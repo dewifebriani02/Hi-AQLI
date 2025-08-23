@@ -11,6 +11,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Mic,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Tilawah Assistant", icon: Mic },
@@ -35,13 +37,19 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { state } = useSidebar();
 
   return (
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2">
           <Logo className="w-auto h-6 text-sidebar-foreground" />
-          <SidebarTrigger />
+          <SidebarTrigger
+            className={cn(
+              "md:flex",
+              state === "expanded" && "md:flex",
+            )}
+          />
         </div>
       </SidebarHeader>
       <SidebarContent className="p-2">
