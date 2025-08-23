@@ -46,7 +46,6 @@ export function AppSidebar() {
           <Logo className="w-auto h-6 text-sidebar-foreground" />
           <SidebarTrigger
             className={cn(
-              "md:flex",
               state === "expanded" && "md:flex",
             )}
           />
