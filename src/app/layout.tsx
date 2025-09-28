@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,10 @@ export default function RootLayout({
           <div className="relative flex min-h-screen">
             <AppSidebar />
             <SidebarInset>
-              <div className="p-4 sm:p-6 lg:p-8 h-full">
+               <div className="p-4 sm:p-6 lg:p-8 h-full">
+                <div className="md:hidden absolute top-4 left-4">
+                  <SidebarTrigger />
+                </div>
                 {children}
               </div>
             </SidebarInset>
