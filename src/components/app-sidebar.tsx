@@ -18,7 +18,7 @@ import {
   BookOpen,
   Bot,
   Users,
-  BarChart,
+  LayoutDashboard,
   HeartHandshake,
   Settings,
 } from "lucide-react";
@@ -31,7 +31,7 @@ const navItems = [
   { href: "/tajweed", label: "Modul Tajwid", icon: BookOpen },
   { href: "/ai-scholar", label: "Cendekiawan AI", icon: Bot },
   { href: "/study-circles", label: "Lingkar Studi", icon: Users },
-  { href: "/progress", label: "Progres", icon: BarChart },
+  { href: "/dasbor", label: "Dasbor", icon: LayoutDashboard },
   { href: "/donate", label: "Donasi", icon: HeartHandshake },
 ];
 
