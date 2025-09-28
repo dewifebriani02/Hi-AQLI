@@ -7,6 +7,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const tajweedRules = [
   {
@@ -79,7 +80,9 @@ export default function TajweedPage() {
                     <p className="text-sm text-muted-foreground">Kuis adalah cara yang bagus untuk memperkuat pembelajaran. Tantang diri Anda setelah meninjau modul.</p>
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">Mulai Kuis</Button>
+                    <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                      <Link href="/tajweed-quiz">Mulai Kuis</Link>
+                    </Button>
                 </CardFooter>
             </Card>
         </div>
