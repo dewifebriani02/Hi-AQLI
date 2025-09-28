@@ -19,7 +19,7 @@ type Message = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="icon" disabled={pending} aria-label="Send message">
+    <Button type="submit" size="icon" disabled={pending} aria-label="Kirim pesan">
       {pending ? <LoaderCircle className="animate-spin" /> : <Send />}
     </Button>
   );
@@ -61,7 +61,7 @@ export function AiScholarClient() {
         <div className="space-y-6">
           {messages.length === 0 && (
             <div className="text-center text-muted-foreground">
-                Start a conversation by asking a question below.
+                Mulai percakapan dengan mengajukan pertanyaan di bawah.
             </div>
           )}
           {messages.map((message, index) => (
@@ -99,7 +99,7 @@ export function AiScholarClient() {
       <form ref={formRef} onSubmit={handleFormSubmit} className="flex items-start gap-2">
         <Textarea
           name="question"
-          placeholder="Ask about the Tafsir of Surah Al-Fatiha..."
+          placeholder="Tanyakan tentang Tafsir Surah Al-Fatihah..."
           className="min-h-0 resize-none"
           rows={1}
           required

@@ -14,9 +14,9 @@ export default function DonatePage() {
           <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
             <HeartHandshake className="h-8 w-8" />
           </div>
-          <CardTitle className="font-headline text-2xl">Support AQLI Digital</CardTitle>
+          <CardTitle className="font-headline text-2xl">Dukung AQLI Digital</CardTitle>
           <CardDescription>
-            Your generous donations help us maintain and improve this platform for learners worldwide.
+            Donasi Anda membantu kami memelihara dan meningkatkan platform ini untuk pelajar di seluruh dunia.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -29,19 +29,19 @@ export default function DonatePage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex-1 border-t"></div>
-            <span className="text-xs text-muted-foreground">OR</span>
+            <span className="text-xs text-muted-foreground">ATAU</span>
             <div className="flex-1 border-t"></div>
           </div>
           <div>
-            <Label htmlFor="custom-amount" className="mb-2 block">Enter a custom amount</Label>
+            <Label htmlFor="custom-amount" className="mb-2 block">Masukkan jumlah khusus</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-              <Input id="custom-amount" type="number" placeholder="Enter amount" className="pl-7" />
+              <Input id="custom-amount" type="number" placeholder="Masukkan jumlah" className="pl-7" />
             </div>
           </div>
         </CardContent>
         <CardFooter>
-          <Button size="lg" className="w-full font-bold text-lg bg-accent text-accent-foreground hover:bg-accent/90">Donate Now</Button>
+          <Button size="lg" className="w-full font-bold text-lg bg-accent text-accent-foreground hover:bg-accent/90">Donasi Sekarang</Button>
         </CardFooter>
       </Card>
     </div>

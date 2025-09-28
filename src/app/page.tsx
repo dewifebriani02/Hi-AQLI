@@ -5,15 +5,15 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-8 h-full">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">AI Tilawah Assistant</h1>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Asisten Tilawah AI</h1>
         <p className="text-muted-foreground">
-          Improve your Quranic recitation with real-time feedback. Record yourself and let our AI guide you.
+          Tingkatkan bacaan Al-Qur'an Anda dengan umpan balik waktu nyata. Rekam diri Anda dan biarkan AI kami membimbing Anda.
         </p>
       </div>
       <Card className="flex-1">
         <CardHeader>
-          <CardTitle>Recitation Practice</CardTitle>
-          <CardDescription>Press record to begin your recitation. Press stop when you are finished.</CardDescription>
+          <CardTitle>Latihan Tilawah</CardTitle>
+          <CardDescription>Tekan rekam untuk memulai tilawah Anda. Tekan berhenti jika sudah selesai.</CardDescription>
         </CardHeader>
         <CardContent>
           <TilawahClient />

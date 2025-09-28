@@ -27,12 +27,12 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Tilawah Assistant", icon: Mic },
-  { href: "/tajweed", label: "Tajweed Modules", icon: BookOpen },
-  { href: "/ai-scholar", label: "AI Scholar", icon: Bot },
-  { href: "/study-circles", label: "Study Circles", icon: Users },
-  { href: "/progress", label: "Progress", icon: BarChart },
-  { href: "/donate", label: "Donate", icon: HeartHandshake },
+  { href: "/", label: "Asisten Tilawah", icon: Mic },
+  { href: "/tajweed", label: "Modul Tajwid", icon: BookOpen },
+  { href: "/ai-scholar", label: "Cendekiawan AI", icon: Bot },
+  { href: "/study-circles", label: "Lingkar Studi", icon: Users },
+  { href: "/progress", label: "Progres", icon: BarChart },
+  { href: "/donate", label: "Donasi", icon: HeartHandshake },
 ];
 
 export function AppSidebar() {
@@ -68,7 +68,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <Button variant="ghost" className="justify-start gap-2 p-2 h-8 w-full">
             <Settings />
-            <span>Settings</span>
+            <span>Pengaturan</span>
         </Button>
       </SidebarFooter>
     </Sidebar>

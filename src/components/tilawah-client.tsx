@@ -31,7 +31,7 @@ export function TilawahClient() {
       setAudioDataUri(null);
       setIsRecording(true);
       audioChunksRef.current = [];
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
@@ -85,8 +85,8 @@ export function TilawahClient() {
     } catch (error) {
       console.error("Error submitting recitation:", error);
       setFeedback({
-        feedback: "An error occurred.",
-        suggestions: "Please try again later.",
+        feedback: "Terjadi kesalahan.",
+        suggestions: "Silakan coba lagi nanti.",
       });
     } finally {
       setIsLoading(false);
@@ -104,11 +104,11 @@ export function TilawahClient() {
       >
         {isRecording ? (
           <>
-            <Square className="mr-2" /> Stop
+            <Square className="mr-2" /> Berhenti
           </>
         ) : (
           <>
-            <Mic className="mr-2" /> Record
+            <Mic className="mr-2" /> Rekam
           </>
         )}
       </Button>
@@ -116,11 +116,11 @@ export function TilawahClient() {
       {audioURL && (
         <div className="w-full max-w-lg flex flex-col items-center gap-4">
           <div className="w-full">
-            <h3 className="font-semibold mb-2">Your Recitation:</h3>
+            <h3 className="font-semibold mb-2">Tilawah Anda:</h3>
             <audio controls src={audioURL} className="w-full" />
           </div>
           <Button onClick={handleGetFeedback} disabled={isLoading || !audioDataUri}>
-            {isLoading ? <LoaderCircle className="animate-spin" /> : "Get Feedback"}
+            {isLoading ? <LoaderCircle className="animate-spin" /> : "Dapatkan Umpan Balik"}
           </Button>
         </div>
       )}
@@ -128,12 +128,12 @@ export function TilawahClient() {
       {feedback && (
         <Alert className="w-full max-w-lg">
           <AudioLines className="h-4 w-4" />
-          <AlertTitle>Recitation Analysis Complete</AlertTitle>
+          <AlertTitle>Analisis Tilawah Selesai</AlertTitle>
           <AlertDescription className="mt-4 space-y-4">
             <div>
               <div className="flex items-center gap-2 font-semibold mb-1">
                 <FileCheck2 className="h-4 w-4 text-primary" />
-                Feedback
+                Umpan Balik
               </div>
               <p>{feedback.feedback}</p>
             </div>
@@ -141,7 +141,7 @@ export function TilawahClient() {
             <div>
               <div className="flex items-center gap-2 font-semibold mb-1">
                 <Lightbulb className="h-4 w-4 text-accent" />
-                Suggestions
+                Saran
               </div>
               <p>{feedback.suggestions}</p>
             </div>

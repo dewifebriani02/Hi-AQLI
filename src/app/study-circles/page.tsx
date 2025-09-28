@@ -13,40 +13,40 @@ import { Clock, User, Users } from "lucide-react";
 
 const studyCircles = [
   {
-    title: "Tafsir of Juz' Amma",
+    title: "Tafsir Juz' Amma",
     instructor: "Dr. Fatima Ahmed",
     image: "https://placehold.co/600x400.png",
     aiHint: "woman scholar",
-    description: "An in-depth study of the meanings and context of the last part of the Quran, perfect for beginners.",
-    schedule: "Saturdays, 10:00 AM EST",
-    level: "Beginner",
+    description: "Studi mendalam tentang makna dan konteks bagian terakhir Al-Qur'an, cocok untuk pemula.",
+    schedule: "Sabtu, 10:00 WIB",
+    level: "Pemula",
   },
   {
-    title: "Advanced Tajweed: Sifaat Al-Huroof",
-    instructor: "Sheikh Yusuf Ibrahim",
+    title: "Tajwid Lanjutan: Sifaat Al-Huroof",
+    instructor: "Syekh Yusuf Ibrahim",
     image: "https://placehold.co/600x400.png",
     aiHint: "man teaching",
-    description: "A detailed exploration of the characteristics of Arabic letters (Sifaat) for experienced reciters.",
-    schedule: "Mondays & Wednesdays, 7:00 PM EST",
-    level: "Advanced",
+    description: "Eksplorasi rinci tentang karakteristik huruf Arab (Sifaat) untuk qari berpengalaman.",
+    schedule: "Senin & Rabu, 19:00 WIB",
+    level: "Lanjutan",
   },
   {
-    title: "Seerah of the Prophet (PBUH)",
+    title: "Sirah Nabi (SAW)",
     instructor: "Ustadha Aisha Khan",
     image: "https://placehold.co/600x400.png",
     aiHint: "islamic book",
-    description: "Journey through the life of Prophet Muhammad (PBUH) and derive timeless lessons for today.",
-    schedule: "Sundays, 2:00 PM EST",
-    level: "All Levels",
+    description: "Perjalanan melalui kehidupan Nabi Muhammad (SAW) dan dapatkan pelajaran abadi untuk hari ini.",
+    schedule: "Minggu, 14:00 WIB",
+    level: "Semua Level",
   },
   {
-    title: "Fiqh of Worship",
+    title: "Fikih Ibadah",
     instructor: "Imam Omar Farooq",
     image: "https://placehold.co/600x400.png",
     aiHint: "praying mosque",
-    description: "Understand the rulings and wisdom behind the core acts of worship, including Salah, Zakat, and Sawm.",
-    schedule: "Thursdays, 8:00 PM EST",
-    level: "Intermediate",
+    description: "Pahami hukum dan hikmah di balik ibadah inti, termasuk Salat, Zakat, dan Puasa.",
+    schedule: "Kamis, 20:00 WIB",
+    level: "Menengah",
   },
 ];
 
@@ -55,9 +55,9 @@ export default function StudyCirclesPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Community Study Circles</h1>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Lingkar Studi Komunitas</h1>
         <p className="text-muted-foreground">
-          Join online halaqas with certified instructors to deepen your knowledge in a supportive community.
+          Bergabunglah dengan halaqah online bersama instruktur bersertifikat untuk memperdalam pengetahuan Anda dalam komunitas yang suportif.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -92,7 +92,7 @@ export default function StudyCirclesPage() {
                     <Badge variant="secondary" className="font-semibold">{circle.level}</Badge>
                 </div>
                </div>
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">Join Circle</Button>
+              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">Gabung Lingkar Studi</Button>
             </CardFooter>
           </Card>
         ))}

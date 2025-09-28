@@ -10,34 +10,34 @@ import { Button } from "@/components/ui/button";
 
 const tajweedRules = [
   {
-    title: "Noon Sakinah and Tanween",
-    category: "Articulation",
-    content: "Rules governing the pronunciation of a non-voweled Noon (نْ) or Tanween (ـًـــٍـــٌ) when followed by certain letters. This includes Izhar (clear pronunciation), Idgham (merging), Iqlab (conversion), and Ikhfa (hiding).",
+    title: "Nun Sakinah dan Tanwin",
+    category: "Artikulasi",
+    content: "Aturan yang mengatur pengucapan Nun tanpa harakat (نْ) atau Tanwin (ـًـــٍـــٌ) ketika diikuti oleh huruf-huruf tertentu. Ini termasuk Izhar (jelas), Idgham (melebur), Iqlab (mengubah), dan Ikhfa (menyembunyikan).",
   },
   {
-    title: "Meem Sakinah",
-    category: "Articulation",
-    content: "Rules for a non-voweled Meem (مْ). This includes Ikhfa Shafawi (hiding), Idgham Shafawi (merging), and Izhar Shafawi (clear pronunciation), depending on the letter that follows.",
+    title: "Mim Sakinah",
+    category: "Artikulasi",
+    content: "Aturan untuk Mim tanpa harakat (مْ). Ini termasuk Ikhfa Syafawi (menyembunyikan), Idgham Syafawi (melebur), dan Izhar Syafawi (jelas), tergantung pada huruf yang mengikutinya.",
   },
   {
     title: "Qalqalah",
-    category: "Echoing",
-    content: "The echoing or vibrating sound made on certain letters (ق ط ب ج د) when they have a sukoon. There are different levels of Qalqalah depending on the letter's position in the word.",
+    category: "Pantulan",
+    content: "Suara memantul atau bergetar yang dibuat pada huruf-huruf tertentu (ق ط ب ج د) ketika mereka memiliki sukun. Ada berbagai tingkat Qalqalah tergantung pada posisi huruf dalam kata.",
   },
   {
-    title: "Madd (Elongation)",
-    category: "Vowels",
-    content: "The prolongation of vowel sounds. There are many types, such as Madd Asli (natural madd) and Madd Far'i (secondary madd), each with specific rules for its length.",
+    title: "Madd (Panjang)",
+    category: "Vokal",
+    content: "Perpanjangan suara vokal. Ada banyak jenis, seperti Madd Asli (madd alami) dan Madd Far'i (madd sekunder), masing-masing dengan aturan khusus untuk panjangnya.",
   },
   {
-    title: "Rules of Laam",
-    category: "Letters",
-    content: "Rules concerning the letter Laam (ل), particularly in the name of Allah (الله). It can be pronounced with a heavy sound (Tafkheem) or a light sound (Tarqeeq) depending on the preceding vowel.",
+    title: "Hukum Lam",
+    category: "Huruf",
+    content: "Aturan mengenai huruf Lam (ل), terutama dalam nama Allah (الله). Bisa diucapkan dengan suara tebal (Tafkhim) atau suara tipis (Tarqiq) tergantung pada vokal sebelumnya.",
   },
   {
-    title: "Rules of Raa",
-    category: "Letters",
-    content: "Rules for the letter Raa (ر). Similar to Laam, it can be pronounced with a heavy (Tafkheem) or light (Tarqeeq) sound based on its vowel and the vowels of surrounding letters.",
+    title: "Hukum Ra",
+    category: "Huruf",
+    content: "Aturan untuk huruf Ra (ر). Mirip dengan Lam, bisa diucapkan dengan suara tebal (Tafkhim) atau tipis (Tarqiq) berdasarkan vokal dan vokal huruf di sekitarnya.",
   },
 ];
 
@@ -46,9 +46,9 @@ export default function TajweedPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Interactive Tajweed Modules</h1>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Modul Tajwid Interaktif</h1>
         <p className="text-muted-foreground">
-          Master the art of Quranic recitation by studying the essential rules of Tajweed.
+          Kuasai seni tilawah Al-Qur'an dengan mempelajari aturan-aturan penting Tajwid.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -72,14 +72,14 @@ export default function TajweedPage() {
         <div className="md:col-span-4">
             <Card>
                 <CardHeader>
-                    <CardTitle>Test Your Knowledge</CardTitle>
-                    <CardDescription>Take a quiz to check your understanding of the rules.</CardDescription>
+                    <CardTitle>Uji Pengetahuan Anda</CardTitle>
+                    <CardDescription>Ikuti kuis untuk memeriksa pemahaman Anda tentang aturan-aturan tersebut.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-muted-foreground">Quizzes are a great way to reinforce learning. Challenge yourself after reviewing the modules.</p>
+                    <p className="text-sm text-muted-foreground">Kuis adalah cara yang bagus untuk memperkuat pembelajaran. Tantang diri Anda setelah meninjau modul.</p>
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">Start Quiz</Button>
+                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">Mulai Kuis</Button>
                 </CardFooter>
             </Card>
         </div>

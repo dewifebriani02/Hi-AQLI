@@ -7,17 +7,17 @@ import {
 } from "@/components/ui/chart"
 
 const chartData = [
-  { month: "January", accuracy: 75 },
-  { month: "February", accuracy: 78 },
-  { month: "March", accuracy: 82 },
+  { month: "Januari", accuracy: 75 },
+  { month: "Februari", accuracy: 78 },
+  { month: "Maret", accuracy: 82 },
   { month: "April", accuracy: 80 },
-  { month: "May", accuracy: 85 },
-  { month: "June", accuracy: 88 },
+  { month: "Mei", accuracy: 85 },
+  { month: "Juni", accuracy: 88 },
 ]
 
 const chartConfig = {
   accuracy: {
-    label: "Accuracy",
+    label: "Akurasi",
     color: "hsl(var(--accent))",
   },
 }
