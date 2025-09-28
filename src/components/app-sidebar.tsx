@@ -40,11 +40,11 @@ export function AppSidebar() {
   const { state } = useSidebar();
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <Logo className="w-auto h-6 text-sidebar-foreground" />
-          <SidebarTrigger className={cn("hidden", state === 'expanded' && 'md:flex')} />
+        <div className="flex items-center justify-between w-full">
+          <Logo className="w-auto h-6 text-sidebar-foreground group-data-[collapsible=icon]:hidden" />
+          <SidebarTrigger />
         </div>
       </SidebarHeader>
       <SidebarContent className="p-2">
@@ -65,11 +65,15 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter>
-        <Button variant="ghost" className="justify-start gap-2 p-2 h-8 w-full">
-            <Settings />
-            <span>Pengaturan</span>
-        </Button>
+      <SidebarFooter className="p-2">
+        <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton tooltip={{children: "Pengaturan"}}>
+                    <Settings />
+                    <span>Pengaturan</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
