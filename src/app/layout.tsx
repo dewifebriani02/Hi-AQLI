@@ -28,8 +28,8 @@ export default function RootLayout({
             <AppSidebar />
             <SidebarInset>
                <div className="p-4 sm:p-6 lg:p-8 h-full">
-                <div className="md:hidden absolute top-4 left-4">
-                  <SidebarTrigger />
+                <div className="absolute top-4 left-4">
+                  <SidebarTrigger className="md:hidden" />
                 </div>
                 {children}
               </div>

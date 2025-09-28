@@ -44,7 +44,7 @@ export function AppSidebar() {
       <SidebarHeader>
         <div className="flex items-center gap-2">
           <Logo className="w-auto h-6 text-sidebar-foreground" />
-          <SidebarTrigger className="hidden md:flex" />
+          <SidebarTrigger className={cn("hidden", state === 'expanded' && 'md:flex')} />
         </div>
       </SidebarHeader>
       <SidebarContent className="p-2">
