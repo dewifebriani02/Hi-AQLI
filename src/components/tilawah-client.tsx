@@ -18,6 +18,7 @@ export function TilawahClient() {
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [error, setError] = useState<string | null>(null);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -27,11 +28,12 @@ export function TilawahClient() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setFeedback(null);
+      setError(null);
       setAudioURL(null);
       setAudioDataUri(null);
       setIsRecording(true);
       audioChunksRef.current = [];
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/wav' });
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
@@ -56,7 +58,7 @@ export function TilawahClient() {
       mediaRecorderRef.current.start();
     } catch (err) {
       console.error("Error accessing microphone:", err);
-      // You might want to show an error message to the user here
+      setError("Tidak dapat mengakses mikrofon. Mohon izinkan akses mikrofon di pengaturan browser Anda.");
     }
   };
 
@@ -79,15 +81,13 @@ export function TilawahClient() {
     if (!audioDataUri) return;
     setIsLoading(true);
     setFeedback(null);
+    setError(null);
     try {
       const result = await submitRecitation(audioDataUri);
       setFeedback(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting recitation:", error);
-      setFeedback({
-        feedback: "Terjadi kesalahan.",
-        suggestions: "Silakan coba lagi nanti.",
-      });
+      setError(error.message || "Terjadi kesalahan. Silakan coba lagi nanti.");
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +123,13 @@ export function TilawahClient() {
             {isLoading ? <LoaderCircle className="animate-spin" /> : "Dapatkan Umpan Balik"}
           </Button>
         </div>
+      )}
+
+      {error && (
+        <Alert variant="destructive" className="w-full max-w-lg">
+           <AlertTitle>Terjadi Kesalahan</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {feedback && (

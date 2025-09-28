@@ -38,6 +38,13 @@ export async function submitRecitation(audioAsDataUri: string) {
     if (!audioAsDataUri) {
         throw new Error("Audio data is missing.");
     }
-    const result = await aiTilawahAssistant({ audioDataUri: audioAsDataUri });
-    return result;
+    try {
+        const result = await aiTilawahAssistant({ audioDataUri: audioAsDataUri });
+        return result;
+    } catch (e: any) {
+        if (e.message?.includes('503')) {
+             throw new Error("Layanan AI sedang tidak tersedia. Silakan coba lagi nanti.");
+        }
+        throw new Error("Terjadi kesalahan saat menganalisis tilawah.");
+    }
 }
