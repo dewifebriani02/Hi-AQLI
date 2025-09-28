@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useActionState } from "react";
 import { askScholarQuestion, type ScholarState } from "@/app/actions";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
@@ -27,7 +28,7 @@ function SubmitButton() {
 
 export function AiScholarClient() {
   const initialState: ScholarState = {};
-  const [state, formAction] = useFormState(askScholarQuestion, initialState);
+  const [state, formAction] = useActionState(askScholarQuestion, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
