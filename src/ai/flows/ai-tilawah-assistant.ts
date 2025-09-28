@@ -22,8 +22,8 @@ const AiTilawahAssistantInputSchema = z.object({
 export type AiTilawahAssistantInput = z.infer<typeof AiTilawahAssistantInputSchema>;
 
 const AiTilawahAssistantOutputSchema = z.object({
-  feedback: z.string().describe('Feedback on the recitation, including accuracy and fluency.'),
-  suggestions: z.string().describe('Suggestions for improvement.'),
+  feedback: z.string().describe('Umpan balik tentang tilawah, termasuk akurasi dan kelancaran.'),
+  suggestions: z.string().describe('Saran untuk perbaikan.'),
 });
 export type AiTilawahAssistantOutput = z.infer<typeof AiTilawahAssistantOutputSchema>;
 
@@ -35,13 +35,15 @@ const prompt = ai.definePrompt({
   name: 'aiTilawahAssistantPrompt',
   input: {schema: AiTilawahAssistantInputSchema},
   output: {schema: AiTilawahAssistantOutputSchema},
-  prompt: `You are an expert Quran recitation assistant. Analyze the provided audio recording of the user's recitation and provide feedback on their accuracy and fluency. Provide specific suggestions for improvement.
+  prompt: `Anda adalah seorang ahli asisten tilawah Al-Qur'an. Analisis rekaman audio tilawah pengguna dan berikan umpan balik mengenai akurasi dan kelancaran mereka. Berikan saran-saran spesifik untuk perbaikan.
+
+Pastikan semua respons dalam Bahasa Indonesia.
 
 Audio: {{media url=audioDataUri}}
 
-Respond in the following format:
-Feedback: <feedback on accuracy and fluency>
-Suggestions: <suggestions for improvement>`,
+Gunakan format berikut untuk respons Anda:
+Umpan Balik: <umpan balik mengenai akurasi dan kelancaran>
+Saran: <saran untuk perbaikan>`,
 });
 
 const aiTilawahAssistantFlow = ai.defineFlow(

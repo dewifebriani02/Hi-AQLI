@@ -12,12 +12,12 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AskQuestionInputSchema = z.object({
-  question: z.string().describe('The question about Tajwid, Tafsir, or Islamic history.'),
+  question: z.string().describe('Pertanyaan tentang Tajwid, Tafsir, atau sejarah Islam.'),
 });
 export type AskQuestionInput = z.infer<typeof AskQuestionInputSchema>;
 
 const AskQuestionOutputSchema = z.object({
-  answer: z.string().describe('The answer to the question, based on a curated, verified dataset.'),
+  answer: z.string().describe('Jawaban atas pertanyaan, berdasarkan kumpulan data terverifikasi yang dikurasi.'),
 });
 export type AskQuestionOutput = z.infer<typeof AskQuestionOutputSchema>;
 
@@ -29,13 +29,13 @@ const prompt = ai.definePrompt({
   name: 'aiScholarQuestionPrompt',
   input: {schema: AskQuestionInputSchema},
   output: {schema: AskQuestionOutputSchema},
-  prompt: `You are an AI scholar specializing in providing answers about Tajwid, Tafsir, and Islamic history.
+  prompt: `Anda adalah seorang cendekiawan AI yang berspesialisasi dalam memberikan jawaban tentang Tajwid, Tafsir, dan sejarah Islam.
 
-You will use a curated, verified dataset to answer the question.
+Anda akan menggunakan kumpulan data terverifikasi yang dikurasi untuk menjawab pertanyaan. Pastikan semua respons dalam Bahasa Indonesia.
 
-Question: {{{question}}}
+Pertanyaan: {{{question}}}
 
-Answer: `,
+Jawaban: `,
 });
 
 const askQuestionFlow = ai.defineFlow(
