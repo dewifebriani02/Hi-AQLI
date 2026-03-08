@@ -16,40 +16,46 @@ import {
   Users, 
   HeartHandshake, 
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  Sparkles,
+  ArrowRight
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-const quickActions = [
+const featureAds = [
   { 
-    label: "Al-Qur'an", 
+    label: "Tilawah AI", 
     icon: Mic, 
     href: "/tilawah", 
-    color: "bg-blue-500/10 text-blue-600",
-    description: "Latihan Tilawah AI"
+    color: "from-blue-600 to-blue-400",
+    description: "Koreksi bacaan Anda secara real-time dengan teknologi AI tercanggih.",
+    badge: "Populer"
   },
   { 
-    label: "Tajwid", 
+    label: "Modul Tajwid", 
     icon: BookOpen, 
     href: "/tajweed", 
-    color: "bg-green-500/10 text-green-600",
-    description: "Modul Interaktif"
+    color: "from-emerald-600 to-emerald-400",
+    description: "Kuasai hukum bacaan dengan kurikulum interaktif yang mudah dipahami.",
+    badge: "Baru"
   },
   { 
-    label: "Tanya AI", 
+    label: "Tanya Scholar", 
     icon: Bot, 
     href: "/ai-scholar", 
-    color: "bg-purple-500/10 text-purple-600",
-    description: "Cendekiawan AI"
+    color: "from-purple-600 to-purple-400",
+    description: "Diskusikan Tafsir dan Sejarah Islam dengan asisten cerdas 24/7.",
+    badge: "Cerdas"
   },
   { 
-    label: "Komunitas", 
+    label: "Halaqah Online", 
     icon: Users, 
     href: "/study-circles", 
-    color: "bg-orange-500/10 text-orange-600",
-    description: "Lingkar Studi"
+    color: "from-orange-600 to-orange-400",
+    description: "Bergabunglah dengan komunitas belajar bersama guru bersertifikat.",
+    badge: "Komunitas"
   },
 ];
 
@@ -58,24 +64,35 @@ export default function DasborPage() {
     <div className="flex flex-col gap-8 pb-10">
       {/* Welcome Header */}
       <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-accent" />
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Selamat Datang</span>
+        </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight text-[#800000]">Assalamu'alaikum, Akhi/Ukhti</h1>
         <p className="text-muted-foreground">
           Semoga hari ini penuh keberkahan dengan Al-Qur'an.
         </p>
       </div>
 
-      {/* Quick Actions Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {quickActions.map((action, index) => (
-          <Link key={index} href={action.href}>
-            <Card className="hover:border-[#800000]/50 transition-all cursor-pointer group h-full">
-              <CardContent className="p-4 flex flex-col items-center text-center gap-3">
-                <div className={`p-3 rounded-2xl ${action.color} group-hover:scale-110 transition-transform`}>
-                  <action.icon className="w-6 h-6" />
+      {/* Feature Ads Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {featureAds.map((ad, index) => (
+          <Link key={index} href={ad.href}>
+            <Card className="overflow-hidden border-none shadow-md hover:shadow-xl transition-all group relative h-full">
+              <div className={`absolute inset-0 bg-gradient-to-br ${ad.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
+              <CardContent className="p-6 relative z-10 text-white flex flex-col justify-between h-full gap-4">
+                <div className="flex justify-between items-start">
+                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                    <ad.icon className="w-8 h-8" />
+                  </div>
+                  <Badge className="bg-white/20 border-none text-white backdrop-blur-sm">{ad.badge}</Badge>
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-bold text-sm">{action.label}</h3>
-                  <p className="text-[10px] text-muted-foreground">{action.description}</p>
+                  <h3 className="text-xl font-bold font-headline">{ad.label}</h3>
+                  <p className="text-sm opacity-90 leading-relaxed">{ad.description}</p>
+                </div>
+                <div className="flex items-center gap-2 text-sm font-bold pt-2">
+                  Mulai Belajar <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </CardContent>
             </Card>
@@ -147,17 +164,17 @@ export default function DasborPage() {
       </div>
 
       {/* Progress Chart */}
-      <Card className="shadow-lg border-none">
-        <CardHeader>
+      <Card className="shadow-lg border-none overflow-hidden">
+        <CardHeader className="bg-muted/30">
           <CardTitle className="text-xl font-bold flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-[#800000]" />
             Akurasi Tilawah Mingguan
           </CardTitle>
           <CardDescription>
-            Grafik ini menunjukkan perkembangan kualitas bacaan Anda berdasarkan analisis AI.
+            Grafik perkembangan kualitas bacaan Anda berdasarkan analisis AI.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <ProgressClient />
         </CardContent>
       </Card>
