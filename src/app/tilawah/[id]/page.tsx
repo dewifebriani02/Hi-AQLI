@@ -37,9 +37,9 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // Fetch Verses with Uthmani text and Indonesian translation (ID 33: Kemenag-RI)
+        // Fetch Verses with Uthmani text and Sabeeq Company translation (ID 158)
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=false&translations=33&fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=false&translations=158&fields=text_uthmani`
         );
         const verseData = await verseRes.json();
         setVerses(verseData.verses);
