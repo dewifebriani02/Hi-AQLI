@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
@@ -11,13 +12,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#800000',
     icons: [
       {
-        src: 'https://placehold.co/192x192/800000/ffffff?text=AQLI',
+        src: 'https://picsum.photos/seed/aqli-icon/192/192',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable',
       },
       {
-        src: 'https://placehold.co/512x512/800000/ffffff?text=AQLI',
+        src: 'https://picsum.photos/seed/aqli-icon/512/512',
         sizes: '512x512',
         type: 'image/png',
       },

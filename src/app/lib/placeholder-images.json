@@ -1,0 +1,15 @@
+
+{
+  "logo": {
+    "url": "https://picsum.photos/seed/aqli-gold-logo/400/400",
+    "width": 400,
+    "height": 400,
+    "aiHint": "golden calligraphy"
+  },
+  "hero": {
+    "url": "https://picsum.photos/seed/quran-hero/1200/600",
+    "width": 1200,
+    "height": 600,
+    "aiHint": "islamic background"
+  }
+}
