@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Metadata, Viewport } from 'next';
@@ -11,12 +10,13 @@ import { BottomNav } from '@/components/bottom-nav';
 import { FirebaseClientProvider, useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import React from 'react';
-
-// Note: Metadata cannot be exported from 'use client' components. 
-// For PWA and Title purposes, we keep them in head tags or a separate layout-metadata.ts if needed.
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { User as UserIcon } from 'lucide-react';
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
   const adminDocRef = useMemoFirebase(() => {
@@ -45,7 +45,24 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight uppercase text-[#800000]">
                  Sahabat AQLI
                </div>
-               <div className="w-8" />
+               <div className="flex items-center gap-2">
+                 {!isUserLoading && (
+                   user ? (
+                     <Link href="/profile">
+                        <Avatar className="h-8 w-8 border-2 border-[#800000]/20">
+                          <AvatarImage src={user.photoURL || undefined} />
+                          <AvatarFallback className="bg-primary/5 text-[#800000] text-xs font-bold uppercase">
+                            {user.displayName?.[0] || user.email?.[0] || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                     </Link>
+                   ) : (
+                     <Button asChild size="sm" variant="ghost" className="text-[#800000] font-bold">
+                       <Link href="/login">Masuk</Link>
+                     </Button>
+                   )
+                 )}
+               </div>
             </header>
             <main className="p-4 sm:p-6 lg:p-8 flex-1">
               {children}
