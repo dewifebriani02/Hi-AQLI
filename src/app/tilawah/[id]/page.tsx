@@ -3,16 +3,10 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Bookmark, AlertCircle, Loader2 } from "lucide-react";
+import { ChevronLeft, Play, Bookmark, AlertCircle, Loader2, Info } from "lucide-react";
 import Link from "next/link";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  TooltipPortal,
-} from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 interface Word {
   id: number;
@@ -118,94 +112,78 @@ export default function SurahDetailPage() {
   }
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
-        <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
-          <Button asChild variant="ghost" size="icon" className="h-9 w-9">
-            <Link href="/tilawah">
-              <ChevronLeft className="h-6 w-6" />
-            </Link>
-          </Button>
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold font-headline">{surah.id}. {surah.name_simple}</h1>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
-              {surah.translated_name.name} • {surah.verses_count} Ayat
-            </p>
-          </div>
-        </div>
-
-        {id !== "1" && id !== "9" && (
-          <div className="text-center py-12">
-            <h2 className="text-3xl md:text-4xl font-arabic leading-relaxed text-foreground">
-              بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-            </h2>
-          </div>
-        )}
-
-        <div className="flex flex-col divide-y divide-border/50">
-          {verses.map((verse) => (
-            <div key={verse.id} className="py-12 px-4 space-y-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-foreground text-xs font-bold border">
-                  {verse.verse_number}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <Play className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Area Teks Arab: Ukuran 3xl/4xl, Rata Kanan (start in RTL) */}
-              <div 
-                className="flex flex-wrap justify-start gap-x-2 gap-y-4" 
-                dir="rtl"
-              >
-                {verse.words && verse.words.length > 0 ? (
-                  verse.words.map((word) => (
-                    <Tooltip key={word.id}>
-                      <TooltipTrigger asChild>
-                        <span 
-                          className="text-3xl md:text-4xl font-arabic leading-[1.8] cursor-pointer hover:text-[#800000] transition-colors" 
-                        >
-                          {word.text_uthmani}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipPortal>
-                        <TooltipContent 
-                          className="bg-[#800000] text-white font-semibold border-none shadow-lg px-3 py-1.5"
-                        >
-                          <p className="text-xs">{word.translation?.text || "..."}</p>
-                        </TooltipContent>
-                      </TooltipPortal>
-                    </Tooltip>
-                  ))
-                ) : (
-                  <span className="text-3xl md:text-4xl font-arabic leading-[1.8] text-right w-full">
-                    {verse.text_uthmani}
-                  </span>
-                )}
-              </div>
-
-              {/* Terjemahan Ayat (Kemenag RI) */}
-              <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">
-                <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
-                {verse.translations && verse.translations.length > 0 ? (
-                  <div 
-                    className="text-base md:text-lg text-foreground/90 leading-relaxed" 
-                    dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
-                )}
-              </div>
-            </div>
-          ))}
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
+      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
+        <Button asChild variant="ghost" size="icon" className="h-9 w-9">
+          <Link href="/tilawah">
+            <ChevronLeft className="h-6 w-6" />
+          </Link>
+        </Button>
+        <div className="flex flex-col">
+          <h1 className="text-lg font-bold font-headline">{surah.id}. {surah.name_simple}</h1>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+            {surah.translated_name.name} • {surah.verses_count} Ayat
+          </p>
         </div>
       </div>
-    </TooltipProvider>
+
+      {id !== "1" && id !== "9" && (
+        <div className="text-center py-12">
+          <h2 className="text-3xl md:text-4xl font-arabic leading-relaxed text-foreground">
+            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+          </h2>
+        </div>
+      )}
+
+      <div className="flex flex-col divide-y divide-border/50">
+        {verses.map((verse) => (
+          <div key={verse.id} className="py-12 px-4 space-y-8 group">
+            <div className="flex items-center justify-between">
+              <Link 
+                href={`/tilawah/${id}/${verse.verse_number}`}
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all cursor-pointer"
+                title="Klik untuk detail & tafsir AI"
+              >
+                {verse.verse_number}
+              </Link>
+              <div className="flex items-center gap-1">
+                 <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] hover:text-[#800000] gap-1">
+                  <Link href={`/tilawah/${id}/${verse.verse_number}`}>
+                    <Info className="h-3 w-3" /> DETAIL & TAFSIR
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                  <Play className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                  <Bookmark className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div 
+              className="flex flex-wrap justify-start gap-x-2 gap-y-4" 
+              dir="rtl"
+            >
+              <span className="text-3xl md:text-4xl font-arabic leading-[2] text-right w-full text-foreground/90 group-hover:text-[#800000] transition-colors duration-300">
+                {verse.text_uthmani}
+              </span>
+            </div>
+
+            <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">
+              <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
+              {verse.translations && verse.translations.length > 0 ? (
+                <div 
+                  className="text-base md:text-lg text-foreground/90 leading-relaxed" 
+                  dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

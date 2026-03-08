@@ -2,6 +2,7 @@
 
 import { askQuestion } from "@/ai/flows/ai-scholar-question";
 import { aiTilawahAssistant } from "@/ai/flows/ai-tilawah-assistant";
+import { analyzeVerse, type AnalyzeVerseInput, type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { z } from "zod";
 
 const scholarSchema = z.object({
@@ -47,4 +48,14 @@ export async function submitRecitation(audioAsDataUri: string) {
         }
         throw new Error("Terjadi kesalahan saat menganalisis tilawah.");
     }
+}
+
+export async function getVerseAnalysis(input: AnalyzeVerseInput): Promise<AnalyzeVerseOutput> {
+  try {
+    const result = await analyzeVerse(input);
+    return result;
+  } catch (e: any) {
+    console.error("Analysis Error:", e);
+    throw new Error("Gagal menganalisis ayat. Silakan coba lagi.");
+  }
 }
