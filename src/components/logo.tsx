@@ -12,7 +12,7 @@ export const Logo = (props: React.SVGProps<SVGSVGElement>) => (
         y="50%" 
         dominantBaseline="middle" 
         textAnchor="middle" 
-        fontFamily="Alegreya, serif" 
+        fontFamily="Amiri, serif" 
         fontSize="32" 
         fontWeight="bold" 
         fill="currentColor">
