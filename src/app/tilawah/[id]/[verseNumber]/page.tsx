@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, AlertCircle } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, AlertCircle, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +53,6 @@ export default function VerseDetailPage() {
       setAnalysis(result);
     } catch (e: any) {
       console.error("AI Analysis Error:", e);
-      // We don't set the main error here so the rest of the page remains usable
     } finally {
       setAnalysisLoading(false);
     }
@@ -67,13 +66,11 @@ export default function VerseDetailPage() {
         setLoading(true);
         setError(null);
 
-        // 1. Fetch surah name
         const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         if (!surahRes.ok) throw new Error("Gagal memuat nama surat.");
         const surahData = await surahRes.json();
         setSurahName(surahData.chapter.name_simple);
 
-        // 2. Fetch verse detail including words and roots
         const res = await fetch(
           `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani,root&word_translation_language=id&translations=33&fields=text_uthmani`
         );
@@ -81,7 +78,6 @@ export default function VerseDetailPage() {
         const data = await res.json();
         setVerse(data.verse);
 
-        // 3. Fetch Tafsir Ringkas Kemenag RI (ID: 157)
         try {
           const tafsirRes = await fetch(
             `https://api.quran.com/api/v4/tafsirs/157/by_key/${id}:${verseNumber}`
@@ -97,7 +93,6 @@ export default function VerseDetailPage() {
           setApiTafsir("Gagal memuat tafsir resmi.");
         }
         
-        // 4. Trigger AI Analysis
         if (data.verse) {
           fetchAiAnalysis(surahData.chapter.name_simple, parseInt(verseNumber), data.verse.text_uthmani);
         }
@@ -149,10 +144,15 @@ export default function VerseDetailPage() {
             <ChevronLeft className="h-6 w-6" />
           </Link>
         </Button>
-        <div className="flex flex-col">
+        <div className="flex-1 flex flex-col">
           <h1 className="text-lg font-bold font-headline">{surahName} : Ayat {verseNumber}</h1>
           <p className="text-[10px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Detail Mendalam</p>
         </div>
+        <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 text-white font-bold gap-2">
+          <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
+            <GraduationCap className="w-4 h-4" /> UJI HAFALAN
+          </Link>
+        </Button>
       </div>
 
       <Card className="border-none bg-muted/20">
@@ -162,7 +162,7 @@ export default function VerseDetailPage() {
           </h2>
           <div className="max-w-2xl mx-auto" dir="ltr">
             <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20">Terjemahan Kemenag RI</Badge>
-            <p className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} />
+            <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} />
           </div>
         </CardContent>
       </Card>
