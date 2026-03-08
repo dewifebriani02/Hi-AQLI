@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/tilawah", label: "Asisten Tilawah", icon: Mic },
+  { href: "/tilawah", label: "Asisten Qur'an", icon: Mic },
   { href: "/tajweed", label: "Modul Tajwid", icon: BookOpen },
   { href: "/ai-scholar", label: "Cendekiawan AI", icon: Bot },
   { href: "/study-circles", label: "Lingkar Studi", icon: Users },

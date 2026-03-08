@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/tilawah", label: "Tilawah", icon: Mic },
+  { href: "/tilawah", label: "Qur'an", icon: Mic },
   { href: "/tajweed", label: "Tajwid", icon: BookOpen },
   { href: "/ai-scholar", label: "Cendekiawan", icon: Bot },
   { href: "/study-circles", label: "Komunitas", icon: Users },

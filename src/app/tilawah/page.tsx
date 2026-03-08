@@ -5,7 +5,7 @@ export default function TilawahPage() {
   return (
     <div className="flex flex-col gap-8 h-full">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Asisten Tilawah AI</h1>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Asisten Qur'an AI</h1>
         <p className="text-muted-foreground">
           Tingkatkan bacaan Al-Qur'an Anda dengan umpan balik waktu nyata. Rekam diri Anda dan biarkan AI kami membimbing Anda.
         </p>
