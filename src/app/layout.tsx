@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/bottom-nav';
 
 export const metadata: Metadata = {
-  title: 'AQLI Digital',
-  description: 'Panduan Anda menuju keunggulan Al-Qur\'an.',
+  title: 'AQLI Companion',
+  description: 'Pendamping Anda menuju keunggulan Al-Qur\'an.',
 };
 
 export default function RootLayout({
@@ -32,7 +32,7 @@ export default function RootLayout({
                 <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4 md:hidden">
                    <SidebarTrigger />
                    <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight">
-                     AQLI DIGITAL
+                     AQLI COMPANION
                    </div>
                    <div className="w-8" />
                 </header>

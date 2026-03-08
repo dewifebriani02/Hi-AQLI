@@ -14,7 +14,7 @@ export default function DonatePage() {
           <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
             <HeartHandshake className="h-8 w-8" />
           </div>
-          <CardTitle className="font-headline text-2xl">Dukung AQLI Digital</CardTitle>
+          <CardTitle className="font-headline text-2xl">Dukung AQLI Companion</CardTitle>
           <CardDescription>
             Donasi Anda membantu kami memelihara dan meningkatkan platform ini untuk pelajar di seluruh dunia.
           </CardDescription>

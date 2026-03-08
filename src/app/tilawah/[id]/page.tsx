@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Share2, Bookmark, AlertCircle } from "lucide-react";
+import { ChevronLeft, Play, Share2, Bookmark, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -28,6 +28,7 @@ interface Word {
 }
 
 interface Verse {
+  id: number;
   verse_number: number;
   text_uthmani: string;
   words: Word[];
@@ -64,24 +65,24 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // 2. Ambil Ayat (dengan text_uthmani eksplisit dan limit per_page yang tinggi)
-        // Parameter per_page=300 digunakan karena surat terpanjang (Al-Baqarah) memiliki 286 ayat.
+        // 2. Ambil Ayat (Gunakan parameter yang lebih stabil)
+        // Kita meminta words=true (untuk per kata) dan translations=33 (Kemenag RI)
+        // fields=text_uthmani memastikan teks Arab utuh juga terkirim
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&word_translation_language=id&fields=text_uthmani&per_page=300`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?words=true&translations=33&word_translation_language=id&fields=text_uthmani&per_page=300`
         );
         
-        if (!verseRes.ok) throw new Error("Gagal mengambil data ayat.");
+        if (!verseRes.ok) throw new Error("Gagal mengambil data ayat Al-Qur'an.");
         
         const verseData = await verseRes.json();
         
-        if (verseData && verseData.verses && verseData.verses.length > 0) {
+        if (verseData && verseData.verses) {
             setVerses(verseData.verses);
         } else {
-            throw new Error("Data ayat tidak ditemukan.");
+            throw new Error("Struktur data ayat tidak sesuai.");
         }
       } catch (err: any) {
-        console.error("Fetch Error:", err);
-        setError(err.message || "Terjadi kesalahan saat memuat data.");
+        setError(err.message || "Terjadi kesalahan koneksi ke server Al-Qur'an.");
       } finally {
         setLoading(false);
       }
@@ -91,14 +92,9 @@ export default function SurahDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 max-w-4xl mx-auto py-6 px-4">
-        <Skeleton className="h-10 w-48 mb-4" />
-        <Skeleton className="h-32 w-full mb-6" />
-        <div className="space-y-8">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-40 w-full rounded-xl" />
-          ))}
-        </div>
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto py-12 px-4 items-center">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse">Memuat ayat-ayat suci...</p>
       </div>
     );
   }
@@ -118,7 +114,16 @@ export default function SurahDetailPage() {
     );
   }
 
-  if (!surah) return <div className="p-8 text-center">Surat tidak ditemukan.</div>;
+  if (!surah || verses.length === 0) {
+    return (
+      <div className="p-8 text-center flex flex-col items-center gap-4">
+        <p>Maaf, ayat tidak ditemukan untuk surat ini.</p>
+        <Button asChild variant="outline">
+          <Link href="/tilawah">Coba Surat Lain</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24 md:pb-10">
@@ -147,7 +152,7 @@ export default function SurahDetailPage() {
       {/* Daftar Ayat */}
       <div className="flex flex-col divide-y divide-muted/50">
         {verses.map((verse) => (
-          <div key={verse.verse_number} className="py-10 px-4 space-y-8">
+          <div key={verse.id} className="py-12 px-4 space-y-10 group transition-colors hover:bg-muted/5">
             {/* Action Bar Ayat */}
             <div className="flex items-center justify-between">
               <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-primary/20 text-primary text-xs font-bold">
@@ -167,27 +172,27 @@ export default function SurahDetailPage() {
             </div>
 
             {/* Teks Arab dengan Word-by-Word Tooltip */}
-            <div className="flex flex-wrap justify-end gap-x-2 gap-y-6" dir="rtl">
+            <div className="flex flex-wrap justify-end gap-x-2 gap-y-8" dir="rtl">
               <TooltipProvider>
                 {verse.words && verse.words.length > 0 ? (
                   verse.words.map((word) => (
                     <Tooltip key={word.id} delayDuration={100}>
                       <TooltipTrigger asChild>
                         <span 
-                          className="text-4xl md:text-5xl font-arabic leading-[1.8] cursor-pointer hover:text-accent transition-colors duration-200" 
+                          className="text-4xl md:text-5xl font-arabic leading-[2] cursor-pointer hover:text-accent transition-colors duration-200" 
                         >
                           {word.text_uthmani}
                         </span>
                       </TooltipTrigger>
                       {word.char_type_name === "word" && (
-                        <TooltipContent className="bg-accent text-accent-foreground border-none font-medium">
+                        <TooltipContent className="bg-accent text-accent-foreground border-none font-medium shadow-xl">
                           <p>{word.translation?.text || "..."}</p>
                         </TooltipContent>
                       )}
                     </Tooltip>
                   ))
                 ) : (
-                  <span className="text-4xl md:text-5xl font-arabic leading-[1.8] text-right w-full">
+                  <span className="text-4xl md:text-5xl font-arabic leading-[2] text-right w-full">
                     {verse.text_uthmani}
                   </span>
                 )}
@@ -195,8 +200,8 @@ export default function SurahDetailPage() {
             </div>
 
             {/* Terjemahan Bahasa Indonesia */}
-            <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-accent shadow-sm">
-              <p className="text-[10px] font-bold text-accent-foreground/50 mb-3 uppercase tracking-[0.2em]">Terjemahan Kemenag RI</p>
+            <div className="text-left bg-muted/30 p-6 rounded-2xl border-l-4 border-accent shadow-sm">
+              <p className="text-[10px] font-bold text-accent-foreground/40 mb-3 uppercase tracking-[0.2em]">Terjemahan Kemenag RI</p>
               {verse.translations && verse.translations.length > 0 ? (
                 <div 
                   className="text-base md:text-lg text-foreground leading-relaxed font-body" 

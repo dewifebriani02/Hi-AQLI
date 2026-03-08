@@ -4,7 +4,7 @@ export const Logo = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 300 60"
-    aria-label="AQLI Digital"
+    aria-label="AQLI Companion"
     {...props}
   >
     <text 
@@ -13,10 +13,10 @@ export const Logo = (props: React.SVGProps<SVGSVGElement>) => (
         dominantBaseline="middle" 
         textAnchor="middle" 
         fontFamily="Alegreya, serif" 
-        fontSize="40" 
+        fontSize="32" 
         fontWeight="bold" 
         fill="currentColor">
-      AQLI DIGITAL
+      AQLI COMPANION
     </text>
   </svg>
 );
