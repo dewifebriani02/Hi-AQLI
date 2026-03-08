@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -66,10 +65,8 @@ export default function VerseDetailPage() {
     const isRightSwipe = distance < -70;
 
     if (isLeftSwipe && currentVerseNum < totalVerses) {
-      // Swipe Left -> Next Verse
       router.push(`/tilawah/${id}/${currentVerseNum + 1}`);
     } else if (isRightSwipe && currentVerseNum > 1) {
-      // Swipe Right -> Prev Verse
       router.push(`/tilawah/${id}/${currentVerseNum - 1}`);
     }
 
@@ -86,10 +83,15 @@ export default function VerseDetailPage() {
         verseNumber: num,
         verseText: text
       });
-      setAnalysis(result);
+      
+      if (result.error) {
+        setAnalysisError(result.error);
+      } else {
+        setAnalysis(result);
+      }
     } catch (e: any) {
-      console.error("AI Analysis Error captured in UI:", e);
-      setAnalysisError(e.message || "Gagal memuat analisis AI.");
+      console.error("AI Analysis Fetch Error:", e);
+      setAnalysisError("Gagal terhubung dengan layanan analisis AI.");
     } finally {
       setAnalysisLoading(false);
     }
@@ -200,11 +202,11 @@ export default function VerseDetailPage() {
       </div>
 
       <Card className="border-none bg-muted/20">
-        <CardContent className="pt-8 pb-10 px-6 space-y-8 text-center" dir="rtl">
-          <h2 className="text-3xl md:text-4xl font-arabic leading-[1.8] text-foreground">
+        <CardContent className="pt-8 pb-10 px-6 space-y-8 text-right" dir="rtl">
+          <h2 className="text-2xl md:text-3xl font-arabic leading-[1.8] text-foreground">
             {verse.text_uthmani}
           </h2>
-          <div className="max-w-2xl mx-auto" dir="ltr">
+          <div className="max-w-2xl ml-auto" dir="ltr">
             <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20">Terjemahan Kemenag RI</Badge>
             <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} />
           </div>
@@ -275,13 +277,20 @@ export default function VerseDetailPage() {
                 <Skeleton className="h-4 w-5/6" />
                 <Skeleton className="h-4 w-2/3" />
               </div>
+            ) : analysisError ? (
+               <div className="text-center py-6 space-y-4">
+                  <p className="text-sm text-muted-foreground italic">
+                    {analysisError}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10">
+                    <RefreshCw className="w-3 h-3" /> Coba Analisis AI
+                  </Button>
+               </div>
             ) : analysis ? (
               <p className="text-foreground/90 leading-relaxed italic whitespace-pre-wrap">{analysis.context}</p>
             ) : (
                <div className="text-center py-6 space-y-4">
-                  <p className="text-sm text-muted-foreground italic">
-                    {analysisError || "Gagal memuat analisis AI secara otomatis."}
-                  </p>
+                  <p className="text-sm text-muted-foreground italic">Gagal memuat analisis AI.</p>
                   <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10">
                     <RefreshCw className="w-3 h-3" /> Coba Analisis AI
                   </Button>
@@ -291,7 +300,6 @@ export default function VerseDetailPage() {
         </Card>
       </div>
 
-      {/* Navigation Buttons */}
       <div className="fixed bottom-24 left-0 right-0 px-4 md:px-8 pointer-events-none z-40 hidden md:block">
         <div className="max-w-4xl mx-auto flex justify-between">
           <Button 

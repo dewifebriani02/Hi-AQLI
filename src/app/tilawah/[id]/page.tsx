@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Bookmark, AlertCircle, Loader2, Info } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipPortal,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface Word {
@@ -129,60 +136,73 @@ export default function SurahDetailPage() {
 
       {id !== "1" && id !== "9" && (
         <div className="text-center py-12">
-          <h2 className="text-3xl md:text-4xl font-arabic leading-relaxed text-foreground">
+          <h2 className="text-2xl md:text-3xl font-arabic leading-relaxed text-foreground">
             بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
           </h2>
         </div>
       )}
 
       <div className="flex flex-col divide-y divide-border/50">
-        {verses.map((verse) => (
-          <div key={verse.id} className="py-12 px-4 space-y-8 group">
-            <div className="flex items-center justify-between">
-              <Link 
-                href={`/tilawah/${id}/${verse.verse_number}`}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all cursor-pointer"
-                title="Klik untuk detail & tafsir AI"
+        <TooltipProvider delayDuration={100}>
+          {verses.map((verse) => (
+            <div key={verse.id} className="py-12 px-4 space-y-8 group">
+              <div className="flex items-center justify-between">
+                <Link 
+                  href={`/tilawah/${id}/${verse.verse_number}`}
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all cursor-pointer"
+                  title="Klik untuk detail & tafsir AI"
+                >
+                  {verse.verse_number}
+                </Link>
+                <div className="flex items-center gap-1">
+                   <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] hover:text-[#800000] gap-1">
+                    <Link href={`/tilawah/${id}/${verse.verse_number}`}>
+                      <Info className="h-3 w-3" /> DETAIL & TAFSIR
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                    <Play className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                    <Bookmark className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div 
+                className="flex flex-wrap justify-end gap-x-3 gap-y-4 w-full" 
+                dir="rtl"
               >
-                {verse.verse_number}
-              </Link>
-              <div className="flex items-center gap-1">
-                 <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] hover:text-[#800000] gap-1">
-                  <Link href={`/tilawah/${id}/${verse.verse_number}`}>
-                    <Info className="h-3 w-3" /> DETAIL & TAFSIR
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                  <Play className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                  <Bookmark className="h-4 w-4" />
-                </Button>
+                {verse.words?.map((word, wordIdx) => (
+                  <Tooltip key={wordIdx}>
+                    <TooltipTrigger asChild>
+                      <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-right text-foreground/90 hover:text-[#800000] transition-colors duration-200 cursor-help">
+                        {word.text_uthmani}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg">
+                        <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
+                      </TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
+                ))}
+              </div>
+
+              <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">
+                <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
+                {verse.translations && verse.translations.length > 0 ? (
+                  <div 
+                    className="text-base md:text-lg text-foreground/90 leading-relaxed" 
+                    dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
+                )}
               </div>
             </div>
-
-            <div 
-              className="flex flex-wrap justify-start gap-x-2 gap-y-4" 
-              dir="rtl"
-            >
-              <span className="text-3xl md:text-4xl font-arabic leading-[2] text-right w-full text-foreground/90 group-hover:text-[#800000] transition-colors duration-300">
-                {verse.text_uthmani}
-              </span>
-            </div>
-
-            <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">
-              <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
-              {verse.translations && verse.translations.length > 0 ? (
-                <div 
-                  className="text-base md:text-lg text-foreground/90 leading-relaxed" 
-                  dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
-              )}
-            </div>
-          </div>
-        ))}
+          ))}
+        </TooltipProvider>
       </div>
     </div>
   );
