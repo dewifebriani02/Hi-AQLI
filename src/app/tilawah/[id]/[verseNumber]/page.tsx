@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams } from "next/navigation";
@@ -13,11 +12,21 @@ import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+interface WordData {
+  id: number;
+  text_uthmani: string;
+  root: string | null;
+  translation: {
+    text: string;
+  };
+}
+
 interface VerseDetail {
   id: number;
   verse_number: number;
   text_uthmani: string;
   translations: { text: string }[];
+  words: WordData[];
 }
 
 export default function VerseDetailPage() {
@@ -44,7 +53,7 @@ export default function VerseDetailPage() {
       setAnalysis(result);
     } catch (e: any) {
       console.error(e);
-      setError(e.message || "Terjadi kesalahan saat memuat analisis.");
+      setError(e.message || "Terjadi kesalahan saat memuat analisis AI.");
     } finally {
       setAnalysisLoading(false);
     }
@@ -59,14 +68,14 @@ export default function VerseDetailPage() {
         const surahData = await surahRes.json();
         setSurahName(surahData.chapter.name_simple);
 
-        // Fetch verse detail
+        // Fetch verse detail including words and roots
         const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&translations=33&fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani,root&word_translation_language=id&translations=33&fields=text_uthmani`
         );
         const data = await res.json();
         setVerse(data.verse);
         
-        // Trigger AI Analysis
+        // Trigger AI Analysis for Tafsir & Context only
         if (data.verse) {
           fetchAiAnalysis(surahData.chapter.name_simple, parseInt(verseNumber), data.verse.text_uthmani);
         }
@@ -131,66 +140,60 @@ export default function VerseDetailPage() {
         </CardContent>
       </Card>
 
-      {error && (
-        <Alert variant="destructive" className="bg-destructive/5 border-destructive/20">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Gagal Memuat Analisis AI</AlertTitle>
-          <AlertDescription className="flex flex-col gap-3 mt-2">
-            <p>{error}</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-fit gap-2 border-destructive/20 hover:bg-destructive/10"
-              onClick={handleRetry}
-            >
-              <RefreshCw className="w-3 h-3" /> Coba Lagi
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-        {/* Word Breakdown */}
+        {/* Word Breakdown (From API) */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="border-b bg-muted/30">
             <CardTitle className="text-lg flex items-center gap-2 font-headline">
               <ListTree className="w-5 h-5 text-[#800000]" />
-              Penjabaran Kata & Akar Kata
+              Penjabaran Kata & Akar Kata (API Resmi)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {analysisLoading ? (
-               <div className="p-6 space-y-4">
-                 {[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
-               </div>
-            ) : analysis ? (
-              <div className="divide-y">
-                {analysis.wordBreakdown.map((item, idx) => (
-                  <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-2xl font-arabic text-[#800000]">{item.word}</span>
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">Akar: <span className="text-foreground font-arabic text-lg">{item.root}</span></span>
-                    </div>
-                    <div className="text-right sm:max-w-[60%]">
-                      <p className="text-sm font-medium">{item.meaning}</p>
-                    </div>
+            <div className="divide-y">
+              {verse.words?.filter(w => w.text_uthmani).map((word, idx) => (
+                <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-2xl font-arabic text-[#800000]">{word.text_uthmani}</span>
+                    {word.root && (
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">
+                        Akar: <span className="text-foreground font-arabic text-lg">{word.root}</span>
+                      </span>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground italic">
-                {error ? "Analisis tidak tersedia karena kesalahan sistem." : "Menunggu analisis AI..."}
-              </div>
-            )}
+                  <div className="text-right sm:max-w-[60%]">
+                    <p className="text-sm font-medium">{word.translation.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Tafsir Card */}
+        {error && (
+          <Alert variant="destructive" className="bg-destructive/5 border-destructive/20">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Gagal Memuat Analisis AI</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 mt-2">
+              <p>{error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-fit gap-2 border-destructive/20 hover:bg-destructive/10"
+                onClick={handleRetry}
+              >
+                <RefreshCw className="w-3 h-3" /> Coba Lagi
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Tafsir Card (From AI) */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white">
             <CardTitle className="text-lg flex items-center gap-2 font-headline">
               <BookOpen className="w-5 h-5" />
-              Tafsir Ringkas
+              Tafsir Ringkas (AI)
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
@@ -208,12 +211,12 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
-         {/* Lesson Card */}
+         {/* Lesson Card (From AI) */}
          <Card className="border-accent/20 shadow-sm bg-accent/5">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2 font-headline text-[#800000]">
               <BrainCircuit className="w-5 h-5" />
-              Pelajaran & Konteks
+              Pelajaran & Konteks (AI)
             </CardTitle>
           </CardHeader>
           <CardContent>

@@ -1,10 +1,9 @@
-
 'use server';
 
 /**
- * @fileOverview Flow untuk analisis mendalam ayat Al-Qur'an.
+ * @fileOverview Flow untuk analisis mendalam ayat Al-Qur'an (Tafsir dan Konteks).
  *
- * - analyzeVerse - Fungsi untuk menganalisis ayat (akar kata, tafsir, konteks).
+ * - analyzeVerse - Fungsi untuk menganalisis ayat (tafsir, konteks).
  */
 
 import {ai} from '@/ai/genkit';
@@ -18,11 +17,6 @@ const AnalyzeVerseInputSchema = z.object({
 export type AnalyzeVerseInput = z.infer<typeof AnalyzeVerseInputSchema>;
 
 const AnalyzeVerseOutputSchema = z.object({
-  wordBreakdown: z.array(z.object({
-    word: z.string(),
-    root: z.string().describe('Akar kata (root word) dalam bahasa Arab'),
-    meaning: z.string().describe('Arti kata secara mendalam dalam Bahasa Indonesia'),
-  })),
   tafsir: z.string().describe('Tafsir ringkas dan padat untuk ayat ini'),
   context: z.string().describe('Konteks atau pelajaran utama dari ayat ini'),
 });
@@ -56,16 +50,15 @@ const prompt = ai.definePrompt({
       },
     ],
   },
-  prompt: `Anda adalah seorang ahli tafsir dan bahasa Arab Al-Qur'an terkemuka.
+  prompt: `Anda adalah seorang ahli tafsir Al-Qur'an terkemuka.
 Berikan analisis mendalam untuk ayat berikut:
 Surah: {{{surahName}}}
 Ayat: {{{verseNumber}}}
 Teks: {{{verseText}}}
 
 Tugas Anda:
-1. Bedah kata demi kata: Identifikasi setiap kata dalam ayat tersebut. Sebutkan kata Arabnya, akar katanya (Root word), dan maknanya secara akurat dalam Bahasa Indonesia.
-2. Berikan tafsir ringkas: Jelaskan makna ayat tersebut secara padat namun mendalam agar mudah dipahami masyarakat Indonesia.
-3. Jelaskan pelajaran utama: Sebutkan hikmah, pelajaran praktis, atau konteks sejarah (Asbabun Nuzul) jika ada.
+1. Berikan tafsir ringkas: Jelaskan makna ayat tersebut secara padat namun mendalam agar mudah dipahami masyarakat Indonesia.
+2. Jelaskan pelajaran utama: Sebutkan hikmah, pelajaran praktis, atau konteks sejarah (Asbabun Nuzul) jika ada.
 
 Pastikan semua respons dalam Bahasa Indonesia yang santun, formal, dan akurat secara keilmuan Islam.`,
 });
