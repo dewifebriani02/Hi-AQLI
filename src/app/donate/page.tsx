@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { HeartHandshake } from "lucide-react";
 
 export default function DonatePage() {
-  const donationAmounts = [10, 25, 50, 100];
+  const donationAmounts = [10000, 25000, 50000, 100000];
 
   return (
     <div className="flex justify-center items-start pt-10">
@@ -14,16 +14,16 @@ export default function DonatePage() {
           <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
             <HeartHandshake className="h-8 w-8" />
           </div>
-          <CardTitle className="font-headline text-2xl">Dukung AQLI Companion</CardTitle>
+          <CardTitle className="font-headline text-2xl">Dukung Sahabat AQLI</CardTitle>
           <CardDescription>
-            Donasi Anda membantu kami memelihara dan meningkatkan platform ini untuk pelajar di seluruh dunia.
+            Donasi Anda membantu kami memelihara dan meningkatkan platform ini untuk pelajar di seluruh Indonesia.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {donationAmounts.map((amount) => (
-              <Button key={amount} variant="outline" className="h-12 text-lg font-semibold">
-                ${amount}
+              <Button key={amount} variant="outline" className="h-12 text-sm font-semibold">
+                Rp {amount.toLocaleString('id-ID')}
               </Button>
             ))}
           </div>
@@ -35,8 +35,8 @@ export default function DonatePage() {
           <div>
             <Label htmlFor="custom-amount" className="mb-2 block">Masukkan jumlah khusus</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-              <Input id="custom-amount" type="number" placeholder="Masukkan jumlah" className="pl-7" />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rp</span>
+              <Input id="custom-amount" type="number" placeholder="Contoh: 150000" className="pl-9" />
             </div>
           </div>
         </CardContent>
