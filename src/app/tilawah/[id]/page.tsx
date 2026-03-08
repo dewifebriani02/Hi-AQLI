@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 interface Word {
   id: number;
   text_uthmani: string;
+  text?: string;
   translation?: {
     text: string;
   };
@@ -59,10 +60,10 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // 2. Ambil Ayat dengan data kata-per-kata dan terjemahan Bahasa Indonesia (ID 33: Kemenag RI)
-        // Menambahkan parameter words=true dan fields=text_uthmani
+        // 2. Ambil Ayat dengan data kata-per-kata dan terjemahan Bahasa Indonesia
+        // Parameter word_fields=text_uthmani dan word_translation_language=id sangat penting
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&fields=text_uthmani&per_page=300`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani&per_page=300`
         );
         
         if (!verseRes.ok) throw new Error("Gagal mengambil data ayat.");
@@ -144,25 +145,25 @@ export default function SurahDetailPage() {
       )}
 
       <div className="flex flex-col divide-y divide-border/50">
-        {verses.map((verse) => (
-          <div key={verse.id} className="py-12 px-4 space-y-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border">
-                {verse.verse_number}
+        <TooltipProvider delayDuration={0}>
+          {verses.map((verse) => (
+            <div key={verse.id} className="py-12 px-4 space-y-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border">
+                  {verse.verse_number}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
+                    <Play className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
+                    <Bookmark className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
-                  <Play className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
-                  <Bookmark className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
 
-            {/* Area Teks Arab dengan Hover Maroon dan Tooltip */}
-            <div className="flex flex-wrap justify-end gap-x-3 gap-y-6" dir="rtl">
-              <TooltipProvider delayDuration={100}>
+              {/* Area Teks Arab dengan Hover Maroon dan Tooltip */}
+              <div className="flex flex-wrap justify-end gap-x-3 gap-y-6" dir="rtl">
                 {verse.words && verse.words.length > 0 ? (
                   verse.words.map((word) => (
                     <Tooltip key={word.id}>
@@ -170,14 +171,12 @@ export default function SurahDetailPage() {
                         <span 
                           className="text-4xl md:text-6xl font-arabic leading-[2.2] cursor-pointer hover:text-[#800000] transition-colors" 
                         >
-                          {word.text_uthmani}
+                          {word.text_uthmani || word.text || ""}
                         </span>
                       </TooltipTrigger>
-                      {word.translation && (
-                        <TooltipContent className="bg-[#800000] text-white font-semibold border-none shadow-lg">
-                          <p className="text-sm">{word.translation.text}</p>
-                        </TooltipContent>
-                      )}
+                      <TooltipContent className="bg-[#800000] text-white font-semibold border-none shadow-lg">
+                        <p className="text-sm">{word.translation?.text || "..."}</p>
+                      </TooltipContent>
                     </Tooltip>
                   ))
                 ) : (
@@ -185,23 +184,23 @@ export default function SurahDetailPage() {
                     {verse.text_uthmani}
                   </span>
                 )}
-              </TooltipProvider>
-            </div>
+              </div>
 
-            {/* Terjemahan Ayat (Kemenag RI) */}
-            <div className="text-left bg-muted/30 p-6 rounded-xl border-l-4 border-[#800000]">
-              <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
-              {verse.translations && verse.translations.length > 0 ? (
-                <div 
-                  className="text-base md:text-xl text-foreground/90 leading-relaxed" 
-                  dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
-              )}
+              {/* Terjemahan Ayat (Kemenag RI) */}
+              <div className="text-left bg-muted/30 p-6 rounded-xl border-l-4 border-[#800000]">
+                <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
+                {verse.translations && verse.translations.length > 0 ? (
+                  <div 
+                    className="text-base md:text-xl text-foreground/90 leading-relaxed" 
+                    dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </TooltipProvider>
       </div>
     </div>
   );
