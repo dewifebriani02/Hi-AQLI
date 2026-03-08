@@ -1,9 +1,9 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, Play, Share2, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,10 +42,10 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // Fetch Verses dengan teks Uthmani dan terjemahan Sabeeq Company Bahasa Indonesia (ID 158)
-        // Pastikan parameter 'translations' ada di URL
+        // Fetch Verses dengan teks Uthmani dan terjemahan Kemenag RI (ID 33) 
+        // ID 33 adalah standar Bahasa Indonesia yang paling akurat di Quran.com
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=false&translations=158&fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=false&translations=33&fields=text_uthmani`
         );
         const verseData = await verseRes.json();
         
@@ -134,12 +134,12 @@ export default function SurahDetailPage() {
               />
             </div>
 
-            {/* Terjemahan Sabeeq Company */}
-            <div className="text-left bg-muted/20 p-4 rounded-lg border-l-4 border-accent">
-              <p className="text-xs font-bold text-accent-foreground/60 mb-2 uppercase tracking-widest">Terjemahan</p>
+            {/* Terjemahan Bahasa Indonesia */}
+            <div className="text-left bg-muted/30 p-4 rounded-lg border-l-4 border-accent">
+              <p className="text-[10px] font-bold text-accent-foreground/60 mb-2 uppercase tracking-widest">Terjemahan Indonesia</p>
               {verse.translations && verse.translations.length > 0 ? (
                 <p 
-                  className="text-sm md:text-base text-muted-foreground leading-relaxed" 
+                  className="text-sm md:text-base text-foreground leading-relaxed font-body" 
                   dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
                 />
               ) : (
