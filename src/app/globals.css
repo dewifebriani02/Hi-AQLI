@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -32,7 +33,7 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
     --sidebar-background: 0 0% 9%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 51 100% 50%;
@@ -84,5 +85,16 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Custom Scrollbar Hide */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
