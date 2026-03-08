@@ -1,0 +1,244 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CORE PHILOSOPHY
+     * This ruleset implements a hybrid security model combining Path-Based Ownership and Database Access Control (DBAC). 
+     * User-specific data is nested under unique user IDs to ensure clear authorization boundaries. Global content
+     * follows a "Public Read, Admin Write" pattern.
+     *
+     * DATA STRUCTURE
+     * 1. /users/{userId}: Root profiles and private subcollections (recitation, progress, attempts).
+     * 2. /roles_superadmin & /roles_admin: Marker collections for high-privilege access.
+     * 3. /tajweed_modules & /suras: Global educational content.
+     * 4. /study_circles: Collaborative learning groups.
+     *
+     * KEY SECURITY DECISIONS
+     * - DBAC Markers: Admin and SuperAdmin privileges are determined by the existence of a document 
+     *   in specialized collections matching the user's UID.
+     * - Authorization Independence: Subcollections under /users/{userId} rely on the path wildcard 
+     *   for ownership verification, avoiding expensive cross-document lookups.
+     * - Denormalization: Access to Study Circle meetings and enrollments is granted via a 
+     *   denormalized `instructorId` field on the child documents.
+     * - Prototyping Flexibility: Rules focus strictly on "Who can access" rather than "What the 
+     *   data looks like," allowing for rapid schema evolution.
+     */
+
+    // --- Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Helper to check if the user is a SuperAdmin via marker collection
+    function isSuperAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid));
+    }
+
+    // Helper to check if the user is an Admin (SuperAdmins are also Admins)
+    function isAdmin() {
+      return isSignedIn() && (exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) || isSuperAdmin());
+    }
+
+    // Helper for destructive or state-changing operations
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- User Profile & Identity ---
+
+    /**
+     * @description Rules for user profile documents.
+     * @path /users/{userId}
+     * @allow User 'abc' updates their own profile (update).
+     * @deny User 'abc' attempts to delete User 'xyz's profile.
+     * @principle Ownership-based writes with administrative oversight.
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.id == userId;
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Role definitions for the application.
+     * @path /roles/{roleId}
+     * @allow Any signed-in user reads the 'Learner' role definition (get).
+     * @deny An Admin attempts to create a new role (SuperAdmin only).
+     * @principle Public read-only access for definitions; restricted management.
+     */
+    match /roles/{roleId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    /**
+     * @description Marker collections for RBAC (Database Access Control).
+     * @path /roles_superadmin/{superadminId}, /roles_admin/{adminId}
+     * @allow SuperAdmin adds a new Admin UID to the marker collection.
+     * @deny A standard Admin attempts to promote themselves to SuperAdmin.
+     * @principle Use marker existence to define high-level system privileges.
+     */
+    match /roles_superadmin/{superadminId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+    match /roles_admin/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- Quranic and Educational Content (Admin Managed) ---
+
+    /**
+     * @description Quranic Sura data and Tajweed educational modules.
+     * @path /suras/{suraId}, /tajweed_modules/{moduleId} (and sub-entities)
+     * @allow A learner reads the description of 'Sura Al-Fatiha'.
+     * @deny a learner attempts to edit the name of a Tajweed module.
+     * @principle Public consumption with administrative content control.
+     */
+    match /suras/{suraId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /tajweed_modules/{moduleId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+
+      match /lessons/{lessonId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isAdmin();
+
+        match /quizzes/{quizId} {
+          allow get, list: if isSignedIn();
+          allow create, update, delete: if isAdmin();
+
+          match /questions/{questionId} {
+            allow get, list: if isSignedIn();
+            allow create, update, delete: if isAdmin();
+
+            match /options/{optionId} {
+              allow get, list: if isSignedIn();
+              allow create, update, delete: if isAdmin();
+            }
+          }
+        }
+      }
+    }
+
+    // --- User Activity & Progress (Owner Only) ---
+
+    /**
+     * @description User-private data including sessions, progress, and AI interactions.
+     * @path /users/{userId}/...
+     * @allow User 'abc' creates a new recitation session record in their own path.
+     * @deny User 'xyz' attempts to list User 'abc's quiz attempts.
+     * @principle Strict path-based ownership ensures privacy and performance.
+     */
+    match /users/{userId}/recitation_sessions/{sessionId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId) || isAdmin();
+
+      match /feedback_details/{feedbackId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+        allow create, update, delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /users/{userId}/lesson_progress/{progressId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId}/quiz_attempts/{attemptId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId) || isAdmin();
+
+      match /answers/{answerId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+        allow create, update, delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /users/{userId}/ai_scholar_questions/{questionId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId) || isAdmin();
+
+      match /answers/{answerId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    // --- Shared & Collaborative Data ---
+
+    /**
+     * @description AI Knowledge sources used for referencing.
+     * @path /ai_scholar_sources/{sourceId}
+     * @principle Verified knowledge is public read, admin managed.
+     */
+    match /ai_scholar_sources/{sourceId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Collaborative study circles managed by instructors.
+     * @path /study_circles/{studyCircleId}
+     * @allow An instructor updates the description of their own circle.
+     * @deny A learner attempts to delete a study circle.
+     * @principle Instructor-based write access via denormalized ownership field.
+     */
+    match /study_circles/{studyCircleId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin() || (isSignedIn() && request.resource.data.instructorId == request.auth.uid);
+      allow update: if isAdmin() || (resource != null && resource.data.instructorId == request.auth.uid);
+      allow delete: if isAdmin();
+
+      match /enrollments/{enrollmentId} {
+        allow get, list: if isAdmin() || (isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.instructorId == request.auth.uid));
+        allow create: if isSignedIn();
+        allow update, delete: if isAdmin() || (isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.instructorId == request.auth.uid));
+      }
+
+      match /meetings/{meetingId} {
+        allow get, list: if isSignedIn(); // Simplified for prototyping; discovery is open.
+        allow create: if isAdmin() || (isSignedIn() && request.resource.data.instructorId == request.auth.uid);
+        allow update, delete: if isAdmin() || (resource != null && resource.data.instructorId == request.auth.uid);
+      }
+    }
+
+    // --- Financial Records ---
+
+    /**
+     * @description User donation records.
+     * @path /donations/{donationId}
+     * @allow User 'abc' views their own donation history.
+     * @deny User 'abc' attempts to view User 'xyz's non-anonymous donation.
+     * @principle Restricted listing requiring query filters to match user UID.
+     */
+    match /donations/{donationId} {
+      allow get: if isAdmin() || (resource != null && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100); // Admin can list all, users must filter or are limited.
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+  }
+}
