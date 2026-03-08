@@ -60,8 +60,9 @@ export default function SurahDetailPage() {
         setSurah(infoData.chapter);
 
         // 2. Ambil Ayat dengan data kata-per-kata dan terjemahan Bahasa Indonesia
+        // Menggunakan parameter words=true untuk mendapatkan data per kata
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&translations=33&fields=text_uthmani&per_page=300`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&fields=text_uthmani&per_page=300`
         );
         
         if (!verseRes.ok) throw new Error("Gagal mengambil data ayat.");
