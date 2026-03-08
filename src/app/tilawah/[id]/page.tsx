@@ -58,16 +58,15 @@ export default function SurahDetailPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch Surah Info
+        // 1. Ambil Info Surat
         const infoRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         if (!infoRes.ok) throw new Error("Gagal mengambil informasi surat.");
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // Fetch Verses dengan data kata-demi-kata (words=true)
-        // Kita mengambil semua ayat sekaligus (per_page=all) untuk kemudahan navigasi
+        // 2. Ambil Ayat (dengan text_uthmani eksplisit dan limit per_page yang tinggi)
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&word_translation_language=id&per_page=all`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&word_translation_language=id&fields=text_uthmani&per_page=300`
         );
         
         if (!verseRes.ok) throw new Error("Gagal mengambil data ayat.");
@@ -80,6 +79,7 @@ export default function SurahDetailPage() {
             throw new Error("Data ayat tidak ditemukan.");
         }
       } catch (err: any) {
+        console.error("Fetch Error:", err);
         setError(err.message || "Terjadi kesalahan saat memuat data.");
       } finally {
         setLoading(false);
@@ -186,7 +186,9 @@ export default function SurahDetailPage() {
                     </Tooltip>
                   ))
                 ) : (
-                  <span className="text-4xl md:text-5xl font-arabic leading-[1.8]">{verse.text_uthmani}</span>
+                  <span className="text-4xl md:text-5xl font-arabic leading-[1.8] text-right w-full">
+                    {verse.text_uthmani}
+                  </span>
                 )}
               </TooltipProvider>
             </div>
@@ -195,7 +197,7 @@ export default function SurahDetailPage() {
             <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-accent shadow-sm">
               <p className="text-[10px] font-bold text-accent-foreground/50 mb-3 uppercase tracking-[0.2em]">Terjemahan Kemenag RI</p>
               {verse.translations && verse.translations.length > 0 ? (
-                <p 
+                <div 
                   className="text-base md:text-lg text-foreground leading-relaxed font-body" 
                   dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
                 />
