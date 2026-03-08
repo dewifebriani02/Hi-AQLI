@@ -10,13 +10,13 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
+  TooltipPortal,
 } from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Word {
   id: number;
   text_uthmani: string;
-  text?: string;
   translation?: {
     text: string;
   };
@@ -54,14 +54,11 @@ export default function SurahDetailPage() {
         setLoading(true);
         setError(null);
 
-        // 1. Ambil Info Surat
         const infoRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         if (!infoRes.ok) throw new Error("Gagal mengambil informasi surat.");
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // 2. Ambil Ayat dengan data kata-per-kata dan terjemahan Bahasa Indonesia
-        // Parameter word_fields=text_uthmani dan word_translation_language=id sangat penting
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani&per_page=300`
         );
@@ -121,77 +118,84 @@ export default function SurahDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
-      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
-        <Button asChild variant="ghost" size="icon" className="h-9 w-9">
-          <Link href="/tilawah">
-            <ChevronLeft className="h-6 w-6" />
-          </Link>
-        </Button>
-        <div className="flex flex-col">
-          <h1 className="text-lg font-bold font-headline">{surah.id}. {surah.name_simple}</h1>
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
-            {surah.translated_name.name} • {surah.verses_count} Ayat
-          </p>
+    <TooltipProvider delayDuration={0}>
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
+        <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
+          <Button asChild variant="ghost" size="icon" className="h-9 w-9">
+            <Link href="/tilawah">
+              <ChevronLeft className="h-6 w-6" />
+            </Link>
+          </Button>
+          <div className="flex flex-col">
+            <h1 className="text-lg font-bold font-headline">{surah.id}. {surah.name_simple}</h1>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+              {surah.translated_name.name} • {surah.verses_count} Ayat
+            </p>
+          </div>
         </div>
-      </div>
 
-      {id !== "1" && id !== "9" && (
-        <div className="text-center py-12">
-          <h2 className="text-4xl md:text-5xl font-arabic leading-relaxed text-foreground">
-            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-          </h2>
-        </div>
-      )}
+        {id !== "1" && id !== "9" && (
+          <div className="text-center py-12">
+            <h2 className="text-3xl md:text-4xl font-arabic leading-relaxed text-foreground">
+              بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+            </h2>
+          </div>
+        )}
 
-      <div className="flex flex-col divide-y divide-border/50">
-        <TooltipProvider delayDuration={0}>
+        <div className="flex flex-col divide-y divide-border/50">
           {verses.map((verse) => (
-            <div key={verse.id} className="py-12 px-4 space-y-10">
+            <div key={verse.id} className="py-12 px-4 space-y-8">
               <div className="flex items-center justify-between">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-foreground text-xs font-bold border">
                   {verse.verse_number}
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                     <Play className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                     <Bookmark className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
-              {/* Area Teks Arab dengan Hover Maroon dan Tooltip */}
-              <div className="flex flex-wrap justify-end gap-x-3 gap-y-6" dir="rtl">
+              {/* Area Teks Arab: Ukuran 3xl/4xl, Rata Kanan (start in RTL) */}
+              <div 
+                className="flex flex-wrap justify-start gap-x-2 gap-y-4" 
+                dir="rtl"
+              >
                 {verse.words && verse.words.length > 0 ? (
                   verse.words.map((word) => (
                     <Tooltip key={word.id}>
                       <TooltipTrigger asChild>
                         <span 
-                          className="text-4xl md:text-6xl font-arabic leading-[2.2] cursor-pointer hover:text-[#800000] transition-colors" 
+                          className="text-3xl md:text-4xl font-arabic leading-[1.8] cursor-pointer hover:text-[#800000] transition-colors" 
                         >
-                          {word.text_uthmani || word.text || ""}
+                          {word.text_uthmani}
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-[#800000] text-white font-semibold border-none shadow-lg">
-                        <p className="text-sm">{word.translation?.text || "..."}</p>
-                      </TooltipContent>
+                      <TooltipPortal>
+                        <TooltipContent 
+                          className="bg-[#800000] text-white font-semibold border-none shadow-lg px-3 py-1.5"
+                        >
+                          <p className="text-xs">{word.translation?.text || "..."}</p>
+                        </TooltipContent>
+                      </TooltipPortal>
                     </Tooltip>
                   ))
                 ) : (
-                  <span className="text-4xl md:text-6xl font-arabic leading-[2.2] text-right w-full">
+                  <span className="text-3xl md:text-4xl font-arabic leading-[1.8] text-right w-full">
                     {verse.text_uthmani}
                   </span>
                 )}
               </div>
 
               {/* Terjemahan Ayat (Kemenag RI) */}
-              <div className="text-left bg-muted/30 p-6 rounded-xl border-l-4 border-[#800000]">
+              <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">
                 <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
                 {verse.translations && verse.translations.length > 0 ? (
                   <div 
-                    className="text-base md:text-xl text-foreground/90 leading-relaxed" 
+                    className="text-base md:text-lg text-foreground/90 leading-relaxed" 
                     dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
                   />
                 ) : (
@@ -200,8 +204,8 @@ export default function SurahDetailPage() {
               </div>
             </div>
           ))}
-        </TooltipProvider>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
