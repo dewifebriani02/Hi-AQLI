@@ -1,5 +1,4 @@
-
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -10,6 +9,22 @@ import { BottomNav } from '@/components/bottom-nav';
 export const metadata: Metadata = {
   title: 'Sahabat AQLI',
   description: 'Pendamping Anda menuju keunggulan Al-Qur\'an.',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Sahabat AQLI',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#800000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -23,6 +38,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
+        <link rel="manifest" href="/manifest.webmanifest" />
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
         <SidebarProvider>
