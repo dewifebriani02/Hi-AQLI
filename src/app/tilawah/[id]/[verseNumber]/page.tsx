@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, AlertCircle, GraduationCap } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, AlertCircle, GraduationCap, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,17 +32,50 @@ interface VerseDetail {
 
 export default function VerseDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
+  const currentVerseNum = parseInt(verseNumber);
   
   const [verse, setVerse] = useState<VerseDetail | null>(null);
   const [surahName, setSurahName] = useState("");
+  const [totalVerses, setTotalVerses] = useState(0);
   const [apiTafsir, setApiTafsir] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Swipe Detection
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > 70;
+    const isRightSwipe = distance < -70;
+
+    if (isLeftSwipe && currentVerseNum < totalVerses) {
+      // Swipe Left -> Next Verse
+      router.push(`/tilawah/${id}/${currentVerseNum + 1}`);
+    } else if (isRightSwipe && currentVerseNum > 1) {
+      // Swipe Right -> Prev Verse
+      router.push(`/tilawah/${id}/${currentVerseNum - 1}`);
+    }
+
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
 
   const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
     setAnalysisLoading(true);
@@ -69,11 +102,13 @@ export default function VerseDetailPage() {
       try {
         setLoading(true);
         setError(null);
+        setAnalysis(null);
 
         const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         if (!surahRes.ok) throw new Error("Gagal memuat nama surat.");
         const surahData = await surahRes.json();
         setSurahName(surahData.chapter.name_simple);
+        setTotalVerses(surahData.chapter.verses_count);
 
         const res = await fetch(
           `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani,root&word_translation_language=id&translations=33&fields=text_uthmani`
@@ -141,7 +176,12 @@ export default function VerseDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-24 px-4 sm:px-0">
+    <div 
+      className="flex flex-col gap-8 max-w-4xl mx-auto pb-32 px-4 sm:px-0 touch-pan-y"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
         <Button asChild variant="ghost" size="icon">
           <Link href={`/tilawah/${id}`}>
@@ -180,10 +220,10 @@ export default function VerseDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y">
+            <div className="divide-y" dir="rtl">
               {verse.words?.filter(w => w.text_uthmani).map((word, idx) => (
-                <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex flex-col gap-1">
+                <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors" dir="ltr">
+                  <div className="flex flex-col gap-1 text-left">
                     <span className="text-2xl font-arabic text-[#800000]">{word.text_uthmani}</span>
                     {word.root && (
                       <span className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">
@@ -249,6 +289,50 @@ export default function VerseDetailPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="fixed bottom-24 left-0 right-0 px-4 md:px-8 pointer-events-none z-40 hidden md:block">
+        <div className="max-w-4xl mx-auto flex justify-between">
+          <Button 
+            variant="secondary" 
+            className="pointer-events-auto shadow-lg border border-[#800000]/20 gap-2 bg-white/90 backdrop-blur"
+            disabled={currentVerseNum <= 1}
+            onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}
+          >
+            <ChevronLeft className="w-4 h-4" /> Ayat Sebelumnya
+          </Button>
+          <Button 
+            variant="secondary" 
+            className="pointer-events-auto shadow-lg border border-[#800000]/20 gap-2 bg-white/90 backdrop-blur"
+            disabled={currentVerseNum >= totalVerses}
+            onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
+          >
+            Ayat Selanjutnya <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="fixed bottom-20 md:hidden left-0 right-0 flex justify-between p-2 bg-background/80 backdrop-blur border-t z-50">
+        <Button 
+          variant="ghost" 
+          className="flex-1 gap-1 text-[#800000]"
+          disabled={currentVerseNum <= 1}
+          onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}
+        >
+          <ChevronLeft className="w-4 h-4" /> Prev
+        </Button>
+        <div className="flex-1 flex items-center justify-center font-bold text-sm text-muted-foreground">
+          {currentVerseNum} / {totalVerses}
+        </div>
+        <Button 
+          variant="ghost" 
+          className="flex-1 gap-1 text-[#800000]"
+          disabled={currentVerseNum >= totalVerses}
+          onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
+        >
+          Next <ChevronRight className="w-4 h-4" />
+        </Button>
       </div>
     </div>
   );
