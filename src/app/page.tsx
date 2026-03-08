@@ -24,7 +24,8 @@ import {
   Youtube,
   Globe,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/firebase";
@@ -46,12 +47,19 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
       {/* User Greeting & Rank */}
-      <div className="flex items-center justify-between mt-2">
-        <h1 className="text-xl font-bold font-headline">
-          Salam, {user?.displayName?.split(' ')[0] || 'Sahabat'}!
-        </h1>
-        <Badge className="bg-black text-white gap-1 px-3 py-1 text-[10px] font-bold uppercase tracking-wider">
-          ALIM <div className="w-2 h-2 rounded-full bg-emerald-500" />
+      <div className="flex items-start justify-between mt-2 px-1">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[#800000] mb-1">
+            <Sparkles className="w-4 h-4 fill-current" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Semoga harimu penuh berkah</span>
+          </div>
+          <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight">
+            Assalamu'alaikum,<br />
+            {user?.displayName?.split(' ')[0] || 'Sahabat AQLI'}!
+          </h1>
+        </div>
+        <Badge className="bg-black text-white gap-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-black/10">
+          ALIM <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
         </Badge>
       </div>
 
@@ -123,7 +131,7 @@ export default function DashboardPage() {
             <Button variant="ghost" className="rounded-none h-12 gap-2 text-xs font-bold text-muted-foreground">
               <BarChart3 className="w-4 h-4" /> Insight
             </Button>
-            <Button asChild variant="ghost" className="rounded-none h-12 gap-2 text-xs font-bold">
+            <Button asChild variant="ghost" className="rounded-none h-12 gap-2 text-xs font-bold text-[#800000]">
               <Link href="/tilawah">
                 Lanjut Membaca <ChevronRight className="w-4 h-4" />
               </Link>
