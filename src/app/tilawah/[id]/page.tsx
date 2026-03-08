@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams } from "next/navigation";
@@ -7,14 +6,30 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Share2, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Translation {
   text: string;
 }
 
+interface Word {
+  id: number;
+  text_uthmani: string;
+  translation: {
+    text: string;
+  };
+  char_type_name: string;
+}
+
 interface Verse {
   verse_number: number;
   text_uthmani: string;
+  words: Word[];
   translations: Translation[];
 }
 
@@ -42,10 +57,9 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // Fetch Verses dengan teks Uthmani dan terjemahan Kemenag RI (ID 33) 
-        // ID 33 adalah standar Bahasa Indonesia yang paling akurat di Quran.com
+        // Fetch Verses with Uthmani text, words (for word-by-word), and Kemenag translation (ID 33)
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=false&translations=33&fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&fields=text_uthmani`
         );
         const verseData = await verseRes.json();
         
@@ -105,49 +119,63 @@ export default function SurahDetailPage() {
 
       {/* Daftar Ayat */}
       <div className="flex flex-col divide-y divide-muted/50">
-        {verses.map((verse) => (
-          <div key={verse.verse_number} className="py-8 px-4 space-y-8">
-            {/* Action Bar Ayat */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-primary/20 text-primary text-[10px] font-bold">
-                {verse.verse_number}
+        <TooltipProvider>
+          {verses.map((verse) => (
+            <div key={verse.verse_number} className="py-8 px-4 space-y-8">
+              {/* Action Bar Ayat */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-primary/20 text-primary text-[10px] font-bold">
+                  {verse.verse_number}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                    <Play className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                    <Bookmark className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                  <Play className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                  <Bookmark className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                  <Share2 className="h-4 w-4" />
-                </Button>
+
+              {/* Teks Arab dengan Word-by-Word Tooltip */}
+              <div className="text-right flex flex-wrap flex-row-reverse justify-start gap-x-2 gap-y-4">
+                {verse.words.map((word) => (
+                  <Tooltip key={word.id}>
+                    <TooltipTrigger asChild>
+                      <span 
+                        className="text-3xl md:text-4xl font-arabic leading-relaxed cursor-pointer hover:text-accent transition-colors duration-200" 
+                        dir="rtl"
+                      >
+                        {word.text_uthmani}
+                      </span>
+                    </TooltipTrigger>
+                    {word.char_type_name === "word" && (
+                      <TooltipContent className="bg-accent text-accent-foreground border-none font-medium">
+                        <p>{word.translation.text}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                ))}
+              </div>
+
+              {/* Terjemahan Bahasa Indonesia */}
+              <div className="text-left bg-muted/30 p-4 rounded-lg border-l-4 border-accent">
+                <p className="text-[10px] font-bold text-accent-foreground/60 mb-2 uppercase tracking-widest">Terjemahan Indonesia</p>
+                {verse.translations && verse.translations.length > 0 ? (
+                  <p 
+                    className="text-sm md:text-base text-foreground leading-relaxed font-body" 
+                    dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
+                )}
               </div>
             </div>
-
-            {/* Teks Arab */}
-            <div className="text-right">
-              <p 
-                className="text-3xl md:text-4xl font-arabic leading-[2.5] md:leading-[2.8] tracking-wide text-foreground" 
-                dir="rtl"
-                dangerouslySetInnerHTML={{ __html: verse.text_uthmani }}
-              />
-            </div>
-
-            {/* Terjemahan Bahasa Indonesia */}
-            <div className="text-left bg-muted/30 p-4 rounded-lg border-l-4 border-accent">
-              <p className="text-[10px] font-bold text-accent-foreground/60 mb-2 uppercase tracking-widest">Terjemahan Indonesia</p>
-              {verse.translations && verse.translations.length > 0 ? (
-                <p 
-                  className="text-sm md:text-base text-foreground leading-relaxed font-body" 
-                  dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
-              )}
-            </div>
-          </div>
-        ))}
+          ))}
+        </TooltipProvider>
       </div>
     </div>
   );
