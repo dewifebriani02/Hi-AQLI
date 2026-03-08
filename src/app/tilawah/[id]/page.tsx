@@ -65,8 +65,9 @@ export default function SurahDetailPage() {
         setSurah(infoData.chapter);
 
         // Fetch Verses dengan data kata-demi-kata (words=true)
+        // Kita mengambil semua ayat sekaligus (per_page=all) untuk kemudahan navigasi
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?words=true&translations=33&word_translation_language=id&fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&word_translation_language=id&per_page=all`
         );
         
         if (!verseRes.ok) throw new Error("Gagal mengambil data ayat.");
@@ -79,7 +80,6 @@ export default function SurahDetailPage() {
             throw new Error("Data ayat tidak ditemukan.");
         }
       } catch (err: any) {
-        console.error("Fetch Error:", err);
         setError(err.message || "Terjadi kesalahan saat memuat data.");
       } finally {
         setLoading(false);
