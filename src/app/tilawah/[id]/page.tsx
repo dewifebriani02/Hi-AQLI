@@ -8,10 +8,14 @@ import { ChevronLeft, Play, Share2, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface Translation {
+  text: string;
+}
+
 interface Verse {
   verse_number: number;
   text_uthmani: string;
-  translations: { text: string }[];
+  translations: Translation[];
 }
 
 interface SurahInfo {
@@ -32,30 +36,37 @@ export default function SurahDetailPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch Surah Info dalam Bahasa Indonesia
+        setLoading(true);
+        // Fetch Surah Info
         const infoRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
         // Fetch Verses dengan teks Uthmani dan terjemahan Sabeeq Company Bahasa Indonesia (ID 158)
+        // Pastikan parameter 'translations' ada di URL
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=false&translations=158&fields=text_uthmani`
         );
         const verseData = await verseRes.json();
-        setVerses(verseData.verses);
+        
+        if (verseData && verseData.verses) {
+            setVerses(verseData.verses);
+        }
       } catch (error) {
         console.error("Gagal mengambil data ayat:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    if (id) {
+        fetchData();
+    }
   }, [id]);
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 max-w-4xl mx-auto py-10">
-        <Skeleton className="h-12 w-48 mb-4" />
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto py-6 px-4">
+        <Skeleton className="h-10 w-48 mb-4" />
         <Skeleton className="h-32 w-full mb-6" />
         <div className="space-y-8">
           {[...Array(5)].map((_, i) => (
@@ -69,69 +80,73 @@ export default function SurahDetailPage() {
   if (!surah) return <div className="p-8 text-center">Surat tidak ditemukan.</div>;
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-10">
-      {/* Header */}
-      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-20 py-2 border-b">
-        <Button asChild variant="ghost" size="icon">
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24 md:pb-10">
+      {/* Header Navigasi */}
+      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
+        <Button asChild variant="ghost" size="icon" className="h-8 w-8">
           <Link href="/tilawah">
             <ChevronLeft className="h-6 w-6" />
           </Link>
         </Button>
         <div className="flex flex-col">
-          <h1 className="text-xl font-bold font-headline">{surah.name_simple}</h1>
-          <p className="text-xs text-muted-foreground">{surah.translated_name.name}</p>
+          <h1 className="text-xl font-bold font-headline">{surah.id}. {surah.name_simple}</h1>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            {surah.translated_name.name} • {surah.verses_count} Ayat
+          </p>
         </div>
       </div>
 
-      {/* Bismillah Banner (Kecuali At-Tawbah dan Al-Fatihah yang sudah punya di ayat pertama) */}
+      {/* Bismillah Banner */}
       {id !== "1" && id !== "9" && (
-        <div className="text-center py-12">
-          <h2 className="text-4xl font-arabic leading-relaxed">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</h2>
+        <div className="text-center py-10">
+          <h2 className="text-3xl font-arabic leading-relaxed text-foreground">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</h2>
         </div>
       )}
 
-      {/* Verses List */}
-      <div className="flex flex-col gap-8">
+      {/* Daftar Ayat */}
+      <div className="flex flex-col divide-y divide-muted/50">
         {verses.map((verse) => (
-          <Card key={verse.verse_number} className="border-none shadow-none bg-transparent">
-            <CardContent className="p-0 space-y-6">
-              {/* Verse Actions & Number */}
-              <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                  {verse.verse_number}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <Play className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                </div>
+          <div key={verse.verse_number} className="py-8 px-4 space-y-8">
+            {/* Action Bar Ayat */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-primary/20 text-primary text-[10px] font-bold">
+                {verse.verse_number}
               </div>
-
-              {/* Arabic Text */}
-              <div className="text-right py-2">
-                <p 
-                  className="text-3xl font-arabic leading-[2.5] tracking-wide" 
-                  dir="rtl"
-                  dangerouslySetInnerHTML={{ __html: verse.text_uthmani }}
-                />
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                  <Play className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                  <Bookmark className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                  <Share2 className="h-4 w-4" />
+                </Button>
               </div>
+            </div>
 
-              {/* Translation (Sabeeq Company ID 158) */}
-              <div className="text-left pb-4">
+            {/* Teks Arab */}
+            <div className="text-right">
+              <p 
+                className="text-3xl md:text-4xl font-arabic leading-[2.5] md:leading-[2.8] tracking-wide text-foreground" 
+                dir="rtl"
+                dangerouslySetInnerHTML={{ __html: verse.text_uthmani }}
+              />
+            </div>
+
+            {/* Terjemahan Sabeeq Company */}
+            <div className="text-left bg-muted/20 p-4 rounded-lg border-l-4 border-accent">
+              <p className="text-xs font-bold text-accent-foreground/60 mb-2 uppercase tracking-widest">Terjemahan</p>
+              {verse.translations && verse.translations.length > 0 ? (
                 <p 
-                  className="text-sm text-muted-foreground leading-relaxed italic" 
+                  className="text-sm md:text-base text-muted-foreground leading-relaxed" 
                   dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
                 />
-              </div>
-              <div className="border-b border-muted/50 w-full" />
-            </CardContent>
-          </Card>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Terjemahan tidak tersedia.</p>
+              )}
+            </div>
+          </div>
         ))}
       </div>
     </div>
