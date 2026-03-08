@@ -23,18 +23,18 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
-      <body className={cn('font-body antialiased')}>
+      <body className={cn('font-body antialiased min-h-screen bg-background')}>
         <SidebarProvider>
           <div className="relative flex min-h-screen w-full">
             <AppSidebar />
-            <SidebarInset className="w-full">
-               <div className="relative flex flex-col h-full w-full pb-16 md:pb-0">
-                <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
+            <SidebarInset className="w-full flex flex-col">
+               <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
+                <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4 md:hidden">
                    <SidebarTrigger />
                    <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight">
                      AQLI DIGITAL
                    </div>
-                   <div className="w-8" /> {/* Spacer untuk menyeimbangkan layout */}
+                   <div className="w-8" />
                 </header>
                 <main className="p-4 sm:p-6 lg:p-8 flex-1">
                   {children}
@@ -42,9 +42,9 @@ export default function RootLayout({
               </div>
             </SidebarInset>
           </div>
+          <BottomNav />
+          <Toaster />
         </SidebarProvider>
-        <BottomNav />
-        <Toaster />
       </body>
     </html>
   );
