@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
@@ -59,9 +60,7 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // 2. Ambil Ayat (Parameter yang diperbaiki untuk memastikan teks Arab muncul)
-        // word_fields=text_uthmani sangat penting untuk rendering per-kata
-        // fields=text_uthmani adalah fallback untuk rendering ayat utuh
+        // 2. Ambil Ayat dengan data kata-per-kata
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&translations=33&fields=text_uthmani&per_page=300`
         );
@@ -162,20 +161,20 @@ export default function SurahDetailPage() {
             </div>
 
             <div className="flex flex-wrap justify-end gap-x-3 gap-y-6" dir="rtl">
-              <TooltipProvider>
+              <TooltipProvider delayDuration={100}>
                 {verse.words && verse.words.length > 0 ? (
                   verse.words.map((word) => (
-                    <Tooltip key={word.id} delayDuration={100}>
+                    <Tooltip key={word.id}>
                       <TooltipTrigger asChild>
                         <span 
-                          className="text-4xl md:text-6xl font-arabic leading-[2.2] cursor-pointer hover:text-accent transition-colors" 
+                          className="text-4xl md:text-6xl font-arabic leading-[2.2] cursor-pointer hover:text-[#800000] transition-colors" 
                         >
                           {word.text_uthmani}
                         </span>
                       </TooltipTrigger>
                       {word.translation && (
-                        <TooltipContent className="bg-accent text-accent-foreground font-semibold">
-                          <p>{word.translation.text}</p>
+                        <TooltipContent className="bg-[#800000] text-white font-semibold border-none shadow-lg">
+                          <p className="text-sm">{word.translation.text}</p>
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -188,8 +187,8 @@ export default function SurahDetailPage() {
               </TooltipProvider>
             </div>
 
-            <div className="text-left bg-muted/30 p-6 rounded-xl border-l-4 border-accent">
-              <p className="text-[10px] font-bold text-accent mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
+            <div className="text-left bg-muted/30 p-6 rounded-xl border-l-4 border-[#800000]">
+              <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
               {verse.translations && verse.translations.length > 0 ? (
                 <div 
                   className="text-base md:text-xl text-foreground/90 leading-relaxed" 
