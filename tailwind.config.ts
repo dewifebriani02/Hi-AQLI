@@ -12,6 +12,7 @@ export default {
       fontFamily: {
         body: ['Roboto', 'sans-serif'],
         headline: ['Roboto', 'sans-serif'],
+        arabic: ['Amiri', 'serif'],
         code: ['monospace'],
       },
       colors: {

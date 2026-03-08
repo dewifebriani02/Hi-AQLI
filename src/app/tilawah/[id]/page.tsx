@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams } from "next/navigation";
@@ -65,8 +64,7 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // Fetch Verses
-        // Menggunakan translations=33 (Kemenag RI) dan word_translation_language=id
+        // Fetch Verses dengan data kata-demi-kata (words=true)
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?words=true&translations=33&word_translation_language=id&fields=text_uthmani`
         );
@@ -78,7 +76,7 @@ export default function SurahDetailPage() {
         if (verseData && verseData.verses && verseData.verses.length > 0) {
             setVerses(verseData.verses);
         } else {
-            throw new Error("Data ayat kosong atau tidak ditemukan.");
+            throw new Error("Data ayat tidak ditemukan.");
         }
       } catch (err: any) {
         console.error("Fetch Error:", err);
@@ -141,7 +139,7 @@ export default function SurahDetailPage() {
       {/* Bismillah Banner */}
       {id !== "1" && id !== "9" && (
         <div className="text-center py-10">
-          <h2 className="text-3xl font-arabic leading-relaxed text-foreground">بِسْمِ اللَّهِ الرَّحْمَٰنِ الر·حِيمِ</h2>
+          <h2 className="text-4xl font-arabic leading-relaxed text-foreground">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</h2>
         </div>
       )}
 
@@ -168,25 +166,28 @@ export default function SurahDetailPage() {
             </div>
 
             {/* Teks Arab dengan Word-by-Word Tooltip */}
-            <div className="text-right flex flex-wrap flex-row-reverse justify-start gap-x-3 gap-y-6">
+            <div className="flex flex-wrap justify-end gap-x-2 gap-y-6" dir="rtl">
               <TooltipProvider>
-                {verse.words && verse.words.map((word) => (
-                  <Tooltip key={word.id}>
-                    <TooltipTrigger asChild>
-                      <span 
-                        className="text-4xl md:text-5xl font-arabic leading-[1.8] cursor-pointer hover:text-accent transition-colors duration-200" 
-                        dir="rtl"
-                      >
-                        {word.text_uthmani}
-                      </span>
-                    </TooltipTrigger>
-                    {word.char_type_name === "word" && (
-                      <TooltipContent className="bg-accent text-accent-foreground border-none font-medium">
-                        <p>{word.translation?.text || "..."}</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                ))}
+                {verse.words && verse.words.length > 0 ? (
+                  verse.words.map((word) => (
+                    <Tooltip key={word.id} delayDuration={100}>
+                      <TooltipTrigger asChild>
+                        <span 
+                          className="text-4xl md:text-5xl font-arabic leading-[1.8] cursor-pointer hover:text-accent transition-colors duration-200" 
+                        >
+                          {word.text_uthmani}
+                        </span>
+                      </TooltipTrigger>
+                      {word.char_type_name === "word" && (
+                        <TooltipContent className="bg-accent text-accent-foreground border-none font-medium">
+                          <p>{word.translation?.text || "..."}</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  ))
+                ) : (
+                  <span className="text-4xl md:text-5xl font-arabic leading-[1.8]">{verse.text_uthmani}</span>
+                )}
               </TooltipProvider>
             </div>
 
