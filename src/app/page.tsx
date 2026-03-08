@@ -18,7 +18,8 @@ import {
   ChevronRight,
   TrendingUp,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Book
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -26,11 +27,19 @@ import { Badge } from "@/components/ui/badge";
 
 const featureAds = [
   { 
+    label: "Mushaf Digital", 
+    icon: Book, 
+    href: "/tilawah", 
+    color: "from-amber-600 to-amber-400",
+    description: "Baca Al-Qur'an dengan terjemahan Kemenag RI dan tafsir per kata.",
+    badge: "Utama"
+  },
+  { 
     label: "Tilawah AI", 
     icon: Mic, 
-    href: "/tilawah", 
+    href: "/tilawah/ai-assistant", 
     color: "from-blue-600 to-blue-400",
-    description: "Koreksi bacaan Anda secara real-time dengan teknologi AI tercanggih.",
+    description: "Koreksi bacaan Anda secara real-time dengan teknologi AI.",
     badge: "Populer"
   },
   { 
@@ -38,7 +47,7 @@ const featureAds = [
     icon: BookOpen, 
     href: "/tajweed", 
     color: "from-emerald-600 to-emerald-400",
-    description: "Kuasai hukum bacaan dengan kurikulum interaktif yang mudah dipahami.",
+    description: "Kuasai hukum bacaan dengan kurikulum interaktif yang mudah.",
     badge: "Baru"
   },
   { 
@@ -46,16 +55,8 @@ const featureAds = [
     icon: Bot, 
     href: "/ai-scholar", 
     color: "from-purple-600 to-purple-400",
-    description: "Diskusikan Tafsir dan Sejarah Islam dengan asisten cerdas 24/7.",
+    description: "Diskusikan Tafsir dan Sejarah Islam dengan asisten cerdas.",
     badge: "Cerdas"
-  },
-  { 
-    label: "Halaqah Online", 
-    icon: Users, 
-    href: "/study-circles", 
-    color: "from-orange-600 to-orange-400",
-    description: "Bergabunglah dengan komunitas belajar bersama guru bersertifikat.",
-    badge: "Komunitas"
   },
 ];
 
