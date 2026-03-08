@@ -1,10 +1,8 @@
-
 import { SurahList } from "@/components/surah-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Search } from "lucide-react";
+import { Mic } from "lucide-react";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
 
 export default function QuranPage() {
   return (
@@ -38,11 +36,6 @@ export default function QuranPage() {
           <span className="text-xs text-muted-foreground font-medium">114 Surat</span>
         </div>
         
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Cari surat..." className="pl-10 h-11 bg-muted/50 border-none ring-offset-background" />
-        </div>
-
         <SurahList />
       </div>
     </div>
