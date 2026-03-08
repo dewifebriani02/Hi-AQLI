@@ -25,20 +25,21 @@ import {
   Globe,
   CheckCircle2,
   Calendar,
-  Sparkles
+  Sparkles,
+  Users
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
 
 const days = [
-  { label: 'Fri', active: false },
-  { label: 'Sat', active: false },
-  { label: 'Sun', active: false },
-  { label: 'Mon', active: true },
-  { label: 'Tue', active: false },
-  { label: 'Wed', active: false },
-  { label: 'Thu', active: false },
+  { label: 'Jum', active: false },
+  { label: 'Sab', active: false },
+  { label: 'Ahad', active: false },
+  { label: 'Sen', active: true },
+  { label: 'Sel', active: false },
+  { label: 'Rab', active: false },
+  { label: 'Kam', active: false },
 ];
 
 export default function DashboardPage() {
@@ -47,10 +48,10 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
       {/* User Greeting & Rank */}
-      <div className="flex items-start justify-between mt-2 px-1">
+      <div className="flex items-start justify-between mt-4 px-1">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
-            <Sparkles className="w-4 h-4 fill-current" />
+            <Sparkles className="w-4 h-4 fill-current animate-pulse" />
             <span className="text-[10px] font-bold uppercase tracking-widest">Semoga harimu penuh berkah</span>
           </div>
           <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight">
@@ -58,9 +59,12 @@ export default function DashboardPage() {
             {user?.displayName?.split(' ')[0] || 'Sahabat AQLI'}!
           </h1>
         </div>
-        <Badge className="bg-black text-white gap-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-black/10">
-          ALIM <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge className="bg-black text-white gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-black/10">
+            ALIM <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          </Badge>
+          <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">Peringkat Anda</span>
+        </div>
       </div>
 
       {/* Streak Tracker Card */}
@@ -70,7 +74,7 @@ export default function DashboardPage() {
             <div className="p-3 bg-white rounded-full shadow-sm">
               <Flame className="w-8 h-8 text-muted-foreground/30" />
             </div>
-            <span className="text-sm font-bold text-muted-foreground">0 Days</span>
+            <span className="text-sm font-bold text-muted-foreground">0 Hari</span>
           </div>
           
           <div className="flex-1 flex flex-col gap-3">
@@ -89,12 +93,12 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] font-bold text-emerald-500 px-1">Longest Streak 12 Days</p>
+            <p className="text-[10px] font-bold text-emerald-500 px-1">Streak Terpanjang 12 Hari</p>
           </div>
 
           <div className="flex flex-col gap-3">
-            <Bell className="w-4 h-4 text-emerald-500" />
-            <PlusCircle className="w-4 h-4 text-emerald-500" />
+            <Bell className="w-4 h-4 text-emerald-500 cursor-pointer" />
+            <PlusCircle className="w-4 h-4 text-emerald-500 cursor-pointer" />
           </div>
         </CardContent>
       </Card>
@@ -140,49 +144,85 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Highlights Section */}
+      {/* Feature Ads Section */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold font-headline">Sorotan</h2>
+        <h2 className="text-lg font-bold font-headline">Jelajahi Fitur</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card className="overflow-hidden border-none shadow-sm bg-black group cursor-pointer">
-            <div className="relative h-48 w-full opacity-60 group-hover:opacity-80 transition-opacity">
-               <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
-               <img src="https://picsum.photos/seed/wahy/600/400" alt="Wahy" className="w-full h-full object-cover" />
-               <div className="absolute inset-0 flex items-center justify-center">
-                  <PlayCircle className="w-12 h-12 text-white/80" />
-               </div>
-            </div>
-            <CardContent className="p-4 relative -mt-16">
-              <div className="flex items-center gap-2 mb-2">
-                <Youtube className="w-3 h-3 text-red-500" />
-                <span className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Serial Ramadhan</span>
-              </div>
-              <h4 className="text-sm font-bold text-white mb-1">Wahy: Kisah Turunnya Wahyu</h4>
-              <p className="text-[10px] text-white/60 line-clamp-2 italic">Episode harian bagaimana Al-Qur'an sampai kepada kita!</p>
-            </CardContent>
-          </Card>
+          {/* Al-Qur'an Ad */}
+          <Link href="/tilawah" className="block group">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#800000] to-[#b30000] text-white h-44 transition-transform group-hover:scale-[1.02]">
+              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
+                  <BookMarked className="w-32 h-32" />
+                </div>
+                <div className="space-y-2 relative z-10">
+                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">UTAMA</Badge>
+                  <h4 className="font-bold text-lg">Mushaf Digital</h4>
+                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Baca Al-Qur'an dengan terjemahan per kata dan tafsir Kemenag RI yang mendalam.</p>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10">
+                  MULAI MEMBACA <ChevronRight className="w-3 h-3" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="overflow-hidden border-none shadow-sm group cursor-pointer">
-            <div className="p-4 bg-blue-50/50 h-full flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Target Tercapai 🎉</span>
+          {/* AI Scholar Ad */}
+          <Link href="/ai-scholar" className="block group">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-indigo-900 to-indigo-700 text-white h-44 transition-transform group-hover:scale-[1.02]">
+              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
+                  <Globe className="w-32 h-32" />
                 </div>
-                <div className="flex justify-center py-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    {['EN', 'AR', 'ID', 'IN'].map(l => (
-                      <div key={l} className="w-8 h-8 rounded-lg bg-[#800000] text-white text-[10px] font-bold flex items-center justify-center shadow-md shadow-[#800000]/20">{l}</div>
-                    ))}
-                  </div>
+                <div className="space-y-2 relative z-10">
+                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">CERDAS</Badge>
+                  <h4 className="font-bold text-lg">Cendekiawan AI</h4>
+                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Tanyakan apa pun tentang hukum Islam, Tafsir, dan sejarah kepada AI terverifikasi kami.</p>
                 </div>
-                <h4 className="text-sm font-bold">Studi Komparatif Terjemahan</h4>
-                <p className="text-[10px] text-muted-foreground">Unduh dan bandingkan berbagai tafsir bahasa dunia.</p>
-              </div>
-              <div className="pt-4 flex items-center gap-1 text-[10px] font-bold text-blue-600">
-                LIHAT DETAIL <ChevronRight className="w-3 h-3" />
-              </div>
-            </div>
-          </Card>
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10">
+                  TANYA SEKARANG <ChevronRight className="w-3 h-3" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Tajweed Ad */}
+          <Link href="/tajweed" className="block group">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-emerald-800 to-emerald-600 text-white h-44 transition-transform group-hover:scale-[1.02]">
+              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
+                  <PlayCircle className="w-32 h-32" />
+                </div>
+                <div className="space-y-2 relative z-10">
+                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">BELAJAR</Badge>
+                  <h4 className="font-bold text-lg">Modul Tajwid</h4>
+                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Kuasai seni tilawah dengan modul interaktif dan kuis yang mengasah pemahaman.</p>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10">
+                  PELAJARI TAJWID <ChevronRight className="w-3 h-3" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Study Circle Ad */}
+          <Link href="/study-circles" className="block group">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-amber-700 to-amber-500 text-white h-44 transition-transform group-hover:scale-[1.02]">
+              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
+                  <Users className="w-32 h-32" />
+                </div>
+                <div className="space-y-2 relative z-10">
+                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">KOMUNITAS</Badge>
+                  <h4 className="font-bold text-lg">Lingkar Studi</h4>
+                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Bergabunglah dengan halaqah online bersama instruktur bersertifikat di seluruh dunia.</p>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10">
+                  GABUNG HALAQAH <ChevronRight className="w-3 h-3" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </div>
 
