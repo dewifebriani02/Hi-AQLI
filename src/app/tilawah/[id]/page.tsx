@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams } from "next/navigation";
@@ -60,7 +59,7 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // 2. Ambil Ayat dengan data kata-per-kata
+        // 2. Ambil Ayat dengan data kata-per-kata dan terjemahan Bahasa Indonesia
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&translations=33&fields=text_uthmani&per_page=300`
         );
@@ -160,6 +159,7 @@ export default function SurahDetailPage() {
               </div>
             </div>
 
+            {/* Area Teks Arab dengan Hover Maroon dan Tooltip */}
             <div className="flex flex-wrap justify-end gap-x-3 gap-y-6" dir="rtl">
               <TooltipProvider delayDuration={100}>
                 {verse.words && verse.words.length > 0 ? (
@@ -187,6 +187,7 @@ export default function SurahDetailPage() {
               </TooltipProvider>
             </div>
 
+            {/* Terjemahan Ayat (Kemenag RI) */}
             <div className="text-left bg-muted/30 p-6 rounded-xl border-l-4 border-[#800000]">
               <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
               {verse.translations && verse.translations.length > 0 ? (
