@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface WordData {
@@ -59,12 +60,12 @@ export default function WordQuizPage() {
       const currentWord = words[currentIdx];
       const correct = currentWord.translation.text;
       
-      // Get 3 random unique wrong answers from all words in this verse
+      // Get random unique wrong answers from all words in this verse
       let wrong = words
         .filter(w => w.translation.text !== correct)
         .map(w => w.translation.text);
       
-      // Shuffle and take 3
+      // Shuffle and take up to 3
       wrong = [...new Set(wrong)].sort(() => Math.random() - 0.5).slice(0, 3);
       
       // Combine and shuffle again
