@@ -45,21 +45,6 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
-      {/* Top Navigation Mockup - Dashboard Sub-nav */}
-      <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-2 border-b">
-        {['Dashboard', 'Target', 'Hafalan', 'Aktivitas', 'Komunitas'].map((tab, i) => (
-          <span 
-            key={tab} 
-            className={cn(
-              "text-sm font-bold whitespace-nowrap cursor-pointer transition-colors",
-              i === 0 ? "text-foreground border-b-2 border-[#800000] pb-2" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {tab}
-          </span>
-        ))}
-      </div>
-
       {/* User Greeting & Rank */}
       <div className="flex items-center justify-between mt-2">
         <h1 className="text-xl font-bold font-headline">
