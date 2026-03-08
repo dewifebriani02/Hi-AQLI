@@ -23,7 +23,6 @@ import {
   Settings,
 } from "lucide-react";
 import { Logo } from "./logo";
-import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -41,23 +40,25 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center justify-between w-full">
-          <Logo className="w-auto h-6 text-sidebar-foreground group-data-[collapsible=icon]:hidden" />
-          <SidebarTrigger />
+      <SidebarHeader className="border-b py-4">
+        <div className="flex items-center justify-between px-2">
+          <Link href="/" className="flex items-center gap-2">
+            <Logo className="w-auto h-8 text-sidebar-foreground group-data-[collapsible=icon]:hidden" />
+          </Link>
+          <SidebarTrigger className="hidden md:flex" />
         </div>
       </SidebarHeader>
-      <SidebarContent className="p-2">
+      <SidebarContent className="p-2 pt-4">
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href}
-                tooltip={{ children: item.label }}
+                tooltip={item.label}
               >
                 <Link href={item.href}>
-                  <item.icon />
+                  <item.icon className={cn(pathname === item.href && "text-sidebar-primary")} />
                   <span>{item.label}</span>
                 </Link>
               </SidebarMenuButton>
@@ -65,10 +66,10 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-2">
+      <SidebarFooter className="p-2 border-t">
         <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton tooltip={{children: "Pengaturan"}}>
+                <SidebarMenuButton tooltip="Pengaturan">
                     <Settings />
                     <span>Pengaturan</span>
                 </SidebarMenuButton>

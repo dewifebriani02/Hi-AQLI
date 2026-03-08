@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { AppSidebar } from '@/components/app-sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { BottomNav } from '@/components/bottom-nav';
 
 export const metadata: Metadata = {
   title: 'AQLI Digital',
@@ -24,18 +25,25 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased')}>
         <SidebarProvider>
-          <div className="relative flex min-h-screen">
+          <div className="relative flex min-h-screen w-full">
             <AppSidebar />
-            <SidebarInset>
-               <div className="p-4 sm:p-6 lg:p-8 h-full">
-                <div className="absolute top-4 left-4">
-                  <SidebarTrigger className="md:hidden" />
-                </div>
-                {children}
+            <SidebarInset className="w-full">
+               <div className="relative flex flex-col h-full w-full pb-16 md:pb-0">
+                <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
+                   <SidebarTrigger />
+                   <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight">
+                     AQLI DIGITAL
+                   </div>
+                   <div className="w-8" /> {/* Spacer untuk menyeimbangkan layout */}
+                </header>
+                <main className="p-4 sm:p-6 lg:p-8 flex-1">
+                  {children}
+                </main>
               </div>
             </SidebarInset>
           </div>
         </SidebarProvider>
+        <BottomNav />
         <Toaster />
       </body>
     </html>
