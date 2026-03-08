@@ -30,8 +30,9 @@ export async function askScholarQuestion(
   try {
     const result = await askQuestion({ question: validatedFields.data.question });
     return { answer: result.answer };
-  } catch (e) {
-    return { error: "An error occurred while asking the question. Please try again." };
+  } catch (e: any) {
+    console.error("Scholar Question Error:", e);
+    return { error: e.message?.includes('429') ? "Kuota AI sedang penuh. Silakan coba lagi beberapa saat lagi." : "Terjadi kesalahan saat mengajukan pertanyaan." };
   }
 }
 
@@ -44,8 +45,9 @@ export async function submitRecitation(audioAsDataUri: string) {
         const result = await aiTilawahAssistant({ audioDataUri: audioAsDataUri });
         return result;
     } catch (e: any) {
-        if (e.message?.includes('503')) {
-             throw new Error("Layanan AI sedang tidak tersedia. Silakan coba lagi nanti.");
+        console.error("Recitation Assistant Error:", e);
+        if (e.message?.includes('429')) {
+             throw new Error("Kuota harian AI telah habis atau terlalu banyak permintaan. Silakan coba lagi nanti.");
         }
         throw new Error("Terjadi kesalahan saat menganalisis tilawah.");
     }
@@ -56,8 +58,11 @@ export async function getVerseAnalysis(input: AnalyzeVerseInput): Promise<Analyz
     const result = await analyzeVerse(input);
     return result;
   } catch (e: any) {
-    console.error("Analysis Action Error:", e);
-    // Re-throw with a meaningful message for the UI
+    console.error("Analysis Action Error Detail:", e);
+    // Specifically catch rate limit errors
+    if (e.message?.includes('429') || e.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error("Kuota AI gratis sedang terbatas. Silakan tunggu sekitar 1 menit lalu tekan tombol 'Coba Lagi'.");
+    }
     throw new Error(e.message || "Gagal menganalisis ayat. Silakan coba lagi.");
   }
 }

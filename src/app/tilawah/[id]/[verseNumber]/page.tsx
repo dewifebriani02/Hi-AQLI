@@ -1,15 +1,17 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface VerseDetail {
   id: number;
@@ -28,6 +30,25 @@ export default function VerseDetailPage() {
   const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
+    setAnalysisLoading(true);
+    setError(null);
+    try {
+      const result = await getVerseAnalysis({
+        surahName: name,
+        verseNumber: num,
+        verseText: text
+      });
+      setAnalysis(result);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || "Terjadi kesalahan saat memuat analisis.");
+    } finally {
+      setAnalysisLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchVerse() {
@@ -51,28 +72,19 @@ export default function VerseDetailPage() {
         }
       } catch (err) {
         console.error("Fetch Error:", err);
+        setError("Gagal memuat data ayat dari server.");
       } finally {
         setLoading(false);
       }
     }
     fetchVerse();
-  }, [id, verseNumber]);
+  }, [id, verseNumber, fetchAiAnalysis]);
 
-  async function fetchAiAnalysis(name: string, num: number, text: string) {
-    setAnalysisLoading(true);
-    try {
-      const result = await getVerseAnalysis({
-        surahName: name,
-        verseNumber: num,
-        verseText: text
-      });
-      setAnalysis(result);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setAnalysisLoading(false);
+  const handleRetry = () => {
+    if (verse) {
+      fetchAiAnalysis(surahName, parseInt(verseNumber), verse.text_uthmani);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -83,10 +95,17 @@ export default function VerseDetailPage() {
     );
   }
 
-  if (!verse) return null;
+  if (!verse) return (
+    <div className="p-12 text-center flex flex-col items-center gap-4">
+      <p className="text-muted-foreground">Data ayat tidak ditemukan.</p>
+      <Button asChild variant="outline">
+        <Link href={`/tilawah/${id}`}>Kembali</Link>
+      </Button>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-24">
+    <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-24 px-4 sm:px-0">
       <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
         <Button asChild variant="ghost" size="icon">
           <Link href={`/tilawah/${id}`}>
@@ -111,6 +130,24 @@ export default function VerseDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {error && (
+        <Alert variant="destructive" className="bg-destructive/5 border-destructive/20">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Gagal Memuat Analisis AI</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3 mt-2">
+            <p>{error}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-fit gap-2 border-destructive/20 hover:bg-destructive/10"
+              onClick={handleRetry}
+            >
+              <RefreshCw className="w-3 h-3" /> Coba Lagi
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
         {/* Word Breakdown */}
@@ -141,7 +178,9 @@ export default function VerseDetailPage() {
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center text-muted-foreground italic">Gagal memuat analisis kata.</div>
+              <div className="p-8 text-center text-muted-foreground italic">
+                {error ? "Analisis tidak tersedia karena kesalahan sistem." : "Menunggu analisis AI..."}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -163,7 +202,9 @@ export default function VerseDetailPage() {
               </div>
             ) : analysis ? (
               <p className="text-foreground/90 leading-relaxed text-lg whitespace-pre-wrap">{analysis.tafsir}</p>
-            ) : null}
+            ) : (
+               <p className="text-muted-foreground italic text-center py-4">Tafsir akan muncul setelah analisis AI berhasil.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -183,7 +224,9 @@ export default function VerseDetailPage() {
               </div>
             ) : analysis ? (
               <p className="text-muted-foreground leading-relaxed">{analysis.context}</p>
-            ) : null}
+            ) : (
+               <p className="text-muted-foreground italic text-center py-4">Pelajaran utama akan muncul di sini.</p>
+            )}
           </CardContent>
         </Card>
       </div>
