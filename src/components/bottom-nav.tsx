@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Mic, BookOpen, Bot, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
@@ -15,6 +16,15 @@ const navItems = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around border-t bg-background/95 backdrop-blur p-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
