@@ -65,6 +65,7 @@ export default function SurahDetailPage() {
         setSurah(infoData.chapter);
 
         // 2. Ambil Ayat (dengan text_uthmani eksplisit dan limit per_page yang tinggi)
+        // Parameter per_page=300 digunakan karena surat terpanjang (Al-Baqarah) memiliki 286 ayat.
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&word_translation_language=id&fields=text_uthmani&per_page=300`
         );
@@ -110,7 +111,7 @@ export default function SurahDetailPage() {
           <AlertTitle>Kesalahan</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="w-fit">
           <Link href="/tilawah">Kembali ke Daftar Surat</Link>
         </Button>
       </div>
