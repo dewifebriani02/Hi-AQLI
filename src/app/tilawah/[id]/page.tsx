@@ -59,8 +59,8 @@ export default function SurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // 2. Ambil Ayat dengan data kata-per-kata dan terjemahan Bahasa Indonesia
-        // Menggunakan parameter words=true untuk mendapatkan data per kata
+        // 2. Ambil Ayat dengan data kata-per-kata dan terjemahan Bahasa Indonesia (ID 33: Kemenag RI)
+        // Menambahkan parameter words=true dan fields=text_uthmani
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&translations=33&fields=text_uthmani&per_page=300`
         );
