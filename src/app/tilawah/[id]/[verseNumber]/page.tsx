@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
@@ -40,10 +41,12 @@ export default function VerseDetailPage() {
   const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
     setAnalysisLoading(true);
+    setAnalysisError(null);
     try {
       const result = await getVerseAnalysis({
         surahName: name,
@@ -52,7 +55,8 @@ export default function VerseDetailPage() {
       });
       setAnalysis(result);
     } catch (e: any) {
-      console.error("AI Analysis Error:", e);
+      console.error("AI Analysis Error captured in UI:", e);
+      setAnalysisError(e.message || "Gagal memuat analisis AI.");
     } finally {
       setAnalysisLoading(false);
     }
@@ -235,8 +239,10 @@ export default function VerseDetailPage() {
               <p className="text-foreground/90 leading-relaxed italic whitespace-pre-wrap">{analysis.context}</p>
             ) : (
                <div className="text-center py-6 space-y-4">
-                  <p className="text-sm text-muted-foreground italic">Gagal memuat analisis AI secara otomatis.</p>
-                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2">
+                  <p className="text-sm text-muted-foreground italic">
+                    {analysisError || "Gagal memuat analisis AI secara otomatis."}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10">
                     <RefreshCw className="w-3 h-3" /> Coba Analisis AI
                   </Button>
                </div>
