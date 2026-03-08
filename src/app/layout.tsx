@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
@@ -31,8 +32,8 @@ export default function RootLayout({
                <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
                 <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4 md:hidden">
                    <SidebarTrigger />
-                   <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight">
-                     SAHABAT AQLI
+                   <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight uppercase">
+                     Sahabat AQLI
                    </div>
                    <div className="w-8" />
                 </header>

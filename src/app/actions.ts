@@ -1,3 +1,4 @@
+
 "use server";
 
 import { askQuestion } from "@/ai/flows/ai-scholar-question";
@@ -55,7 +56,8 @@ export async function getVerseAnalysis(input: AnalyzeVerseInput): Promise<Analyz
     const result = await analyzeVerse(input);
     return result;
   } catch (e: any) {
-    console.error("Analysis Error:", e);
-    throw new Error("Gagal menganalisis ayat. Silakan coba lagi.");
+    console.error("Analysis Action Error:", e);
+    // Re-throw with a meaningful message for the UI
+    throw new Error(e.message || "Gagal menganalisis ayat. Silakan coba lagi.");
   }
 }
