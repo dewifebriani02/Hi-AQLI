@@ -58,10 +58,9 @@ export async function getVerseAnalysis(input: AnalyzeVerseInput): Promise<Analyz
     return result;
   } catch (e: any) {
     console.error("Analysis Action Error Detail:", e);
-    // Specifically catch rate limit errors
     if (e.message?.includes('429') || e.message?.includes('RESOURCE_EXHAUSTED')) {
       throw new Error("Kuota AI gratis sedang terbatas. Silakan tunggu sekitar 1 menit lalu tekan tombol 'Coba Lagi'.");
     }
-    throw new Error(e.message || "Gagal menganalisis ayat. Silakan coba lagi.");
+    throw new Error(e.message || "Gagal menganalisis konteks ayat. Silakan coba lagi.");
   }
 }

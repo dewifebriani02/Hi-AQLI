@@ -36,6 +36,7 @@ export default function VerseDetailPage() {
   
   const [verse, setVerse] = useState<VerseDetail | null>(null);
   const [surahName, setSurahName] = useState("");
+  const [apiTafsir, setApiTafsir] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -74,14 +75,21 @@ export default function VerseDetailPage() {
         );
         const data = await res.json();
         setVerse(data.verse);
+
+        // Fetch Tafsir Ringkas Kemenag RI (ID: 157)
+        const tafsirRes = await fetch(
+          `https://api.quran.com/api/v4/tafsirs/157/by_key/${id}:${verseNumber}`
+        );
+        const tafsirData = await tafsirRes.json();
+        setApiTafsir(tafsirData.tafsir.text);
         
-        // Trigger AI Analysis for Tafsir & Context only
+        // Trigger AI Analysis for Context & Lesson only
         if (data.verse) {
           fetchAiAnalysis(surahData.chapter.name_simple, parseInt(verseNumber), data.verse.text_uthmani);
         }
       } catch (err) {
         console.error("Fetch Error:", err);
-        setError("Gagal memuat data ayat dari server.");
+        setError("Gagal memuat data ayat atau tafsir.");
       } finally {
         setLoading(false);
       }
@@ -140,7 +148,7 @@ export default function VerseDetailPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Word Breakdown (From API) */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="border-b bg-muted/30">
@@ -170,10 +178,30 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
+        {/* Tafsir Card (From API Resmi Kemenag) */}
+        <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
+          <CardHeader className="bg-[#800000] text-white">
+            <CardTitle className="text-lg flex items-center gap-2 font-headline">
+              <BookOpen className="w-5 h-5" />
+              Tafsir Ringkas (Kemenag RI)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {apiTafsir ? (
+              <div 
+                className="text-foreground/90 leading-relaxed text-lg prose prose-sm max-w-none prose-p:mb-4"
+                dangerouslySetInnerHTML={{ __html: apiTafsir }} 
+              />
+            ) : (
+               <p className="text-muted-foreground italic text-center py-4">Memuat Tafsir resmi...</p>
+            )}
+          </CardContent>
+        </Card>
+
         {error && (
           <Alert variant="destructive" className="bg-destructive/5 border-destructive/20">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Gagal Memuat Analisis AI</AlertTitle>
+            <AlertTitle>Gagal Memuat Konteks AI</AlertTitle>
             <AlertDescription className="flex flex-col gap-3 mt-2">
               <p>{error}</p>
               <Button 
@@ -187,29 +215,6 @@ export default function VerseDetailPage() {
             </AlertDescription>
           </Alert>
         )}
-
-        {/* Tafsir Card (From AI) */}
-        <Card className="border-[#800000]/10 shadow-sm">
-          <CardHeader className="bg-[#800000] text-white">
-            <CardTitle className="text-lg flex items-center gap-2 font-headline">
-              <BookOpen className="w-5 h-5" />
-              Tafsir Ringkas (AI)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {analysisLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            ) : analysis ? (
-              <p className="text-foreground/90 leading-relaxed text-lg whitespace-pre-wrap">{analysis.tafsir}</p>
-            ) : (
-               <p className="text-muted-foreground italic text-center py-4">Tafsir akan muncul setelah analisis AI berhasil.</p>
-            )}
-          </CardContent>
-        </Card>
 
          {/* Lesson Card (From AI) */}
          <Card className="border-accent/20 shadow-sm bg-accent/5">
@@ -226,9 +231,9 @@ export default function VerseDetailPage() {
                 <Skeleton className="h-4 w-2/3" />
               </div>
             ) : analysis ? (
-              <p className="text-muted-foreground leading-relaxed">{analysis.context}</p>
+              <p className="text-foreground/90 leading-relaxed italic whitespace-pre-wrap">{analysis.context}</p>
             ) : (
-               <p className="text-muted-foreground italic text-center py-4">Pelajaran utama akan muncul di sini.</p>
+               <p className="text-muted-foreground italic text-center py-4">Pelajaran utama akan muncul di sini setelah analisis AI.</p>
             )}
           </CardContent>
         </Card>

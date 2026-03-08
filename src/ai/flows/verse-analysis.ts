@@ -1,9 +1,9 @@
 'use server';
 
 /**
- * @fileOverview Flow untuk analisis mendalam ayat Al-Qur'an (Tafsir dan Konteks).
+ * @fileOverview Flow untuk analisis konteks dan pelajaran utama ayat Al-Qur'an.
  *
- * - analyzeVerse - Fungsi untuk menganalisis ayat (tafsir, konteks).
+ * - analyzeVerseContext - Fungsi untuk menganalisis konteks dan hikmah ayat.
  */
 
 import {ai} from '@/ai/genkit';
@@ -17,8 +17,7 @@ const AnalyzeVerseInputSchema = z.object({
 export type AnalyzeVerseInput = z.infer<typeof AnalyzeVerseInputSchema>;
 
 const AnalyzeVerseOutputSchema = z.object({
-  tafsir: z.string().describe('Tafsir ringkas dan padat untuk ayat ini'),
-  context: z.string().describe('Konteks atau pelajaran utama dari ayat ini'),
+  context: z.string().describe('Konteks sejarah (Asbabun Nuzul) dan pelajaran praktis utama dari ayat ini'),
 });
 export type AnalyzeVerseOutput = z.infer<typeof AnalyzeVerseOutputSchema>;
 
@@ -50,17 +49,15 @@ const prompt = ai.definePrompt({
       },
     ],
   },
-  prompt: `Anda adalah seorang ahli tafsir Al-Qur'an terkemuka.
-Berikan analisis mendalam untuk ayat berikut:
+  prompt: `Anda adalah seorang ahli pendidikan Islam. Berikan ulasan singkat mengenai pelajaran utama dan konteks dari ayat berikut:
 Surah: {{{surahName}}}
 Ayat: {{{verseNumber}}}
 Teks: {{{verseText}}}
 
 Tugas Anda:
-1. Berikan tafsir ringkas: Jelaskan makna ayat tersebut secara padat namun mendalam agar mudah dipahami masyarakat Indonesia.
-2. Jelaskan pelajaran utama: Sebutkan hikmah, pelajaran praktis, atau konteks sejarah (Asbabun Nuzul) jika ada.
+Jelaskan hikmah, pelajaran praktis untuk kehidupan sehari-hari, atau konteks sejarah (Asbabun Nuzul) jika ada. Fokuslah pada bagaimana pembaca bisa mengamalkan nilai ayat ini.
 
-Pastikan semua respons dalam Bahasa Indonesia yang santun, formal, dan akurat secara keilmuan Islam.`,
+Pastikan respons dalam Bahasa Indonesia yang inspiratif dan akurat secara keilmuan Islam.`,
 });
 
 const analyzeVerseFlow = ai.defineFlow(
