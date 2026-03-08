@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, Play, Share2, Bookmark, LoaderCircle } from "lucide-react";
+import { ChevronLeft, Play, Share2, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -32,12 +32,12 @@ export default function SurahDetailPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch Surah Info
+        // Fetch Surah Info dalam Bahasa Indonesia
         const infoRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
-        // Fetch Verses with Uthmani text and Sabeeq Company translation (ID 158)
+        // Fetch Verses dengan teks Uthmani dan terjemahan Sabeeq Company Bahasa Indonesia (ID 158)
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=false&translations=158&fields=text_uthmani`
         );
@@ -66,7 +66,7 @@ export default function SurahDetailPage() {
     );
   }
 
-  if (!surah) return <div>Surat tidak ditemukan.</div>;
+  if (!surah) return <div className="p-8 text-center">Surat tidak ditemukan.</div>;
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-10">
@@ -83,18 +83,18 @@ export default function SurahDetailPage() {
         </div>
       </div>
 
-      {/* Bismillah Banner (Except for At-Tawbah and Al-Fatihah shows as first verse) */}
+      {/* Bismillah Banner (Kecuali At-Tawbah dan Al-Fatihah yang sudah punya di ayat pertama) */}
       {id !== "1" && id !== "9" && (
-        <div className="text-center py-8">
-          <h2 className="text-4xl font-arabic">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</h2>
+        <div className="text-center py-12">
+          <h2 className="text-4xl font-arabic leading-relaxed">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</h2>
         </div>
       )}
 
       {/* Verses List */}
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
         {verses.map((verse) => (
           <Card key={verse.verse_number} className="border-none shadow-none bg-transparent">
-            <CardContent className="p-0 space-y-4">
+            <CardContent className="p-0 space-y-6">
               {/* Verse Actions & Number */}
               <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg">
                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-xs font-bold">
@@ -114,17 +114,20 @@ export default function SurahDetailPage() {
               </div>
 
               {/* Arabic Text */}
-              <div className="text-right py-4">
+              <div className="text-right py-2">
                 <p 
-                  className="text-3xl font-arabic leading-loose tracking-wide dir-rtl" 
+                  className="text-3xl font-arabic leading-[2.5] tracking-wide" 
                   dir="rtl"
                   dangerouslySetInnerHTML={{ __html: verse.text_uthmani }}
                 />
               </div>
 
-              {/* Translation */}
+              {/* Translation (Sabeeq Company ID 158) */}
               <div className="text-left pb-4">
-                <p className="text-sm text-muted-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} />
+                <p 
+                  className="text-sm text-muted-foreground leading-relaxed italic" 
+                  dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} 
+                />
               </div>
               <div className="border-b border-muted/50 w-full" />
             </CardContent>
