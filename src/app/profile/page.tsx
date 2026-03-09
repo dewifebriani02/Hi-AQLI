@@ -41,7 +41,7 @@ export default function ProfilePage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Fetch real donation history for the user with limit
+  // Fetch real donation history for the user with limit and proper QAP filter
   const donationsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
@@ -196,7 +196,7 @@ export default function ProfilePage() {
                               "text-[8px] font-bold px-1.5 py-0",
                               d.status === 'completed' ? "bg-emerald-500" : "bg-amber-500"
                             )}>
-                              {d.status === 'completed' ? 'BERHASIL' : 'DIVERIFIKASI'}
+                              {d.status === 'completed' ? 'BERHASIL' : 'PENDING'}
                             </Badge>
                           </TableCell>
                         </TableRow>
