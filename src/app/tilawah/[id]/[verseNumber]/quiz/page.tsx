@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy } from "lucide-react";
+import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -22,6 +22,7 @@ interface WordData {
 
 export default function WordQuizPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
 
@@ -35,14 +36,15 @@ export default function WordQuizPage() {
   const [options, setOptions] = useState<string[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [attempts, setAttempts] = useState(1);
 
   // SFX Player with swapped sounds as requested: 
-  // Wrong -> Ding (2182), Correct -> Blip (2568)
+  // Correct -> Blip (Short/Sharp), Incorrect -> Ding (Happy/Long)
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
     const soundUrls = {
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip (Short)
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding (Happy/Long)
-      perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding
+      perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Fanfare
     };
     
     try {
@@ -56,25 +58,26 @@ export default function WordQuizPage() {
     }
   }, []);
 
-  useEffect(() => {
-    async function fetchWords() {
-      try {
-        setLoading(true);
-        const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id`
-        );
-        if (!res.ok) throw new Error("Gagal memuat data ayat.");
-        const data = await res.json();
-        const validWords = data.verse.words.filter((w: any) => w.text_uthmani && w.translation.text);
-        setWords(validWords);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+  const fetchWords = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id`
+      );
+      if (!res.ok) throw new Error("Gagal memuat data ayat.");
+      const data = await res.json();
+      const validWords = data.verse.words.filter((w: any) => w.text_uthmani && w.translation.text);
+      setWords(validWords);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    fetchWords();
   }, [id, verseNumber]);
+
+  useEffect(() => {
+    fetchWords();
+  }, [fetchWords]);
 
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
@@ -97,7 +100,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Force blur to remove focus rings immediately
+    // Force blur to remove browser focus rings immediately for a clean look
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -129,6 +132,15 @@ export default function WordQuizPage() {
     }, 1200);
   };
 
+  const handleReset = () => {
+    setScore(0);
+    setCurrentIdx(0);
+    setIsFinished(false);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setAttempts(a => a + 1);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col gap-6 max-w-3xl mx-auto py-32 items-center">
@@ -153,36 +165,65 @@ export default function WordQuizPage() {
   }
 
   if (isFinished) {
+    const isPerfect = score === words.length;
     const percentage = Math.round((score / words.length) * 100);
+    
     return (
       <div className="max-w-md mx-auto py-10 flex flex-col gap-8">
         <Card className="text-center border-[#D4AF37]/20 shadow-xl overflow-hidden">
-          <div className="bg-[#D4AF37] p-8 flex flex-col items-center gap-4 text-black">
-            <Trophy className="w-16 h-16 animate-bounce text-black/80" />
-            <h2 className="text-2xl font-bold font-headline">Hasil Uji Hafalan</h2>
+          <div className={cn(
+            "p-8 flex flex-col items-center gap-4 text-white transition-colors duration-500",
+            isPerfect ? "bg-[#D4AF37]" : "bg-rose-900"
+          )}>
+            <Trophy className={cn("w-16 h-16 text-white/80", isPerfect && "animate-bounce")} />
+            <h2 className="text-2xl font-bold font-headline">
+              {isPerfect ? "Sempurna!" : "Belum Hafal?"}
+            </h2>
           </div>
-          <CardContent className="pt-8 space-y-4">
-            <div className="text-5xl font-bold text-black">{percentage}%</div>
-            <p className="text-muted-foreground">
-              Anda menjawab {score} dari {words.length} kata dengan benar.
-            </p>
-            <div className="pt-4">
-               {percentage >= 80 ? (
-                 <Badge className="bg-emerald-600 text-white p-2 px-4 rounded-lg border-none">Luar Biasa!</Badge>
-               ) : percentage >= 50 ? (
-                 <Badge className="bg-amber-600 text-white p-2 px-4 rounded-lg border-none">Cukup Bagus!</Badge>
-               ) : (
-                 <Badge className="bg-rose-600 text-white p-2 px-4 rounded-lg border-none">Terus Berlatih!</Badge>
-               )}
+          <CardContent className="pt-8 space-y-6">
+            <div className="space-y-1">
+              <div className="text-5xl font-bold text-black">{percentage}%</div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Skor Akurasi</p>
             </div>
+            
+            <div className="bg-muted/30 p-4 rounded-xl space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Anda menjawab <strong>{score}</strong> dari <strong>{words.length}</strong> kata dengan benar.
+              </p>
+              <div className="flex items-center justify-center gap-2 text-[#B8860B] font-bold">
+                <RefreshCw className="w-4 h-4" />
+                <span>Jumlah Percobaan: {attempts}</span>
+              </div>
+            </div>
+
+            {!isPerfect && (
+              <Alert className="bg-rose-50 border-rose-200 text-rose-800 text-left">
+                <RotateCcw className="h-4 w-4 text-rose-800" />
+                <AlertTitle className="text-xs font-bold">TARGET HARUS 100%</AlertTitle>
+                <AlertDescription className="text-[10px] leading-relaxed">
+                  Mohon ulangi kuis. Program Sahabat AQLI mewajibkan hafalan sempurna 100% sebelum Anda bisa melanjutkan ke ayat berikutnya.
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6">
-            <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12">
-               <Link href={`/tilawah/${id}/${verseNumber}`}>Selesai</Link>
-            </Button>
-            <Button variant="outline" className="w-full font-bold gap-2 border-[#D4AF37] text-[#B8860B] hover:bg-amber-50 h-12" onClick={() => window.location.reload()}>
-               <RefreshCw className="w-4 h-4" /> Ulangi Kuis
-            </Button>
+            {isPerfect ? (
+              <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12 shadow-lg">
+                <Link href={`/tilawah/${id}/${verseNumber}`}>SELESAI & LANJUT</Link>
+              </Button>
+            ) : (
+              <Button 
+                className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold h-12 shadow-lg gap-2"
+                onClick={handleReset}
+              >
+                <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
+              </Button>
+            )}
+            {isPerfect && (
+              <Button variant="ghost" className="w-full font-bold gap-2 text-[#B8860B] hover:bg-amber-50" onClick={handleReset}>
+                <RotateCcw className="w-4 h-4" /> Coba Lagi untuk Melatih Kecepatan
+              </Button>
+            )}
           </CardFooter>
         </Card>
       </div>
@@ -192,7 +233,7 @@ export default function WordQuizPage() {
   const progressValue = ((currentIdx + 1) / words.length) * 100;
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col gap-6">
+    <div className="max-w-2xl mx-auto flex flex-col gap-6 px-4 sm:px-0">
       <div className="flex items-center gap-4">
         <Button asChild variant="ghost" size="icon">
           <Link href={`/tilawah/${id}/${verseNumber}`}>
@@ -201,19 +242,22 @@ export default function WordQuizPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">Uji Hafalan Kata</h1>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold text-[#D4AF37]">Ayat {verseNumber}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold text-[#D4AF37]">Ayat {verseNumber} • Percobaan {attempts}</p>
         </div>
-        <div className="text-sm font-bold text-muted-foreground">
+        <div className="text-sm font-bold text-muted-foreground bg-muted px-3 py-1 rounded-full">
           {currentIdx + 1} / {words.length}
         </div>
       </div>
 
-      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
+      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37] shadow-inner" />
 
-      <Card key={`question-card-${currentIdx}`} className="border-[#D4AF37]/10 shadow-lg overflow-hidden">
-        <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
-          <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Apa arti dari kata ini?</CardTitle>
-          <div className="text-6xl md:text-7xl font-arabic leading-relaxed text-[#B8860B]">
+      <Card key={`question-card-${currentIdx}`} className="border-[#D4AF37]/10 shadow-2xl overflow-hidden rounded-2xl">
+        <CardHeader className="text-center pb-10 pt-12 bg-muted/10 relative overflow-hidden">
+           <div className="absolute top-0 right-0 p-4 opacity-5">
+              <GraduationCap className="w-24 h-24" />
+           </div>
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Apa arti dari kata ini?</CardTitle>
+          <div className="text-6xl md:text-8xl font-arabic leading-relaxed text-[#B8860B] drop-shadow-sm">
             {words[currentIdx]?.text_uthmani}
           </div>
         </CardHeader>
@@ -223,10 +267,10 @@ export default function WordQuizPage() {
               key={`${currentIdx}-opt-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none focus-visible:outline-none",
-                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100 shadow-sm",
-                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100 shadow-sm",
-                selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700 shadow-sm",
+                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none focus-visible:outline-none shadow-sm rounded-xl",
+                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100 shadow-md",
+                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100 shadow-md",
+                selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700 shadow-md",
                 !selectedAnswer && "hover:border-[#D4AF37] hover:text-[#B8860B] active:bg-muted"
               )}
               onClick={() => handleAnswer(option)}
@@ -243,8 +287,8 @@ export default function WordQuizPage() {
         </CardContent>
       </Card>
       
-      <div className="text-center text-sm text-muted-foreground italic">
-        Pilih jawaban yang paling tepat sesuai dengan terjemahan kata tersebut.
+      <div className="text-center text-[10px] text-muted-foreground italic font-medium">
+        Target 100% diperlukan untuk melanjutkan. Fokus pada setiap detail kata.
       </div>
     </div>
   );
