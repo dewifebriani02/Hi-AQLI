@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Clock, User, ChevronRight } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen } from "lucide-react";
 import Link from "next/link";
 
 const studyCircles = [
@@ -54,16 +54,20 @@ export default function StudyCirclesPage() {
   return (
     <div className="flex flex-col gap-8 max-w-3xl mx-auto pb-24">
       <div className="flex flex-col gap-2 mt-4 px-1">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Halaqah Belajar</h1>
+        <div className="flex items-center gap-2 text-[#800000] mb-1">
+          <BookOpen className="w-5 h-5" />
+          <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Perpustakaan Halaqah</span>
+        </div>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Materi Belajar</h1>
         <p className="text-muted-foreground text-sm">
-          Bergabunglah dengan lingkar studi interaktif untuk memperdalam pemahaman agama Anda.
+          Pilih materi atau lingkar studi untuk mulai belajar dan lihat peringkat Anda di dalam grup.
         </p>
       </div>
 
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="Cari materi atau instruktur..." 
+          placeholder="Cari buku, materi, atau instruktur..." 
           className="pl-11 h-12 bg-muted/50 border-none ring-offset-background text-sm" 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -72,35 +76,36 @@ export default function StudyCirclesPage() {
 
       <div className="flex flex-col gap-3 px-1">
         {filteredCircles.map((circle) => (
-          <Card 
-            key={circle.id}
-            className="p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm bg-card/50"
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#800000]/10 text-[#800000] font-bold group-hover:bg-[#800000] group-hover:text-white transition-colors">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <h4 className="font-bold text-base leading-tight">{circle.title}</h4>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <User className="w-3 h-3" />
-                    <span>{circle.instructor}</span>
+          <Link key={circle.id} href={`/study-circles/${circle.id}`}>
+            <Card 
+              className="p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm bg-card/50"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#800000]/10 text-[#800000] font-bold group-hover:bg-[#800000] group-hover:text-white transition-colors">
+                    <Users className="w-6 h-6" />
                   </div>
-                  <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground font-medium">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{circle.schedule}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <h4 className="font-bold text-base leading-tight">{circle.title}</h4>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <User className="w-3 h-3" />
+                      <span>{circle.instructor}</span>
                     </div>
-                    <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 py-0 border-[#800000]/20 text-[#800000] uppercase">
-                      {circle.level}
-                    </Badge>
+                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground font-medium">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{circle.schedule}</span>
+                      </div>
+                      <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 py-0 border-[#800000]/20 text-[#800000] uppercase">
+                        {circle.level}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#800000] transition-colors" />
               </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#800000] transition-colors" />
-            </div>
-          </Card>
+            </Card>
+          </Link>
         ))}
         {filteredCircles.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
