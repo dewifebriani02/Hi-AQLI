@@ -96,6 +96,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
+    // Explicitly blur the button to remove focus ring immediately
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }

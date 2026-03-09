@@ -44,7 +44,6 @@ export default function VerseDetailPage() {
   const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Swipe Detection
@@ -73,17 +72,15 @@ export default function VerseDetailPage() {
 
   const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
     setAnalysisLoading(true);
-    setAnalysisError(null);
     try {
       const result = await getVerseAnalysis({
         surahName: name,
         verseNumber: num,
         verseText: text
       });
-      if (result.error) setAnalysisError(result.error);
-      else setAnalysis(result);
+      setAnalysis(result);
     } catch (e) {
-      setAnalysisError("Gagal memuat analisis AI.");
+      console.error("AI Analysis Error:", e);
     } finally {
       setAnalysisLoading(false);
     }
@@ -132,7 +129,8 @@ export default function VerseDetailPage() {
         setSurahName(sData.chapter.name_simple);
         setTotalVerses(sData.chapter.verses_count);
 
-        const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_translation_language=id&translations=33&fields=text_uthmani`);
+        const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`);
+        if (!vRes.ok) throw new Error("Gagal memuat ayat.");
         const vData = await vRes.json();
         setVerse(vData.verse);
 
@@ -188,6 +186,7 @@ export default function VerseDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6">
+        {/* Penjabaran Kata Section */}
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-muted/30 py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline">
@@ -218,6 +217,7 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
+        {/* Tafsir Resmi Section */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white py-4">
             <CardTitle className="text-sm flex items-center gap-2 font-headline">
@@ -240,6 +240,7 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
+        {/* AI Analysis Section */}
         <Card className="border-accent/20 shadow-sm bg-accent/5">
           <CardHeader className="py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">
