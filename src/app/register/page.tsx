@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth, useFirestore } from '@/firebase';
+import { useState, useEffect } from 'react';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,7 @@ import Link from 'next/link';
 export default function RegisterPage() {
   const auth = useAuth();
   const db = useFirestore();
+  const { user } = useUser();
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -23,38 +24,40 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
 
-      // Update profile display name
-      await updateProfile(user, { displayName: username });
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const newUser = userCredential.user;
 
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        id: user.uid,
-        username: username,
-        email: email,
-        roleId: 'learner',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        updateProfile(newUser, { displayName: username });
+
+        setDoc(doc(db, 'users', newUser.uid), {
+          id: newUser.uid,
+          username: username,
+          email: email,
+          roleId: 'learner',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      })
+      .catch((err: any) => {
+        if (err.code === 'auth/email-already-in-use') {
+          setError('Email sudah terdaftar. Silakan gunakan email lain.');
+        } else {
+          setError('Gagal mendaftar. Pastikan data yang dimasukkan benar.');
+        }
+        setLoading(false);
       });
-
-      router.push('/');
-    } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Email sudah terdaftar. Silakan gunakan email lain.');
-      } else {
-        setError('Gagal mendaftar. Pastikan data yang dimasukkan benar.');
-      }
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
