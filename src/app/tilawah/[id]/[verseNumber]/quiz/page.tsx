@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw } from "lucide-react";
+import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -35,12 +34,13 @@ export default function WordQuizPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [attempts, setAttempts] = useState(1);
+  const [time, setTime] = useState(0);
 
   // SFX Player
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding (Swapped)
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip (short)
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding (crystal)
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Fanfare
       fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3', // Fail sound
     };
@@ -75,6 +75,17 @@ export default function WordQuizPage() {
     fetchWords();
   }, [fetchWords]);
 
+  // Timer Effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (!isFinished && !loading) {
+      interval = setInterval(() => {
+        setTime((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isFinished, loading]);
+
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
       setSelectedAnswer(null);
@@ -96,7 +107,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Explicitly blur the button to remove focus ring immediately
+    // Remove focus ring immediately
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -108,10 +119,10 @@ export default function WordQuizPage() {
     setIsCorrect(isAnsCorrect);
     
     if (isAnsCorrect) {
-      playSfx('correct');
+      playSfx('correct'); // Blip
       setScore(s => s + 1);
     } else {
-      playSfx('incorrect');
+      playSfx('incorrect'); // Ding
     }
 
     const finalScoreIfCorrect = isAnsCorrect ? score + 1 : score;
@@ -137,6 +148,13 @@ export default function WordQuizPage() {
     setSelectedAnswer(null);
     setIsCorrect(null);
     setAttempts(a => a + 1);
+    setTime(0);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (loading) {
@@ -179,18 +197,26 @@ export default function WordQuizPage() {
             </h2>
           </div>
           <CardContent className="pt-8 space-y-6">
-            <div className="space-y-1">
-              <div className="text-5xl font-bold text-black">{percentage}%</div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Skor Akurasi</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="text-4xl font-bold text-black">{percentage}%</div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skor</p>
+              </div>
+              <div className="space-y-1">
+                <div className="text-4xl font-bold text-black">{formatTime(time)}</div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Waktu</p>
+              </div>
             </div>
             
-            <div className="bg-muted/30 p-4 rounded-xl space-y-2">
+            <div className="bg-muted/30 p-4 rounded-xl space-y-3">
               <p className="text-sm text-muted-foreground">
                 Anda menjawab <strong>{score}</strong> dari <strong>{words.length}</strong> kata dengan benar.
               </p>
-              <div className="flex items-center justify-center gap-2 text-[#B8860B] font-bold">
-                <RefreshCw className="w-4 h-4" />
-                <span>Jumlah Percobaan: {attempts}</span>
+              <div className="flex flex-col gap-1 items-center justify-center text-[#B8860B] font-bold text-xs">
+                <div className="flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Jumlah Percobaan: {attempts}</span>
+                </div>
               </div>
             </div>
 
@@ -235,7 +261,12 @@ export default function WordQuizPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">Uji Hafalan Kata</h1>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold text-[#D4AF37]">Ayat {verseNumber} • Percobaan {attempts}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold text-[#D4AF37]">Ayat {verseNumber} • Percobaan {attempts}</p>
+            <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+              <Timer className="w-3 h-3" /> {formatTime(time)}
+            </div>
+          </div>
         </div>
         <div className="text-sm font-bold text-muted-foreground bg-muted px-3 py-1 rounded-full">
           {currentIdx + 1} / {words.length}
