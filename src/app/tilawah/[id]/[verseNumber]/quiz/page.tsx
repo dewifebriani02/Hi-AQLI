@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams } from "next/navigation";
@@ -36,14 +35,12 @@ export default function WordQuizPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  // SFX Player with short, single-shot sounds
+  // SFX Player with swapped correct/incorrect sounds
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
     const soundUrls = {
-      // Short crystal ding
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
-      // Very short single blip for "Salah"
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
-      // Short celebration fanfare
+      // Swapped URLs as per user request
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
     };
     
@@ -100,7 +97,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Force blur to remove browser focus rings (the yellow/blue marks)
+    // Force blur to remove browser focus rings (the yellow marks)
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
