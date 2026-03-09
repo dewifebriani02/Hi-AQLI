@@ -39,8 +39,8 @@ export default function WordQuizPage() {
   // SFX Player
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip (Swapped: Benar = Blip)
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding (Swapped: Salah = Ding)
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip (Tukar: Benar = Blip)
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding (Tukar: Salah = Ding)
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Fanfare
       fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3', // Fail sound
     };
