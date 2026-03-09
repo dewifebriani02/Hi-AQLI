@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -105,13 +106,16 @@ export default function VerseDetailPage() {
         setLoading(true);
         setError(null);
         setAnalysis(null);
+        setApiTafsir(null);
 
+        // 1. Fetch Surah Info
         const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         if (!surahRes.ok) throw new Error("Gagal memuat nama surat.");
         const surahData = await surahRes.json();
         setSurahName(surahData.chapter.name_simple);
         setTotalVerses(surahData.chapter.verses_count);
 
+        // 2. Fetch Verse Detail with Words and Translation (Kemenag - 33)
         const res = await fetch(
           `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani,root&word_translation_language=id&translations=33&fields=text_uthmani`
         );
@@ -119,6 +123,7 @@ export default function VerseDetailPage() {
         const data = await res.json();
         setVerse(data.verse);
 
+        // 3. Fetch Official Tafsir from Quran.com (ID: 157 for Kemenag RI Ringkas)
         try {
           const tafsirRes = await fetch(
             `https://api.quran.com/api/v4/tafsirs/157/by_key/${id}:${verseNumber}`
@@ -134,6 +139,7 @@ export default function VerseDetailPage() {
           setApiTafsir("Gagal memuat tafsir resmi.");
         }
         
+        // 4. Trigger AI Analysis
         if (data.verse) {
           fetchAiAnalysis(surahData.chapter.name_simple, parseInt(verseNumber), data.verse.text_uthmani);
         }
@@ -214,6 +220,7 @@ export default function VerseDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6">
+        {/* Word-by-Word Analysis */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="border-b bg-muted/30">
             <CardTitle className="text-lg flex items-center gap-2 font-headline">
@@ -242,6 +249,7 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
+        {/* Official Tafsir Section */}
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="bg-[#800000] text-white">
             <CardTitle className="text-lg flex items-center gap-2 font-headline">
@@ -263,6 +271,7 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
+        {/* AI Analysis Section */}
          <Card className="border-accent/20 shadow-sm bg-accent/5">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2 font-headline text-[#800000]">
@@ -290,9 +299,9 @@ export default function VerseDetailPage() {
               <p className="text-foreground/90 leading-relaxed italic whitespace-pre-wrap">{analysis.context}</p>
             ) : (
                <div className="text-center py-6 space-y-4">
-                  <p className="text-sm text-muted-foreground italic">Gagal memuat analisis AI.</p>
+                  <p className="text-sm text-muted-foreground italic">Tekan tombol di bawah untuk mendapatkan analisis dari AI Sahabat AQLI.</p>
                   <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10">
-                    <RefreshCw className="w-3 h-3" /> Coba Analisis AI
+                    <RefreshCw className="w-3 h-3" /> Analisis AI
                   </Button>
                </div>
             )}
@@ -300,6 +309,7 @@ export default function VerseDetailPage() {
         </Card>
       </div>
 
+      {/* Persistent Navigation for Mobile Swipe and Buttons */}
       <div className="fixed bottom-24 left-0 right-0 px-4 md:px-8 pointer-events-none z-40 hidden md:block">
         <div className="max-w-4xl mx-auto flex justify-between">
           <Button 
