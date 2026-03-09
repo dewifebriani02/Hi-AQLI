@@ -47,7 +47,7 @@ export default function VerseDetailPage() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Swipe Detection
+  // Swipe Detection for Mobile Navigation
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -62,15 +62,11 @@ export default function VerseDetailPage() {
   const handleTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
-    const isLeftSwipe = distance > 70;
-    const isRightSwipe = distance < -70;
-
-    if (isLeftSwipe && currentVerseNum < totalVerses) {
+    if (distance > 70 && currentVerseNum < totalVerses) {
       router.push(`/tilawah/${id}/${currentVerseNum + 1}`);
-    } else if (isRightSwipe && currentVerseNum > 1) {
+    } else if (distance < -70 && currentVerseNum > 1) {
       router.push(`/tilawah/${id}/${currentVerseNum - 1}`);
     }
-
     touchStartX.current = null;
     touchEndX.current = null;
   };
@@ -84,15 +80,10 @@ export default function VerseDetailPage() {
         verseNumber: num,
         verseText: text
       });
-      
-      if (result.error) {
-        setAnalysisError(result.error);
-      } else {
-        setAnalysis(result);
-      }
-    } catch (e: any) {
-      console.error("AI Analysis Fetch Error:", e);
-      setAnalysisError("Gagal terhubung dengan layanan analisis AI.");
+      if (result.error) setAnalysisError(result.error);
+      else setAnalysis(result);
+    } catch (e) {
+      setAnalysisError("Gagal memuat analisis AI.");
     } finally {
       setAnalysisLoading(false);
     }
@@ -103,73 +94,59 @@ export default function VerseDetailPage() {
     try {
       const fetchTafsirText = async (tafsirId: number) => {
         try {
-          const tafsirRes = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${chapterId}:${vNum}`);
-          if (tafsirRes.ok) {
-            const tafsirData = await tafsirRes.json();
-            return tafsirData.tafsir?.text || null;
+          const res = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${chapterId}:${vNum}`);
+          if (res.ok) {
+            const data = await res.json();
+            return data.tafsir?.text || null;
           }
-        } catch (e) {
-          return null;
-        }
+        } catch { return null; }
         return null;
       };
 
       // Priority 1: Kemenag Ringkas (157)
-      let foundTafsir = await fetchTafsirText(157);
-      if (foundTafsir) {
+      let found = await fetchTafsirText(157);
+      if (found) {
         setTafsirSource("Kemenag RI (Ringkas)");
       } else {
         // Priority 2: Jalalayn ID (158)
-        foundTafsir = await fetchTafsirText(158);
-        if (foundTafsir) setTafsirSource("Tafsir Jalalayn (ID)");
+        found = await fetchTafsirText(158);
+        if (found) setTafsirSource("Tafsir Jalalayn (ID)");
       }
-      
-      setApiTafsir(foundTafsir || "Tafsir resmi belum tersedia untuk ayat ini.");
-    } catch (e) {
-      console.error("Tafsir Fetch Error:", e);
+      setApiTafsir(found || "Tafsir resmi belum tersedia untuk ayat ini.");
+    } catch {
       setApiTafsir("Gagal memuat tafsir resmi.");
     }
   }, []);
 
   useEffect(() => {
-    async function fetchVerse() {
+    async function fetchAll() {
       if (!id || !verseNumber) return;
-
       try {
         setLoading(true);
         setError(null);
-        setAnalysis(null);
 
-        // 1. Fetch Surah Info
-        const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        if (!surahRes.ok) throw new Error("Gagal memuat nama surat.");
-        const surahData = await surahRes.json();
-        setSurahName(surahData.chapter.name_simple);
-        setTotalVerses(surahData.chapter.verses_count);
+        // Surah Info
+        const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
+        if (!sRes.ok) throw new Error("Gagal memuat informasi surat.");
+        const sData = await sRes.json();
+        setSurahName(sData.chapter.name_simple);
+        setTotalVerses(sData.chapter.verses_count);
 
-        // 2. Fetch Verse Detail
-        const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani,root&word_translation_language=id&translations=33&fields=text_uthmani`
-        );
-        if (!res.ok) throw new Error("Gagal memuat data ayat.");
-        const data = await res.json();
-        setVerse(data.verse);
+        // Verse Info
+        const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_translation_language=id&translations=33&fields=text_uthmani`);
+        if (!vRes.ok) throw new Error("Gagal memuat ayat.");
+        const vData = await vRes.json();
+        setVerse(vData.verse);
 
-        // 3. Fetch Tafsir
         fetchOfficialTafsir(id, verseNumber);
-        
-        // 4. AI Analysis
-        if (data.verse) {
-          fetchAiAnalysis(surahData.chapter.name_simple, parseInt(verseNumber), data.verse.text_uthmani);
-        }
-      } catch (err: any) {
-        console.error("Main Fetch Error:", err);
-        setError(err.message || "Terjadi kesalahan saat memuat data.");
+        if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseNumber), vData.verse.text_uthmani);
+      } catch (e: any) {
+        setError(e.message);
       } finally {
         setLoading(false);
       }
     }
-    fetchVerse();
+    fetchAll();
   }, [id, verseNumber, fetchAiAnalysis, fetchOfficialTafsir]);
 
   if (loading) {
@@ -194,7 +171,7 @@ export default function VerseDetailPage() {
             <ChevronLeft className="h-6 w-6" />
           </Link>
         </Button>
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">{surahName} : {verseNumber}</h1>
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Detail Ayat</p>
         </div>
@@ -213,8 +190,8 @@ export default function VerseDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Word-by-Word Analysis */}
-        <Card className="border-[#800000]/10 shadow-sm">
+        {/* Word-by-Word Card */}
+        <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-muted/30 py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline">
               <ListTree className="w-4 h-4 text-[#800000]" />
@@ -227,11 +204,6 @@ export default function VerseDetailPage() {
                 <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors" dir="ltr">
                   <div className="flex flex-col gap-1 text-left">
                     <span className="text-2xl font-arabic text-[#800000]">{word.text_uthmani}</span>
-                    {word.root && (
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        Akar: <span className="text-foreground font-arabic text-base">{word.root}</span>
-                      </span>
-                    )}
                   </div>
                   <div className="text-right sm:max-w-[60%]">
                     <p className="text-sm font-medium">{word.translation.text}</p>
@@ -240,7 +212,7 @@ export default function VerseDetailPage() {
               ))}
             </div>
           </CardContent>
-          <CardFooter className="pt-6 border-t bg-muted/5">
+          <CardFooter className="pt-6 border-t bg-amber-50/50">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 shadow-md border-b-4 border-amber-600 transition-all active:translate-y-0.5 active:border-b-2">
               <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
                 <GraduationCap className="w-5 h-5 text-black" /> UJI HAFALAN KATA
@@ -249,10 +221,10 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
-        {/* Official Tafsir Section */}
-        <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
+        {/* Tafsir Card */}
+        <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white py-4">
-            <CardTitle className="text-base flex items-center gap-2 font-headline">
+            <CardTitle className="text-sm flex items-center gap-2 font-headline">
               <BookOpen className="w-4 h-4" />
               Tafsir Resmi ({tafsirSource})
             </CardTitle>
@@ -260,77 +232,43 @@ export default function VerseDetailPage() {
           <CardContent className="pt-6 min-h-[100px]">
             {apiTafsir ? (
               <div 
-                className="text-foreground/90 leading-relaxed text-base prose prose-sm max-w-none prose-p:mb-4 prose-strong:text-[#800000]"
+                className="text-foreground/90 leading-relaxed text-base prose prose-sm max-w-none prose-strong:text-[#800000]"
                 dangerouslySetInnerHTML={{ __html: apiTafsir }} 
               />
             ) : (
-               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground italic">Memuat tafsir resmi...</p>
-               </div>
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                 <p className="text-xs text-muted-foreground italic">Memuat data tafsir...</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* AI Analysis Section */}
-         <Card className="border-accent/20 shadow-sm bg-accent/5">
+        {/* AI Analysis Card */}
+        <Card className="border-accent/20 shadow-sm bg-accent/5">
           <CardHeader className="py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">
               <BrainCircuit className="w-4 h-4" />
               Hikmah & Pelajaran (AI Sahabat AQLI)
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-8">
+          <CardContent>
             {analysisLoading ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-2/3" />
               </div>
-            ) : analysisError ? (
-               <div className="text-center py-6 space-y-4">
-                  <p className="text-sm text-muted-foreground italic">{analysisError}</p>
-                  <Button variant="outline" size="sm" onClick={() => verse && fetchAiAnalysis(surahName, parseInt(verseNumber), verse.text_uthmani)} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10 font-bold">
-                    <RefreshCw className="w-3 h-3" /> Coba Analisis AI
-                  </Button>
-               </div>
             ) : analysis ? (
               <p className="text-foreground/90 leading-relaxed italic text-sm whitespace-pre-wrap">{analysis.context}</p>
             ) : (
-               <div className="text-center py-6 space-y-4">
-                  <p className="text-sm text-muted-foreground italic">Gunakan AI untuk mendapatkan pelajaran praktis dari ayat ini.</p>
-                  <Button variant="outline" size="sm" onClick={() => verse && fetchAiAnalysis(surahName, parseInt(verseNumber), verse.text_uthmani)} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10 font-bold">
-                    <RefreshCw className="w-3 h-3" /> Analisis AI
-                  </Button>
-               </div>
+              <div className="text-center py-4">
+                <Button variant="outline" size="sm" onClick={() => verse && fetchAiAnalysis(surahName, parseInt(verseNumber), verse.text_uthmani)} className="gap-2 border-[#800000] text-[#800000] font-bold">
+                  <RefreshCw className="w-3 h-3" /> Analisis AI
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Mobile Sticky Navigation */}
-      <div className="fixed bottom-20 md:hidden left-0 right-0 flex justify-between p-2 bg-background/95 backdrop-blur border-t z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="flex-1 gap-1 text-[#800000] font-bold"
-          disabled={currentVerseNum <= 1}
-          onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}
-        >
-          <ChevronLeft className="w-4 h-4" /> PREV
-        </Button>
-        <div className="flex-1 flex items-center justify-center font-bold text-xs text-muted-foreground">
-          AYAT {currentVerseNum} / {totalVerses}
-        </div>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="flex-1 gap-1 text-[#800000] font-bold"
-          disabled={currentVerseNum >= totalVerses}
-          onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
-        >
-          NEXT <ChevronRight className="w-4 h-4" />
-        </Button>
       </div>
     </div>
   );

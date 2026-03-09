@@ -36,14 +36,14 @@ export default function WordQuizPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  // Helper to play short UI sound effects
+  // SFX Player with short, single-shot sounds
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
     const soundUrls = {
-      // Happy bright crystal ding
+      // Short crystal ding
       correct: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
-      // Clear but gentle "oops" fail sound
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2658/2658-preview.mp3',
-      // Success fanfare for 100%
+      // Very short single blip for "Salah"
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+      // Short celebration fanfare
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
     };
     
@@ -80,6 +80,7 @@ export default function WordQuizPage() {
 
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
+      // Fully clear state before next question
       setSelectedAnswer(null);
       setIsCorrect(null);
 
@@ -99,7 +100,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Immediately blur to remove any browser focus highlights (garis kuning/biru)
+    // Force blur to remove browser focus rings (the yellow/blue marks)
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -110,7 +111,7 @@ export default function WordQuizPage() {
     setSelectedAnswer(answer);
     setIsCorrect(isAnsCorrect);
     
-    // Play SFX
+    // Play SFX immediately
     if (isAnsCorrect) {
       playSfx('correct');
       setScore(s => s + 1);
@@ -126,7 +127,6 @@ export default function WordQuizPage() {
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
-        // Play perfect sound if score is 100%
         if (finalScoreIfCorrect === words.length) {
           playSfx('perfect');
         }
@@ -194,7 +194,6 @@ export default function WordQuizPage() {
     );
   }
 
-  const currentWord = words[currentIdx];
   const progressValue = ((currentIdx + 1) / words.length) * 100;
 
   return (
@@ -216,23 +215,23 @@ export default function WordQuizPage() {
 
       <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
-      <Card key={`question-card-${currentIdx}`} className="border-[#D4AF37]/10 shadow-lg overflow-hidden">
+      <Card key={`question-${currentIdx}`} className="border-[#D4AF37]/10 shadow-lg overflow-hidden">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Apa arti dari kata ini?</CardTitle>
           <div className="text-6xl md:text-7xl font-arabic leading-relaxed text-[#B8860B]">
-            {currentWord?.text_uthmani}
+            {words[currentIdx]?.text_uthmani}
           </div>
         </CardHeader>
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {options.map((option, idx) => (
             <Button
-              key={`${currentIdx}-option-${idx}`}
+              key={`${currentIdx}-opt-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none outline-0 focus:outline-none focus-visible:outline-none",
-                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100",
-                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100",
-                selectedAnswer && option === currentWord?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
+                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none focus-visible:outline-none",
+                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100 shadow-sm",
+                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100 shadow-sm",
+                selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700 shadow-sm",
                 !selectedAnswer && "hover:border-[#D4AF37] hover:text-[#B8860B] active:bg-muted"
               )}
               onClick={() => handleAnswer(option)}
@@ -242,7 +241,7 @@ export default function WordQuizPage() {
                 <span className="truncate">{option}</span>
                 {selectedAnswer === option && isCorrect === true && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
                 {selectedAnswer === option && isCorrect === false && <XCircle className="w-5 h-5 text-red-600 shrink-0" />}
-                {selectedAnswer && option === currentWord?.translation?.text && isCorrect === false && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
+                {selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
               </div>
             </Button>
           ))}
