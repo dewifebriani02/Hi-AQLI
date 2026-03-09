@@ -9,9 +9,9 @@ import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/tilawah", label: "Qur'an", icon: BookOpen },
-  { href: "/tajweed", label: "Tajwid", icon: GraduationCap },
   { href: "/study-circles", label: "Halaqah", icon: Users },
+  { href: "/tilawah", label: "Qur'an", icon: BookOpen, isProminent: true },
+  { href: "/tajweed", label: "Tajwid", icon: GraduationCap },
   { href: "/leaderboard", label: "Juara", icon: Trophy },
 ];
 
@@ -28,9 +28,35 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around border-t bg-background/95 backdrop-blur p-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-[100] flex items-end justify-around border-t bg-background/95 backdrop-blur px-1 pb-2 pt-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
       {navItems.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+        
+        if (item.isProminent) {
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="relative -top-4 flex flex-col items-center justify-center gap-1 group"
+            >
+              <div className={cn(
+                "flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300",
+                isActive 
+                  ? "bg-[#800000] text-white scale-110" 
+                  : "bg-white text-[#800000] border-2 border-[#800000]/20 hover:bg-[#800000] hover:text-white"
+              )}>
+                <item.icon className="h-7 w-7" />
+              </div>
+              <span className={cn(
+                "text-[10px] font-bold uppercase tracking-wider transition-colors mt-1",
+                isActive ? "text-[#800000]" : "text-muted-foreground"
+              )}>
+                {item.label}
+              </span>
+            </Link>
+          );
+        }
+
         return (
           <Link
             key={item.href}

@@ -2,11 +2,11 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Trophy, Medal, Users, Clock, User, BookOpen, Star, ArrowRight, CheckCircle2, PlayCircle, Lock } from "lucide-react";
+import { ChevronLeft, Trophy, Users, Clock, User, BookOpen, Star, ArrowRight, CheckCircle2, PlayCircle, Lock } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
@@ -91,7 +91,6 @@ export default function StudyCircleDetailPage() {
         </div>
       </div>
 
-      {/* Circle Info Header */}
       <Card className="border-none shadow-md overflow-hidden">
         <div className="h-24 bg-gradient-to-r from-[#800000] to-[#b30000] opacity-90" />
         <CardContent className="pt-0 px-6 pb-6">
@@ -128,7 +127,6 @@ export default function StudyCircleDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Lesson List Section */}
       <div ref={lessonsRef} className="space-y-4 px-1 scroll-mt-24">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-lg font-headline">Daftar Materi Pembelajaran</h3>
@@ -137,37 +135,34 @@ export default function StudyCircleDetailPage() {
         
         <div className="grid gap-3">
           {circle.lessons.map((lesson, idx) => (
-            <Card 
+            <div
               key={lesson.id} 
-              className={cn(
-                "border-none shadow-sm transition-all select-none ring-0 outline-none group",
-                lesson.locked ? "opacity-60 bg-muted/30" : "hover:bg-accent/50 cursor-pointer bg-card/50 active:scale-[0.98]"
-              )}
               onClick={() => handleLessonAction(lesson)}
+              className={cn(
+                "group border rounded-xl p-4 flex items-center justify-between transition-all select-none cursor-pointer",
+                lesson.locked ? "opacity-60 bg-muted/30" : "hover:bg-accent/50 bg-card active:scale-[0.98] shadow-sm"
+              )}
             >
-              <CardContent className="p-4 flex items-center justify-between pointer-events-auto">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                    lesson.completed ? "bg-emerald-100 text-emerald-600" : 
-                    lesson.locked ? "bg-muted text-muted-foreground" : "bg-[#800000]/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
-                  )}>
-                    {lesson.completed ? <CheckCircle2 className="w-5 h-5" /> : 
-                     lesson.locked ? <Lock className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold">{idx + 1}. {lesson.title}</span>
-                    <span className="text-[10px] text-muted-foreground font-medium">{lesson.duration} • {lesson.completed ? "Selesai" : lesson.locked ? "Terkunci" : "Tersedia"}</span>
-                  </div>
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                  lesson.completed ? "bg-emerald-100 text-emerald-600" : 
+                  lesson.locked ? "bg-muted text-muted-foreground" : "bg-[#800000]/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
+                )}>
+                  {lesson.completed ? <CheckCircle2 className="w-5 h-5" /> : 
+                   lesson.locked ? <Lock className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}
                 </div>
-                {!lesson.locked && <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-[#800000]" />}
-              </CardContent>
-            </Card>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold">{idx + 1}. {lesson.title}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{lesson.duration} • {lesson.completed ? "Selesai" : lesson.locked ? "Terkunci" : "Tersedia"}</span>
+                </div>
+              </div>
+              {!lesson.locked && <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-[#800000]" />}
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Leaderboard Section Per Halaqah */}
       <div className="space-y-4 px-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

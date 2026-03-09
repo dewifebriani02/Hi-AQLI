@@ -36,10 +36,10 @@ const adminItems = [
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
+  { href: "/study-circles", label: "Halaqah", icon: Users },
   { href: "/tilawah", label: "Al-Qur'an", icon: BookOpen },
-  { href: "/tajweed", label: "Modul Tajwid", icon: GraduationCap },
-  { href: "/study-circles", label: "Lingkar Studi (Halaqah)", icon: Users },
-  { href: "/leaderboard", label: "Papan Peringkat", icon: Trophy },
+  { href: "/tajweed", label: "Tajwid", icon: GraduationCap },
+  { href: "/leaderboard", label: "Juara", icon: Trophy },
   { href: "/donate", label: "Donasi", icon: HeartHandshake },
 ];
 
