@@ -4,13 +4,14 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface WordData {
   id: number;
@@ -206,6 +207,20 @@ export default function VerseDetailPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Tips Menghafal Efektif */}
+            <div className="p-4 bg-amber-50/50" dir="ltr">
+              <Alert className="border-amber-200 bg-white shadow-sm">
+                <Lightbulb className="h-4 w-4 text-[#B8860B]" />
+                <AlertTitle className="text-xs font-bold text-[#800000] uppercase tracking-wider">Tips Menghafal Efektif</AlertTitle>
+                <AlertDescription className="text-xs text-muted-foreground leading-relaxed space-y-2 mt-2">
+                  <p>• <strong>Hubungkan Makna:</strong> Bayangkan arti kata dalam sebuah cerita atau gambaran visual sesuai konteks ayat.</p>
+                  <p>• <strong>Ucapkan Lisan:</strong> Bacalah kata Arab-nya lalu sebutkan artinya dengan suara pelan sebanyak 3-5 kali per kata.</p>
+                  <p>• <strong>Fokus Akar Kata:</strong> Perhatikan pola huruf dasar kata tersebut, biasanya arti kata sejenis akan saling berkaitan.</p>
+                  <p>• <strong>Gunakan Kuis:</strong> Segera uji hafalan Anda setelah merasa siap untuk mengunci memori jangka panjang.</p>
+                </AlertDescription>
+              </Alert>
             </div>
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/10 p-4">
