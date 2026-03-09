@@ -1,10 +1,11 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, BookOpen, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, BookOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, TooltipPortal } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ export function MushafPage() {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [inputPage, setInputPage] = useState("1");
+  const [showTranslation, setShowTranslation] = useState(true);
 
   useEffect(() => {
     async function fetchPageVerses() {
@@ -59,42 +61,57 @@ export function MushafPage() {
   return (
     <div className="flex flex-col gap-6 px-1">
       {/* Page Navigation Header */}
-      <div className="flex items-center justify-between gap-4 bg-muted/30 p-4 rounded-xl border border-[#800000]/10 shadow-sm sticky top-20 z-20 backdrop-blur-md">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          disabled={page <= 1 || loading} 
-          onClick={() => setPage(p => p - 1)}
-          className="h-10 w-10 border-[#800000]/20 text-[#800000] hover:bg-[#800000] hover:text-white transition-all"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        
-        <form onSubmit={handlePageChange} className="flex items-center gap-2 flex-1 justify-center">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border shadow-inner">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden sm:inline">Hal.</span>
-            <Input 
-              type="number" 
-              min={1} 
-              max={604} 
-              value={inputPage} 
-              onChange={(e) => setInputPage(e.target.value)}
-              className="text-center font-bold h-7 w-12 p-0 border-none shadow-none focus-visible:ring-0 text-[#800000] text-lg"
-            />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">/ 604</span>
-          </div>
-          <Button type="submit" size="sm" variant="ghost" className="h-8 text-[10px] font-bold text-[#800000] uppercase tracking-tighter sm:tracking-widest">Pindah</Button>
-        </form>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/30 p-4 rounded-xl border border-[#800000]/10 shadow-sm sticky top-20 z-20 backdrop-blur-md">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            disabled={page <= 1 || loading} 
+            onClick={() => setPage(p => p - 1)}
+            className="h-10 w-10 border-[#800000]/20 text-[#800000] hover:bg-[#800000] hover:text-white transition-all"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          
+          <form onSubmit={handlePageChange} className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border shadow-inner">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Hal.</span>
+              <Input 
+                type="number" 
+                min={1} 
+                max={604} 
+                value={inputPage} 
+                onChange={(e) => setInputPage(e.target.value)}
+                className="text-center font-bold h-7 w-12 p-0 border-none shadow-none focus-visible:ring-0 text-[#800000] text-lg"
+              />
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">/ 604</span>
+            </div>
+            <Button type="submit" size="sm" variant="ghost" className="h-8 text-[10px] font-bold text-[#800000] uppercase tracking-widest">Pindah</Button>
+          </form>
 
-        <Button 
-          variant="outline" 
-          size="icon" 
-          disabled={page >= 604 || loading} 
-          onClick={() => setPage(p => p + 1)}
-          className="h-10 w-10 border-[#800000]/20 text-[#800000] hover:bg-[#800000] hover:text-white transition-all"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            disabled={page >= 604 || loading} 
+            onClick={() => setPage(p => p + 1)}
+            className="h-10 w-10 border-[#800000]/20 text-[#800000] hover:bg-[#800000] hover:text-white transition-all"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Translation Toggle */}
+        <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg border shadow-sm self-stretch sm:self-auto justify-center">
+          <Switch 
+            id="mushaf-translation-toggle" 
+            checked={showTranslation} 
+            onCheckedChange={setShowTranslation}
+            className="data-[state=checked]:bg-[#800000]"
+          />
+          <Label htmlFor="mushaf-translation-toggle" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground cursor-pointer select-none">
+            Terjemahan
+          </Label>
+        </div>
       </div>
 
       {loading ? (
@@ -137,13 +154,15 @@ export function MushafPage() {
                   ))}
                 </div>
 
-                <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">
-                  <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
-                  <div 
-                    className="text-base md:text-lg text-foreground/80 leading-relaxed italic"
-                    dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }}
-                  />
-                </div>
+                {showTranslation && (
+                  <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000] animate-in fade-in slide-in-from-left-2 duration-300">
+                    <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
+                    <div 
+                      className="text-base md:text-lg text-foreground/80 leading-relaxed italic"
+                      dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }}
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </TooltipProvider>
