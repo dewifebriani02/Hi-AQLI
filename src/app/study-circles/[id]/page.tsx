@@ -140,17 +140,17 @@ export default function StudyCircleDetailPage() {
             <Card 
               key={lesson.id} 
               className={cn(
-                "border-none shadow-sm transition-all select-none ring-0 outline-none",
-                lesson.locked ? "opacity-60 bg-muted/30" : "hover:bg-accent/50 cursor-pointer bg-card/50"
+                "border-none shadow-sm transition-all select-none ring-0 outline-none group",
+                lesson.locked ? "opacity-60 bg-muted/30" : "hover:bg-accent/50 cursor-pointer bg-card/50 active:scale-[0.98]"
               )}
               onClick={() => handleLessonAction(lesson)}
             >
-              <CardContent className="p-4 flex items-center justify-between">
+              <CardContent className="p-4 flex items-center justify-between pointer-events-auto">
                 <div className="flex items-center gap-4">
                   <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center",
+                    "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
                     lesson.completed ? "bg-emerald-100 text-emerald-600" : 
-                    lesson.locked ? "bg-muted text-muted-foreground" : "bg-[#800000]/10 text-[#800000]"
+                    lesson.locked ? "bg-muted text-muted-foreground" : "bg-[#800000]/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
                   )}>
                     {lesson.completed ? <CheckCircle2 className="w-5 h-5" /> : 
                      lesson.locked ? <Lock className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}
@@ -160,7 +160,7 @@ export default function StudyCircleDetailPage() {
                     <span className="text-[10px] text-muted-foreground font-medium">{lesson.duration} • {lesson.completed ? "Selesai" : lesson.locked ? "Terkunci" : "Tersedia"}</span>
                   </div>
                 </div>
-                {!lesson.locked && <ArrowRight className="w-4 h-4 text-muted-foreground/30" />}
+                {!lesson.locked && <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-[#800000]" />}
               </CardContent>
             </Card>
           ))}
