@@ -2,7 +2,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +36,25 @@ export default function WordQuizPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
+  // Helper to play short UI sound effects
+  const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
+    const soundUrls = {
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Quick digital ping
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Dull error thud
+      perfect: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Success sparkle
+    };
+    
+    try {
+      const audio = new Audio(soundUrls[type]);
+      audio.volume = 0.5;
+      audio.play().catch(() => {
+        // Silently ignore if browser blocks auto-play
+      });
+    } catch (e) {
+      console.error("Audio SFX Error:", e);
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchWords() {
       try {
@@ -58,7 +77,6 @@ export default function WordQuizPage() {
 
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
-      // RESET visual state totally before new question options are set
       setSelectedAnswer(null);
       setIsCorrect(null);
 
@@ -78,7 +96,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Explicitly remove focus from the clicked button to hide any browser focus ring
+    // Force blur to remove browser's yellow/blue focus ring
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -88,15 +106,26 @@ export default function WordQuizPage() {
     const isAnsCorrect = answer === correct;
     setIsCorrect(isAnsCorrect);
     
+    // Play correct/incorrect sound
     if (isAnsCorrect) {
+      playSfx('correct');
       setScore(s => s + 1);
+    } else {
+      playSfx('incorrect');
     }
+
+    const isLastQuestion = currentIdx + 1 === words.length;
+    const finalScoreIfCorrect = isAnsCorrect ? score + 1 : score;
 
     setTimeout(() => {
       if (currentIdx + 1 < words.length) {
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
+        // Play perfect score sound if applicable
+        if (finalScoreIfCorrect === words.length) {
+          setTimeout(() => playSfx('perfect'), 300);
+        }
       }
     }, 1000);
   };
