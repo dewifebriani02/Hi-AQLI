@@ -39,16 +39,19 @@ export default function WordQuizPage() {
   // Helper to play short UI sound effects
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
     const soundUrls = {
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Quick digital ping
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Dull error thud
-      perfect: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Success sparkle
+      // Clean "ding" for correct
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+      // Clear "buzzer" for incorrect
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3',
+      // Sparkle for 100%
+      perfect: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
     };
     
     try {
       const audio = new Audio(soundUrls[type]);
-      audio.volume = 0.5;
-      audio.play().catch(() => {
-        // Silently ignore if browser blocks auto-play
+      audio.volume = 0.6;
+      audio.play().catch((e) => {
+        console.warn("Autoplay audio blocked by browser:", e);
       });
     } catch (e) {
       console.error("Audio SFX Error:", e);
@@ -101,12 +104,13 @@ export default function WordQuizPage() {
       (document.activeElement as HTMLElement)?.blur();
     }
 
-    setSelectedAnswer(answer);
     const correct = words[currentIdx].translation.text;
     const isAnsCorrect = answer === correct;
+    
+    setSelectedAnswer(answer);
     setIsCorrect(isAnsCorrect);
     
-    // Play correct/incorrect sound
+    // Play sound immediately
     if (isAnsCorrect) {
       playSfx('correct');
       setScore(s => s + 1);
@@ -122,12 +126,11 @@ export default function WordQuizPage() {
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
-        // Play perfect score sound if applicable
         if (finalScoreIfCorrect === words.length) {
           setTimeout(() => playSfx('perfect'), 300);
         }
       }
-    }, 1000);
+    }, 1200);
   };
 
   if (loading) {
