@@ -63,11 +63,9 @@ export default function VerseDetailPage() {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
     
-    // Swipe left (next verse)
     if (distance > 70 && currentVerseNum < totalVerses) {
       router.push(`/tilawah/${id}/${currentVerseNum + 1}`);
     } 
-    // Swipe right (previous verse)
     else if (distance < -70 && currentVerseNum > 1) {
       router.push(`/tilawah/${id}/${currentVerseNum - 1}`);
     }
@@ -95,29 +93,14 @@ export default function VerseDetailPage() {
   const fetchOfficialTafsir = useCallback(async (chapterId: string, vNum: string) => {
     setApiTafsir(null);
     try {
-      const fetchTafsirText = async (tafsirId: number) => {
-        try {
-          const res = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${chapterId}:${vNum}`);
-          if (res.ok) {
-            const data = await res.json();
-            return data.tafsir?.text || null;
-          }
-        } catch { return null; }
-        return null;
-      };
-
-      let found = await fetchTafsirText(157); // Kemenag
-      if (found) {
-        setTafsirSource("Kemenag RI (Ringkas)");
+      const tafsirId = 157; // Kemenag RI
+      const res = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${chapterId}:${vNum}`);
+      if (res.ok) {
+        const data = await res.json();
+        setApiTafsir(data.tafsir?.text || "Tafsir belum tersedia untuk ayat ini.");
       } else {
-        found = await fetchTafsirText(158); // Jalalayn
-        if (found) setTafsirSource("Tafsir Jalalayn (ID)");
-        else {
-          found = await fetchTafsirText(159); // Kemenag Lengkap
-          if (found) setTafsirSource("Tafsir Kemenag (Lengkap)");
-        }
+        setApiTafsir("Gagal memuat tafsir resmi.");
       }
-      setApiTafsir(found || "Tafsir resmi belum tersedia untuk ayat ini.");
     } catch {
       setApiTafsir("Gagal memuat tafsir resmi.");
     }
@@ -210,7 +193,6 @@ export default function VerseDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Penjabaran Kata Section */}
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-muted/30 py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline">
@@ -232,16 +214,14 @@ export default function VerseDetailPage() {
               ))}
             </div>
 
-            {/* Tips Menghafal Efektif Section */}
             <div className="p-4 bg-amber-50/50" dir="ltr">
               <Alert className="border-amber-200 bg-white shadow-sm">
                 <Lightbulb className="h-4 w-4 text-[#B8860B]" />
                 <AlertTitle className="text-xs font-bold text-[#800000] uppercase tracking-wider">Tips Menghafal Efektif</AlertTitle>
                 <AlertDescription className="text-xs text-muted-foreground leading-relaxed space-y-2 mt-2">
-                  <p>• <strong>Hubungkan Makna:</strong> Bayangkan arti kata dalam sebuah cerita atau gambaran visual sesuai konteks ayat.</p>
-                  <p>• <strong>Ucapkan Lisan:</strong> Bacalah kata Arab-nya lalu sebutkan artinya dengan suara pelan sebanyak 3-5 kali per kata.</p>
-                  <p>• <strong>Fokus Akar Kata:</strong> Perhatikan pola huruf dasar kata tersebut, biasanya arti kata sejenis akan saling berkaitan.</p>
-                  <p>• <strong>Pelajari Sebelum Kuis:</strong> Gunakan tabel di atas untuk memantapkan ingatan Anda sebelum mulai menguji hafalan.</p>
+                  <p>• <strong>Visualisasi:</strong> Bayangkan arti kata dalam gambaran visual sesuai konteks ayat.</p>
+                  <p>• <strong>Pengulangan Lisan:</strong> Ucapkan kata Arab dan artinya sebanyak 5 kali.</p>
+                  <p>• <strong>Target Sempurna:</strong> Anda wajib mendapatkan skor 100% untuk menyelesaikan kuis ini.</p>
                 </AlertDescription>
               </Alert>
             </div>
@@ -255,35 +235,33 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
-        {/* Tafsir Resmi Section */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white py-4">
             <CardTitle className="text-sm flex items-center gap-2 font-headline">
               <BookOpen className="w-4 h-4" />
-              Tafsir Resmi ({tafsirSource})
+              Tafsir Resmi (Kemenag RI)
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 min-h-[100px]">
+          <CardContent className="pt-6">
             {apiTafsir ? (
               <div 
                 className="text-foreground/90 leading-relaxed text-base prose prose-sm max-w-none prose-strong:text-[#800000]"
                 dangerouslySetInnerHTML={{ __html: apiTafsir }} 
               />
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 gap-3">
-                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                 <p className="text-xs text-muted-foreground italic">Memuat data tafsir...</p>
+              <div className="flex flex-col items-center justify-center py-8 gap-3 text-muted-foreground italic">
+                 <Loader2 className="w-5 h-5 animate-spin" />
+                 <p className="text-xs">Memuat tafsir...</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* AI Analysis Section */}
         <Card className="border-accent/20 shadow-sm bg-accent/5">
           <CardHeader className="py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">
               <BrainCircuit className="w-4 h-4" />
-              Hikmah & Pelajaran (AI Sahabat AQLI)
+              Hikmah (AI Sahabat AQLI)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -293,19 +271,14 @@ export default function VerseDetailPage() {
                 <Skeleton className="h-4 w-5/6" />
               </div>
             ) : analysis ? (
-              <p className="text-foreground/90 leading-relaxed italic text-sm whitespace-pre-wrap">{analysis.context}</p>
+              <p className="text-foreground/90 leading-relaxed italic text-sm">{analysis.context}</p>
             ) : (
-              <div className="text-center py-4">
-                <Button variant="outline" size="sm" onClick={() => verse && fetchAiAnalysis(surahName, parseInt(verseNumber), verse.text_uthmani)} className="gap-2 border-[#800000] text-[#800000] font-bold">
-                  <RefreshCw className="w-3 h-3" /> Analisis AI
-                </Button>
-              </div>
+              <p className="text-xs text-muted-foreground">Analisis tidak tersedia.</p>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Bottom Verse Navigation */}
       <div className="flex items-center justify-between gap-4 mt-8">
         <Button 
           variant="outline" 

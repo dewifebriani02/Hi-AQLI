@@ -10,6 +10,7 @@ import { ChevronLeft, Trophy, Medal, Users, Clock, User, BookOpen, Star, ArrowRi
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const studyCircles = [
   {
@@ -39,30 +40,6 @@ const studyCircles = [
       { id: "l3", title: "Sifat-sifat Tak Berlawanan", duration: "45 mnt", completed: false, locked: true },
     ]
   },
-  {
-    id: "3",
-    title: "Sirah Nabi (SAW)",
-    instructor: "Ustadha Aisha Khan",
-    description: "Perjalanan melalui kehidupan Nabi Muhammad (SAW) dan dapatkan pelajaran abadi untuk hari ini.",
-    schedule: "Minggu, 14:00 WIB",
-    level: "Semua Level",
-    lessons: [
-      { id: "l1", title: "Kondisi Arab Pra-Islam", duration: "20 mnt", completed: true },
-      { id: "l2", title: "Kelahiran Sang Cahaya", duration: "30 mnt", completed: false },
-    ]
-  },
-  {
-    id: "4",
-    title: "Fikih Ibadah",
-    instructor: "Imam Omar Farooq",
-    description: "Pahami hukum dan hikmah di balik ibadah inti, termasuk Salat, Zakat, dan Puasa.",
-    schedule: "Kamis, 20:00 WIB",
-    level: "Menengah",
-    lessons: [
-      { id: "l1", title: "Thaharah & Wudhu", duration: "25 mnt", completed: true },
-      { id: "l2", title: "Rukun-Rukun Salat", duration: "40 mnt", completed: false },
-    ]
-  },
 ];
 
 const mockGroupLeaderboard = [
@@ -76,13 +53,28 @@ const mockGroupLeaderboard = [
 export default function StudyCircleDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const circle = studyCircles.find(c => c.id === id);
+  const { toast } = useToast();
+  const circle = studyCircles.find(c => c.id === id) || studyCircles[0];
   const lessonsRef = useRef<HTMLDivElement>(null);
-
-  if (!circle) return <div className="p-8 text-center">Materi tidak ditemukan.</div>;
 
   const scrollToLessons = () => {
     lessonsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleLessonAction = (lesson: any) => {
+    if (lesson.locked) {
+      toast({
+        variant: "destructive",
+        title: "Materi Terkunci",
+        description: "Selesaikan materi sebelumnya untuk membuka bab ini.",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Mulai Belajar",
+      description: `Menyiapkan materi: ${lesson.title}. Silakan tunggu...`,
+    });
   };
 
   return (
@@ -145,10 +137,14 @@ export default function StudyCircleDetailPage() {
         
         <div className="grid gap-3">
           {circle.lessons.map((lesson, idx) => (
-            <Card key={lesson.id} className={cn(
-              "border-none shadow-sm transition-all",
-              lesson.locked ? "opacity-60 bg-muted/30" : "hover:bg-accent/50 cursor-pointer bg-card/50"
-            )}>
+            <Card 
+              key={lesson.id} 
+              className={cn(
+                "border-none shadow-sm transition-all select-none ring-0 outline-none",
+                lesson.locked ? "opacity-60 bg-muted/30" : "hover:bg-accent/50 cursor-pointer bg-card/50"
+              )}
+              onClick={() => handleLessonAction(lesson)}
+            >
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={cn(
@@ -219,9 +215,6 @@ export default function StudyCircleDetailPage() {
             </div>
           </CardContent>
         </Card>
-        <p className="text-[10px] text-center text-muted-foreground italic font-medium">
-          Dapatkan poin dengan menyelesaikan tugas dan kuis di dalam halaqah ini.
-        </p>
       </div>
     </div>
   );

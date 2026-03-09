@@ -37,13 +37,12 @@ export default function WordQuizPage() {
   const [attempts, setAttempts] = useState(1);
   const [time, setTime] = useState(0);
 
-  // SFX Player
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip (short)
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding (crystal)
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Fanfare
-      fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3', // Fail sound
+      fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3', // Fail
     };
     
     try {
@@ -76,7 +75,6 @@ export default function WordQuizPage() {
     fetchWords();
   }, [fetchWords]);
 
-  // Timer Effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (!isFinished && !loading) {
@@ -108,7 +106,6 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Remove focus ring immediately
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -120,10 +117,10 @@ export default function WordQuizPage() {
     setIsCorrect(isAnsCorrect);
     
     if (isAnsCorrect) {
-      playSfx('correct'); // Blip
+      playSfx('correct');
       setScore(s => s + 1);
     } else {
-      playSfx('incorrect'); // Ding
+      playSfx('incorrect');
     }
 
     const finalScoreIfCorrect = isAnsCorrect ? score + 1 : score;
@@ -169,14 +166,12 @@ export default function WordQuizPage() {
 
   if (error || words.length === 0) {
     return (
-      <div className="p-12 text-center flex flex-col items-center gap-4 max-w-lg mx-auto">
+      <div className="p-12 text-center flex flex-col items-center gap-4">
         <Alert variant="destructive">
           <AlertTitle>Gagal</AlertTitle>
-          <AlertDescription>Tidak dapat memuat kuis untuk ayat ini.</AlertDescription>
+          <AlertDescription>Tidak dapat memuat kuis.</AlertDescription>
         </Alert>
-        <Button asChild variant="outline">
-          <Link href={`/tilawah/${id}/${verseNumber}`}>Kembali</Link>
-        </Button>
+        <Button asChild variant="outline"><Link href={`/tilawah/${id}/${verseNumber}`}>Kembali</Link></Button>
       </div>
     );
   }
@@ -189,56 +184,47 @@ export default function WordQuizPage() {
       <div className="max-w-md mx-auto py-10 flex flex-col gap-8">
         <Card className="text-center border-[#D4AF37]/20 shadow-xl overflow-hidden">
           <div className={cn(
-            "p-8 flex flex-col items-center gap-4 text-white transition-colors duration-500",
+            "p-8 flex flex-col items-center gap-4 text-white",
             isPerfect ? "bg-[#D4AF37]" : "bg-rose-900"
           )}>
-            <Trophy className={cn("w-16 h-16 text-white/80", isPerfect && "animate-bounce")} />
+            <Trophy className={cn("w-16 h-16", isPerfect && "animate-bounce")} />
             <h2 className="text-2xl font-bold font-headline">
-              {isPerfect ? "Sempurna!" : "Hafalan Belum Sempurna"}
+              {isPerfect ? "Hafalan Sempurna!" : "Belum Sempurna"}
             </h2>
           </div>
           <CardContent className="pt-8 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <div className="text-4xl font-bold text-black">{percentage}%</div>
+                <div className="text-4xl font-bold">{percentage}%</div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skor</p>
               </div>
               <div className="space-y-1">
-                <div className="text-4xl font-bold text-black">{formatTime(time)}</div>
+                <div className="text-4xl font-bold">{formatTime(time)}</div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Waktu</p>
               </div>
             </div>
             
             <div className="bg-muted/30 p-4 rounded-xl space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Anda menjawab <strong>{score}</strong> dari <strong>{words.length}</strong> kata dengan benar.
-              </p>
-              <div className="flex flex-col gap-1 items-center justify-center text-[#B8860B] font-bold text-xs">
-                <div className="flex items-center gap-1">
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Jumlah Percobaan: {attempts}</span>
-                </div>
-              </div>
+              <p className="text-sm font-medium">Percobaan ke-{attempts}</p>
+              {!isPerfect && (
+                <Alert className="bg-rose-50 border-rose-200 text-rose-800 text-left">
+                  <RotateCcw className="h-4 w-4 text-rose-800" />
+                  <AlertTitle className="text-xs font-bold uppercase">Target Harus 100%</AlertTitle>
+                  <AlertDescription className="text-[10px]">
+                    Silakan ulangi kuis hingga Anda benar-benar hafal seluruh arti kata dalam ayat ini.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
-
-            {!isPerfect && (
-              <Alert className="bg-rose-50 border-rose-200 text-rose-800 text-left">
-                <RotateCcw className="h-4 w-4 text-rose-800" />
-                <AlertTitle className="text-xs font-bold">TARGET HARUS 100%</AlertTitle>
-                <AlertDescription className="text-[10px] leading-relaxed">
-                  Mohon ulangi kuis. Target program Sahabat AQLI adalah hafalan sempurna 100%. Silakan tekan tombol di bawah untuk mencoba lagi.
-                </AlertDescription>
-              </Alert>
-            )}
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6">
             {isPerfect ? (
-              <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12 shadow-lg">
+              <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12">
                 <Link href={`/tilawah/${id}/${verseNumber}`}>SELESAI & LANJUT</Link>
               </Button>
             ) : (
               <Button 
-                className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold h-12 shadow-lg gap-2"
+                className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold h-12 gap-2"
                 onClick={handleReset}
               >
                 <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
@@ -250,51 +236,39 @@ export default function WordQuizPage() {
     );
   }
 
-  const progressValue = ((currentIdx + 1) / words.length) * 100;
-
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6 px-4 sm:px-0">
       <div className="flex items-center gap-4">
         <Button asChild variant="ghost" size="icon">
-          <Link href={`/tilawah/${id}/${verseNumber}`}>
-            <ChevronLeft className="h-6 w-6" />
-          </Link>
+          <Link href={`/tilawah/${id}/${verseNumber}`}><ChevronLeft className="h-6 w-6" /></Link>
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">Uji Hafalan Kata</h1>
-          <div className="flex items-center gap-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold text-[#D4AF37]">Ayat {verseNumber} • Percobaan {attempts}</p>
-            <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
-              <Timer className="w-3 h-3" /> {formatTime(time)}
-            </div>
+          <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <span className="text-[#D4AF37]">Percobaan {attempts}</span>
+            <span>•</span>
+            <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {formatTime(time)}</span>
           </div>
         </div>
-        <div className="text-sm font-bold text-muted-foreground bg-muted px-3 py-1 rounded-full">
-          {currentIdx + 1} / {words.length}
-        </div>
+        <div className="text-sm font-bold bg-muted px-3 py-1 rounded-full">{currentIdx + 1} / {words.length}</div>
       </div>
 
-      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
+      <Progress value={((currentIdx + 1) / words.length) * 100} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
-      <Card key={`question-card-${currentIdx}`} className="border-[#D4AF37]/10 shadow-2xl overflow-hidden rounded-2xl">
-        <CardHeader className="text-center pb-10 pt-12 bg-muted/10 relative overflow-hidden">
-           <div className="absolute top-0 right-0 p-4 opacity-5">
-              <GraduationCap className="w-24 h-24" />
-           </div>
-          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Apa arti dari kata ini?</CardTitle>
-          <div className="text-6xl md:text-8xl font-arabic leading-relaxed text-[#B8860B] drop-shadow-sm">
-            {words[currentIdx]?.text_uthmani}
-          </div>
+      <Card className="border-[#D4AF37]/10 shadow-2xl overflow-hidden rounded-2xl">
+        <CardHeader className="text-center pb-10 pt-12 bg-muted/10">
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Pilih Arti yang Tepat:</CardTitle>
+          <div className="text-6xl md:text-8xl font-arabic leading-relaxed text-[#B8860B]">{words[currentIdx]?.text_uthmani}</div>
         </CardHeader>
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {options.map((option, idx) => (
             <Button
-              key={`${currentIdx}-opt-${idx}`}
+              key={idx}
               variant="outline"
               className={cn(
-                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none shadow-sm rounded-xl",
-                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100",
-                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100",
+                "h-auto py-5 text-lg font-bold transition-all border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none shadow-sm rounded-xl",
+                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700",
+                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700",
                 selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
                 !selectedAnswer && "hover:border-[#D4AF37] hover:text-[#B8860B]"
               )}
@@ -311,10 +285,6 @@ export default function WordQuizPage() {
           ))}
         </CardContent>
       </Card>
-      
-      <div className="text-center text-[10px] text-muted-foreground italic font-medium">
-        Target 100% diperlukan untuk melanjutkan. Pelajari arti kata dengan teliti.
-      </div>
     </div>
   );
 }
