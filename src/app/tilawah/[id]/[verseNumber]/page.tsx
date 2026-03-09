@@ -110,9 +110,15 @@ export default function VerseDetailPage() {
       } else {
         // Priority 2: Jalalayn ID (158)
         found = await fetchTafsirText(158);
-        if (found) setTafsirSource("Tafsir Jalalayn (ID)");
+        if (found) {
+          setTafsirSource("Tafsir Jalalayn (ID)");
+        } else {
+          // Priority 3: Kemenag Lengkap (159/160 depend on API availability)
+          found = await fetchTafsirText(159);
+          if (found) setTafsirSource("Tafsir Kemenag (Lengkap)");
+        }
       }
-      setApiTafsir(found || "Tafsir resmi belum tersedia untuk ayat ini.");
+      setApiTafsir(found || "Tafsir resmi belum tersedia untuk ayat ini di server Quran.com.");
     } catch {
       setApiTafsir("Gagal memuat tafsir resmi.");
     }
@@ -138,6 +144,7 @@ export default function VerseDetailPage() {
         const vData = await vRes.json();
         setVerse(vData.verse);
 
+        // Chain independent fetches
         fetchOfficialTafsir(id, verseNumber);
         if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseNumber), vData.verse.text_uthmani);
       } catch (e: any) {

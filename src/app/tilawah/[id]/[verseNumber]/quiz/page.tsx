@@ -42,7 +42,7 @@ export default function WordQuizPage() {
       // Short crystal ding
       correct: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
       // Very short single blip for "Salah"
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
       // Short celebration fanfare
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
     };
@@ -119,7 +119,6 @@ export default function WordQuizPage() {
       playSfx('incorrect');
     }
 
-    const isLastQuestion = currentIdx + 1 === words.length;
     const finalScoreIfCorrect = isAnsCorrect ? score + 1 : score;
 
     setTimeout(() => {
