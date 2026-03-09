@@ -47,7 +47,7 @@ export default function VerseDetailPage() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Swipe Detection
+  // Swipe Detection Logic
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -62,11 +62,16 @@ export default function VerseDetailPage() {
   const handleTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
+    
+    // Swipe left (next verse)
     if (distance > 70 && currentVerseNum < totalVerses) {
       router.push(`/tilawah/${id}/${currentVerseNum + 1}`);
-    } else if (distance < -70 && currentVerseNum > 1) {
+    } 
+    // Swipe right (previous verse)
+    else if (distance < -70 && currentVerseNum > 1) {
       router.push(`/tilawah/${id}/${currentVerseNum - 1}`);
     }
+    
     touchStartX.current = null;
     touchEndX.current = null;
   };
@@ -101,14 +106,14 @@ export default function VerseDetailPage() {
         return null;
       };
 
-      let found = await fetchTafsirText(157);
+      let found = await fetchTafsirText(157); // Kemenag
       if (found) {
         setTafsirSource("Kemenag RI (Ringkas)");
       } else {
-        found = await fetchTafsirText(158);
+        found = await fetchTafsirText(158); // Jalalayn
         if (found) setTafsirSource("Tafsir Jalalayn (ID)");
         else {
-          found = await fetchTafsirText(159);
+          found = await fetchTafsirText(159); // Kemenag Lengkap
           if (found) setTafsirSource("Tafsir Kemenag (Lengkap)");
         }
       }
@@ -170,7 +175,7 @@ export default function VerseDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">{surahName} : {verseNumber}</h1>
-          <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Detail Ayat</p>
+          <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Geser untuk navigasi ayat</p>
         </div>
       </div>
 
@@ -209,7 +214,7 @@ export default function VerseDetailPage() {
               ))}
             </div>
 
-            {/* Tips Menghafal Efektif */}
+            {/* Tips Menghafal Efektif Section */}
             <div className="p-4 bg-amber-50/50" dir="ltr">
               <Alert className="border-amber-200 bg-white shadow-sm">
                 <Lightbulb className="h-4 w-4 text-[#B8860B]" />
@@ -218,7 +223,7 @@ export default function VerseDetailPage() {
                   <p>• <strong>Hubungkan Makna:</strong> Bayangkan arti kata dalam sebuah cerita atau gambaran visual sesuai konteks ayat.</p>
                   <p>• <strong>Ucapkan Lisan:</strong> Bacalah kata Arab-nya lalu sebutkan artinya dengan suara pelan sebanyak 3-5 kali per kata.</p>
                   <p>• <strong>Fokus Akar Kata:</strong> Perhatikan pola huruf dasar kata tersebut, biasanya arti kata sejenis akan saling berkaitan.</p>
-                  <p>• <strong>Gunakan Kuis:</strong> Segera uji hafalan Anda setelah merasa siap untuk mengunci memori jangka panjang.</p>
+                  <p>• <strong>Pelajari Sebelum Kuis:</strong> Gunakan tabel di atas untuk memantapkan ingatan Anda sebelum mulai menguji hafalan.</p>
                 </AlertDescription>
               </Alert>
             </div>
