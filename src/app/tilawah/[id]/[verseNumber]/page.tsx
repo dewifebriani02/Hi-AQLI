@@ -41,6 +41,7 @@ export default function VerseDetailPage() {
   const [surahName, setSurahName] = useState("");
   const [totalVerses, setTotalVerses] = useState(0);
   const [apiTafsir, setApiTafsir] = useState<string | null>(null);
+  const [tafsirSource, setTafsirSource] = useState<string>("Kemenag RI");
   const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -115,7 +116,7 @@ export default function VerseDetailPage() {
         setSurahName(surahData.chapter.name_simple);
         setTotalVerses(surahData.chapter.verses_count);
 
-        // 2. Fetch Verse Detail with Words and Translation (Kemenag - 33)
+        // 2. Fetch Verse Detail
         const res = await fetch(
           `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani,root&word_translation_language=id&translations=33&fields=text_uthmani`
         );
@@ -123,21 +124,29 @@ export default function VerseDetailPage() {
         const data = await res.json();
         setVerse(data.verse);
 
-        // 3. Fetch Official Tafsir from Quran.com (ID: 157 for Kemenag RI Ringkas)
-        try {
-          const tafsirRes = await fetch(
-            `https://api.quran.com/api/v4/tafsirs/157/by_key/${id}:${verseNumber}`
-          );
-          if (tafsirRes.ok) {
-            const tafsirData = await tafsirRes.json();
-            setApiTafsir(tafsirData.tafsir?.text || "Tafsir tidak tersedia.");
-          } else {
-            setApiTafsir("Tafsir resmi tidak tersedia untuk ayat ini.");
+        // 3. Fetch Official Tafsir with Fallback Strategy
+        const fetchTafsir = async (tafsirId: number) => {
+          try {
+            const tafsirRes = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${id}:${verseNumber}`);
+            if (tafsirRes.ok) {
+              const tafsirData = await tafsirRes.json();
+              return tafsirData.tafsir?.text || null;
+            }
+          } catch (e) {
+            return null;
           }
-        } catch (tafsirErr) {
-          console.error("Tafsir Fetch Error:", tafsirErr);
-          setApiTafsir("Gagal memuat tafsir resmi.");
+          return null;
+        };
+
+        let tafsirText = await fetchTafsir(157); // Try Kemenag Ringkas first
+        if (tafsirText) {
+          setTafsirSource("Kemenag RI (Ringkas)");
+        } else {
+          tafsirText = await fetchTafsir(158); // Fallback to Jalalayn ID
+          if (tafsirText) setTafsirSource("Tafsir Jalalayn (ID)");
         }
+        
+        setApiTafsir(tafsirText || "Tafsir resmi tidak tersedia untuk ayat ini.");
         
         // 4. Trigger AI Analysis
         if (data.verse) {
@@ -163,7 +172,7 @@ export default function VerseDetailPage() {
     return (
       <div className="flex flex-col gap-6 max-w-3xl mx-auto py-32 items-center">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
-        <p className="text-muted-foreground font-medium">Menyiapkan Penjabaran Ayat...</p>
+        <p className="text-muted-foreground font-medium text-sm">Menyiapkan Penjabaran Ayat...</p>
       </div>
     );
   }
@@ -197,10 +206,10 @@ export default function VerseDetailPage() {
           </Link>
         </Button>
         <div className="flex-1 flex flex-col">
-          <h1 className="text-lg font-bold font-headline">{surahName} : Ayat {verseNumber}</h1>
-          <p className="text-[10px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Detail Mendalam</p>
+          <h1 className="text-lg font-bold font-headline">{surahName} : {verseNumber}</h1>
+          <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Detail Ayat</p>
         </div>
-        <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 text-white font-bold gap-2">
+        <Button asChild size="sm" className="bg-[#800000] hover:bg-[#800000]/90 text-white font-bold gap-2">
           <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
             <GraduationCap className="w-4 h-4" /> UJI HAFALAN
           </Link>
@@ -209,11 +218,11 @@ export default function VerseDetailPage() {
 
       <Card className="border-none bg-muted/20">
         <CardContent className="pt-8 pb-10 px-6 space-y-8 text-right" dir="rtl">
-          <h2 className="text-2xl md:text-3xl font-arabic leading-[1.8] text-foreground">
+          <h2 className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground">
             {verse.text_uthmani}
           </h2>
           <div className="max-w-2xl ml-auto" dir="ltr">
-            <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20">Terjemahan Kemenag RI</Badge>
+            <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20 text-[10px] font-bold">TERJEMAHAN KEMENAG RI</Badge>
             <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} />
           </div>
         </CardContent>
@@ -222,10 +231,10 @@ export default function VerseDetailPage() {
       <div className="grid grid-cols-1 gap-6">
         {/* Word-by-Word Analysis */}
         <Card className="border-[#800000]/10 shadow-sm">
-          <CardHeader className="border-b bg-muted/30">
-            <CardTitle className="text-lg flex items-center gap-2 font-headline">
-              <ListTree className="w-5 h-5 text-[#800000]" />
-              Penjabaran Kata & Akar Kata
+          <CardHeader className="border-b bg-muted/30 py-4">
+            <CardTitle className="text-base flex items-center gap-2 font-headline">
+              <ListTree className="w-4 h-4 text-[#800000]" />
+              Penjabaran Kata
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -235,8 +244,8 @@ export default function VerseDetailPage() {
                   <div className="flex flex-col gap-1 text-left">
                     <span className="text-2xl font-arabic text-[#800000]">{word.text_uthmani}</span>
                     {word.root && (
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">
-                        Akar: <span className="text-foreground font-arabic text-lg">{word.root}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        Akar: <span className="text-foreground font-arabic text-base">{word.root}</span>
                       </span>
                     )}
                   </div>
@@ -251,21 +260,22 @@ export default function VerseDetailPage() {
 
         {/* Official Tafsir Section */}
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
-          <CardHeader className="bg-[#800000] text-white">
-            <CardTitle className="text-lg flex items-center gap-2 font-headline">
-              <BookOpen className="w-5 h-5" />
-              Tafsir Ringkas (Kemenag RI)
+          <CardHeader className="bg-[#800000] text-white py-4">
+            <CardTitle className="text-base flex items-center gap-2 font-headline">
+              <BookOpen className="w-4 h-4" />
+              Tafsir Resmi ({tafsirSource})
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             {apiTafsir ? (
               <div 
-                className="text-foreground/90 leading-relaxed text-lg prose prose-sm max-w-none prose-p:mb-4"
+                className="text-foreground/90 leading-relaxed text-base prose prose-sm max-w-none prose-p:mb-4"
                 dangerouslySetInnerHTML={{ __html: apiTafsir }} 
               />
             ) : (
-               <div className="flex justify-center py-8">
+               <div className="flex flex-col items-center justify-center py-12 gap-3">
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground italic">Memuat tafsir resmi...</p>
                </div>
             )}
           </CardContent>
@@ -273,13 +283,13 @@ export default function VerseDetailPage() {
 
         {/* AI Analysis Section */}
          <Card className="border-accent/20 shadow-sm bg-accent/5">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2 font-headline text-[#800000]">
-              <BrainCircuit className="w-5 h-5" />
-              Pelajaran & Konteks (AI Sahabat AQLI)
+          <CardHeader className="py-4">
+            <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">
+              <BrainCircuit className="w-4 h-4" />
+              Hikmah & Pelajaran (AI Sahabat AQLI)
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-8">
             {analysisLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-4 w-full" />
@@ -291,16 +301,16 @@ export default function VerseDetailPage() {
                   <p className="text-sm text-muted-foreground italic">
                     {analysisError}
                   </p>
-                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10">
+                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10 font-bold">
                     <RefreshCw className="w-3 h-3" /> Coba Analisis AI
                   </Button>
                </div>
             ) : analysis ? (
-              <p className="text-foreground/90 leading-relaxed italic whitespace-pre-wrap">{analysis.context}</p>
+              <p className="text-foreground/90 leading-relaxed italic text-sm whitespace-pre-wrap">{analysis.context}</p>
             ) : (
                <div className="text-center py-6 space-y-4">
-                  <p className="text-sm text-muted-foreground italic">Tekan tombol di bawah untuk mendapatkan analisis dari AI Sahabat AQLI.</p>
-                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10">
+                  <p className="text-sm text-muted-foreground italic">Gunakan AI untuk mendapatkan pelajaran praktis dari ayat ini.</p>
+                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10 font-bold">
                     <RefreshCw className="w-3 h-3" /> Analisis AI
                   </Button>
                </div>
@@ -309,47 +319,28 @@ export default function VerseDetailPage() {
         </Card>
       </div>
 
-      {/* Persistent Navigation for Mobile Swipe and Buttons */}
-      <div className="fixed bottom-24 left-0 right-0 px-4 md:px-8 pointer-events-none z-40 hidden md:block">
-        <div className="max-w-4xl mx-auto flex justify-between">
-          <Button 
-            variant="secondary" 
-            className="pointer-events-auto shadow-lg border border-[#800000]/20 gap-2 bg-white/90 backdrop-blur"
-            disabled={currentVerseNum <= 1}
-            onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}
-          >
-            <ChevronLeft className="w-4 h-4" /> Ayat Sebelumnya
-          </Button>
-          <Button 
-            variant="secondary" 
-            className="pointer-events-auto shadow-lg border border-[#800000]/20 gap-2 bg-white/90 backdrop-blur"
-            disabled={currentVerseNum >= totalVerses}
-            onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
-          >
-            Ayat Selanjutnya <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="fixed bottom-20 md:hidden left-0 right-0 flex justify-between p-2 bg-background/80 backdrop-blur border-t z-50">
+      {/* Mobile Sticky Navigation */}
+      <div className="fixed bottom-20 md:hidden left-0 right-0 flex justify-between p-2 bg-background/95 backdrop-blur border-t z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
         <Button 
           variant="ghost" 
-          className="flex-1 gap-1 text-[#800000]"
+          size="sm"
+          className="flex-1 gap-1 text-[#800000] font-bold"
           disabled={currentVerseNum <= 1}
           onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}
         >
-          <ChevronLeft className="w-4 h-4" /> Prev
+          <ChevronLeft className="w-4 h-4" /> PREV
         </Button>
-        <div className="flex-1 flex items-center justify-center font-bold text-sm text-muted-foreground">
-          {currentVerseNum} / {totalVerses}
+        <div className="flex-1 flex items-center justify-center font-bold text-xs text-muted-foreground">
+          AYAT {currentVerseNum} / {totalVerses}
         </div>
         <Button 
           variant="ghost" 
-          className="flex-1 gap-1 text-[#800000]"
+          size="sm"
+          className="flex-1 gap-1 text-[#800000] font-bold"
           disabled={currentVerseNum >= totalVerses}
           onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
         >
-          Next <ChevronRight className="w-4 h-4" />
+          NEXT <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
     </div>
