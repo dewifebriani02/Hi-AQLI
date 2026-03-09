@@ -4,7 +4,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb, ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -177,6 +177,24 @@ export default function VerseDetailPage() {
           <h1 className="text-lg font-bold font-headline">{surahName} : {verseNumber}</h1>
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Geser untuk navigasi ayat</p>
         </div>
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            disabled={currentVerseNum <= 1}
+            onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            disabled={currentVerseNum >= totalVerses}
+            onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
+          >
+            <ArrowRight className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       <Card className="border-none bg-muted/20">
@@ -285,6 +303,26 @@ export default function VerseDetailPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Bottom Verse Navigation */}
+      <div className="flex items-center justify-between gap-4 mt-8">
+        <Button 
+          variant="outline" 
+          className="flex-1 gap-2 border-[#800000] text-[#800000] font-bold" 
+          disabled={currentVerseNum <= 1}
+          onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}
+        >
+          <ChevronLeft className="h-4 w-4" /> Ayat Sebelumnya
+        </Button>
+        <Button 
+          variant="outline" 
+          className="flex-1 gap-2 border-[#800000] text-[#800000] font-bold" 
+          disabled={currentVerseNum >= totalVerses}
+          onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
+        >
+          Ayat Selanjutnya <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
