@@ -47,7 +47,7 @@ export default function VerseDetailPage() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Swipe Detection for Mobile Navigation
+  // Swipe Detection
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -103,22 +103,19 @@ export default function VerseDetailPage() {
         return null;
       };
 
-      // Priority 1: Kemenag Ringkas (157)
+      // Priority: Kemenag Ringkas (157), Jalalayn (158), Kemenag Lengkap (159)
       let found = await fetchTafsirText(157);
       if (found) {
         setTafsirSource("Kemenag RI (Ringkas)");
       } else {
-        // Priority 2: Jalalayn ID (158)
         found = await fetchTafsirText(158);
-        if (found) {
-          setTafsirSource("Tafsir Jalalayn (ID)");
-        } else {
-          // Priority 3: Kemenag Lengkap (159/160 depend on API availability)
+        if (found) setTafsirSource("Tafsir Jalalayn (ID)");
+        else {
           found = await fetchTafsirText(159);
           if (found) setTafsirSource("Tafsir Kemenag (Lengkap)");
         }
       }
-      setApiTafsir(found || "Tafsir resmi belum tersedia untuk ayat ini di server Quran.com.");
+      setApiTafsir(found || "Tafsir resmi belum tersedia untuk ayat ini.");
     } catch {
       setApiTafsir("Gagal memuat tafsir resmi.");
     }
@@ -131,24 +128,19 @@ export default function VerseDetailPage() {
         setLoading(true);
         setError(null);
 
-        // Surah Info
         const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        if (!sRes.ok) throw new Error("Gagal memuat informasi surat.");
         const sData = await sRes.json();
         setSurahName(sData.chapter.name_simple);
         setTotalVerses(sData.chapter.verses_count);
 
-        // Verse Info
         const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_translation_language=id&translations=33&fields=text_uthmani`);
-        if (!vRes.ok) throw new Error("Gagal memuat ayat.");
         const vData = await vRes.json();
         setVerse(vData.verse);
 
-        // Chain independent fetches
         fetchOfficialTafsir(id, verseNumber);
         if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseNumber), vData.verse.text_uthmani);
       } catch (e: any) {
-        setError(e.message);
+        setError("Gagal memuat data ayat.");
       } finally {
         setLoading(false);
       }
@@ -197,7 +189,6 @@ export default function VerseDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Word-by-Word Card */}
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-muted/30 py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline">
@@ -228,7 +219,6 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
-        {/* Tafsir Card */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white py-4">
             <CardTitle className="text-sm flex items-center gap-2 font-headline">
@@ -251,7 +241,6 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
-        {/* AI Analysis Card */}
         <Card className="border-accent/20 shadow-sm bg-accent/5">
           <CardHeader className="py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">

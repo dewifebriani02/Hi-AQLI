@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
@@ -35,12 +36,12 @@ export default function WordQuizPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  // SFX Player with swapped correct/incorrect sounds
+  // SFX Player with swapped sounds as requested: 
+  // Wrong -> Ding (2182), Correct -> Blip (2568)
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
     const soundUrls = {
-      // Swapped URLs as per user request
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip (Short)
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding (Happy/Long)
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
     };
     
@@ -77,7 +78,6 @@ export default function WordQuizPage() {
 
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
-      // Fully clear state before next question
       setSelectedAnswer(null);
       setIsCorrect(null);
 
@@ -97,7 +97,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Force blur to remove browser focus rings (the yellow marks)
+    // Force blur to remove focus rings immediately
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -108,7 +108,6 @@ export default function WordQuizPage() {
     setSelectedAnswer(answer);
     setIsCorrect(isAnsCorrect);
     
-    // Play SFX immediately
     if (isAnsCorrect) {
       playSfx('correct');
       setScore(s => s + 1);
@@ -211,7 +210,7 @@ export default function WordQuizPage() {
 
       <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
-      <Card key={`question-${currentIdx}`} className="border-[#D4AF37]/10 shadow-lg overflow-hidden">
+      <Card key={`question-card-${currentIdx}`} className="border-[#D4AF37]/10 shadow-lg overflow-hidden">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Apa arti dari kata ini?</CardTitle>
           <div className="text-6xl md:text-7xl font-arabic leading-relaxed text-[#B8860B]">
