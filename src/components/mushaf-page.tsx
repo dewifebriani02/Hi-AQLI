@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -119,28 +118,29 @@ export function MushafPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-8 pb-24">
-          {/* Mushaf Page Container */}
-          <Card className="relative p-6 md:p-14 border-none shadow-2xl bg-[#fffcf5] min-h-[700px] flex flex-col items-center overflow-hidden">
-            {/* Decorative Borders */}
-            <div className="absolute inset-2 border-2 border-[#800000]/5 rounded-xl pointer-events-none" />
-            <div className="absolute inset-4 border border-[#800000]/10 rounded-lg pointer-events-none" />
+          {/* Mushaf Page Container - Styled for Madinah 15-line feel */}
+          <Card className="relative p-8 md:p-12 lg:p-16 border-none shadow-2xl bg-[#fffcf5] min-h-[850px] flex flex-col items-center overflow-hidden">
+            {/* Decorative Borders to mimic a physical Quran page */}
+            <div className="absolute inset-4 border-[3px] border-[#800000]/5 rounded-xl pointer-events-none" />
+            <div className="absolute inset-6 border border-[#800000]/10 rounded-lg pointer-events-none" />
             
-            <div className="w-full text-center mb-10 opacity-40">
-               <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-[#800000]">Halaman {page}</span>
+            {/* Header Page Info */}
+            <div className="w-full text-center mb-8 opacity-40">
+               <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#800000]">Halaman {page}</span>
             </div>
 
-            {/* Continuous Arabic Text Flow (The "Madinah" 15-line style) */}
+            {/* Continuous Arabic Text Flow - Forced into approximately 15 lines */}
             <div 
-              className="flex flex-wrap justify-center gap-x-1 gap-y-6 md:gap-y-8 w-full max-w-2xl text-center px-2" 
+              className="flex flex-wrap justify-center gap-x-1 gap-y-0 w-full max-w-2xl text-center px-4 md:px-8" 
               dir="rtl"
             >
-              {verses.map((verse) => (
-                <React.Fragment key={verse.id}>
-                  {verse.words.map((word, wordIdx) => (
-                    <TooltipProvider key={`${verse.id}-${wordIdx}`} delayDuration={100}>
-                      <Tooltip>
+              <TooltipProvider delayDuration={100}>
+                {verses.map((verse) => (
+                  <React.Fragment key={verse.id}>
+                    {verse.words.map((word, wordIdx) => (
+                      <Tooltip key={`${verse.id}-${wordIdx}`}>
                         <TooltipTrigger asChild>
-                          <span className="text-3xl md:text-5xl font-arabic leading-[2.8] md:leading-[3.2] text-foreground/90 hover:text-[#800000] transition-colors cursor-help select-none">
+                          <span className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[3] md:leading-[3.2] text-foreground/90 hover:text-[#800000] transition-colors cursor-help select-none px-0.5">
                             {word.text_uthmani}
                           </span>
                         </TooltipTrigger>
@@ -150,18 +150,19 @@ export function MushafPage() {
                           </TooltipContent>
                         </TooltipPortal>
                       </Tooltip>
-                    </TooltipProvider>
-                  ))}
-                  {/* Inline Verse Marker inside the flow */}
-                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-[#800000]/10 text-xs font-bold text-[#800000] mx-4 align-middle bg-white shadow-md shrink-0">
-                    {verse.verse_key.split(':')[1]}
-                  </span>
-                </React.Fragment>
-              ))}
+                    ))}
+                    {/* Inline Verse Marker with elegant circle */}
+                    <span className="inline-flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-[#800000]/15 text-[10px] md:text-xs font-bold text-[#800000] mx-3 align-middle bg-white shadow-sm shrink-0">
+                      {verse.verse_key.split(':')[1]}
+                    </span>
+                  </React.Fragment>
+                ))}
+              </TooltipProvider>
             </div>
 
-            <div className="w-full text-center mt-14 opacity-30">
-               <BookOpen className="w-4 h-4 mx-auto text-[#800000]" />
+            {/* Footer Decorative Icon */}
+            <div className="w-full text-center mt-auto pt-8 opacity-20">
+               <BookOpen className="w-5 h-5 mx-auto text-[#800000]" />
             </div>
           </Card>
 
