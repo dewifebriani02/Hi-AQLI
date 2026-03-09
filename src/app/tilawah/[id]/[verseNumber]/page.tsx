@@ -155,7 +155,7 @@ export default function VerseDetailPage() {
         const data = await res.json();
         setVerse(data.verse);
 
-        // 3. Fetch Tafsir (Independent)
+        // 3. Fetch Tafsir
         fetchOfficialTafsir(id, verseNumber);
         
         // 4. AI Analysis

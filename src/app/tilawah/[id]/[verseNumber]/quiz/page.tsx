@@ -39,17 +39,17 @@ export default function WordQuizPage() {
   // Helper to play short UI sound effects
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
     const soundUrls = {
-      // Clean "ding" for correct
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
-      // Clear "buzzer" for incorrect
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3',
-      // Sparkle for 100%
-      perfect: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+      // Happy bright ding
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
+      // Short clear "oops" buzzer
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2650/2650-preview.mp3',
+      // Success fanfare for 100%
+      perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
     };
     
     try {
       const audio = new Audio(soundUrls[type]);
-      audio.volume = 0.6;
+      audio.volume = 0.5;
       audio.play().catch((e) => {
         console.warn("Autoplay audio blocked by browser:", e);
       });
@@ -99,7 +99,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Force blur to remove browser's yellow/blue focus ring
+    // Immediately blur to remove any browser focus highlights
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -110,7 +110,7 @@ export default function WordQuizPage() {
     setSelectedAnswer(answer);
     setIsCorrect(isAnsCorrect);
     
-    // Play sound immediately
+    // Play SFX
     if (isAnsCorrect) {
       playSfx('correct');
       setScore(s => s + 1);
@@ -126,8 +126,9 @@ export default function WordQuizPage() {
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
+        // Play perfect sound if score is 100%
         if (finalScoreIfCorrect === words.length) {
-          setTimeout(() => playSfx('perfect'), 300);
+          playSfx('perfect');
         }
       }
     }, 1200);
