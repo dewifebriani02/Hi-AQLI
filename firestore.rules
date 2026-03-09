@@ -163,12 +163,9 @@ service cloud.firestore {
     // --- Financial Records ---
 
     match /donations/{donationId} {
-      // Allow get if admin or owner of the specific donation
-      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      
-      // Allow list only if the query is filtered by userId or if the user is an admin
-      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      
+      // Allow read (get and list) if admin or owner of the specific donation
+      // Using .get() ensures we handle cases where userId might be missing
+      allow read: if isAdmin() || (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
