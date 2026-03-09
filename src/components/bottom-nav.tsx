@@ -3,15 +3,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Mic, BookOpen, Bot, Trophy } from "lucide-react";
+import { LayoutDashboard, BookOpen, GraduationCap, Users, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/tilawah", label: "Qur'an", icon: Mic },
-  { href: "/tajweed", label: "Tajwid", icon: BookOpen },
-  { href: "/ai-scholar", label: "AI", icon: Bot },
+  { href: "/tilawah", label: "Qur'an", icon: BookOpen },
+  { href: "/tajweed", label: "Tajwid", icon: GraduationCap },
+  { href: "/study-circles", label: "Halaqah", icon: Users },
   { href: "/leaderboard", label: "Juara", icon: Trophy },
 ];
 
@@ -38,8 +38,8 @@ export function BottomNav() {
             className={cn(
               "flex flex-1 flex-col items-center justify-center gap-1 rounded-md py-2 text-[10px] font-medium transition-colors",
               isActive 
-                ? "text-primary bg-primary/5" 
-                : "text-muted-foreground hover:text-primary"
+                ? "text-[#800000] bg-[#800000]/5" 
+                : "text-muted-foreground hover:text-[#800000]"
             )}
           >
             <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />

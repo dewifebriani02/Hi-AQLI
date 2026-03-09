@@ -12,18 +12,17 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
   SidebarFooter,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  Mic,
   BookOpen,
-  Bot,
+  GraduationCap,
   Users,
   LayoutDashboard,
   HeartHandshake,
   Settings,
   ShieldCheck,
   Lock,
+  Trophy,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
@@ -37,10 +36,10 @@ const adminItems = [
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/tilawah", label: "Asisten Qur'an", icon: Mic },
-  { href: "/tajweed", label: "Modul Tajwid", icon: BookOpen },
-  { href: "/ai-scholar", label: "Cendekiawan AI", icon: Bot },
-  { href: "/study-circles", label: "Lingkar Studi", icon: Users },
+  { href: "/tilawah", label: "Al-Qur'an", icon: BookOpen },
+  { href: "/tajweed", label: "Modul Tajwid", icon: GraduationCap },
+  { href: "/study-circles", label: "Lingkar Studi (Halaqah)", icon: Users },
+  { href: "/leaderboard", label: "Papan Peringkat", icon: Trophy },
   { href: "/donate", label: "Donasi", icon: HeartHandshake },
 ];
 
@@ -92,7 +91,7 @@ export function AppSidebar() {
                   tooltip={item.label}
                 >
                   <Link href={item.href}>
-                    <item.icon className={cn(pathname === item.href && "text-sidebar-primary")} />
+                    <item.icon className={cn(pathname === item.href && "text-[#800000]")} />
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -116,7 +115,7 @@ export function AppSidebar() {
                   tooltip={item.label}
                 >
                   <Link href={item.href}>
-                    <item.icon className={cn(pathname === item.href && "text-sidebar-primary")} />
+                    <item.icon className={cn(pathname === item.href && "text-[#800000]")} />
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
