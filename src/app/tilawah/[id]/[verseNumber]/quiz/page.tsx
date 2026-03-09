@@ -2,14 +2,13 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface WordData {
@@ -22,7 +21,6 @@ interface WordData {
 
 export default function WordQuizPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
 
@@ -40,11 +38,12 @@ export default function WordQuizPage() {
 
   // SFX Player with swapped sounds as requested: 
   // Correct -> Blip (Short/Sharp), Incorrect -> Ding (Happy/Long)
-  const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
+  const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
       correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip
       incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Fanfare
+      fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3', // Failure sound
     };
     
     try {
@@ -127,6 +126,8 @@ export default function WordQuizPage() {
         setIsFinished(true);
         if (finalScoreIfCorrect === words.length) {
           playSfx('perfect');
+        } else {
+          playSfx('fail');
         }
       }
     }, 1200);
