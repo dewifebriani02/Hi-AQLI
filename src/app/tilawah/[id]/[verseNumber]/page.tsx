@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -106,7 +107,7 @@ export default function VerseDetailPage() {
         setLoading(true);
         setError(null);
         setAnalysis(null);
-        setApiTafsir(null);
+        setApiTafsir(null); // Reset tafsir state to show loader
 
         // 1. Fetch Surah Info
         const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
@@ -124,7 +125,7 @@ export default function VerseDetailPage() {
         setVerse(data.verse);
 
         // 3. Official Tafsir with Fallback Strategy
-        const fetchTafsir = async (tafsirId: number) => {
+        const fetchTafsirText = async (tafsirId: number) => {
           try {
             const tafsirRes = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${id}:${verseNumber}`);
             if (tafsirRes.ok) {
@@ -137,23 +138,24 @@ export default function VerseDetailPage() {
           return null;
         };
 
-        let tafsirText = await fetchTafsir(157); // Try Kemenag Ringkas first
-        if (tafsirText) {
+        let foundTafsir = await fetchTafsirText(157); // Kemenag RI
+        if (foundTafsir) {
           setTafsirSource("Kemenag RI (Ringkas)");
         } else {
-          tafsirText = await fetchTafsir(158); // Fallback to Jalalayn ID
-          if (tafsirText) setTafsirSource("Tafsir Jalalayn (ID)");
+          foundTafsir = await fetchTafsirText(158); // Jalalayn (ID)
+          if (foundTafsir) setTafsirSource("Tafsir Jalalayn (ID)");
         }
         
-        setApiTafsir(tafsirText || "Tafsir resmi tidak tersedia untuk ayat ini.");
+        setApiTafsir(foundTafsir || "Tafsir resmi tidak tersedia untuk ayat ini.");
         
-        // 4. Trigger AI Analysis
+        // 4. AI Analysis
         if (data.verse) {
           fetchAiAnalysis(surahData.chapter.name_simple, parseInt(verseNumber), data.verse.text_uthmani);
         }
       } catch (err: any) {
         console.error("Main Fetch Error:", err);
         setError(err.message || "Terjadi kesalahan saat memuat data.");
+        setApiTafsir("Gagal memuat tafsir.");
       } finally {
         setLoading(false);
       }
@@ -161,32 +163,11 @@ export default function VerseDetailPage() {
     fetchVerse();
   }, [id, verseNumber, fetchAiAnalysis]);
 
-  const handleRetryAnalysis = () => {
-    if (verse) {
-      fetchAiAnalysis(surahName, parseInt(verseNumber), verse.text_uthmani);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex flex-col gap-6 max-w-3xl mx-auto py-32 items-center">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
         <p className="text-muted-foreground font-medium text-sm">Menyiapkan Penjabaran Ayat...</p>
-      </div>
-    );
-  }
-
-  if (error || !verse) {
-    return (
-      <div className="p-12 text-center flex flex-col items-center gap-4 max-w-lg mx-auto">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Kesalahan</AlertTitle>
-          <AlertDescription>{error || "Data ayat tidak ditemukan."}</AlertDescription>
-        </Alert>
-        <Button asChild variant="outline">
-          <Link href={`/tilawah/${id}`}>Kembali ke Surat</Link>
-        </Button>
       </div>
     );
   }
@@ -213,11 +194,11 @@ export default function VerseDetailPage() {
       <Card className="border-none bg-muted/20">
         <CardContent className="pt-8 pb-10 px-6 space-y-8 text-right" dir="rtl">
           <h2 className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground">
-            {verse.text_uthmani}
+            {verse?.text_uthmani}
           </h2>
           <div className="max-w-2xl ml-auto text-left" dir="ltr">
             <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20 text-[10px] font-bold">TERJEMAHAN KEMENAG RI</Badge>
-            <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} />
+            <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse?.translations[0]?.text || "" }} />
           </div>
         </CardContent>
       </Card>
@@ -233,7 +214,7 @@ export default function VerseDetailPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y" dir="rtl">
-              {verse.words?.filter(w => w.text_uthmani).map((word, idx) => (
+              {verse?.words?.filter(w => w.text_uthmani).map((word, idx) => (
                 <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors" dir="ltr">
                   <div className="flex flex-col gap-1 text-left">
                     <span className="text-2xl font-arabic text-[#800000]">{word.text_uthmani}</span>
@@ -299,10 +280,8 @@ export default function VerseDetailPage() {
               </div>
             ) : analysisError ? (
                <div className="text-center py-6 space-y-4">
-                  <p className="text-sm text-muted-foreground italic">
-                    {analysisError}
-                  </p>
-                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10 font-bold">
+                  <p className="text-sm text-muted-foreground italic">{analysisError}</p>
+                  <Button variant="outline" size="sm" onClick={() => verse && fetchAiAnalysis(surahName, parseInt(verseNumber), verse.text_uthmani)} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10 font-bold">
                     <RefreshCw className="w-3 h-3" /> Coba Analisis AI
                   </Button>
                </div>
@@ -311,7 +290,7 @@ export default function VerseDetailPage() {
             ) : (
                <div className="text-center py-6 space-y-4">
                   <p className="text-sm text-muted-foreground italic">Gunakan AI untuk mendapatkan pelajaran praktis dari ayat ini.</p>
-                  <Button variant="outline" size="sm" onClick={handleRetryAnalysis} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10 font-bold">
+                  <Button variant="outline" size="sm" onClick={() => verse && fetchAiAnalysis(surahName, parseInt(verseNumber), verse.text_uthmani)} className="gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/10 font-bold">
                     <RefreshCw className="w-3 h-3" /> Analisis AI
                   </Button>
                </div>

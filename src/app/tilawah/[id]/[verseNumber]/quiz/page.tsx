@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
@@ -57,6 +58,10 @@ export default function WordQuizPage() {
 
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
+      // RESET visual state totally before new question options are set
+      setSelectedAnswer(null);
+      setIsCorrect(null);
+
       const currentWord = words[currentIdx];
       const correct = currentWord.translation.text;
       
@@ -73,7 +78,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Remove focus from button to hide the "yellow" focus ring
+    // Explicitly remove focus from the clicked button to hide any browser focus ring (the "yellow" or "blue" line)
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -89,8 +94,6 @@ export default function WordQuizPage() {
 
     setTimeout(() => {
       if (currentIdx + 1 < words.length) {
-        setSelectedAnswer(null);
-        setIsCorrect(null);
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
@@ -125,7 +128,7 @@ export default function WordQuizPage() {
     const percentage = Math.round((score / words.length) * 100);
     return (
       <div className="max-w-md mx-auto py-10 flex flex-col gap-8">
-        <Card className="text-center border-amber-500/20 shadow-xl overflow-hidden">
+        <Card className="text-center border-[#D4AF37]/20 shadow-xl overflow-hidden">
           <div className="bg-[#D4AF37] p-8 flex flex-col items-center gap-4 text-black">
             <Trophy className="w-16 h-16 animate-bounce text-black/80" />
             <h2 className="text-2xl font-bold font-headline">Hasil Uji Hafalan</h2>
@@ -146,10 +149,10 @@ export default function WordQuizPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6">
-            <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold">
+            <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12">
                <Link href={`/tilawah/${id}/${verseNumber}`}>Selesai</Link>
             </Button>
-            <Button variant="outline" className="w-full font-bold gap-2 border-[#D4AF37] text-[#B8860B] hover:bg-amber-50" onClick={() => window.location.reload()}>
+            <Button variant="outline" className="w-full font-bold gap-2 border-[#D4AF37] text-[#B8860B] hover:bg-amber-50 h-12" onClick={() => window.location.reload()}>
                <RefreshCw className="w-4 h-4" /> Ulangi Kuis
             </Button>
           </CardFooter>
@@ -180,7 +183,8 @@ export default function WordQuizPage() {
 
       <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
-      <Card key={`question-${currentIdx}`} className="border-amber-500/10 shadow-lg">
+      {/* Adding a key to the Card based on currentIdx forces a clean re-render of the question container */}
+      <Card key={`question-card-${currentIdx}`} className="border-[#D4AF37]/10 shadow-lg overflow-hidden">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Apa arti dari kata ini?</CardTitle>
           <div className="text-6xl md:text-7xl font-arabic leading-relaxed text-[#B8860B]">
@@ -193,11 +197,11 @@ export default function WordQuizPage() {
               key={`${currentIdx}-option-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto py-5 text-lg font-medium transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0",
+                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none",
                 selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100",
                 selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100",
                 selectedAnswer && option === currentWord?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
-                !selectedAnswer && "hover:border-amber-500 hover:text-amber-700 active:bg-muted"
+                !selectedAnswer && "hover:border-[#D4AF37] hover:text-[#B8860B] active:bg-muted"
               )}
               onClick={() => handleAnswer(option)}
               disabled={!!selectedAnswer}
