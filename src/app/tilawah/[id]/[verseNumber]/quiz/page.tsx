@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams } from "next/navigation";
@@ -126,31 +125,31 @@ export default function WordQuizPage() {
     const percentage = Math.round((score / words.length) * 100);
     return (
       <div className="max-w-md mx-auto py-10 flex flex-col gap-8">
-        <Card className="text-center border-[#800000]/20 shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-br from-[#800000] to-[#D4AF37] p-8 flex flex-col items-center gap-4 text-white">
-            <Trophy className="w-16 h-16 animate-bounce text-amber-200" />
+        <Card className="text-center border-amber-500/20 shadow-xl overflow-hidden">
+          <div className="bg-[#D4AF37] p-8 flex flex-col items-center gap-4 text-black">
+            <Trophy className="w-16 h-16 animate-bounce text-black/80" />
             <h2 className="text-2xl font-bold font-headline">Hasil Uji Hafalan</h2>
           </div>
           <CardContent className="pt-8 space-y-4">
-            <div className="text-5xl font-bold text-[#800000]">{percentage}%</div>
+            <div className="text-5xl font-bold text-black">{percentage}%</div>
             <p className="text-muted-foreground">
               Anda menjawab {score} dari {words.length} kata dengan benar.
             </p>
             <div className="pt-4">
                {percentage >= 80 ? (
-                 <Badge className="bg-emerald-600 text-white p-2 px-4 rounded-lg">Luar Biasa!</Badge>
+                 <Badge className="bg-emerald-600 text-white p-2 px-4 rounded-lg border-none">Luar Biasa!</Badge>
                ) : percentage >= 50 ? (
-                 <Badge className="bg-amber-500 text-white p-2 px-4 rounded-lg">Cukup Bagus!</Badge>
+                 <Badge className="bg-amber-600 text-white p-2 px-4 rounded-lg border-none">Cukup Bagus!</Badge>
                ) : (
-                 <Badge className="bg-rose-600 text-white p-2 px-4 rounded-lg">Terus Berlatih!</Badge>
+                 <Badge className="bg-rose-600 text-white p-2 px-4 rounded-lg border-none">Terus Berlatih!</Badge>
                )}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6">
-            <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold">
+            <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold">
                <Link href={`/tilawah/${id}/${verseNumber}`}>Selesai</Link>
             </Button>
-            <Button variant="outline" className="w-full font-bold gap-2 border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => window.location.reload()}>
+            <Button variant="outline" className="w-full font-bold gap-2 border-[#D4AF37] text-[#B8860B] hover:bg-amber-50" onClick={() => window.location.reload()}>
                <RefreshCw className="w-4 h-4" /> Ulangi Kuis
             </Button>
           </CardFooter>
@@ -172,19 +171,19 @@ export default function WordQuizPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">Uji Hafalan Kata</h1>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold text-[#800000]">Ayat {verseNumber}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold text-[#D4AF37]">Ayat {verseNumber}</p>
         </div>
         <div className="text-sm font-bold text-muted-foreground">
           {currentIdx + 1} / {words.length}
         </div>
       </div>
 
-      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-gradient-to-r [&>div]:from-[#800000] [&>div]:to-[#D4AF37]" />
+      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
-      <Card key={`question-${currentIdx}`} className="border-[#800000]/10 shadow-lg">
+      <Card key={`question-${currentIdx}`} className="border-amber-500/10 shadow-lg">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
-          <CardTitle className="text-sm font-bold uppercase tracking-widest text-[#800000]/60 mb-4">Apa arti dari kata ini?</CardTitle>
-          <div className="text-6xl md:text-7xl font-arabic leading-relaxed text-[#800000]">
+          <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Apa arti dari kata ini?</CardTitle>
+          <div className="text-6xl md:text-7xl font-arabic leading-relaxed text-[#B8860B]">
             {currentWord?.text_uthmani}
           </div>
         </CardHeader>

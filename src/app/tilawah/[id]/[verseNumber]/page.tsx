@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -252,9 +251,9 @@ export default function VerseDetailPage() {
             </div>
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/5">
-            <Button asChild className="w-full bg-gradient-to-r from-[#800000] via-[#800000] to-[#D4AF37] hover:from-[#600000] hover:to-[#B8860B] text-white font-bold gap-2 py-6 shadow-md border-b-2 border-amber-600/50">
+            <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 shadow-md border-b-4 border-amber-600 transition-all active:translate-y-1 active:border-b-0">
               <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
-                <GraduationCap className="w-5 h-5 text-amber-200" /> UJI HAFALAN KATA
+                <GraduationCap className="w-5 h-5 text-black" /> UJI HAFALAN KATA
               </Link>
             </Button>
           </CardFooter>
