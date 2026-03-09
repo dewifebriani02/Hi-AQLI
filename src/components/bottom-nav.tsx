@@ -1,8 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Mic, BookOpen, Bot, Users } from "lucide-react";
+import { LayoutDashboard, Mic, BookOpen, Bot, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
@@ -10,8 +11,8 @@ const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
   { href: "/tilawah", label: "Qur'an", icon: Mic },
   { href: "/tajweed", label: "Tajwid", icon: BookOpen },
-  { href: "/ai-scholar", label: "Cendekiawan", icon: Bot },
-  { href: "/study-circles", label: "Komunitas", icon: Users },
+  { href: "/ai-scholar", label: "AI", icon: Bot },
+  { href: "/leaderboard", label: "Juara", icon: Trophy },
 ];
 
 export function BottomNav() {

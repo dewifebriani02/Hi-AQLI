@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -21,7 +22,8 @@ import {
   Calendar,
   Sparkles,
   Users,
-  HeartHandshake
+  HeartHandshake,
+  Trophy
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/firebase";
@@ -54,12 +56,14 @@ export default function DashboardPage() {
             {user?.displayName?.split(' ')[0] || 'Sahabat AQLI'}!
           </h1>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <Badge className="bg-black text-white gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-black/10">
+        <Link href="/leaderboard" className="flex flex-col items-end gap-1 group">
+          <Badge className="bg-black text-white gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-black/10 group-hover:bg-[#800000] transition-colors">
             ALIM <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           </Badge>
-          <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">Peringkat Anda</span>
-        </div>
+          <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter flex items-center gap-1">
+            <Trophy className="w-2 h-2" /> Peringkat Anda
+          </span>
+        </Link>
       </div>
 
       {/* Streak Tracker Card */}
@@ -200,26 +204,26 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {/* Study Circle Ad */}
-          <Link href="/study-circles" className="block group">
+          {/* Leaderboard Ad */}
+          <Link href="/leaderboard" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-amber-700 to-amber-500 text-white h-44 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
-                  <Users className="w-32 h-32" />
+                  <Trophy className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">KOMUNITAS</Badge>
-                  <h4 className="font-bold text-lg">Lingkar Studi</h4>
-                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Bergabunglah dengan halaqah online bersama instruktur bersertifikat di seluruh dunia.</p>
+                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">KOMPETISI</Badge>
+                  <h4 className="font-bold text-lg">Papan Peringkat</h4>
+                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Lihat peringkat Anda dan bersainglah dalam kebaikan bersama Sahabat AQLI lainnya.</p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider">
-                  Gabung Halaqah <ChevronRight className="w-3 h-3" />
+                  Lihat Juara <ChevronRight className="w-3 h-3" />
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          {/* Donation Ad (NEW) */}
+          {/* Donation Ad */}
           <Link href="/donate" className="block group sm:col-span-2">
             <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-rose-900 to-rose-700 text-white h-44 transition-transform group-hover:scale-[1.01]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
