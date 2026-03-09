@@ -21,7 +21,6 @@ import {
   Bell,
   PlusCircle,
   BarChart3,
-  Youtube,
   Globe,
   CheckCircle2,
   Calendar,
