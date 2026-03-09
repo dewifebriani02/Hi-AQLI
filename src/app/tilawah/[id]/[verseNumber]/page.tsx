@@ -209,11 +209,6 @@ export default function VerseDetailPage() {
           <h1 className="text-lg font-bold font-headline">{surahName} : {verseNumber}</h1>
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Detail Ayat</p>
         </div>
-        <Button asChild size="sm" className="bg-[#800000] hover:bg-[#800000]/90 text-white font-bold gap-2">
-          <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
-            <GraduationCap className="w-4 h-4" /> UJI HAFALAN
-          </Link>
-        </Button>
       </div>
 
       <Card className="border-none bg-muted/20">
@@ -221,9 +216,17 @@ export default function VerseDetailPage() {
           <h2 className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground">
             {verse.text_uthmani}
           </h2>
-          <div className="max-w-2xl ml-auto" dir="ltr">
+          <div className="max-w-2xl ml-auto text-left" dir="ltr">
             <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20 text-[10px] font-bold">TERJEMAHAN KEMENAG RI</Badge>
             <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} />
+            
+            <div className="pt-6">
+              <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 text-white font-bold gap-2">
+                <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
+                  <GraduationCap className="w-4 h-4" /> UJI HAFALAN KATA
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
