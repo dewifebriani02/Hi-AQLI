@@ -69,12 +69,9 @@ export default function WordQuizPage() {
       // Shuffle and take up to 3
       wrong = [...new Set(wrong)].sort(() => Math.random() - 0.5).slice(0, 3);
       
-      // Combine and shuffle again
+      // Combine and shuffle зagain
       const all = [correct, ...wrong].sort(() => Math.random() - 0.5);
       setOptions(all);
-      // Reset state for new question (backup reset)
-      setSelectedAnswer(null);
-      setIsCorrect(null);
     }
   }, [words, currentIdx]);
 
@@ -92,14 +89,14 @@ export default function WordQuizPage() {
 
     setTimeout(() => {
       if (currentIdx + 1 < words.length) {
-        // Crucial fix: Reset state before moving to the next index
+        // Reset ALL states simultaneously to ensure "polos" look on next question
         setSelectedAnswer(null);
         setIsCorrect(null);
-        setCurrentIdx(c => c + 1);
+        setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
       }
-    }, 1500);
+    }, 1200);
   };
 
   if (loading) {
@@ -184,7 +181,8 @@ export default function WordQuizPage() {
 
       <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#800000]" />
 
-      <Card className="border-[#800000]/10 shadow-lg">
+      {/* Adding a key to the card forces it to fully re-mount on each question, clearing any visual artifacts */}
+      <Card key={`question-${currentIdx}`} className="border-[#800000]/10 shadow-lg">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-[#800000]/60 mb-4">Apa arti dari kata ini?</CardTitle>
           <div className="text-6xl md:text-7xl font-arabic leading-relaxed text-[#800000]">
@@ -194,22 +192,23 @@ export default function WordQuizPage() {
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {options.map((option, idx) => (
             <Button
-              key={idx}
+              key={`${currentIdx}-option-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto py-5 text-lg font-medium transition-all duration-200 border-2",
-                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100 hover:text-green-700",
-                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100 hover:text-red-700",
+                "h-auto py-5 text-lg font-medium transition-all duration-200 border-2 bg-white",
+                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100",
+                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100",
                 selectedAnswer && option === currentWord?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
-                !selectedAnswer && "hover:border-[#800000] hover:text-[#800000]"
+                !selectedAnswer && "hover:border-[#800000] hover:text-[#800000] active:bg-muted"
               )}
               onClick={() => handleAnswer(option)}
               disabled={!!selectedAnswer}
             >
               <div className="flex items-center justify-between w-full px-2">
-                <span>{option}</span>
-                {selectedAnswer === option && isCorrect === true && <CheckCircle2 className="w-5 h-5 text-green-600" />}
-                {selectedAnswer === option && isCorrect === false && <XCircle className="w-5 h-5 text-red-600" />}
+                <span className="truncate">{option}</span>
+                {selectedAnswer === option && isCorrect === true && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
+                {selectedAnswer === option && isCorrect === false && <XCircle className="w-5 h-5 text-red-600 shrink-0" />}
+                {selectedAnswer && option === currentWord?.translation?.text && isCorrect === false && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
               </div>
             </Button>
           ))}
