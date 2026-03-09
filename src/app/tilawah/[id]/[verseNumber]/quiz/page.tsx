@@ -36,22 +36,19 @@ export default function WordQuizPage() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [attempts, setAttempts] = useState(1);
 
-  // SFX Player with swapped sounds as requested: 
-  // Correct -> Blip (Short/Sharp), Incorrect -> Ding (Happy/Long)
+  // SFX Player
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip (Swapped: Benar = Blip)
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding (Swapped: Salah = Ding)
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Fanfare
-      fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3', // Failure sound
+      fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3', // Fail sound
     };
     
     try {
       const audio = new Audio(soundUrls[type]);
       audio.volume = 0.5;
-      audio.play().catch((e) => {
-        console.warn("Autoplay audio blocked by browser:", e);
-      });
+      audio.play().catch(() => {});
     } catch (e) {
       console.error("Audio SFX Error:", e);
     }
@@ -99,7 +96,6 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Force blur to remove browser focus rings immediately for a clean look
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -178,7 +174,7 @@ export default function WordQuizPage() {
           )}>
             <Trophy className={cn("w-16 h-16 text-white/80", isPerfect && "animate-bounce")} />
             <h2 className="text-2xl font-bold font-headline">
-              {isPerfect ? "Sempurna!" : "Belum Hafal?"}
+              {isPerfect ? "Sempurna!" : "Hafalan Belum Sempurna"}
             </h2>
           </div>
           <CardContent className="pt-8 space-y-6">
@@ -202,7 +198,7 @@ export default function WordQuizPage() {
                 <RotateCcw className="h-4 w-4 text-rose-800" />
                 <AlertTitle className="text-xs font-bold">TARGET HARUS 100%</AlertTitle>
                 <AlertDescription className="text-[10px] leading-relaxed">
-                  Mohon ulangi kuis. Program Sahabat AQLI mewajibkan hafalan sempurna 100% sebelum Anda bisa melanjutkan ke ayat berikutnya.
+                  Mohon ulangi kuis. Target program Sahabat AQLI adalah hafalan sempurna 100%. Silakan tekan tombol di bawah untuk mencoba lagi.
                 </AlertDescription>
               </Alert>
             )}
@@ -218,11 +214,6 @@ export default function WordQuizPage() {
                 onClick={handleReset}
               >
                 <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
-              </Button>
-            )}
-            {isPerfect && (
-              <Button variant="ghost" className="w-full font-bold gap-2 text-[#B8860B] hover:bg-amber-50" onClick={handleReset}>
-                <RotateCcw className="w-4 h-4" /> Coba Lagi untuk Melatih Kecepatan
               </Button>
             )}
           </CardFooter>
@@ -250,7 +241,7 @@ export default function WordQuizPage() {
         </div>
       </div>
 
-      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37] shadow-inner" />
+      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
       <Card key={`question-card-${currentIdx}`} className="border-[#D4AF37]/10 shadow-2xl overflow-hidden rounded-2xl">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/10 relative overflow-hidden">
@@ -268,11 +259,11 @@ export default function WordQuizPage() {
               key={`${currentIdx}-opt-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none focus-visible:outline-none shadow-sm rounded-xl",
-                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100 shadow-md",
-                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100 shadow-md",
-                selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700 shadow-md",
-                !selectedAnswer && "hover:border-[#D4AF37] hover:text-[#B8860B] active:bg-muted"
+                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none shadow-sm rounded-xl",
+                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100",
+                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100",
+                selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
+                !selectedAnswer && "hover:border-[#D4AF37] hover:text-[#B8860B]"
               )}
               onClick={() => handleAnswer(option)}
               disabled={!!selectedAnswer}
@@ -289,7 +280,7 @@ export default function WordQuizPage() {
       </Card>
       
       <div className="text-center text-[10px] text-muted-foreground italic font-medium">
-        Target 100% diperlukan untuk melanjutkan. Fokus pada setiap detail kata.
+        Target 100% diperlukan untuk melanjutkan. Pelajari arti kata dengan teliti.
       </div>
     </div>
   );
