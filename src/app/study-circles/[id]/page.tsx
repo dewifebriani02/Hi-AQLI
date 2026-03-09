@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Trophy, Medal, Users, Clock, User, BookOpen, Star, ArrowRight } from "lucide-react";
+import { ChevronLeft, Trophy, Medal, Users, Clock, User, BookOpen, Star, ArrowRight, CheckCircle2, PlayCircle, Lock } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useRef } from "react";
 
 const studyCircles = [
   {
@@ -18,6 +19,12 @@ const studyCircles = [
     description: "Studi mendalam tentang makna dan konteks bagian terakhir Al-Qur'an, cocok untuk pemula.",
     schedule: "Sabtu, 10:00 WIB",
     level: "Pemula",
+    lessons: [
+      { id: "l1", title: "Pengantar Juz 30", duration: "15 mnt", completed: true },
+      { id: "l2", title: "Tafsir Surah An-Naba Part 1", duration: "25 mnt", completed: true },
+      { id: "l3", title: "Tafsir Surah An-Naba Part 2", duration: "20 mnt", completed: false },
+      { id: "l4", title: "Hikmah Surah An-Naziat", duration: "30 mnt", completed: false, locked: true },
+    ]
   },
   {
     id: "2",
@@ -26,6 +33,11 @@ const studyCircles = [
     description: "Eksplorasi rinci tentang karakteristik huruf Arab (Sifaat) untuk qari berpengalaman.",
     schedule: "Senin & Rabu, 19:00 WIB",
     level: "Lanjutan",
+    lessons: [
+      { id: "l1", title: "Review Makharij", duration: "20 mnt", completed: true },
+      { id: "l2", title: "Sifat-sifat Berlawanan", duration: "45 mnt", completed: false },
+      { id: "l3", title: "Sifat-sifat Tak Berlawanan", duration: "45 mnt", completed: false, locked: true },
+    ]
   },
   {
     id: "3",
@@ -34,6 +46,10 @@ const studyCircles = [
     description: "Perjalanan melalui kehidupan Nabi Muhammad (SAW) dan dapatkan pelajaran abadi untuk hari ini.",
     schedule: "Minggu, 14:00 WIB",
     level: "Semua Level",
+    lessons: [
+      { id: "l1", title: "Kondisi Arab Pra-Islam", duration: "20 mnt", completed: true },
+      { id: "l2", title: "Kelahiran Sang Cahaya", duration: "30 mnt", completed: false },
+    ]
   },
   {
     id: "4",
@@ -42,6 +58,10 @@ const studyCircles = [
     description: "Pahami hukum dan hikmah di balik ibadah inti, termasuk Salat, Zakat, dan Puasa.",
     schedule: "Kamis, 20:00 WIB",
     level: "Menengah",
+    lessons: [
+      { id: "l1", title: "Thaharah & Wudhu", duration: "25 mnt", completed: true },
+      { id: "l2", title: "Rukun-Rukun Salat", duration: "40 mnt", completed: false },
+    ]
   },
 ];
 
@@ -57,8 +77,13 @@ export default function StudyCircleDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const circle = studyCircles.find(c => c.id === id);
+  const lessonsRef = useRef<HTMLDivElement>(null);
 
   if (!circle) return <div className="p-8 text-center">Materi tidak ditemukan.</div>;
+
+  const scrollToLessons = () => {
+    lessonsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="flex flex-col gap-8 max-w-3xl mx-auto pb-32">
@@ -101,12 +126,50 @@ export default function StudyCircleDetailPage() {
                 {circle.description}
               </p>
             </div>
-            <Button className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold shadow-lg h-12 mt-2">
+            <Button 
+              onClick={scrollToLessons}
+              className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold shadow-lg h-12 mt-2"
+            >
               Lanjutkan Belajar <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Lesson List Section */}
+      <div ref={lessonsRef} className="space-y-4 px-1 scroll-mt-24">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-lg font-headline">Daftar Materi Pembelajaran</h3>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{circle.lessons.length} Modul</span>
+        </div>
+        
+        <div className="grid gap-3">
+          {circle.lessons.map((lesson, idx) => (
+            <Card key={lesson.id} className={cn(
+              "border-none shadow-sm transition-all",
+              lesson.locked ? "opacity-60 bg-muted/30" : "hover:bg-accent/50 cursor-pointer bg-card/50"
+            )}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center",
+                    lesson.completed ? "bg-emerald-100 text-emerald-600" : 
+                    lesson.locked ? "bg-muted text-muted-foreground" : "bg-[#800000]/10 text-[#800000]"
+                  )}>
+                    {lesson.completed ? <CheckCircle2 className="w-5 h-5" /> : 
+                     lesson.locked ? <Lock className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold">{idx + 1}. {lesson.title}</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">{lesson.duration} • {lesson.completed ? "Selesai" : lesson.locked ? "Terkunci" : "Tersedia"}</span>
+                  </div>
+                </div>
+                {!lesson.locked && <ArrowRight className="w-4 h-4 text-muted-foreground/30" />}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
 
       {/* Leaderboard Section Per Halaqah */}
       <div className="space-y-4 px-1">
