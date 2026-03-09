@@ -120,18 +120,18 @@ export function MushafPage() {
       ) : (
         <div className="flex flex-col gap-8 pb-24">
           {/* Mushaf Page Container */}
-          <Card className="relative p-6 md:p-12 border-none shadow-2xl bg-[#fffcf5] min-h-[600px] flex flex-col items-center overflow-hidden">
-            {/* Decorative Border */}
+          <Card className="relative p-6 md:p-14 border-none shadow-2xl bg-[#fffcf5] min-h-[700px] flex flex-col items-center overflow-hidden">
+            {/* Decorative Borders */}
             <div className="absolute inset-2 border-2 border-[#800000]/5 rounded-xl pointer-events-none" />
             <div className="absolute inset-4 border border-[#800000]/10 rounded-lg pointer-events-none" />
             
-            <div className="w-full text-center mb-8 opacity-40">
+            <div className="w-full text-center mb-10 opacity-40">
                <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-[#800000]">Halaman {page}</span>
             </div>
 
-            {/* Continuous Arabic Text Flow */}
+            {/* Continuous Arabic Text Flow (The "Madinah" 15-line style) */}
             <div 
-              className="flex flex-wrap justify-center gap-x-1 gap-y-4 md:gap-y-6 w-full max-w-2xl text-center" 
+              className="flex flex-wrap justify-center gap-x-1 gap-y-6 md:gap-y-8 w-full max-w-2xl text-center px-2" 
               dir="rtl"
             >
               {verses.map((verse) => (
@@ -140,7 +140,7 @@ export function MushafPage() {
                     <TooltipProvider key={`${verse.id}-${wordIdx}`} delayDuration={100}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="text-2xl md:text-4xl font-arabic leading-[2.5] md:leading-[2.8] text-foreground/90 hover:text-[#800000] transition-colors cursor-help select-none">
+                          <span className="text-3xl md:text-5xl font-arabic leading-[2.8] md:leading-[3.2] text-foreground/90 hover:text-[#800000] transition-colors cursor-help select-none">
                             {word.text_uthmani}
                           </span>
                         </TooltipTrigger>
@@ -152,15 +152,15 @@ export function MushafPage() {
                       </Tooltip>
                     </TooltipProvider>
                   ))}
-                  {/* Inline Verse Marker */}
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full border-2 border-[#800000]/10 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white shadow-sm shrink-0">
+                  {/* Inline Verse Marker inside the flow */}
+                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-[#800000]/10 text-xs font-bold text-[#800000] mx-4 align-middle bg-white shadow-md shrink-0">
                     {verse.verse_key.split(':')[1]}
                   </span>
                 </React.Fragment>
               ))}
             </div>
 
-            <div className="w-full text-center mt-12 opacity-40">
+            <div className="w-full text-center mt-14 opacity-30">
                <BookOpen className="w-4 h-4 mx-auto text-[#800000]" />
             </div>
           </Card>
