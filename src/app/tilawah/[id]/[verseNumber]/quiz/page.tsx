@@ -61,15 +61,11 @@ export default function WordQuizPage() {
       const currentWord = words[currentIdx];
       const correct = currentWord.translation.text;
       
-      // Get random unique wrong answers from all words in this verse
       let wrong = words
         .filter(w => w.translation.text !== correct)
         .map(w => w.translation.text);
       
-      // Shuffle and take up to 3
       wrong = [...new Set(wrong)].sort(() => Math.random() - 0.5).slice(0, 3);
-      
-      // Combine and shuffle зagain
       const all = [correct, ...wrong].sort(() => Math.random() - 0.5);
       setOptions(all);
     }
@@ -78,6 +74,11 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
+    // Remove focus from button to hide the "yellow" focus ring
+    if (typeof document !== 'undefined') {
+      (document.activeElement as HTMLElement)?.blur();
+    }
+
     setSelectedAnswer(answer);
     const correct = words[currentIdx].translation.text;
     const isAnsCorrect = answer === correct;
@@ -89,14 +90,13 @@ export default function WordQuizPage() {
 
     setTimeout(() => {
       if (currentIdx + 1 < words.length) {
-        // Reset ALL states simultaneously to ensure "polos" look on next question
         setSelectedAnswer(null);
         setIsCorrect(null);
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
       }
-    }, 1200);
+    }, 1000);
   };
 
   if (loading) {
@@ -181,7 +181,6 @@ export default function WordQuizPage() {
 
       <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#800000]" />
 
-      {/* Adding a key to the card forces it to fully re-mount on each question, clearing any visual artifacts */}
       <Card key={`question-${currentIdx}`} className="border-[#800000]/10 shadow-lg">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-[#800000]/60 mb-4">Apa arti dari kata ini?</CardTitle>
@@ -195,7 +194,7 @@ export default function WordQuizPage() {
               key={`${currentIdx}-option-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto py-5 text-lg font-medium transition-all duration-200 border-2 bg-white",
+                "h-auto py-5 text-lg font-medium transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0",
                 selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100",
                 selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100",
                 selectedAnswer && option === currentWord?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
