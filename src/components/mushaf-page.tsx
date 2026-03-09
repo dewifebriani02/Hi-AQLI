@@ -118,20 +118,20 @@ export function MushafPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-8 pb-24">
-          {/* Mushaf Page Container - Styled for Madinah 15-line feel */}
-          <Card className="relative p-8 md:p-12 lg:p-16 border-none shadow-2xl bg-[#fffcf5] min-h-[850px] flex flex-col items-center overflow-hidden">
+          {/* Mushaf Page Container - Re-engineered for 15-line compactness */}
+          <Card className="relative p-6 md:p-10 lg:p-14 border-none shadow-2xl bg-[#fffcf5] min-h-[750px] flex flex-col items-center overflow-hidden">
             {/* Decorative Borders to mimic a physical Quran page */}
-            <div className="absolute inset-4 border-[3px] border-[#800000]/5 rounded-xl pointer-events-none" />
-            <div className="absolute inset-6 border border-[#800000]/10 rounded-lg pointer-events-none" />
+            <div className="absolute inset-2 border-[4px] border-[#800000]/5 rounded-xl pointer-events-none" />
+            <div className="absolute inset-4 border border-[#800000]/10 rounded-lg pointer-events-none" />
             
             {/* Header Page Info */}
-            <div className="w-full text-center mb-8 opacity-40">
+            <div className="w-full text-center mb-6 opacity-40">
                <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#800000]">Halaman {page}</span>
             </div>
 
-            {/* Continuous Arabic Text Flow - Forced into approximately 15 lines */}
+            {/* Compact Arabic Text Flow - Optimized for 15 lines visual density */}
             <div 
-              className="flex flex-wrap justify-center gap-x-1 gap-y-0 w-full max-w-2xl text-center px-4 md:px-8" 
+              className="flex flex-wrap justify-center items-center gap-x-1 gap-y-1 w-full max-w-[500px] text-center px-2 md:px-4" 
               dir="rtl"
             >
               <TooltipProvider delayDuration={100}>
@@ -140,7 +140,7 @@ export function MushafPage() {
                     {verse.words.map((word, wordIdx) => (
                       <Tooltip key={`${verse.id}-${wordIdx}`}>
                         <TooltipTrigger asChild>
-                          <span className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[3] md:leading-[3.2] text-foreground/90 hover:text-[#800000] transition-colors cursor-help select-none px-0.5">
+                          <span className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[2.2] md:leading-[2.4] text-foreground/90 hover:text-[#800000] transition-colors cursor-help select-none px-0.5">
                             {word.text_uthmani}
                           </span>
                         </TooltipTrigger>
@@ -151,8 +151,8 @@ export function MushafPage() {
                         </TooltipPortal>
                       </Tooltip>
                     ))}
-                    {/* Inline Verse Marker with elegant circle */}
-                    <span className="inline-flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-[#800000]/15 text-[10px] md:text-xs font-bold text-[#800000] mx-3 align-middle bg-white shadow-sm shrink-0">
+                    {/* Compact Verse Marker */}
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#800000]/20 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white/50 shadow-xs shrink-0 translate-y-[-2px]">
                       {verse.verse_key.split(':')[1]}
                     </span>
                   </React.Fragment>
@@ -161,8 +161,8 @@ export function MushafPage() {
             </div>
 
             {/* Footer Decorative Icon */}
-            <div className="w-full text-center mt-auto pt-8 opacity-20">
-               <BookOpen className="w-5 h-5 mx-auto text-[#800000]" />
+            <div className="w-full text-center mt-auto pt-6 opacity-20">
+               <BookOpen className="w-4 h-4 mx-auto text-[#800000]" />
             </div>
           </Card>
 
