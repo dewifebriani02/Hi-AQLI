@@ -124,7 +124,7 @@ export default function VerseDetailPage() {
         const data = await res.json();
         setVerse(data.verse);
 
-        // 3. Fetch Official Tafsir with Fallback Strategy
+        // 3. Official Tafsir with Fallback Strategy
         const fetchTafsir = async (tafsirId: number) => {
           try {
             const tafsirRes = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${id}:${verseNumber}`);
@@ -252,9 +252,9 @@ export default function VerseDetailPage() {
             </div>
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/5">
-            <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-bold gap-2 py-6">
+            <Button asChild className="w-full bg-gradient-to-r from-[#800000] via-[#800000] to-[#D4AF37] hover:from-[#600000] hover:to-[#B8860B] text-white font-bold gap-2 py-6 shadow-md border-b-2 border-amber-600/50">
               <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
-                <GraduationCap className="w-5 h-5" /> UJI HAFALAN KATA
+                <GraduationCap className="w-5 h-5 text-amber-200" /> UJI HAFALAN KATA
               </Link>
             </Button>
           </CardFooter>

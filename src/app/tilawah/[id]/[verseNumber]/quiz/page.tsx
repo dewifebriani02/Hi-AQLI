@@ -127,8 +127,8 @@ export default function WordQuizPage() {
     return (
       <div className="max-w-md mx-auto py-10 flex flex-col gap-8">
         <Card className="text-center border-[#800000]/20 shadow-xl overflow-hidden">
-          <div className="bg-[#800000] p-8 flex flex-col items-center gap-4 text-white">
-            <Trophy className="w-16 h-16 animate-bounce" />
+          <div className="bg-gradient-to-br from-[#800000] to-[#D4AF37] p-8 flex flex-col items-center gap-4 text-white">
+            <Trophy className="w-16 h-16 animate-bounce text-amber-200" />
             <h2 className="text-2xl font-bold font-headline">Hasil Uji Hafalan</h2>
           </div>
           <CardContent className="pt-8 space-y-4">
@@ -138,11 +138,11 @@ export default function WordQuizPage() {
             </p>
             <div className="pt-4">
                {percentage >= 80 ? (
-                 <Badge className="bg-green-500 text-white p-2 px-4 rounded-lg">Luar Biasa!</Badge>
+                 <Badge className="bg-emerald-600 text-white p-2 px-4 rounded-lg">Luar Biasa!</Badge>
                ) : percentage >= 50 ? (
-                 <Badge className="bg-blue-500 text-white p-2 px-4 rounded-lg">Cukup Bagus!</Badge>
+                 <Badge className="bg-amber-500 text-white p-2 px-4 rounded-lg">Cukup Bagus!</Badge>
                ) : (
-                 <Badge className="bg-orange-500 text-white p-2 px-4 rounded-lg">Terus Berlatih!</Badge>
+                 <Badge className="bg-rose-600 text-white p-2 px-4 rounded-lg">Terus Berlatih!</Badge>
                )}
             </div>
           </CardContent>
@@ -150,7 +150,7 @@ export default function WordQuizPage() {
             <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold">
                <Link href={`/tilawah/${id}/${verseNumber}`}>Selesai</Link>
             </Button>
-            <Button variant="outline" className="w-full font-bold gap-2" onClick={() => window.location.reload()}>
+            <Button variant="outline" className="w-full font-bold gap-2 border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => window.location.reload()}>
                <RefreshCw className="w-4 h-4" /> Ulangi Kuis
             </Button>
           </CardFooter>
@@ -179,7 +179,7 @@ export default function WordQuizPage() {
         </div>
       </div>
 
-      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#800000]" />
+      <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-gradient-to-r [&>div]:from-[#800000] [&>div]:to-[#D4AF37]" />
 
       <Card key={`question-${currentIdx}`} className="border-[#800000]/10 shadow-lg">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
@@ -198,7 +198,7 @@ export default function WordQuizPage() {
                 selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100",
                 selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100",
                 selectedAnswer && option === currentWord?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
-                !selectedAnswer && "hover:border-[#800000] hover:text-[#800000] active:bg-muted"
+                !selectedAnswer && "hover:border-amber-500 hover:text-amber-700 active:bg-muted"
               )}
               onClick={() => handleAnswer(option)}
               disabled={!!selectedAnswer}
