@@ -1,31 +1,27 @@
-
 'use client';
 
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription 
+import {
+  Card,
+  CardContent,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Flame, 
-  TrendingUp, 
-  PlayCircle, 
-  BookMarked, 
-  ChevronRight, 
+import {
+  Flame,
+  TrendingUp,
+  PlayCircle,
+  BookMarked,
+  ChevronRight,
   Award,
   Bell,
   PlusCircle,
   BarChart3,
   Globe,
-  CheckCircle2,
   Calendar,
   Sparkles,
-  Users
+  Users,
+  HeartHandshake
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/firebase";
@@ -75,7 +71,7 @@ export default function DashboardPage() {
             </div>
             <span className="text-sm font-bold text-muted-foreground">0 Hari</span>
           </div>
-          
+
           <div className="flex-1 flex flex-col gap-3">
             <div className="flex justify-between items-center px-1">
               {days.map((day) => (
@@ -120,7 +116,7 @@ export default function DashboardPage() {
                 Gunakan Sahabat AQLI untuk melacak khatam 90% atau lebih Al-Qur'an selama Ramadhan dan kami akan mewakafkan satu mushaf atas nama Anda!
               </p>
             </div>
-            
+
             <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
               <svg className="w-full h-full rotate-[-90deg]">
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-muted/30" />
@@ -159,8 +155,8 @@ export default function DashboardPage() {
                   <h4 className="font-bold text-lg">Mushaf Digital</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Baca Al-Qur'an dengan terjemahan per kata dan tafsir Kemenag RI yang mendalam.</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10">
-                  MULAI MEMBACA <ChevronRight className="w-3 h-3" />
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider">
+                  Mulai Membaca <ChevronRight className="w-3 h-3" />
                 </div>
               </CardContent>
             </Card>
@@ -178,8 +174,8 @@ export default function DashboardPage() {
                   <h4 className="font-bold text-lg">Cendekiawan AI</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Tanyakan apa pun tentang hukum Islam, Tafsir, dan sejarah kepada AI terverifikasi kami.</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10">
-                  TANYA SEKARANG <ChevronRight className="w-3 h-3" />
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider">
+                  Tanya Sekarang <ChevronRight className="w-3 h-3" />
                 </div>
               </CardContent>
             </Card>
@@ -197,8 +193,8 @@ export default function DashboardPage() {
                   <h4 className="font-bold text-lg">Modul Tajwid</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Kuasai seni tilawah dengan modul interaktif dan kuis yang mengasah pemahaman.</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10">
-                  PELAJARI TAJWID <ChevronRight className="w-3 h-3" />
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider">
+                  Pelajari Tajwid <ChevronRight className="w-3 h-3" />
                 </div>
               </CardContent>
             </Card>
@@ -216,8 +212,29 @@ export default function DashboardPage() {
                   <h4 className="font-bold text-lg">Lingkar Studi</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Bergabunglah dengan halaqah online bersama instruktur bersertifikat di seluruh dunia.</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10">
-                  GABUNG HALAQAH <ChevronRight className="w-3 h-3" />
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider">
+                  Gabung Halaqah <ChevronRight className="w-3 h-3" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Donation Ad (NEW) */}
+          <Link href="/donate" className="block group sm:col-span-2">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-rose-900 to-rose-700 text-white h-44 transition-transform group-hover:scale-[1.01]">
+              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
+                <div className="absolute right-[-20px] bottom-[-20px] opacity-20">
+                  <HeartHandshake className="w-48 h-48" />
+                </div>
+                <div className="space-y-2 relative z-10">
+                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold tracking-widest">WAKAF DIGITAL</Badge>
+                  <h4 className="font-bold text-xl">Infaq &amp; Sedekah</h4>
+                  <p className="text-sm text-white/70 max-w-sm leading-relaxed">
+                    Dukung pemeliharaan infrastruktur AI Sahabat AQLI untuk manfaat umat yang lebih luas dan berkelanjutan.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-widest">
+                  Berikan Kontribusi <ChevronRight className="w-4 h-4" />
                 </div>
               </CardContent>
             </Card>
@@ -261,4 +278,24 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+function CheckCircle2(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  )
 }
