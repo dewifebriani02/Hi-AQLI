@@ -39,10 +39,10 @@ export default function WordQuizPage() {
   // Helper to play short UI sound effects
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect') => {
     const soundUrls = {
-      // Happy bright ding
+      // Happy bright crystal ding
       correct: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
-      // Short clear "oops" buzzer
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2650/2650-preview.mp3',
+      // Clear but gentle "oops" fail sound
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2658/2658-preview.mp3',
       // Success fanfare for 100%
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
     };
@@ -99,7 +99,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Immediately blur to remove any browser focus highlights
+    // Immediately blur to remove any browser focus highlights (garis kuning/biru)
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
