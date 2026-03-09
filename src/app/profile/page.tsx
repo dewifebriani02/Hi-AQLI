@@ -23,7 +23,7 @@ import {
   History
 } from 'lucide-react';
 import { useEffect } from 'react';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { 
   Table, 
@@ -41,13 +41,14 @@ export default function ProfilePage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Fetch real donation history for the user
+  // Fetch real donation history for the user with limit
   const donationsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
       collection(db, "donations"),
       where("userId", "==", user.uid),
-      orderBy("donationDate", "desc")
+      orderBy("donationDate", "desc"),
+      limit(20)
     );
   }, [db, user]);
 

@@ -100,7 +100,7 @@ service cloud.firestore {
     /**
      * @description Quranic Sura data and Tajweed educational modules.
      * @path /suras/{suraId}, /tajweed_modules/{moduleId} (and sub-entities)
-     * @allow A learner reads the description of 'Sura Al-Fatiha'.
+     * @allow a learner reads the description of 'Sura Al-Fatiha'.
      * @deny a learner attempts to edit the name of a Tajweed module.
      * @principle Public consumption with administrative content control.
      */
@@ -202,7 +202,7 @@ service cloud.firestore {
      * @description Collaborative study circles managed by instructors.
      * @path /study_circles/{studyCircleId}
      * @allow An instructor updates the description of their own circle.
-     * @deny A learner attempts to delete a study circle.
+     * @deny a learner attempts to delete a study circle.
      * @principle Instructor-based write access via denormalized ownership field.
      */
     match /study_circles/{studyCircleId} {
@@ -234,8 +234,8 @@ service cloud.firestore {
      * @principle Restricted listing requiring query filters to match user UID.
      */
     match /donations/{donationId} {
-      allow get: if isAdmin() || (resource != null && resource.data.userId == request.auth.uid);
-      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100); // Admin can list all, users must filter or are limited.
+      allow get: if isAdmin() || (isSignedIn() && resource != null && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
