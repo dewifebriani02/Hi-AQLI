@@ -4,14 +4,13 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, AlertCircle, GraduationCap, ChevronRight } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface WordData {
   id: number;
@@ -99,6 +98,39 @@ export default function VerseDetailPage() {
     }
   }, []);
 
+  const fetchOfficialTafsir = useCallback(async (chapterId: string, vNum: string) => {
+    setApiTafsir(null);
+    try {
+      const fetchTafsirText = async (tafsirId: number) => {
+        try {
+          const tafsirRes = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${chapterId}:${vNum}`);
+          if (tafsirRes.ok) {
+            const tafsirData = await tafsirRes.json();
+            return tafsirData.tafsir?.text || null;
+          }
+        } catch (e) {
+          return null;
+        }
+        return null;
+      };
+
+      // Priority 1: Kemenag Ringkas (157)
+      let foundTafsir = await fetchTafsirText(157);
+      if (foundTafsir) {
+        setTafsirSource("Kemenag RI (Ringkas)");
+      } else {
+        // Priority 2: Jalalayn ID (158)
+        foundTafsir = await fetchTafsirText(158);
+        if (foundTafsir) setTafsirSource("Tafsir Jalalayn (ID)");
+      }
+      
+      setApiTafsir(foundTafsir || "Tafsir resmi belum tersedia untuk ayat ini.");
+    } catch (e) {
+      console.error("Tafsir Fetch Error:", e);
+      setApiTafsir("Gagal memuat tafsir resmi.");
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchVerse() {
       if (!id || !verseNumber) return;
@@ -107,7 +139,6 @@ export default function VerseDetailPage() {
         setLoading(true);
         setError(null);
         setAnalysis(null);
-        setApiTafsir(null); // Reset tafsir state to show loader
 
         // 1. Fetch Surah Info
         const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
@@ -124,29 +155,8 @@ export default function VerseDetailPage() {
         const data = await res.json();
         setVerse(data.verse);
 
-        // 3. Official Tafsir with Fallback Strategy
-        const fetchTafsirText = async (tafsirId: number) => {
-          try {
-            const tafsirRes = await fetch(`https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_key/${id}:${verseNumber}`);
-            if (tafsirRes.ok) {
-              const tafsirData = await tafsirRes.json();
-              return tafsirData.tafsir?.text || null;
-            }
-          } catch (e) {
-            return null;
-          }
-          return null;
-        };
-
-        let foundTafsir = await fetchTafsirText(157); // Kemenag RI
-        if (foundTafsir) {
-          setTafsirSource("Kemenag RI (Ringkas)");
-        } else {
-          foundTafsir = await fetchTafsirText(158); // Jalalayn (ID)
-          if (foundTafsir) setTafsirSource("Tafsir Jalalayn (ID)");
-        }
-        
-        setApiTafsir(foundTafsir || "Tafsir resmi tidak tersedia untuk ayat ini.");
+        // 3. Fetch Tafsir (Independent)
+        fetchOfficialTafsir(id, verseNumber);
         
         // 4. AI Analysis
         if (data.verse) {
@@ -155,13 +165,12 @@ export default function VerseDetailPage() {
       } catch (err: any) {
         console.error("Main Fetch Error:", err);
         setError(err.message || "Terjadi kesalahan saat memuat data.");
-        setApiTafsir("Gagal memuat tafsir.");
       } finally {
         setLoading(false);
       }
     }
     fetchVerse();
-  }, [id, verseNumber, fetchAiAnalysis]);
+  }, [id, verseNumber, fetchAiAnalysis, fetchOfficialTafsir]);
 
   if (loading) {
     return (
@@ -232,7 +241,7 @@ export default function VerseDetailPage() {
             </div>
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/5">
-            <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 shadow-md border-b-4 border-amber-600 transition-all active:translate-y-1 active:border-b-0">
+            <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 shadow-md border-b-4 border-amber-600 transition-all active:translate-y-0.5 active:border-b-2">
               <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
                 <GraduationCap className="w-5 h-5 text-black" /> UJI HAFALAN KATA
               </Link>
@@ -248,10 +257,10 @@ export default function VerseDetailPage() {
               Tafsir Resmi ({tafsirSource})
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 min-h-[100px]">
             {apiTafsir ? (
               <div 
-                className="text-foreground/90 leading-relaxed text-base prose prose-sm max-w-none prose-p:mb-4"
+                className="text-foreground/90 leading-relaxed text-base prose prose-sm max-w-none prose-p:mb-4 prose-strong:text-[#800000]"
                 dangerouslySetInnerHTML={{ __html: apiTafsir }} 
               />
             ) : (

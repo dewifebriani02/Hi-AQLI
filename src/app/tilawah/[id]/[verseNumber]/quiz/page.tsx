@@ -78,7 +78,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Explicitly remove focus from the clicked button to hide any browser focus ring (the "yellow" or "blue" line)
+    // Explicitly remove focus from the clicked button to hide any browser focus ring
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -104,7 +104,7 @@ export default function WordQuizPage() {
   if (loading) {
     return (
       <div className="flex flex-col gap-6 max-w-3xl mx-auto py-32 items-center">
-        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+        <Loader2 className="w-10 h-10 animate-spin text-[#D4AF37]" />
         <p className="text-muted-foreground font-medium">Menyiapkan Kuis Hafalan...</p>
       </div>
     );
@@ -183,7 +183,6 @@ export default function WordQuizPage() {
 
       <Progress value={progressValue} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
-      {/* Adding a key to the Card based on currentIdx forces a clean re-render of the question container */}
       <Card key={`question-card-${currentIdx}`} className="border-[#D4AF37]/10 shadow-lg overflow-hidden">
         <CardHeader className="text-center pb-10 pt-12 bg-muted/20">
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Apa arti dari kata ini?</CardTitle>
@@ -197,7 +196,7 @@ export default function WordQuizPage() {
               key={`${currentIdx}-option-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none",
+                "h-auto py-5 text-lg font-bold transition-all duration-200 border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none outline-0 focus:outline-none focus-visible:outline-none",
                 selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 hover:bg-green-100",
                 selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 hover:bg-red-100",
                 selectedAnswer && option === currentWord?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
