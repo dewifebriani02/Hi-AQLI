@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, AlertCircle, GraduationCap, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
@@ -219,14 +219,6 @@ export default function VerseDetailPage() {
           <div className="max-w-2xl ml-auto text-left" dir="ltr">
             <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20 text-[10px] font-bold">TERJEMAHAN KEMENAG RI</Badge>
             <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse.translations[0].text }} />
-            
-            <div className="pt-6">
-              <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 text-white font-bold gap-2">
-                <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
-                  <GraduationCap className="w-4 h-4" /> UJI HAFALAN KATA
-                </Link>
-              </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -259,6 +251,13 @@ export default function VerseDetailPage() {
               ))}
             </div>
           </CardContent>
+          <CardFooter className="pt-6 border-t bg-muted/5">
+            <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-bold gap-2 py-6">
+              <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
+                <GraduationCap className="w-5 h-5" /> UJI HAFALAN KATA
+              </Link>
+            </Button>
+          </CardFooter>
         </Card>
 
         {/* Official Tafsir Section */}
