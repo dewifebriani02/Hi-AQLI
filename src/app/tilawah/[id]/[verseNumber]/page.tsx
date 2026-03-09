@@ -63,9 +63,11 @@ export default function VerseDetailPage() {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
     
+    // Swipe Left (distance > 0) -> Next Verse
     if (distance > 70 && currentVerseNum < totalVerses) {
       router.push(`/tilawah/${id}/${currentVerseNum + 1}`);
     } 
+    // Swipe Right (distance < 0) -> Prev Verse
     else if (distance < -70 && currentVerseNum > 1) {
       router.push(`/tilawah/${id}/${currentVerseNum - 1}`);
     }
@@ -113,16 +115,19 @@ export default function VerseDetailPage() {
         setLoading(true);
         setError(null);
 
+        // Fetch Surah Info
         const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         const sData = await sRes.json();
         setSurahName(sData.chapter.name_simple);
         setTotalVerses(sData.chapter.verses_count);
 
+        // Fetch Verse Details (including word breakdown)
         const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`);
         if (!vRes.ok) throw new Error("Gagal memuat ayat.");
         const vData = await vRes.json();
         setVerse(vData.verse);
 
+        // Fetch Tafsir & AI Analysis
         fetchOfficialTafsir(id, verseNumber);
         if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseNumber), vData.verse.text_uthmani);
       } catch (e: any) {
@@ -150,6 +155,7 @@ export default function VerseDetailPage() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Header Navigation */}
       <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
         <Button asChild variant="ghost" size="icon">
           <Link href={`/tilawah/${id}`}>
@@ -180,6 +186,7 @@ export default function VerseDetailPage() {
         </div>
       </div>
 
+      {/* Verse Card */}
       <Card className="border-none bg-muted/20">
         <CardContent className="pt-8 pb-10 px-6 space-y-8 text-right" dir="rtl">
           <h2 className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground">
@@ -193,6 +200,7 @@ export default function VerseDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6">
+        {/* Word Breakdown Section */}
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-muted/30 py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline">
@@ -214,6 +222,7 @@ export default function VerseDetailPage() {
               ))}
             </div>
 
+            {/* Memorization Tips Card */}
             <div className="p-4 bg-amber-50/50" dir="ltr">
               <Alert className="border-amber-200 bg-white shadow-sm">
                 <Lightbulb className="h-4 w-4 text-[#B8860B]" />
@@ -235,6 +244,7 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
+        {/* Tafsir Card */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white py-4">
             <CardTitle className="text-sm flex items-center gap-2 font-headline">
@@ -257,6 +267,7 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
+        {/* AI Hikmah Card */}
         <Card className="border-accent/20 shadow-sm bg-accent/5">
           <CardHeader className="py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">
@@ -279,6 +290,7 @@ export default function VerseDetailPage() {
         </Card>
       </div>
 
+      {/* Bottom Footer Navigation */}
       <div className="flex items-center justify-between gap-4 mt-8">
         <Button 
           variant="outline" 

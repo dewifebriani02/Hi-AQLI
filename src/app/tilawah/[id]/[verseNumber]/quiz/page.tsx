@@ -106,6 +106,7 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
+    // Remove focus rings by blurring active element
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
