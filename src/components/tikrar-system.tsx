@@ -14,7 +14,8 @@ import {
   Zap,
   Play,
   Loader2,
-  BookOpen
+  BookOpen,
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +65,6 @@ export function TikrarSystem() {
       }
     }
     fetchVerses();
-    // Reset progress on page change (Optional logic based on preference)
     setBlocks({
       1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
       2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -73,7 +73,6 @@ export function TikrarSystem() {
     });
   }, [page]);
 
-  // Function to split verses into 4 chunks for TM1 - TM4
   const getVersesForBlock = (blockId: number) => {
     if (verses.length === 0) return [];
     const chunkSize = Math.ceil(verses.length / 4);
@@ -101,6 +100,11 @@ export function TikrarSystem() {
     }));
   };
 
+  const isBlockDone = (blockId: number) => {
+    const b = blocks[blockId];
+    return b.a.count === TARGET && b.b.count === TARGET && b.combined.count === TARGET;
+  };
+
   const calculateTotalProgress = () => {
     let total = 0;
     Object.values(blocks).forEach(b => {
@@ -111,7 +115,6 @@ export function TikrarSystem() {
 
   return (
     <div className="space-y-8">
-      {/* Page Selector & Global Progress */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={loading}>
@@ -142,35 +145,42 @@ export function TikrarSystem() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-8">
-          {[1, 2, 3, 4].map((id) => (
-            <BlockCard 
-              key={id} 
-              id={id} 
-              state={blocks[id]} 
-              verses={getVersesForBlock(id)}
-              onIncrement={increment} 
-              onReset={() => resetBlock(id)}
-              target={TARGET}
-            />
-          ))}
+          {[1, 2, 3, 4].map((id) => {
+            const isLocked = id > 1 && !isBlockDone(id - 1);
+            return (
+              <BlockCard 
+                key={id} 
+                id={id} 
+                state={blocks[id]} 
+                verses={getVersesForBlock(id)}
+                onIncrement={increment} 
+                onReset={() => resetBlock(id)}
+                target={TARGET}
+                isLocked={isLocked}
+              />
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-function BlockCard({ id, state, verses, onIncrement, onReset, target }: { 
+function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }: { 
   id: number, 
   state: BlockState, 
   verses: Verse[],
   onIncrement: (blockId: number, type: 'a' | 'b' | 'combined') => void,
   onReset: () => void,
-  target: number
+  target: number,
+  isLocked: boolean
 }) {
   const isBlockDone = state.a.count === target && state.b.count === target && state.combined.count === target;
 
   let currentFocus = "";
-  if (state.a.count < target) {
+  if (isLocked) {
+    currentFocus = "Terkunci";
+  } else if (state.a.count < target) {
     currentFocus = `TM${id}a`;
   } else if (state.b.count < target) {
     currentFocus = `TM${id}b`;
@@ -182,27 +192,39 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target }: {
 
   return (
     <Card className={cn(
-      "border-2 transition-all duration-500 overflow-hidden shadow-lg",
+      "border-2 transition-all duration-500 overflow-hidden shadow-lg relative",
+      isLocked ? "border-muted bg-muted/5 opacity-60 pointer-events-none" :
       isBlockDone ? "border-emerald-500 bg-emerald-50/30" : "border-muted"
     )}>
       {/* Active Focus Header */}
-      {!isBlockDone && (
-        <div className="bg-[#800000]/5 py-3 px-6 border-b border-[#800000]/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      <div className={cn(
+        "py-3 px-6 border-b flex items-center justify-between",
+        isLocked ? "bg-muted/20 border-muted" : "bg-[#800000]/5 border-[#800000]/10"
+      )}>
+        <div className="flex items-center gap-2">
+          {isLocked ? (
+            <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+          ) : !isBlockDone ? (
             <div className="w-2.5 h-2.5 rounded-full bg-[#800000] animate-pulse" />
-            <span className="text-[11px] font-bold text-[#800000] uppercase tracking-widest">
-              Target Hafalan: <span className="underline decoration-double">{currentFocus}</span>
-            </span>
-          </div>
-          <Play className="w-4 h-4 text-[#800000]" />
+          ) : (
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          )}
+          <span className={cn(
+            "text-[11px] font-bold uppercase tracking-widest",
+            isLocked ? "text-muted-foreground" : "text-[#800000]"
+          )}>
+            {isLocked ? "Selesaikan TM sebelumnya" : `Target Hafalan: ${currentFocus}`}
+          </span>
         </div>
-      )}
+        {!isLocked && !isBlockDone && <Play className="w-4 h-4 text-[#800000]" />}
+      </div>
 
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 pt-6 px-6">
         <div className="space-y-1">
           <CardTitle className="text-2xl font-black font-headline flex items-center gap-3">
-            <span className="text-[#800000]">TM {id}</span>
+            <span className={isLocked ? "text-muted-foreground" : "text-[#800000]"}>TM {id}</span>
             {isBlockDone && <CheckCircle2 className="h-6 w-6 text-emerald-500" />}
+            {isLocked && <Lock className="h-5 w-5 text-muted-foreground/50" />}
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-[9px] font-bold text-muted-foreground border-muted px-2 py-0">
@@ -215,13 +237,17 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target }: {
           {isBlockDone && (
             <Badge className="bg-emerald-500 text-white text-[9px] font-bold py-1 px-3">LULUS TIKRAR</Badge>
           )}
-          <Button variant="ghost" size="sm" onClick={onReset} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8 px-3 uppercase tracking-widest">Reset</Button>
+          {!isLocked && (
+            <Button variant="ghost" size="sm" onClick={onReset} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8 px-3 uppercase tracking-widest">Reset</Button>
+          )}
         </div>
       </CardHeader>
 
       <CardContent className="space-y-8 px-6 pb-8">
-        {/* Quran Verses Display Section - Optimized for 3-4 lines */}
-        <div className="bg-[#fffdf5] p-6 rounded-2xl border-2 border-[#800000]/10 shadow-inner relative group min-h-[120px] flex flex-col justify-center">
+        <div className={cn(
+          "bg-[#fffdf5] p-6 rounded-2xl border-2 shadow-inner relative group min-h-[120px] flex flex-col justify-center transition-all",
+          isLocked ? "border-muted grayscale blur-[1px]" : "border-[#800000]/10"
+        )}>
           <div className="absolute top-3 left-3 opacity-20">
             <BookOpen className="w-5 h-5 text-[#800000]" />
           </div>
@@ -242,28 +268,29 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target }: {
           </div>
         </div>
 
-        {/* Counter Controls */}
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <MaqtaCounter 
               label={`TM${id}a`} 
               count={state.a.count} 
               target={target} 
-              onClick={() => onIncrement(id, 'a')} 
+              onClick={() => !isLocked && onIncrement(id, 'a')} 
               isActive={currentFocus === `TM${id}a`}
+              disabled={isLocked}
             />
             <MaqtaCounter 
               label={`TM${id}b`} 
               count={state.b.count} 
               target={target} 
-              onClick={() => onIncrement(id, 'b')} 
+              onClick={() => !isLocked && onIncrement(id, 'b')} 
               isActive={currentFocus === `TM${id}b`}
+              disabled={isLocked}
             />
           </div>
 
           <div className="pt-2">
             <Button 
-              disabled={state.a.count < target || state.b.count < target}
+              disabled={isLocked || state.a.count < target || state.b.count < target}
               onClick={() => onIncrement(id, 'combined')}
               className={cn(
                 "w-full h-20 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-md active:scale-[0.98]",
@@ -278,11 +305,11 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target }: {
               )}
               <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Gabungan TM{id}a+b</span>
               <div className="flex items-center gap-3">
-                <RotateCcw className={cn("h-5 w-5", !isBlockDone && "animate-spin-slow")} />
+                <RotateCcw className={cn("h-5 w-5", (!isBlockDone && !isLocked) && "animate-spin-slow")} />
                 <span className="text-2xl font-black">{state.combined.count} <span className="text-sm opacity-60">/ {target}</span></span>
               </div>
             </Button>
-            {(state.a.count < target || state.b.count < target) && (
+            {!isLocked && (state.a.count < target || state.b.count < target) && (
               <p className="text-[10px] text-center mt-3 text-muted-foreground italic font-semibold flex items-center justify-center gap-1">
                 <Zap className="w-3 h-3 text-amber-500" /> Selesaikan TM{id}a & TM{id}b untuk lanjut
               </p>
@@ -294,35 +321,38 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target }: {
   );
 }
 
-function MaqtaCounter({ label, count, target, onClick, isActive }: { 
+function MaqtaCounter({ label, count, target, onClick, isActive, disabled }: { 
   label: string, 
   count: number, 
   target: number, 
   onClick: () => void,
-  isActive?: boolean
+  isActive?: boolean,
+  disabled?: boolean
 }) {
   const isDone = count === target;
 
   return (
     <div 
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       className={cn(
-        "group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 cursor-pointer transition-all active:scale-95 select-none overflow-hidden h-32",
-        isDone ? "bg-emerald-100 border-emerald-500 shadow-emerald-100" : 
-        isActive ? "bg-white border-[#800000] shadow-xl scale-105 z-10" : 
-        "bg-white hover:border-[#800000]/30 shadow-sm border-border grayscale-[0.5] opacity-80 hover:opacity-100"
+        "group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all active:scale-95 select-none overflow-hidden h-32",
+        disabled ? "bg-muted/20 border-muted grayscale cursor-not-allowed" :
+        isDone ? "bg-emerald-100 border-emerald-500 shadow-emerald-100 cursor-pointer" : 
+        isActive ? "bg-white border-[#800000] shadow-xl scale-105 z-10 cursor-pointer" : 
+        "bg-white hover:border-[#800000]/30 shadow-sm border-border grayscale-[0.5] opacity-80 hover:opacity-100 cursor-pointer"
       )}
     >
-      {/* Progress Background Overlay */}
-      <div 
-        className={cn(
-          "absolute bottom-0 left-0 right-0 transition-all duration-500 pointer-events-none",
-          isDone ? "bg-emerald-500/20" : "bg-[#800000]/10"
-        )}
-        style={{ height: `${(count / target) * 100}%` }}
-      />
+      {!disabled && (
+        <div 
+          className={cn(
+            "absolute bottom-0 left-0 right-0 transition-all duration-500 pointer-events-none",
+            isDone ? "bg-emerald-500/20" : "bg-[#800000]/10"
+          )}
+          style={{ height: `${(count / target) * 100}%` }}
+        />
+      )}
 
-      {isActive && !isDone && (
+      {isActive && !isDone && !disabled && (
         <Badge className="absolute -top-2 bg-[#800000] text-white text-[8px] font-black px-2 h-5 animate-in fade-in slide-in-from-top-2 shadow-lg">
           FOKUS
         </Badge>
@@ -330,6 +360,7 @@ function MaqtaCounter({ label, count, target, onClick, isActive }: {
 
       <span className={cn(
         "text-[11px] font-bold uppercase tracking-[0.2em] relative z-10 mb-2",
+        disabled ? "text-muted-foreground" :
         isDone ? "text-emerald-700" : 
         isActive ? "text-[#800000]" :
         "text-muted-foreground group-hover:text-[#800000]"
@@ -340,6 +371,7 @@ function MaqtaCounter({ label, count, target, onClick, isActive }: {
       <div className="flex flex-col items-center relative z-10">
         <span className={cn(
           "text-4xl font-black leading-none",
+          disabled ? "text-muted-foreground/50" :
           isDone ? "text-emerald-600" : 
           isActive ? "text-[#800000]" :
           "text-foreground"
@@ -351,11 +383,13 @@ function MaqtaCounter({ label, count, target, onClick, isActive }: {
 
       {isDone ? (
         <CheckCircle2 className="absolute top-3 right-3 h-5 w-5 text-emerald-600" />
-      ) : isActive ? (
+      ) : isActive && !disabled ? (
         <Play className="absolute top-3 right-3 h-4 w-4 text-[#800000] animate-pulse" />
-      ) : (
+      ) : !disabled && (
         <Zap className="absolute top-3 right-3 h-4 w-4 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
       )}
+      
+      {disabled && <Lock className="absolute top-3 right-3 h-4 w-4 text-muted-foreground/30" />}
     </div>
   );
 }
