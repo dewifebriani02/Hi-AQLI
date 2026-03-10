@@ -4,18 +4,10 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb, ArrowLeft, ArrowRight, Play, Pause, Mic2, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, Lightbulb, ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -48,15 +40,6 @@ interface VerseDetail {
   words: WordData[];
 }
 
-const RECITERS = [
-  { id: 7, name: "Mishary Rashid Alafasy" },
-  { id: 2, name: "AbdulBaset AbdulSamad (Murattal)" },
-  { id: 3, name: "Abdur-Rahman as-Sudais" },
-  { id: 6, name: "Mahmoud Khalil Al-Husary" },
-  { id: 12, name: "Saud al-Shuraim" },
-  { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
-];
-
 export default function VerseDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -78,40 +61,9 @@ export default function VerseDetailPage() {
   // Tooltip persistence state
   const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
 
-  // Audio States
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isAudioLoading, setIsAudioLoading] = useState(false);
-  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
-  const [showReciterDialog, setShowReciterDialog] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   // Swipe Detection Logic
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
-
-  useEffect(() => {
-    const savedReciter = localStorage.getItem('aqli_reciter_id');
-    if (savedReciter) {
-      setSelectedReciterId(parseInt(savedReciter));
-    }
-  }, []);
-
-  const selectReciter = (reciterId: number) => {
-    setSelectedReciterId(reciterId);
-    localStorage.setItem('aqli_reciter_id', reciterId.toString());
-    setShowReciterDialog(false);
-    
-    // If audio was playing or loading, reload with new qari
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      setIsPlaying(false);
-    }
-    
-    toast({
-      description: `Qari berhasil diubah menjadi: ${RECITERS.find(r => r.id === reciterId)?.name}`,
-    });
-  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.targetTouches[0].clientX;
@@ -168,70 +120,6 @@ export default function VerseDetailPage() {
     }
   }, []);
 
-  const togglePlay = useCallback(async () => {
-    if (!selectedReciterId) {
-      setShowReciterDialog(true);
-      return;
-    }
-
-    if (isPlaying) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
-      return;
-    }
-
-    if (audioRef.current) {
-      audioRef.current.play();
-      setIsPlaying(true);
-      return;
-    }
-
-    setIsAudioLoading(true);
-    try {
-      const verseKey = `${id}:${verseNumber}`;
-      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
-      if (!res.ok) throw new Error("API Request Failed");
-      
-      const data = await res.json();
-      const audioUrl = data.audio_files[0]?.url;
-
-      if (!audioUrl) throw new Error("URL missing");
-
-      let fullUrl = audioUrl;
-      if (audioUrl.startsWith('//')) {
-        fullUrl = `https:${audioUrl}`;
-      } else if (!audioUrl.startsWith('http')) {
-        fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
-      }
-
-      const audio = new Audio(fullUrl);
-      audioRef.current = audio;
-
-      audio.onplay = () => {
-        setIsPlaying(true);
-        setIsAudioLoading(false);
-      };
-      audio.onended = () => {
-        setIsPlaying(false);
-        if (currentVerseNum < totalVerses) {
-          router.push(`/tilawah/${id}/${currentVerseNum + 1}?autoplay=true`);
-        }
-      };
-      audio.onerror = (e) => {
-        console.error("Audio Error:", e);
-        setIsAudioLoading(false);
-        setIsPlaying(false);
-        toast({ variant: "destructive", title: "Gagal memutar audio" });
-      };
-
-      await audio.play();
-    } catch (e) {
-      console.error("Audio Playback error:", e);
-      setIsAudioLoading(false);
-      toast({ variant: "destructive", title: "Audio tidak tersedia" });
-    }
-  }, [id, verseNumber, currentVerseNum, totalVerses, isPlaying, router, toast, selectedReciterId]);
-
   useEffect(() => {
     async function fetchAll() {
       if (!id || !verseNumber) return;
@@ -258,20 +146,7 @@ export default function VerseDetailPage() {
       }
     }
     fetchAll();
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
   }, [id, verseNumber, fetchAiAnalysis, fetchOfficialTafsir]);
-
-  useEffect(() => {
-    if (!loading && searchParams.get('autoplay') === 'true' && !isPlaying && !isAudioLoading && selectedReciterId) {
-      togglePlay();
-    }
-  }, [loading, searchParams, togglePlay, isPlaying, isAudioLoading, selectedReciterId]);
 
   if (loading) {
     return (
@@ -306,38 +181,6 @@ export default function VerseDetailPage() {
               <GraduationCap className="h-5 w-5" />
             </Link>
           </Button>
-
-          <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-[#800000]">
-                <Mic2 className="h-5 w-5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Pilih Qari Favorit Anda</DialogTitle>
-                <DialogDescription>
-                  Suara pilihan Anda akan digunakan untuk seluruh pemutaran murottal.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-2 py-4">
-                {RECITERS.map((reciter) => (
-                  <Button
-                    key={reciter.id}
-                    variant={selectedReciterId === reciter.id ? "default" : "outline"}
-                    className={cn(
-                      "justify-between font-bold h-12",
-                      selectedReciterId === reciter.id ? "bg-[#800000] hover:bg-[#800000]/90" : ""
-                    )}
-                    onClick={() => selectReciter(reciter.id)}
-                  >
-                    {reciter.name}
-                    {selectedReciterId === reciter.id && <Check className="h-4 w-4" />}
-                  </Button>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
 
           <Button 
             variant="ghost" 
@@ -397,30 +240,6 @@ export default function VerseDetailPage() {
           <div className="max-w-2xl ml-auto text-left" dir="ltr">
             <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20 text-[10px] font-bold">TERJEMAHAN KEMENAG RI</Badge>
             <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse?.translations[0]?.text || "" }} />
-          </div>
-          
-          <div className="flex flex-col items-center gap-2 pt-4" dir="ltr">
-            <Button 
-              onClick={togglePlay}
-              disabled={isAudioLoading}
-              className={cn(
-                "rounded-full w-14 h-14 shadow-lg transition-all",
-                isPlaying ? "bg-[#800000] hover:bg-[#800000]/90" : "bg-white text-[#800000] hover:bg-muted border-2 border-[#800000]/20"
-              )}
-            >
-              {isAudioLoading ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : isPlaying ? (
-                <Pause className="h-6 w-6 fill-current" />
-              ) : (
-                <Play className="h-6 w-6 fill-current ml-1" />
-              )}
-            </Button>
-            {selectedReciterId && (
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                Qari: {RECITERS.find(r => r.id === selectedReciterId)?.name.split(' ')[0]}
-              </span>
-            )}
           </div>
         </CardContent>
       </Card>
