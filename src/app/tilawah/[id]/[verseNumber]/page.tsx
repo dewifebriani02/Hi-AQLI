@@ -169,12 +169,21 @@ export default function VerseDetailPage() {
     try {
       const verseKey = `${id}:${verseNumber}`;
       const res = await fetch(`https://api.quran.com/api/v4/recitations/7/by_ayah/${verseKey}`);
+      if (!res.ok) throw new Error("API Request Failed");
+      
       const data = await res.json();
       const audioUrl = data.audio_files[0]?.url;
 
-      if (!audioUrl) throw new Error();
+      if (!audioUrl) throw new Error("URL missing");
 
-      const fullUrl = audioUrl.startsWith('//') ? `https:${audioUrl}` : audioUrl;
+      // Handle relative URLs from API
+      let fullUrl = audioUrl;
+      if (audioUrl.startsWith('//')) {
+        fullUrl = `https:${audioUrl}`;
+      } else if (!audioUrl.startsWith('http')) {
+        fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
+      }
+
       const audio = new Audio(fullUrl);
       audioRef.current = audio;
 
@@ -183,14 +192,16 @@ export default function VerseDetailPage() {
         setIsAudioLoading(false);
       };
       audio.onended = () => setIsPlaying(false);
-      audio.onerror = () => {
+      audio.onerror = (e) => {
+        console.error("Audio Error:", e);
         setIsAudioLoading(false);
         setIsPlaying(false);
-        toast({ variant: "destructive", title: "Gagal memuat audio" });
+        toast({ variant: "destructive", title: "Gagal memutar audio" });
       };
 
       await audio.play();
-    } catch {
+    } catch (e) {
+      console.error("Audio Playback error:", e);
       setIsAudioLoading(false);
       toast({ variant: "destructive", title: "Audio tidak tersedia" });
     }

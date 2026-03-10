@@ -118,7 +118,13 @@ export default function SurahDetailPage() {
 
       if (!audioUrl) throw new Error("Audio tidak tersedia.");
 
-      const fullUrl = audioUrl.startsWith('//') ? `https:${audioUrl}` : audioUrl;
+      // Handle relative URLs from API
+      let fullUrl = audioUrl;
+      if (audioUrl.startsWith('//')) {
+        fullUrl = `https:${audioUrl}`;
+      } else if (!audioUrl.startsWith('http')) {
+        fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
+      }
 
       if (audioRef.current) {
         audioRef.current.pause();
@@ -136,7 +142,8 @@ export default function SurahDetailPage() {
         setPlayingKey(null);
       };
 
-      audio.onerror = () => {
+      audio.onerror = (e) => {
+        console.error("Audio Playback Error:", e);
         setLoadingAudioKey(null);
         setPlayingKey(null);
         toast({
@@ -148,6 +155,7 @@ export default function SurahDetailPage() {
 
       await audio.play();
     } catch (err) {
+      console.error("Fetch Audio Error:", err);
       setLoadingAudioKey(null);
       toast({
         variant: "destructive",
@@ -243,6 +251,7 @@ export default function SurahDetailPage() {
                       playingKey === verse.verse_key ? "text-[#800000] bg-[#800000]/10" : "text-muted-foreground"
                     )}
                     onClick={() => toggleAudio(verse.verse_key)}
+                    disabled={loadingAudioKey === verse.verse_key}
                   >
                     {loadingAudioKey === verse.verse_key ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
