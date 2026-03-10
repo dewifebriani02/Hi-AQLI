@@ -220,18 +220,18 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target }: {
       </CardHeader>
 
       <CardContent className="space-y-8 px-6 pb-8">
-        {/* Quran Verses Display Section */}
-        <div className="bg-[#fffdf5] p-6 rounded-2xl border-2 border-[#800000]/10 shadow-inner relative group min-h-[150px] flex flex-col justify-center">
+        {/* Quran Verses Display Section - Optimized for 3-4 lines */}
+        <div className="bg-[#fffdf5] p-6 rounded-2xl border-2 border-[#800000]/10 shadow-inner relative group min-h-[120px] flex flex-col justify-center">
           <div className="absolute top-3 left-3 opacity-20">
             <BookOpen className="w-5 h-5 text-[#800000]" />
           </div>
-          <div className="flex flex-wrap justify-center gap-x-2 gap-y-4 text-center" dir="rtl">
+          <div className="flex flex-wrap justify-center gap-x-1.5 gap-y-3 text-center" dir="rtl">
             {verses.map((v) => (
               <span key={v.id} className="inline-block">
-                <span className="text-3xl md:text-4xl font-arabic leading-[2.2] text-foreground/90">
+                <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-foreground/90">
                   {v.text_uthmani}
                 </span>
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#800000]/30 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white shadow-sm">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/30 text-[9px] font-bold text-[#800000] mx-1.5 align-middle bg-white shadow-sm">
                   ({v.verse_key.split(':')[1]})
                 </span>
               </span>
