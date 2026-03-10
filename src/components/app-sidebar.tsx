@@ -31,7 +31,7 @@ import { doc } from "firebase/firestore";
 
 const adminItems = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
-  { href: "/admin/content", label: "Kelola Konten", icon: Lock },
+  { href: "/admin/registrations", label: "Verifikasi Tikrar", icon: Lock },
 ];
 
 const navItems = [
