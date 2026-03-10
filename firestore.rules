@@ -163,9 +163,8 @@ service cloud.firestore {
     // --- Financial Records ---
 
     match /donations/{donationId} {
-      // Allow read (get and list) if admin or owner of the specific donation
-      // Using .get() ensures we handle cases where userId might be missing
-      allow read: if isAdmin() || (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
+      // Simplified read rule for Query as a Point of Security (QAP) compliance
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }

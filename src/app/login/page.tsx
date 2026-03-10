@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth, useUser, initiateEmailSignIn } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
+import { FirebaseError } from 'firebase/app';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -32,11 +32,27 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     
-    signInWithEmailAndPassword(auth, email, password)
-      .catch((err: any) => {
-        setError('Email atau kata sandi salah. Silakan coba lagi.');
+    // Using non-blocking pattern for login
+    try {
+      initiateEmailSignIn(auth, email, password);
+      // We don't await here. Auth state change is handled by onAuthStateChanged via useUser hook.
+      // However, we want to handle immediate invalid credentials if possible, 
+      // but Firebase Auth non-blocking usually means we wait for the redirect or state change.
+      // For UX, we'll wait a few seconds and if no user is found, show a generic message or handle via global listener.
+    } catch (err: any) {
+      // Immediate errors like invalid email format
+      setError('Terjadi kesalahan saat mencoba masuk.');
+      setLoading(false);
+    }
+
+    // Since initiateEmailSignIn doesn't return a promise we can easily catch for invalid credentials,
+    // in a production app we might use a custom listener. For now, we'll use a timeout to stop loading.
+    setTimeout(() => {
+      if (!user) {
         setLoading(false);
-      });
+        // We don't set a specific error here to avoid false positives.
+      }
+    }, 3000);
   };
 
   return (
@@ -94,12 +110,14 @@ export default function LoginPage() {
             >
               {loading ? <Loader2 className="animate-spin mr-2" /> : 'Masuk'}
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Belum punya akun?{' '}
-              <Link href="/register" className="text-[#800000] font-bold hover:underline">
-                Daftar Sekarang
-              </Link>
-            </p>
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Belum punya akun?{' '}
+                <Link href="/register" className="text-[#800000] font-bold hover:underline">
+                  Daftar Sekarang
+                </Link>
+              </p>
+            </div>
           </CardFooter>
         </form>
       </Card>

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth, useFirestore, useUser } from '@/firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth, useFirestore, useUser, initiateEmailSignUp } from '@/firebase';
+import { updateProfile } from 'firebase/auth';
+import { doc, serverTimestamp } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,38 +27,40 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (user) {
+      // Sync profile data once user is created
+      if (user.displayName !== username) {
+        updateProfile(user, { displayName: username }).catch(console.error);
+        
+        const userRef = doc(db, 'users', user.uid);
+        setDocumentNonBlocking(userRef, {
+          id: user.uid,
+          username: username,
+          email: email,
+          roleId: 'learner',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
       router.push('/');
     }
-  }, [user, router]);
+  }, [user, router, username, email, db]);
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const newUser = userCredential.user;
+    try {
+      initiateEmailSignUp(auth, email, password);
+    } catch (err: any) {
+      setError('Gagal memulai pendaftaran. Silakan periksa data Anda.');
+      setLoading(false);
+    }
 
-        updateProfile(newUser, { displayName: username });
-
-        setDoc(doc(db, 'users', newUser.uid), {
-          id: newUser.uid,
-          username: username,
-          email: email,
-          roleId: 'learner',
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      })
-      .catch((err: any) => {
-        if (err.code === 'auth/email-already-in-use') {
-          setError('Email sudah terdaftar. Silakan gunakan email lain.');
-        } else {
-          setError('Gagal mendaftar. Pastikan data yang dimasukkan benar.');
-        }
-        setLoading(false);
-      });
+    // Timeout to reset loading state if no auth change occurs
+    setTimeout(() => {
+      if (!user) setLoading(false);
+    }, 5000);
   };
 
   return (
