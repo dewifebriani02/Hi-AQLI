@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Sparkles } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -213,7 +214,7 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
-        {/* Static Tips Menghafal Kata (Moved below Start Quiz button) */}
+        {/* Static Tips Menghafal Kata */}
         <Card className="border-amber-200 bg-amber-50 shadow-sm">
           <CardHeader className="py-4 border-b border-amber-100 flex flex-row items-center gap-2">
             <Lightbulb className="w-5 h-5 text-amber-600" />
@@ -243,7 +244,17 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Hikmah & Konteks AI (Terpisah di bagian bawah) */}
+        {/* Tafsir Resmi */}
+        <Card className="border-[#800000]/10 shadow-sm">
+          <CardHeader className="bg-[#800000] text-white py-4">
+            <CardTitle className="text-sm flex items-center gap-2 font-headline"><BookOpen className="w-4 h-4" /> Tafsir Resmi</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="text-foreground/90 leading-relaxed text-base" dangerouslySetInnerHTML={{ __html: apiTafsir || "Memuat tafsir..." }} />
+          </CardContent>
+        </Card>
+
+        {/* Hikmah & Konteks AI (Bimbingan Hikmah) */}
         <Card className="border-indigo-100 bg-indigo-50/30">
           <CardHeader className="py-4 border-b border-indigo-50">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-indigo-900">
@@ -263,15 +274,6 @@ export default function VerseDetailPage() {
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-[#800000]/10 shadow-sm">
-          <CardHeader className="bg-[#800000] text-white py-4">
-            <CardTitle className="text-sm flex items-center gap-2 font-headline"><BookOpen className="w-4 h-4" /> Tafsir Resmi</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="text-foreground/90 leading-relaxed text-base" dangerouslySetInnerHTML={{ __html: apiTafsir || "Memuat tafsir..." }} />
           </CardContent>
         </Card>
       </div>
