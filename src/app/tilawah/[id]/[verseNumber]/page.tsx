@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, Lightbulb, ArrowLeft, ArrowRight, Info, RotateCcw } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,14 +17,10 @@ import {
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 interface WordData {
   id: number;
   text_uthmani: string;
-  root: string | null;
   translation: {
     text: string;
   };
@@ -56,7 +51,6 @@ export default function VerseDetailPage() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
   
-  // State for repetition counting per word
   const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
 
   const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
@@ -203,7 +197,7 @@ export default function VerseDetailPage() {
                   </div>
                   <div className="text-right flex-1">
                     <p className="text-sm font-medium">{word.translation.text}</p>
-                    <p className="text-[10px] text-muted-foreground italic">Ketuk untuk menghitung hafalan</p>
+                    <p className="text-[10px] text-muted-foreground italic">Ketuk untuk menghitung repetisi</p>
                   </div>
                 </div>
               ))}
@@ -216,19 +210,36 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
+        {/* Hikmah & Tips Menghafal AI - Dikembalikan dan diperluas */}
+        <Card className="border-accent/20 bg-accent/5 shadow-inner">
+          <CardHeader className="py-4 border-b border-accent/10">
+            <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">
+              <BrainCircuit className="w-5 h-5" /> Hikmah & Tips Menghafal AI
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {analysisLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+              </div>
+            ) : (
+              <div className="prose prose-sm max-w-none text-foreground/90">
+                <p className="leading-relaxed whitespace-pre-wrap italic">
+                  {analysis?.context || "Sedang memformulasikan hikmah dan tips hafalan untuk Anda..."}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white py-4">
             <CardTitle className="text-sm flex items-center gap-2 font-headline"><BookOpen className="w-4 h-4" /> Tafsir Resmi</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="text-foreground/90 leading-relaxed text-base" dangerouslySetInnerHTML={{ __html: apiTafsir || "Memuat tafsir..." }} />
-          </CardContent>
-        </Card>
-
-        <Card className="border-accent/20 bg-accent/5">
-          <CardHeader className="py-4"><CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]"><BrainCircuit className="w-4 h-4" /> Hikmah AI</CardTitle></CardHeader>
-          <CardContent>
-            {analysisLoading ? <div className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /></div> : <p className="text-foreground/90 leading-relaxed italic text-sm">{analysis?.context}</p>}
           </CardContent>
         </Card>
       </div>

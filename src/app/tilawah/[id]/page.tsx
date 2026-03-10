@@ -3,9 +3,8 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Bookmark, AlertCircle, Loader2, Info, Mic2, Check, GraduationCap } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap } from "lucide-react";
 import Link from "next/link";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Tooltip,
   TooltipContent,
@@ -16,13 +15,11 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 interface Word {
   id: number;
@@ -66,7 +63,6 @@ export default function SurahDetailPage() {
   const [surah, setSurah] = useState<SurahInfo | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
   const [playingKey, setPlayingKey] = useState<string | null>(null);
@@ -86,18 +82,14 @@ export default function SurahDetailPage() {
       
       try {
         setLoading(true);
-        setError(null);
 
         const infoRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        if (!infoRes.ok) throw new Error("Gagal mengambil informasi surat.");
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani&per_page=300`
         );
-        
-        if (!verseRes.ok) throw new Error("Gagal mengambil data ayat.");
         const verseData = await verseRes.json();
         
         if (verseData && verseData.verses) {
@@ -105,7 +97,6 @@ export default function SurahDetailPage() {
         }
       } catch (err: any) {
         console.error("Quran API Fetch Error:", err);
-        setError("Gagal memuat ayat Al-Qur'an.");
       } finally {
         setLoading(false);
       }

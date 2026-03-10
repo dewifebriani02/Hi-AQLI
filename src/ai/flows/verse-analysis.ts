@@ -1,9 +1,9 @@
 'use server';
 
 /**
- * @fileOverview Flow untuk analisis konteks dan pelajaran utama ayat Al-Qur'an.
+ * @fileOverview Flow untuk analisis konteks, pelajaran utama, dan tips menghafal ayat Al-Qur'an.
  *
- * - analyzeVerseContext - Fungsi untuk menganalisis konteks dan hikmah ayat.
+ * - analyzeVerseContext - Fungsi untuk menganalisis konteks, hikmah, dan tips hafalan.
  */
 
 import {ai} from '@/ai/genkit';
@@ -17,7 +17,7 @@ const AnalyzeVerseInputSchema = z.object({
 export type AnalyzeVerseInput = z.infer<typeof AnalyzeVerseInputSchema>;
 
 const AnalyzeVerseOutputSchema = z.object({
-  context: z.string().describe('Konteks sejarah (Asbabun Nuzul) dan pelajaran praktis utama dari ayat ini'),
+  context: z.string().describe('Konteks sejarah (Asbabun Nuzul), pelajaran praktis, dan tips khusus untuk menghafal ayat ini'),
 });
 export type AnalyzeVerseOutput = z.infer<typeof AnalyzeVerseOutputSchema>;
 
@@ -49,15 +49,17 @@ const prompt = ai.definePrompt({
       },
     ],
   },
-  prompt: `Anda adalah seorang ahli pendidikan Islam. Berikan ulasan singkat mengenai pelajaran utama dan konteks dari ayat berikut:
+  prompt: `Anda adalah seorang ahli pendidikan Islam dan pembimbing tahfidz Al-Qur'an. Berikan ulasan singkat mengenai pelajaran utama, konteks, dan tips menghafal untuk ayat berikut:
 Surah: {{{surahName}}}
 Ayat: {{{verseNumber}}}
 Teks: {{{verseText}}}
 
 Tugas Anda:
-Jelaskan hikmah, pelajaran praktis untuk kehidupan sehari-hari, atau konteks sejarah (Asbabun Nuzul) jika ada. Fokuslah pada bagaimana pembaca bisa mengamalkan nilai ayat ini.
+1. Jelaskan hikmah atau pelajaran praktis dari ayat ini.
+2. Berikan konteks sejarah (Asbabun Nuzul) jika relevan.
+3. Berikan satu tips praktis atau jembatan keledai untuk membantu menghafal ayat ini berdasarkan bunyi atau maknanya.
 
-Pastikan respons dalam Bahasa Indonesia yang inspiratif dan akurat secara keilmuan Islam.`,
+Pastikan respons dalam Bahasa Indonesia yang inspiratif, akurat secara keilmuan Islam, dan disusun dengan poin-poin yang mudah dibaca.`,
 });
 
 const analyzeVerseFlow = ai.defineFlow(
