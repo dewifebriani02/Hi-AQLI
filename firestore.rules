@@ -4,9 +4,7 @@ service cloud.firestore {
 
     /**
      * CORE PHILOSOPHY
-     * This ruleset implements a hybrid security model combining Path-Based Ownership and Database Access Control (DBAC). 
-     * User-specific data is nested under unique user IDs to ensure clear authorization boundaries. Global content
-     * follows a "Public Read, Admin Write" pattern.
+     * Hybrid security model: Path-Based Ownership & Database Access Control (DBAC).
      */
 
     // --- Helper Functions ---
@@ -19,18 +17,12 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Helper to check if the user is a SuperAdmin via marker collection
     function isSuperAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid));
     }
 
-    // Helper to check if the user is an Admin (SuperAdmins are also Admins)
     function isAdmin() {
       return isSignedIn() && (exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) || isSuperAdmin());
-    }
-
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
     }
 
     // --- User Profile & Identity ---
@@ -39,7 +31,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.id == userId;
+      allow update: if (isOwner(userId) || isAdmin()) && request.resource.data.id == userId;
       allow delete: if isAdmin();
     }
 
@@ -94,8 +86,8 @@ service cloud.firestore {
     match /users/{userId}/recitation_sessions/{sessionId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
-      allow delete: if isExistingOwner(userId) || isAdmin();
+      allow update: if (isOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+      allow delete: if isOwner(userId) || isAdmin();
 
       match /feedback_details/{feedbackId} {
         allow get, list: if isOwner(userId) || isAdmin();
@@ -106,15 +98,15 @@ service cloud.firestore {
     match /users/{userId}/lesson_progress/{progressId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
-      allow delete: if isExistingOwner(userId) || isAdmin();
+      allow update: if (isOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     match /users/{userId}/quiz_attempts/{attemptId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
-      allow delete: if isExistingOwner(userId) || isAdmin();
+      allow update: if (isOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+      allow delete: if isOwner(userId) || isAdmin();
 
       match /answers/{answerId} {
         allow get, list: if isOwner(userId) || isAdmin();
@@ -125,8 +117,8 @@ service cloud.firestore {
     match /users/{userId}/ai_scholar_questions/{questionId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
-      allow delete: if isExistingOwner(userId) || isAdmin();
+      allow update: if (isOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+      allow delete: if isOwner(userId) || isAdmin();
 
       match /answers/{answerId} {
         allow get, list: if isOwner(userId) || isAdmin();
@@ -163,9 +155,9 @@ service cloud.firestore {
     // --- Financial Records ---
 
     match /donations/{donationId} {
-      // Aturan pembacaan standar untuk kepatuhan Query as a Point of Security (QAP).
-      // Memindahkan kepemilikan ke depan agar QAP bekerja lebih optimal bagi non-admin.
-      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      // Pengecekan eksplisit untuk QAP (Query as a Point of Security)
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow get: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }

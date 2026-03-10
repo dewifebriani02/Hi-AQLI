@@ -41,7 +41,7 @@ export default function ProfilePage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Fetch real donation history for the user with limit and proper QAP filter
+  // Fetch real donation history for the user with proper QAP filter and simple order
   const donationsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
@@ -50,7 +50,7 @@ export default function ProfilePage() {
       orderBy("donationDate", "desc"),
       limit(20)
     );
-  }, [db, user]);
+  }, [db, user?.uid]); // Stabilize by using user.uid
 
   const { data: donations } = useCollection(donationsQuery);
 
