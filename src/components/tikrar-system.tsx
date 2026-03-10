@@ -1,11 +1,18 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   RotateCcw, 
   CheckCircle2, 
@@ -15,10 +22,15 @@ import {
   Play,
   Loader2,
   BookOpen,
-  Lock,
-  ShieldAlert
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Mapping Juz to their starting pages in Madani Mushaf
+const JUZ_PAGES = [
+  1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 
+  302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
+];
 
 interface Verse {
   id: number;
@@ -37,6 +49,7 @@ interface BlockState {
 }
 
 export function TikrarSystem() {
+  const [juz, setJuz] = useState(1);
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +62,9 @@ export function TikrarSystem() {
   });
 
   const TARGET = 40;
+
+  // Determine starting page of current Juz
+  const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1], [juz]);
 
   // Function to check if a specific page is completed
   const checkPageCompletion = (pageNum: number) => {
@@ -97,10 +113,10 @@ export function TikrarSystem() {
       });
     }
 
-    // Check if previous page is done
-    setIsPrevPageDone(page === 1 || checkPageCompletion(page - 1));
+    // Logic: Page is unlocked if it's the START of a Juz OR the PREVIOUS page is done
+    setIsPrevPageDone(page === currentJuzStartPage || checkPageCompletion(page - 1));
     fetchVerses();
-  }, [page]);
+  }, [page, currentJuzStartPage]);
 
   // Save to localStorage whenever blocks change
   useEffect(() => {
@@ -108,6 +124,12 @@ export function TikrarSystem() {
       localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify(blocks));
     }
   }, [blocks, page, loading]);
+
+  const handleJuzChange = (val: string) => {
+    const newJuz = parseInt(val);
+    setJuz(newJuz);
+    setPage(JUZ_PAGES[newJuz - 1]);
+  };
 
   const getVersesForBlock = (blockId: number) => {
     if (verses.length === 0) return [];
@@ -151,18 +173,37 @@ export function TikrarSystem() {
 
   return (
     <div className="space-y-8">
+      {/* Juz & Page Navigator */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={loading}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="text-center min-w-[120px]">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Halaman Mushaf</p>
-            <p className="text-2xl font-black text-[#800000]">{page}</p>
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          <div className="flex flex-col gap-1 w-full sm:w-32">
+            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-1">Pilih Juz</span>
+            <Select value={juz.toString()} onValueChange={handleJuzChange}>
+              <SelectTrigger className="h-10 font-bold border-none bg-muted/50 focus:ring-0">
+                <SelectValue placeholder="Pilih Juz" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 30 }, (_, i) => i + 1).map((num) => (
+                  <SelectItem key={num} value={num.toString()} className="font-medium">
+                    Juz {num}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(604, p + 1))} disabled={loading}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={loading}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center min-w-[100px]">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Halaman</p>
+              <p className="text-2xl font-black text-[#800000]">{page}</p>
+            </div>
+            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(604, p + 1))} disabled={loading}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 w-full max-w-md space-y-2">
