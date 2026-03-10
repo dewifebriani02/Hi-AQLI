@@ -4,7 +4,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer, Star } from "lucide-react";
+import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer, Star, Heart } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface WordData {
   id: number;
@@ -31,6 +32,7 @@ export default function WordQuizPage() {
   const params = useParams();
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
+  const { toast } = useToast();
 
   const [words, setWords] = useState<WordData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,7 @@ export default function WordQuizPage() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [attempts, setAttempts] = useState(1);
   const [time, setTime] = useState(0);
+  const [sentCongrats, setSentCongrats] = useState<string[]>([]);
 
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
@@ -155,12 +158,22 @@ export default function WordQuizPage() {
     setIsCorrect(null);
     setAttempts(a => a + 1);
     setTime(0);
+    setSentCongrats([]);
   };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleSendCongrats = (userName: string) => {
+    if (sentCongrats.includes(userName)) return;
+    setSentCongrats(prev => [...prev, userName]);
+    toast({
+      title: "Ucapan Terkirim!",
+      description: `Masyallah, ucapan selamat terkirim ke ${userName}.`,
+    });
   };
 
   if (loading) {
@@ -277,8 +290,20 @@ export default function WordQuizPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[8px] font-bold h-5 px-1.5">100%</Badge>
-                      {user.rank === 1 && <Star className="w-3 h-3 fill-current text-[#D4AF37]" />}
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleSendCongrats(user.name)}
+                        className={cn(
+                          "h-7 px-2 text-[9px] font-bold gap-1 transition-all",
+                          sentCongrats.includes(user.name) ? "text-rose-500 bg-rose-50" : "text-muted-foreground hover:text-rose-500 hover:bg-rose-50"
+                        )}
+                      >
+                        <Heart className={cn("w-3 h-3", sentCongrats.includes(user.name) && "fill-current")} />
+                        {sentCongrats.includes(user.name) ? "Terkirim" : "Selamat"}
+                      </Button>
+                      <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[8px] font-bold h-5 px-1.5 shrink-0">100%</Badge>
+                      {user.rank === 1 && <Star className="w-3 h-3 fill-current text-[#D4AF37] shrink-0" />}
                     </div>
                   </div>
                 ))}
