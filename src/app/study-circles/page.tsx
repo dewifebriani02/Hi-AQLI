@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -95,8 +96,13 @@ export default function StudyCirclesPage() {
           const isRegistered = isTikrar && userData?.isTikrarPaid;
           const userPaidJuz = userData?.paidJuz;
 
+          // If registered, direct to the tool. If not registered but Tikrar, direct to registration.
+          const href = isRegistered 
+            ? '/tajweed' 
+            : (isTikrar ? '/study-circles/tikrar-registration' : `/study-circles/${circle.id}`);
+
           return (
-            <Link key={circle.id} href={isTikrar ? '/study-circles/tikrar-registration' : `/study-circles/${circle.id}`}>
+            <Link key={circle.id} href={href}>
               <Card 
                 className={cn(
                   "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
@@ -118,7 +124,11 @@ export default function StudyCirclesPage() {
                         {isRegistered ? (
                           <Badge className="bg-blue-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">AKTIF - JUZ {userPaidJuz}</Badge>
                         ) : (
-                          circle.tag && <Badge className="bg-emerald-500 text-white border-none text-[6px] sm:text-[7px] h-4 px-1.5 font-black uppercase tracking-tighter sm:tracking-normal">{circle.tag}</Badge>
+                          circle.tag && (
+                            <Badge className="bg-emerald-500 text-white border-none text-[6px] sm:text-[7px] h-4 px-1.5 font-black uppercase tracking-tighter whitespace-nowrap">
+                              {circle.tag}
+                            </Badge>
+                          )
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">

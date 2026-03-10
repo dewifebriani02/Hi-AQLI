@@ -29,8 +29,8 @@ import {
   Image as ImageIcon,
   Check
 } from "lucide-react";
-import { useFirestore, useUser } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { collection, addDoc, serverTimestamp, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -54,6 +54,14 @@ export default function TikrarRegistrationPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Check if user is already registered to prevent double registration
+  const userDocRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user]);
+
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
   const [step, setStep] = useState(1); // 1: Form, 2: Payment, 3: Confirm
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -79,11 +87,22 @@ export default function TikrarRegistrationPage() {
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login?redirect=/study-circles/tikrar-registration');
+      return;
     }
+    
+    // Redirect if already registered/paid
+    if (!isUserDataLoading && userData?.isTikrarPaid) {
+      toast({
+        title: "Sudah Terdaftar",
+        description: "Anda sudah memiliki akses aktif ke program Tikrar Daily.",
+      });
+      router.push('/tajweed');
+    }
+
     if (user && !name) {
       setName(user.displayName || "");
     }
-  }, [user, isUserLoading, router, name]);
+  }, [user, isUserLoading, router, name, userData, isUserDataLoading, toast]);
 
   useEffect(() => {
     if (step === 2) {
@@ -158,7 +177,7 @@ export default function TikrarRegistrationPage() {
     toast({ description: "Berhasil disalin." });
   };
 
-  if (isUserLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
+  if (isUserLoading || isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
   if (submitted) {
     return (
