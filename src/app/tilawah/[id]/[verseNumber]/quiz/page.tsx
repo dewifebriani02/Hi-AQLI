@@ -91,43 +91,6 @@ export default function WordQuizPage() {
     fetchWords();
   }, [fetchWords]);
 
-  // Total time and question countdown effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (!isFinished && !loading && !selectedAnswer) {
-      interval = setInterval(() => {
-        setTotalTime((prev) => prev + 1);
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            handleAnswer(""); // Timeout triggers an incorrect answer
-            return 60;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isFinished, loading, selectedAnswer]);
-
-  useEffect(() => {
-    if (words.length > 0 && currentIdx < words.length) {
-      setSelectedAnswer(null);
-      setIsCorrect(null);
-      setTimeLeft(60); // Reset question timer for new word
-
-      const currentWord = words[currentIdx];
-      const correct = currentWord.translation.text;
-      
-      let wrong = words
-        .filter(w => w.translation.text !== correct)
-        .map(w => w.translation.text);
-      
-      wrong = [...new Set(wrong)].sort(() => Math.random() - 0.5).slice(0, 3);
-      const all = [correct, ...wrong].sort(() => Math.random() - 0.5);
-      setOptions(all);
-    }
-  }, [words, currentIdx]);
-
   const saveProgress = useCallback(async (finalScore: number) => {
     if (!user || !db) return;
     const isPerfect = finalScore === words.length;
@@ -151,14 +114,17 @@ export default function WordQuizPage() {
     }
   }, [user, db, id, verseNumber, words.length, totalTime]);
 
-  const handleAnswer = (answer: string) => {
+  const handleAnswer = useCallback((answer: string) => {
     if (selectedAnswer) return;
     
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
 
-    const correct = words[currentIdx]?.translation.text;
+    const currentWord = words[currentIdx];
+    if (!currentWord) return;
+
+    const correct = currentWord.translation.text;
     const isAnsCorrect = answer === correct;
     
     setSelectedAnswer(answer === "" ? "Waktu Habis" : answer);
@@ -193,7 +159,58 @@ export default function WordQuizPage() {
         saveProgress(nextScore);
       }
     }, 1200);
-  };
+  }, [selectedAnswer, words, currentIdx, score, playSfx, toast, saveProgress]);
+
+  // Total time effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (!isFinished && !loading) {
+      interval = setInterval(() => {
+        setTotalTime((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isFinished, loading]);
+
+  // Question timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (!isFinished && !loading && !selectedAnswer) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) return 0;
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isFinished, loading, selectedAnswer]);
+
+  // Watch for question timeout
+  useEffect(() => {
+    if (timeLeft === 0 && !selectedAnswer && !isFinished && !loading) {
+      handleAnswer("");
+    }
+  }, [timeLeft, selectedAnswer, isFinished, loading, handleAnswer]);
+
+  useEffect(() => {
+    if (words.length > 0 && currentIdx < words.length) {
+      setSelectedAnswer(null);
+      setIsCorrect(null);
+      setTimeLeft(60); // Reset question timer for new word
+
+      const currentWord = words[currentIdx];
+      const correct = currentWord.translation.text;
+      
+      let wrong = words
+        .filter(w => w.translation.text !== correct)
+        .map(w => w.translation.text);
+      
+      wrong = [...new Set(wrong)].sort(() => Math.random() - 0.5).slice(0, 3);
+      const all = [correct, ...wrong].sort(() => Math.random() - 0.5);
+      setOptions(all);
+    }
+  }, [words, currentIdx]);
 
   const handleReset = () => {
     setScore(0);
