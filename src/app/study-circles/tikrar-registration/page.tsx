@@ -41,10 +41,10 @@ const paymentMethods = [
 ];
 
 const levels = [
-  { id: "1", name: "Level 1 (1 Hal / Pekan)", price: 100000 },
-  { id: "2", name: "Level 2 (1 Hal / 2 Pekan)", price: 75000 },
-  { id: "3", name: "Level 3 (1 Hal / 3 Pekan)", price: 50000 },
-  { id: "4", name: "Level 4 (1 Hal / Bulan)", price: 50000 },
+  { id: "1", name: "Intensif (1 Hal / Pekan)", price: 100000 },
+  { id: "2", name: "Reguler (1 Hal / 2 Pekan)", price: 75000 },
+  { id: "3", name: "Santai (1 Hal / 3 Pekan)", price: 50000 },
+  { id: "4", name: "Pemula (1 Hal / Bulan)", price: 50000 },
 ];
 
 export default function TikrarRegistrationPage() {

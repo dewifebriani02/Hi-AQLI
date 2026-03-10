@@ -73,10 +73,10 @@ const MIN_META = {
 };
 
 const LEVELS = [
-  { id: 1, name: "Level 1", desc: "1 Halaman / Pekan", days: 7 },
-  { id: 2, name: "Level 2", desc: "1 Halaman / 2 Pekan", days: 14 },
-  { id: 3, name: "Level 3", desc: "1 Halaman / 3 Pekan", days: 21 },
-  { id: 4, name: "Level 4", desc: "1 Halaman / Bulan", days: 28 },
+  { id: 1, name: "Intensif", desc: "1 Halaman / Pekan", days: 7 },
+  { id: 2, name: "Reguler", desc: "1 Halaman / 2 Pekan", days: 14 },
+  { id: 3, name: "Santai", desc: "1 Halaman / 3 Pekan", days: 21 },
+  { id: 4, name: "Pemula", desc: "1 Halaman / Bulan", days: 28 },
 ];
 
 export function TikrarSystem() {
@@ -311,7 +311,7 @@ export function TikrarSystem() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
-                  {LEVELS.find(l => l.id === level)?.name} ACTIVE
+                  Level {LEVELS.find(l => l.id === level)?.name} ACTIVE
                 </Badge>
                 {isPaid ? (
                   <Badge className="bg-emerald-500/20 text-white border-none text-[10px] font-bold flex items-center gap-1">
