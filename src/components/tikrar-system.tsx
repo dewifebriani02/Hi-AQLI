@@ -527,8 +527,13 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
       </CardHeader>
 
       <CardContent className="space-y-8 px-6 pb-8">
-        <div className={cn("bg-[#fffdf5] p-5 rounded-2xl border-2 shadow-inner min-h-[140px] flex flex-col justify-center items-center transition-all overflow-hidden", isLocked ? "border-muted grayscale blur-[1px]" : "border-[#800000]/10")}>
-          {renderArabicContent()}
+        <div className={cn(
+          "bg-[#fffdf5] p-5 rounded-2xl border-2 shadow-inner min-h-[140px] max-h-[280px] overflow-y-auto no-scrollbar flex flex-col items-center transition-all", 
+          isLocked ? "border-muted grayscale blur-[1px]" : "border-[#800000]/10"
+        )}>
+          <div className="my-auto w-full">
+            {renderArabicContent()}
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -588,7 +593,7 @@ function MetaCombinedCard({ id, title, count, min, target, verses, isLocked, onI
           </div>
         </div>
 
-        <div className="bg-white/80 p-4 rounded-xl border border-amber-200 shadow-inner max-h-[200px] overflow-auto no-scrollbar" dir="rtl">
+        <div className="bg-white/80 p-4 rounded-xl border border-amber-200 shadow-inner max-h-[220px] overflow-y-auto no-scrollbar" dir="rtl">
           <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 text-center">
             {verses.map((v) => (
               <React.Fragment key={v.id}>
