@@ -5,11 +5,11 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap, CheckCircle2, PlayCircle } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap, CheckCircle2, PlayCircle, Timer } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { collection, doc, query, where, limit } from "firebase/firestore";
 
 const studyCircles = [
   {
@@ -61,6 +61,19 @@ export default function StudyCirclesPage() {
 
   const { data: userData } = useDoc(userDocRef);
 
+  // Check pending registration
+  const regQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "tikrar_registrations"),
+      where("userId", "==", user.uid),
+      where("status", "==", "pending_verification"),
+      limit(1)
+    );
+  }, [db, user?.uid]);
+
+  const { data: pendingReg } = useCollection(regQuery);
+
   const filteredCircles = studyCircles.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
     c.instructor.toLowerCase().includes(search.toLowerCase())
@@ -91,15 +104,14 @@ export default function StudyCirclesPage() {
 
       <div className="flex flex-col gap-3 px-1">
         {filteredCircles.map((circle) => {
-          // Check if this is the premium Tikrar program and if user is already paid
           const isTikrar = circle.id === 'tikrar-j30-b1';
           const isRegistered = isTikrar && userData?.isTikrarPaid;
+          const isPending = isTikrar && pendingReg && pendingReg.length > 0;
           const userPaidJuz = userData?.paidJuz;
 
-          // If registered, direct to the tool. If not registered but Tikrar, direct to registration.
-          const href = isRegistered 
-            ? '/tajweed' 
-            : (isTikrar ? '/study-circles/tikrar-registration' : `/study-circles/${circle.id}`);
+          let href = `/study-circles/${circle.id}`;
+          if (isRegistered) href = '/tajweed';
+          else if (isTikrar) href = '/study-circles/tikrar-registration';
 
           return (
             <Link key={circle.id} href={href}>
@@ -107,6 +119,7 @@ export default function StudyCirclesPage() {
                 className={cn(
                   "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
                   isRegistered ? "bg-blue-50 border-l-4 border-blue-600" :
+                  isPending ? "bg-amber-50 border-l-4 border-amber-500" :
                   circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
                 )}
               >
@@ -115,15 +128,20 @@ export default function StudyCirclesPage() {
                     <div className={cn(
                       "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
                       isRegistered ? "bg-blue-600 text-white" : 
+                      isPending ? "bg-amber-500 text-white" :
                       circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
                     )}>
-                      {isRegistered ? <PlayCircle className="w-6 h-6 animate-pulse" /> : circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                      {isRegistered ? <PlayCircle className="w-6 h-6 animate-pulse" /> : 
+                       isPending ? <Timer className="w-6 h-6" /> :
+                       circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                     </div>
                     <div className="flex flex-col gap-0.5 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className={cn("font-bold text-base leading-tight", isRegistered && "text-blue-900")}>{circle.title}</h4>
+                        <h4 className={cn("font-bold text-base leading-tight", isRegistered && "text-blue-900", isPending && "text-amber-900")}>{circle.title}</h4>
                         {isRegistered ? (
                           <Badge className="bg-blue-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">AKTIF - JUZ {userPaidJuz}</Badge>
+                        ) : isPending ? (
+                          <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">MENUNGGU VERIFIKASI</Badge>
                         ) : (
                           circle.tag && (
                             <Badge className="bg-emerald-500 text-white border-none text-[6px] sm:text-[7px] h-4 px-1.5 font-black uppercase tracking-tighter whitespace-nowrap">
@@ -141,6 +159,10 @@ export default function StudyCirclesPage() {
                           <span className="text-blue-600 font-black uppercase tracking-widest flex items-center gap-1">
                             <PlayCircle className="w-3 h-3" /> MASUK KELAS SEKARANG
                           </span>
+                        ) : isPending ? (
+                          <span className="text-amber-600 font-black uppercase tracking-widest flex items-center gap-1">
+                            <Timer className="w-3 h-3" /> PROSES VERIFIKASI ADMIN
+                          </span>
                         ) : (
                           <>
                             <div className="flex items-center gap-1">
@@ -155,7 +177,12 @@ export default function StudyCirclesPage() {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className={cn("w-5 h-5 transition-colors", isRegistered ? "text-blue-400" : "text-muted-foreground/30 group-hover:text-[#800000]")} />
+                  <ChevronRight className={cn(
+                    "w-5 h-5 transition-colors", 
+                    isRegistered ? "text-blue-400" : 
+                    isPending ? "text-amber-400" :
+                    "text-muted-foreground/30 group-hover:text-[#800000]"
+                  )} />
                 </div>
               </Card>
             </Link>

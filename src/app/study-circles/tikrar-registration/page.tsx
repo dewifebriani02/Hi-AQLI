@@ -27,13 +27,15 @@ import {
   Phone,
   ShieldCheck,
   Image as ImageIcon,
-  Check
+  Check,
+  Clock
 } from "lucide-react";
-import { useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc } from "firebase/firestore";
+import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { collection, addDoc, serverTimestamp, doc, query, where, limit } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import Link from "next/link";
 
 const paymentMethods = [
   { id: 'transfer', label: 'Transfer Bank (BSI)', icon: Landmark, detail: 'Bank Syariah Indonesia - 7123456789 a.n. Sahabat AQLI' },
@@ -54,7 +56,7 @@ export default function TikrarRegistrationPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Check if user is already registered to prevent double registration
+  // Check user profile
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "users", user.uid);
@@ -62,7 +64,20 @@ export default function TikrarRegistrationPage() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
-  const [step, setStep] = useState(1); // 1: Form, 2: Payment, 3: Confirm
+  // Check if there is an existing pending registration
+  const regQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "tikrar_registrations"),
+      where("userId", "==", user.uid),
+      where("status", "==", "pending_verification"),
+      limit(1)
+    );
+  }, [db, user?.uid]);
+
+  const { data: existingReg, isLoading: isRegLoading } = useCollection(regQuery);
+
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -76,7 +91,6 @@ export default function TikrarRegistrationPage() {
   const [senderName, setSenderName] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
 
-  // Dynamic Price based on level
   const getBasePrice = (levelId: string) => {
     const selectedLevel = levels.find(l => l.id === levelId);
     return selectedLevel ? selectedLevel.price : 50000;
@@ -90,19 +104,14 @@ export default function TikrarRegistrationPage() {
       return;
     }
     
-    // Redirect if already registered/paid
     if (!isUserDataLoading && userData?.isTikrarPaid) {
-      toast({
-        title: "Sudah Terdaftar",
-        description: "Anda sudah memiliki akses aktif ke program Tikrar Daily.",
-      });
       router.push('/tajweed');
     }
 
     if (user && !name) {
       setName(user.displayName || "");
     }
-  }, [user, isUserLoading, router, name, userData, isUserDataLoading, toast]);
+  }, [user, isUserLoading, router, name, userData, isUserDataLoading]);
 
   useEffect(() => {
     if (step === 2) {
@@ -177,7 +186,37 @@ export default function TikrarRegistrationPage() {
     toast({ description: "Berhasil disalin." });
   };
 
-  if (isUserLoading || isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
+  if (isUserLoading || isUserDataLoading || isRegLoading) return <div className="flex flex-col items-center justify-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000] h-10 w-10" /><p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Memeriksa Status...</p></div>;
+
+  // If already have a pending registration, show status instead of form
+  if (existingReg && existingReg.length > 0 && !submitted) {
+    return (
+      <div className="flex justify-center items-center min-h-[60vh] px-4">
+        <Card className="w-full max-w-md text-center border-none shadow-2xl overflow-hidden">
+          <div className="bg-amber-500 py-8 flex flex-col items-center gap-2 text-white">
+            <Clock className="h-12 w-12 animate-pulse" />
+            <h2 className="text-xl font-bold font-headline uppercase tracking-wider">Menunggu Verifikasi</h2>
+          </div>
+          <CardContent className="pt-8 pb-10 space-y-6">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Assalamu'alaikum, <strong>{name}</strong>. Kami telah menerima bukti pendaftaran Anda untuk <strong>Juz {existingReg[0].targetJuz}</strong>.
+              </p>
+              <p className="text-xs bg-muted p-4 rounded-lg font-medium italic">
+                Saat ini tim admin sedang melakukan verifikasi manual. Akses "Masuk Kelas" akan terbuka secara otomatis maksimal dalam 1x24 jam.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold">
+                <Link href="/">Kembali ke Dasbor</Link>
+              </Button>
+              <p className="text-[10px] text-muted-foreground">Butuh bantuan? Hubungi kami via WhatsApp Admin AQLI.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
