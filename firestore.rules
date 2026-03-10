@@ -163,8 +163,9 @@ service cloud.firestore {
     // --- Financial Records ---
 
     match /donations/{donationId} {
-      // Simplified read rule for Query as a Point of Security (QAP) compliance
-      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      // Improved read rule for Query as a Point of Security (QAP) compliance
+      // Using .get() to safely handle optional fields and avoid errors during collection scans
+      allow read: if isAdmin() || (isSignedIn() && resource.data.get('userId', null) == request.auth.uid);
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }

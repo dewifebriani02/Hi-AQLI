@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
-import { FirebaseError } from 'firebase/app';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -36,21 +35,18 @@ export default function LoginPage() {
     try {
       initiateEmailSignIn(auth, email, password);
       // We don't await here. Auth state change is handled by onAuthStateChanged via useUser hook.
-      // However, we want to handle immediate invalid credentials if possible, 
-      // but Firebase Auth non-blocking usually means we wait for the redirect or state change.
-      // For UX, we'll wait a few seconds and if no user is found, show a generic message or handle via global listener.
     } catch (err: any) {
-      // Immediate errors like invalid email format
       setError('Terjadi kesalahan saat mencoba masuk.');
       setLoading(false);
     }
 
-    // Since initiateEmailSignIn doesn't return a promise we can easily catch for invalid credentials,
-    // in a production app we might use a custom listener. For now, we'll use a timeout to stop loading.
+    // Timeout to reset loading state if no auth change occurs
+    // This allows the user to try again if the initial attempt failed silently
     setTimeout(() => {
       if (!user) {
         setLoading(false);
-        // We don't set a specific error here to avoid false positives.
+        // We set a generic hint, actual verification happens via auth state change
+        setError('Pastikan email dan kata sandi Anda benar.');
       }
     }, 3000);
   };
