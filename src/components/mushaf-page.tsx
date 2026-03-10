@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -140,12 +141,16 @@ export function MushafPage() {
                     {verse.words.map((word, wordIdx) => (
                       <Tooltip key={`${verse.id}-${wordIdx}`}>
                         <TooltipTrigger asChild>
-                          <span className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[2.2] md:leading-[2.4] text-foreground/90 hover:text-[#800000] transition-colors cursor-help select-none px-0.5">
+                          <span 
+                            tabIndex={0}
+                            role="button"
+                            className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[2.2] md:leading-[2.4] text-foreground/90 hover:text-[#800000] focus:text-[#800000] focus:outline-none transition-colors cursor-help select-none px-0.5"
+                          >
                             {word.text_uthmani}
                           </span>
                         </TooltipTrigger>
                         <TooltipPortal>
-                          <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1 px-2">
+                          <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1 px-2 z-[100]">
                             <p className="text-[10px] font-medium">{word.translation?.text || "..."}</p>
                           </TooltipContent>
                         </TooltipPortal>

@@ -351,12 +351,16 @@ export default function SurahDetailPage() {
                 {verse.words?.map((word, wordIdx) => (
                   <Tooltip key={wordIdx}>
                     <TooltipTrigger asChild>
-                      <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-right text-foreground/90 hover:text-[#800000] transition-colors duration-200 cursor-help">
+                      <span 
+                        tabIndex={0}
+                        role="button"
+                        className="text-2xl md:text-3xl font-arabic leading-[1.8] text-right text-foreground/90 hover:text-[#800000] focus:text-[#800000] focus:outline-none transition-colors duration-200 cursor-help"
+                      >
                         {word.text_uthmani}
                       </span>
                     </TooltipTrigger>
                     <TooltipPortal>
-                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg">
+                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg z-[100]">
                         <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
                       </TooltipContent>
                     </TooltipPortal>
