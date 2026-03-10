@@ -4,7 +4,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Bookmark, AlertCircle, Loader2, Info, Mic2, Check } from "lucide-react";
+import { ChevronLeft, Play, Pause, Bookmark, AlertCircle, Loader2, Info, Mic2, Check, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -307,21 +307,30 @@ export default function SurahDetailPage() {
         <TooltipProvider delayDuration={0} skipDelayDuration={0}>
           {verses.map((verse) => (
             <div key={verse.id} className="py-12 px-4 space-y-8 group">
-              <div className="flex items-center justify-between">
-                <Link 
-                  href={`/tilawah/${id}/${verse.verse_number}`}
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all cursor-pointer"
-                  title="Klik untuk detail & tafsir AI"
-                >
-                  {verse.verse_number}
-                </Link>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Link 
+                    href={`/tilawah/${id}/${verse.verse_number}`}
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all cursor-pointer shrink-0"
+                    title="Klik untuk detail & tafsir AI"
+                  >
+                    {verse.verse_number}
+                  </Link>
+                  <div className="flex items-center gap-1">
+                    <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] hover:text-[#800000] gap-1">
+                      <Link href={`/tilawah/${id}/${verse.verse_number}`}>
+                        <Info className="h-3 w-3" /> DETAIL & TAFSIR
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-amber-600 hover:text-amber-700 gap-1">
+                      <Link href={`/tilawah/${id}/${verse.verse_number}/quiz`}>
+                        <GraduationCap className="h-3 w-3" /> UJI HAFALAN
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+                
                 <div className="flex items-center gap-1">
-                   <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] hover:text-[#800000] gap-1">
-                    <Link href={`/tilawah/${id}/${verse.verse_number}`}>
-                      <Info className="h-3 w-3" /> DETAIL & TAFSIR
-                    </Link>
-                  </Button>
-                  
                   <Button 
                     variant="ghost" 
                     size="icon" 

@@ -300,39 +300,45 @@ export default function VerseDetailPage() {
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Geser untuk navigasi ayat</p>
         </div>
         
-        <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-[#800000]">
-              <Mic2 className="h-5 w-5" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Pilih Qari Favorit Anda</DialogTitle>
-              <DialogDescription>
-                Suara pilihan Anda akan digunakan untuk seluruh pemutaran murottal.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-2 py-4">
-              {RECITERS.map((reciter) => (
-                <Button
-                  key={reciter.id}
-                  variant={selectedReciterId === reciter.id ? "default" : "outline"}
-                  className={cn(
-                    "justify-between font-bold h-12",
-                    selectedReciterId === reciter.id ? "bg-[#800000] hover:bg-[#800000]/90" : ""
-                  )}
-                  onClick={() => selectReciter(reciter.id)}
-                >
-                  {reciter.name}
-                  {selectedReciterId === reciter.id && <Check className="h-4 w-4" />}
-                </Button>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-
         <div className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="icon" className="text-amber-600 hover:text-amber-700" title="Uji Hafalan Kata">
+            <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
+              <GraduationCap className="h-5 w-5" />
+            </Link>
+          </Button>
+
+          <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-[#800000]">
+                <Mic2 className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Pilih Qari Favorit Anda</DialogTitle>
+                <DialogDescription>
+                  Suara pilihan Anda akan digunakan untuk seluruh pemutaran murottal.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-2 py-4">
+                {RECITERS.map((reciter) => (
+                  <Button
+                    key={reciter.id}
+                    variant={selectedReciterId === reciter.id ? "default" : "outline"}
+                    className={cn(
+                      "justify-between font-bold h-12",
+                      selectedReciterId === reciter.id ? "bg-[#800000] hover:bg-[#800000]/90" : ""
+                    )}
+                    onClick={() => selectReciter(reciter.id)}
+                  >
+                    {reciter.name}
+                    {selectedReciterId === reciter.id && <Check className="h-4 w-4" />}
+                  </Button>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button 
             variant="ghost" 
             size="icon" 
