@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams } from "next/navigation";
@@ -311,10 +310,10 @@ export default function SurahDetailPage() {
                 <div className="flex items-center gap-3">
                   <Link 
                     href={`/tilawah/${id}/${verse.verse_number}`}
-                    className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground text-sm font-bold border hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all cursor-pointer shrink-0"
+                    className="flex items-center justify-center w-12 h-10 rounded-full bg-muted text-foreground text-xs font-bold border hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all cursor-pointer shrink-0"
                     title="Klik untuk detail & tafsir AI"
                   >
-                    {verse.verse_number}
+                    ({verse.verse_number})
                   </Link>
                   <div className="flex items-center gap-1">
                     <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] hover:text-[#800000] gap-1">

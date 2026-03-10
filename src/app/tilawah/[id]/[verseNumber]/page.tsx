@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -171,7 +170,7 @@ export default function VerseDetailPage() {
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold font-headline">{surahName} : {verseNumber}</h1>
+          <h1 className="text-lg font-bold font-headline">{surahName} : ({verseNumber})</h1>
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Geser untuk navigasi ayat</p>
         </div>
         
@@ -207,7 +206,7 @@ export default function VerseDetailPage() {
             <div className="flex flex-wrap justify-end gap-x-2 gap-y-4 w-full">
               {verse?.words?.filter(w => w.text_uthmani).map((word, wordIdx) => (
                 <Tooltip 
-                  key={wordIdx}
+                  key={wordIdx} 
                   open={activeWordIdx === wordIdx}
                   onOpenChange={(open) => {
                     if (open) setActiveWordIdx(wordIdx);

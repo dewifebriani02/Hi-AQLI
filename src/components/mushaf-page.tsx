@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -175,8 +174,8 @@ export function MushafPage() {
                       );
                     })}
                     {/* Compact Verse Marker */}
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#800000]/20 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white/50 shadow-xs shrink-0 translate-y-[-2px]">
-                      {verse.verse_key.split(':')[1]}
+                    <span className="inline-flex items-center justify-center w-auto px-2 h-8 rounded-full border border-[#800000]/20 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white/50 shadow-xs shrink-0 translate-y-[-2px]">
+                      ({verse.verse_key.split(':')[1]})
                     </span>
                   </React.Fragment>
                 ))}
