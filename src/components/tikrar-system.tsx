@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -93,6 +93,20 @@ export function TikrarSystem() {
 
   const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1], [juz]);
 
+  const playSfx = useCallback((type: 'click' | 'finish') => {
+    const soundUrls = {
+      click: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+      finish: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'
+    };
+    try {
+      const audio = new Audio(soundUrls[type]);
+      audio.volume = 0.4;
+      audio.play().catch(() => {});
+    } catch (e) {
+      console.error("Audio SFX Error:", e);
+    }
+  }, []);
+
   const checkPageCompletion = (pageNum: number) => {
     if (pageNum < 1) return true;
     const saved = typeof window !== 'undefined' ? localStorage.getItem(`tikrar_progress_p${pageNum}`) : null;
@@ -178,21 +192,41 @@ export function TikrarSystem() {
   };
 
   const incrementTM = (blockId: number, type: 'a' | 'b' | 'combined') => {
+    const currentCount = blocks[blockId][type].count;
+    if (currentCount >= TARGET_TM) return;
+
+    const nextCount = currentCount + 1;
+    if (nextCount === TARGET_TM) {
+      playSfx('finish');
+    } else {
+      playSfx('click');
+    }
+
     setBlocks(prev => ({
       ...prev,
       [blockId]: {
         ...prev[blockId],
         [type]: {
-          count: Math.min(prev[blockId][type].count + 1, TARGET_TM)
+          count: nextCount
         }
       }
     }));
   };
 
   const incrementMeta = (metaId: number) => {
+    const currentCount = metaCombined[metaId];
+    if (currentCount >= RECOMMENDED_META) return;
+
+    const nextCount = currentCount + 1;
+    if (nextCount === RECOMMENDED_META) {
+      playSfx('finish');
+    } else {
+      playSfx('click');
+    }
+
     setMetaCombined(prev => ({
       ...prev,
-      [metaId]: Math.min(prev[metaId] + 1, RECOMMENDED_META)
+      [metaId]: nextCount
     }));
   };
 
@@ -227,7 +261,6 @@ export function TikrarSystem() {
 
   return (
     <div className="space-y-8">
-      {/* Juz & Page Navigator */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <div className="flex flex-col gap-1 w-full sm:w-32">
@@ -293,7 +326,6 @@ export function TikrarSystem() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-8">
-          {/* TM 1 */}
           <BlockCard 
             id={1} 
             state={blocks[1]} 
@@ -306,7 +338,6 @@ export function TikrarSystem() {
             setActiveWordKey={setActiveWordKey}
           />
 
-          {/* TM 2 */}
           <BlockCard 
             id={2} 
             state={blocks[2]} 
@@ -319,7 +350,6 @@ export function TikrarSystem() {
             setActiveWordKey={setActiveWordKey}
           />
 
-          {/* Gabungan 1+2 */}
           <MetaCombinedCard
             id={2}
             title="Gabungan TM1 + TM2"
@@ -332,7 +362,6 @@ export function TikrarSystem() {
             onReset={() => resetMeta(2)}
           />
 
-          {/* TM 3 */}
           <BlockCard 
             id={3} 
             state={blocks[3]} 
@@ -345,7 +374,6 @@ export function TikrarSystem() {
             setActiveWordKey={setActiveWordKey}
           />
 
-          {/* Gabungan 1+2+3 */}
           <MetaCombinedCard
             id={3}
             title="Gabungan TM1 + TM2 + TM3"
@@ -358,7 +386,6 @@ export function TikrarSystem() {
             onReset={() => resetMeta(3)}
           />
 
-          {/* TM 4 */}
           <BlockCard 
             id={4} 
             state={blocks[4]} 
@@ -371,7 +398,6 @@ export function TikrarSystem() {
             setActiveWordKey={setActiveWordKey}
           />
 
-          {/* Gabungan 1+2+3+4 */}
           <MetaCombinedCard
             id={4}
             title="Gabungan Seluruh Blok (TM1-4)"
