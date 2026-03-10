@@ -33,6 +33,14 @@
           "type": "boolean",
           "description": "Flag indicating if the user has paid for the premium Tikrar Daily program."
         },
+        "paidJuz": {
+          "type": "number",
+          "description": "The specific Juz number the user has paid for and has access to."
+        },
+        "tikrarLevel": {
+          "type": "number",
+          "description": "The memorization level chosen by the user (1-4)."
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp when the user account was created.",
@@ -83,6 +91,18 @@
           "type": "string",
           "description": "Method used for payment (transfer, qris)."
         },
+        "level": {
+          "type": "number",
+          "description": "Selected memorization level (1-4)."
+        },
+        "targetJuz": {
+          "type": "number",
+          "description": "The Juz the user wants to memorize."
+        },
+        "proofFileName": {
+          "type": "string",
+          "description": "Name of the uploaded proof file."
+        },
         "status": {
           "type": "string",
           "description": "Registration status (pending_verification, active, expired)."
@@ -98,6 +118,8 @@
         "batchName",
         "whatsapp",
         "amount",
+        "level",
+        "targetJuz",
         "status",
         "createdAt"
       ]

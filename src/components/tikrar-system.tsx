@@ -88,8 +88,10 @@ export function TikrarSystem() {
     return doc(db, "users", user.uid);
   }, [db, user]);
 
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  
   const isPaid = userData?.isTikrarPaid || false;
+  const paidJuz = userData?.paidJuz || null;
 
   const [juz, setJuz] = useState(1);
   const [page, setPage] = useState(1);
@@ -111,10 +113,24 @@ export function TikrarSystem() {
     4: 0
   });
 
-  const isTrial = page === 1;
-  const accessDenied = !isTrial && !isPaid;
+  // Handle Initial Juz and Access
+  useEffect(() => {
+    if (!isUserDataLoading && userData) {
+      if (isPaid && paidJuz) {
+        setJuz(paidJuz);
+        setPage(JUZ_PAGES[paidJuz - 1]);
+      } else {
+        setJuz(1);
+        setPage(1);
+      }
+    }
+  }, [userData, isPaid, paidJuz, isUserDataLoading]);
+
+  const isTrial = page === 1 && juz === 1;
+  const accessDenied = !isTrial && (!isPaid || (paidJuz !== null && juz !== paidJuz));
 
   const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1], [juz]);
+  const nextJuzStartPage = juz < 30 ? JUZ_PAGES[juz] : 605;
 
   const playSfx = useCallback((type: 'click' | 'finish') => {
     if (typeof window === 'undefined') return;
@@ -247,6 +263,8 @@ export function TikrarSystem() {
 
   const totalProgress = calculateTotalProgress();
 
+  if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
+
   if (!level) {
     return (
       <div className="flex flex-col gap-8 items-center justify-center py-10 animate-in fade-in duration-500">
@@ -255,7 +273,7 @@ export function TikrarSystem() {
             <Trophy className="w-8 h-8 text-[#800000]" />
           </div>
           <h2 className="text-2xl font-bold font-headline">Pilih Level Tikrar Daily</h2>
-          <p className="text-sm text-muted-foreground">Tentukan intensitas hafalan Anda. User umum hanya dapat mencoba trial di Halaman 1.</p>
+          <p className="text-sm text-muted-foreground">Tentukan intensitas hafalan Anda. Akses Juz spesifik terbuka bagi yang sudah mendaftar.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4">
           {LEVELS.map((l) => (
@@ -297,18 +315,18 @@ export function TikrarSystem() {
                 </Badge>
                 {isPaid ? (
                   <Badge className="bg-emerald-500/20 text-white border-none text-[10px] font-bold flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> LANGGANAN LUNAS
+                    <ShieldCheck className="w-3 h-3" /> JUZ {paidJuz} ACTIVE
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-white border-white/30 text-[9px] font-bold">MODE TRIAL (HAL 1)</Badge>
+                  <Badge variant="outline" className="text-white border-white/30 text-[9px] font-bold">MODE TRIAL (JUZ 1)</Badge>
                 )}
               </div>
-              <h3 className="text-xl font-bold font-headline">Halaman {page}</h3>
-              <p className="text-xs opacity-80 max-w-sm">Setiap selesai satu halaman, Anda wajib mengikuti ujian setoran bersama Ustadzah.</p>
+              <h3 className="text-xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
+              <p className="text-xs opacity-80 max-w-sm">Anda sedang fokus menghafal <strong>Juz {juz}</strong>. Selesaikan setiap halaman untuk mengajukan ujian.</p>
             </div>
             {totalProgress >= 100 && (
               <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-2">
-                <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20dan%20ingin%20mengajukan%20ujian.`} target="_blank" rel="noopener noreferrer">
+                <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20Juz%20${juz}%20dan%20ingin%20mengajukan%20ujian.`} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="w-4 h-4" /> AJUKAN UJIAN
                 </a>
               </Button>
@@ -320,14 +338,14 @@ export function TikrarSystem() {
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={loading}>
+            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="text-center min-w-[100px]">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Halaman</p>
               <p className="text-2xl font-black text-[#800000]">{page}</p>
             </div>
-            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(604, p + 1))} disabled={loading}>
+            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -351,14 +369,14 @@ export function TikrarSystem() {
           <CardContent className="flex flex-col items-center justify-center text-center gap-6">
             <div className="w-20 h-20 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shadow-lg"><Lock className="w-10 h-10" /></div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-bold font-headline text-rose-900">Program Berbayar</h3>
+              <h3 className="text-2xl font-bold font-headline text-rose-900">Akses Juz Terkunci</h3>
               <p className="text-sm text-rose-800 max-w-sm mx-auto">
-                Maaf, akses counter untuk halaman 2 ke atas hanya tersedia bagi peserta program <strong>Tikrar Daily Juz 30</strong>. 
-                Infaq pendaftaran Rp 50.000 / bulan.
+                Maaf, Anda hanya memiliki akses penuh untuk <strong>Juz {paidJuz || "yang telah didaftarkan"}</strong>. 
+                User umum hanya dapat mencoba trial di Juz 1 Halaman 1.
               </p>
             </div>
             <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 font-bold px-8 h-12 shadow-xl">
-              <Link href="/study-circles">Daftar Sekarang di Menu Halaqah</Link>
+              <Link href="/study-circles">Daftar Pilihan Juz di Menu Halaqah</Link>
             </Button>
           </CardContent>
         </Card>
@@ -418,7 +436,6 @@ export function TikrarSystem() {
 function BlockCard({ id, state, verses, onIncrement, target, isLocked }: any) {
   const isBlockDone = state.combined.count >= target;
   
-  // Logic to split verses into A and B based on waqaf
   const { partA, partB } = useMemo(() => {
     const allWords: any[] = [];
     verses.forEach((v: Verse) => {
