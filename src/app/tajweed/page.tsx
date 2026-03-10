@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -15,19 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BookOpen, 
   RotateCcw, 
-  CheckCircle2, 
-  Zap, 
-  Plus, 
-  Trophy,
-  History,
-  Timer,
-  ChevronRight,
-  ChevronLeft,
   Layers
 } from "lucide-react";
 import Link from "next/link";
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
 import { TikrarSystem } from "@/components/tikrar-system";
 
 const tajweedRules = [
@@ -44,7 +33,7 @@ const tajweedRules = [
   {
     title: "Qalqalah",
     category: "Pantulan",
-    content: "Suara memantul atau bergetar yang dibuat pada huruf-huruf tertentu (ق ط b ج د) ketika mereka memiliki sukun. Ada berbagai tingkat Qalqalah tergantung pada posisi huruf dalam kata.",
+    content: "Suara memantul atau bergetar yang dibuat pada huruf-huruf tertentu (ق ط ب ج d) ketika mereka memiliki sukun. Ada berbagai tingkat Qalqalah tergantung pada posisi huruf dalam kata.",
   },
   {
     title: "Madd (Panjang)",
@@ -63,22 +52,22 @@ export default function HafalanPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Hafalan & Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Gunakan sistem 4 blok untuk memperkuat hafalan satu halaman Mushaf melalui 40x repetisi per maqta.
+          Gunakan sistem 4 TM untuk memperkuat hafalan satu halaman Mushaf melalui 40x repetisi per maqta.
         </p>
       </div>
 
-      <Tabs defaultValue="tikrar-4-blok" className="w-full">
+      <Tabs defaultValue="tikrar-4-tm" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="tikrar-4-blok" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
-            <Layers className="w-4 h-4" /> Sistem 4 Blok
+          <TabsTrigger value="tikrar-4-tm" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
+            <Layers className="w-4 h-4" /> Sistem 4 TM
           </TabsTrigger>
           <TabsTrigger value="theory" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
             <BookOpen className="w-4 h-4" /> Teori Tajwid
           </TabsTrigger>
         </TabsList>
 
-        {/* SYSTEM 4 BLOK TAB */}
-        <TabsContent value="tikrar-4-blok" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {/* SYSTEM 4 TM TAB */}
+        <TabsContent value="tikrar-4-tm" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <TikrarSystem />
         </TabsContent>
 

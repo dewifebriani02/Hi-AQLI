@@ -5,14 +5,12 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { 
   RotateCcw, 
   CheckCircle2, 
   ChevronLeft, 
   ChevronRight,
-  Zap,
-  Play
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -90,7 +88,7 @@ export function TikrarSystem() {
         </div>
       </div>
 
-      {/* 4 Blocks Grid */}
+      {/* 4 TM Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[1, 2, 3, 4].map((id) => (
           <BlockCard 
@@ -124,7 +122,7 @@ function BlockCard({ id, state, onIncrement, onReset, target }: {
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div className="space-y-1">
           <CardTitle className="text-lg font-headline flex items-center gap-2">
-            Blok {id}
+            TM{id}
             {isBlockDone && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
           </CardTitle>
           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Target: 40x per Maqta</p>
