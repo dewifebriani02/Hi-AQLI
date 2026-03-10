@@ -233,7 +233,6 @@ export default function VerseDetailPage() {
                   </TooltipPortal>
                 </Tooltip>
               ))}
-              <span className="text-2xl md:text-4xl font-arabic text-[#800000] mx-2 align-middle select-none">({verseNumber})</span>
             </div>
           </TooltipProvider>
 
