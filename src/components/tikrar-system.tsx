@@ -24,6 +24,13 @@ import {
   BookOpen,
   Lock
 } from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipPortal,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 // Mapping Juz to their starting pages in Madani Mushaf
@@ -32,11 +39,18 @@ const JUZ_PAGES = [
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
 ];
 
+interface Word {
+  text_uthmani: string;
+  translation?: {
+    text: string;
+  };
+}
+
 interface Verse {
   id: number;
   verse_key: string;
   text_uthmani: string;
-  words?: { text_uthmani: string }[];
+  words: Word[];
 }
 
 interface MaqtaState {
@@ -55,6 +69,7 @@ export function TikrarSystem() {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPrevPageDone, setIsPrevPageDone] = useState(true);
+  const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<Record<number, BlockState>>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
     2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -87,7 +102,7 @@ export function TikrarSystem() {
       setLoading(true);
       try {
         const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id`
         );
         if (!res.ok) throw new Error("Gagal memuat ayat");
         const data = await res.json();
@@ -247,6 +262,8 @@ export function TikrarSystem() {
                 onReset={() => resetBlock(id)}
                 target={TARGET}
                 isLocked={isSequentialLocked}
+                activeWordKey={activeWordKey}
+                setActiveWordKey={setActiveWordKey}
               />
             );
           })}
@@ -256,14 +273,16 @@ export function TikrarSystem() {
   );
 }
 
-function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }: { 
+function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, activeWordKey, setActiveWordKey }: { 
   id: number, 
   state: BlockState, 
   verses: Verse[],
   onIncrement: (blockId: number, type: 'a' | 'b' | 'combined') => void,
   onReset: () => void,
   target: number,
-  isLocked: boolean
+  isLocked: boolean,
+  activeWordKey: string | null,
+  setActiveWordKey: (key: string | null) => void
 }) {
   const isBlockDone = state.a.count === target && state.b.count === target && state.combined.count === target;
 
@@ -285,65 +304,143 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
       return <p className="text-xs italic text-muted-foreground" dir="ltr">Tidak ada ayat di bagian ini.</p>;
     }
 
-    if (verses.length > 1) {
-      // Logic: Split multiple verses by verse count
-      const mid = Math.ceil(verses.length / 2);
-      const versesA = verses.slice(0, mid);
-      const versesB = verses.slice(mid);
-
-      return (
+    return (
+      <TooltipProvider delayDuration={0} skipDelayDuration={0}>
         <div className="flex flex-wrap justify-center gap-x-1.5 gap-y-3 text-center" dir="rtl">
-          {versesA.map((v) => (
-            <span key={v.id} className="inline-block">
-              <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000]">
-                {v.text_uthmani}
-              </span>
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/30 text-[9px] font-bold text-[#800000] mx-1.5 align-middle bg-white shadow-sm">
-                ({v.verse_key.split(':')[1]})
-              </span>
-            </span>
-          ))}
-          
-          <div className="w-full h-2" />
+          {verses.length > 1 ? (
+            <>
+              {/* Logic: Split multiple verses by verse count */}
+              {(() => {
+                const mid = Math.ceil(verses.length / 2);
+                const versesA = verses.slice(0, mid);
+                const versesB = verses.slice(mid);
 
-          {versesB.map((v) => (
-            <span key={v.id} className="inline-block">
-              <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46]">
-                {v.text_uthmani}
-              </span>
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#065f46]/30 text-[9px] font-bold text-[#065f46] mx-1.5 align-middle bg-white shadow-sm">
-                ({v.verse_key.split(':')[1]})
-              </span>
-            </span>
-          ))}
-        </div>
-      );
-    } else {
-      // Logic: Split single verse into two parts by words
-      const v = verses[0];
-      const words = v.words || [];
-      const midWord = Math.ceil(words.length / 2);
-      const wordsA = words.slice(0, midWord);
-      const wordsB = words.slice(midWord);
+                return (
+                  <>
+                    {versesA.map((v) => (
+                      <span key={v.id} className="inline-block">
+                        {v.words.map((word, wIdx) => {
+                          const wordKey = `tm${id}-${v.id}-${wIdx}`;
+                          return (
+                            <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                              <TooltipTrigger asChild>
+                                <span 
+                                  className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000] cursor-help px-0.5"
+                                  onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                                >
+                                  {word.text_uthmani}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipPortal>
+                                <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                                  <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
+                                </TooltipContent>
+                              </TooltipPortal>
+                            </Tooltip>
+                          );
+                        })}
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/30 text-[9px] font-bold text-[#800000] mx-1.5 align-middle bg-white shadow-sm">
+                          ({v.verse_key.split(':')[1]})
+                        </span>
+                      </span>
+                    ))}
+                    
+                    <div className="w-full h-2" />
 
-      return (
-        <div className="flex flex-wrap justify-center gap-x-1 gap-y-3 text-center" dir="rtl">
-          <span className="inline-block">
-            <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000]">
-              {wordsA.map(w => w.text_uthmani).join(' ')}
-            </span>
-            {wordsB.length > 0 && (
-              <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46] mr-2">
-                {wordsB.map(w => w.text_uthmani).join(' ')}
-              </span>
-            )}
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-muted text-[9px] font-bold text-muted-foreground mx-1.5 align-middle bg-white shadow-sm">
-              ({v.verse_key.split(':')[1]})
-            </span>
-          </span>
+                    {versesB.map((v) => (
+                      <span key={v.id} className="inline-block">
+                        {v.words.map((word, wIdx) => {
+                          const wordKey = `tm${id}-${v.id}-${wIdx}`;
+                          return (
+                            <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                              <TooltipTrigger asChild>
+                                <span 
+                                  className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46] cursor-help px-0.5"
+                                  onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                                >
+                                  {word.text_uthmani}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipPortal>
+                                <TooltipContent className="bg-[#065f46] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                                  <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
+                                </TooltipContent>
+                              </TooltipPortal>
+                            </Tooltip>
+                          );
+                        })}
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#065f46]/30 text-[9px] font-bold text-[#065f46] mx-1.5 align-middle bg-white shadow-sm">
+                          ({v.verse_key.split(':')[1]})
+                        </span>
+                      </span>
+                    ))}
+                  </>
+                );
+              })()}
+            </>
+          ) : (
+            <>
+              {/* Logic: Split single verse into two parts by words */}
+              {(() => {
+                const v = verses[0];
+                const words = v.words || [];
+                const midWord = Math.ceil(words.length / 2);
+                const wordsA = words.slice(0, midWord);
+                const wordsB = words.slice(midWord);
+
+                return (
+                  <span className="inline-block">
+                    {wordsA.map((word, wIdx) => {
+                      const wordKey = `tm${id}-a-${wIdx}`;
+                      return (
+                        <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                          <TooltipTrigger asChild>
+                            <span 
+                              className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000] cursor-help px-0.5"
+                              onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                            >
+                              {word.text_uthmani}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipPortal>
+                            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                              <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
+                            </TooltipContent>
+                          </TooltipPortal>
+                        </Tooltip>
+                      );
+                    })}
+                    {wordsB.length > 0 && wordsB.map((word, wIdx) => {
+                      const wordKey = `tm${id}-b-${wIdx}`;
+                      return (
+                        <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                          <TooltipTrigger asChild>
+                            <span 
+                              className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46] cursor-help px-0.5"
+                              onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                            >
+                              {word.text_uthmani}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipPortal>
+                            <TooltipContent className="bg-[#065f46] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                              <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
+                            </TooltipContent>
+                          </TooltipPortal>
+                        </Tooltip>
+                      );
+                    })}
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-muted text-[9px] font-bold text-muted-foreground mx-1.5 align-middle bg-white shadow-sm">
+                      ({v.verse_key.split(':')[1]})
+                    </span>
+                  </span>
+                );
+              })()}
+            </>
+          )}
         </div>
-      );
-    }
+      </TooltipProvider>
+    );
   };
 
   return (
