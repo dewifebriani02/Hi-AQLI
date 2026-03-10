@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -138,11 +137,14 @@ export default function WordQuizPage() {
     } else {
       playSfx('incorrect');
       if (answer === "") {
-        toast({
-          variant: "destructive",
-          title: "Waktu Habis!",
-          description: "Satu soal maksimal 1 menit.",
-        });
+        // Wrap in setTimeout to avoid updating Toaster while WordQuizPage is rendering/updating
+        setTimeout(() => {
+          toast({
+            variant: "destructive",
+            title: "Waktu Habis!",
+            description: "Satu soal maksimal 1 menit.",
+          });
+        }, 0);
       }
     }
 
