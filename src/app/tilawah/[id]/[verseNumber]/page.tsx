@@ -4,10 +4,18 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb, ArrowLeft, ArrowRight, Play, Pause } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb, ArrowLeft, ArrowRight, Play, Pause, Mic2, Check } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +41,15 @@ interface VerseDetail {
   words: WordData[];
 }
 
+const RECITERS = [
+  { id: 7, name: "Mishary Rashid Alafasy" },
+  { id: 2, name: "AbdulBaset AbdulSamad (Murattal)" },
+  { id: 3, name: "Abdur-Rahman as-Sudais" },
+  { id: 6, name: "Mahmoud Khalil Al-Husary" },
+  { id: 12, name: "Saud al-Shuraim" },
+  { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
+];
+
 export default function VerseDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -54,11 +71,37 @@ export default function VerseDetailPage() {
   // Audio States
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
+  const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Swipe Detection Logic
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+
+  useEffect(() => {
+    const savedReciter = localStorage.getItem('aqli_reciter_id');
+    if (savedReciter) {
+      setSelectedReciterId(parseInt(savedReciter));
+    }
+  }, []);
+
+  const selectReciter = (reciterId: number) => {
+    setSelectedReciterId(reciterId);
+    localStorage.setItem('aqli_reciter_id', reciterId.toString());
+    setShowReciterDialog(false);
+    
+    // If audio was playing or loading, reload with new qari
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setIsPlaying(false);
+    }
+    
+    toast({
+      description: `Qari berhasil diubah menjadi: ${RECITERS.find(r => r.id === reciterId)?.name}`,
+    });
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.targetTouches[0].clientX;
@@ -116,6 +159,11 @@ export default function VerseDetailPage() {
   }, []);
 
   const togglePlay = useCallback(async () => {
+    if (!selectedReciterId) {
+      setShowReciterDialog(true);
+      return;
+    }
+
     if (isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
@@ -131,7 +179,7 @@ export default function VerseDetailPage() {
     setIsAudioLoading(true);
     try {
       const verseKey = `${id}:${verseNumber}`;
-      const res = await fetch(`https://api.quran.com/api/v4/recitations/7/by_ayah/${verseKey}`);
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
       if (!res.ok) throw new Error("API Request Failed");
       
       const data = await res.json();
@@ -139,7 +187,6 @@ export default function VerseDetailPage() {
 
       if (!audioUrl) throw new Error("URL missing");
 
-      // Handle relative URLs from API
       let fullUrl = audioUrl;
       if (audioUrl.startsWith('//')) {
         fullUrl = `https:${audioUrl}`;
@@ -156,7 +203,6 @@ export default function VerseDetailPage() {
       };
       audio.onended = () => {
         setIsPlaying(false);
-        // AUTOPLAY: Navigate to next verse and signal autoplay
         if (currentVerseNum < totalVerses) {
           router.push(`/tilawah/${id}/${currentVerseNum + 1}?autoplay=true`);
         }
@@ -174,7 +220,7 @@ export default function VerseDetailPage() {
       setIsAudioLoading(false);
       toast({ variant: "destructive", title: "Audio tidak tersedia" });
     }
-  }, [id, verseNumber, currentVerseNum, totalVerses, isPlaying, router, toast]);
+  }, [id, verseNumber, currentVerseNum, totalVerses, isPlaying, router, toast, selectedReciterId]);
 
   useEffect(() => {
     async function fetchAll() {
@@ -183,19 +229,16 @@ export default function VerseDetailPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch Surah Info
         const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         const sData = await sRes.json();
         setSurahName(sData.chapter.name_simple);
         setTotalVerses(sData.chapter.verses_count);
 
-        // Fetch Verse Details
         const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`);
         if (!vRes.ok) throw new Error("Gagal memuat ayat.");
         const vData = await vRes.json();
         setVerse(vData.verse);
 
-        // Fetch Tafsir & AI Analysis
         fetchOfficialTafsir(id, verseNumber);
         if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseNumber), vData.verse.text_uthmani);
       } catch (e: any) {
@@ -214,12 +257,11 @@ export default function VerseDetailPage() {
     };
   }, [id, verseNumber, fetchAiAnalysis, fetchOfficialTafsir]);
 
-  // Handle Autoplay from previous page signal
   useEffect(() => {
-    if (!loading && searchParams.get('autoplay') === 'true' && !isPlaying && !isAudioLoading) {
+    if (!loading && searchParams.get('autoplay') === 'true' && !isPlaying && !isAudioLoading && selectedReciterId) {
       togglePlay();
     }
-  }, [loading, searchParams, togglePlay, isPlaying, isAudioLoading]);
+  }, [loading, searchParams, togglePlay, isPlaying, isAudioLoading, selectedReciterId]);
 
   if (loading) {
     return (
@@ -237,7 +279,6 @@ export default function VerseDetailPage() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header Navigation */}
       <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
         <Button asChild variant="ghost" size="icon">
           <Link href={`/tilawah/${id}`}>
@@ -248,6 +289,39 @@ export default function VerseDetailPage() {
           <h1 className="text-lg font-bold font-headline">{surahName} : {verseNumber}</h1>
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Geser untuk navigasi ayat</p>
         </div>
+        
+        <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-[#800000]">
+              <Mic2 className="h-5 w-5" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Pilih Qari Favorit Anda</DialogTitle>
+              <DialogDescription>
+                Suara pilihan Anda akan digunakan untuk seluruh pemutaran murottal.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2 py-4">
+              {RECITERS.map((reciter) => (
+                <Button
+                  key={reciter.id}
+                  variant={selectedReciterId === reciter.id ? "default" : "outline"}
+                  className={cn(
+                    "justify-between font-bold h-12",
+                    selectedReciterId === reciter.id ? "bg-[#800000] hover:bg-[#800000]/90" : ""
+                  )}
+                  onClick={() => selectReciter(reciter.id)}
+                >
+                  {reciter.name}
+                  {selectedReciterId === reciter.id && <Check className="h-4 w-4" />}
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="flex items-center gap-1">
           <Button 
             variant="ghost" 
@@ -268,7 +342,6 @@ export default function VerseDetailPage() {
         </div>
       </div>
 
-      {/* Verse Card */}
       <Card className="border-none bg-muted/20 relative overflow-hidden">
         <CardContent className="pt-8 pb-10 px-6 space-y-8 text-right" dir="rtl">
           <h2 className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground">
@@ -279,8 +352,7 @@ export default function VerseDetailPage() {
             <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse?.translations[0]?.text || "" }} />
           </div>
           
-          {/* Audio Action in Card */}
-          <div className="flex justify-center pt-4" dir="ltr">
+          <div className="flex flex-col items-center gap-2 pt-4" dir="ltr">
             <Button 
               onClick={togglePlay}
               disabled={isAudioLoading}
@@ -297,12 +369,16 @@ export default function VerseDetailPage() {
                 <Play className="h-6 w-6 fill-current ml-1" />
               )}
             </Button>
+            {selectedReciterId && (
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                Qari: {RECITERS.find(r => r.id === selectedReciterId)?.name.split(' ')[0]}
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Word Breakdown Section */}
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-muted/30 py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline">
@@ -324,7 +400,6 @@ export default function VerseDetailPage() {
               ))}
             </div>
 
-            {/* Memorization Tips Card */}
             <div className="p-4 bg-amber-50/50" dir="ltr">
               <Alert className="border-amber-200 bg-white shadow-sm">
                 <Lightbulb className="h-4 w-4 text-[#B8860B]" />
@@ -346,7 +421,6 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
-        {/* Tafsir Card */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white py-4">
             <CardTitle className="text-sm flex items-center gap-2 font-headline">
@@ -369,7 +443,6 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
-        {/* AI Hikmah Card */}
         <Card className="border-accent/20 shadow-sm bg-accent/5">
           <CardHeader className="py-4">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">
@@ -392,7 +465,6 @@ export default function VerseDetailPage() {
         </Card>
       </div>
 
-      {/* Bottom Footer Navigation */}
       <div className="flex items-center justify-between gap-4 mt-8">
         <Button 
           variant="outline" 

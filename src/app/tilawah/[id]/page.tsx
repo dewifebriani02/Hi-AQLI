@@ -4,7 +4,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Bookmark, AlertCircle, Loader2, Info } from "lucide-react";
+import { ChevronLeft, Play, Pause, Bookmark, AlertCircle, Loader2, Info, Mic2, Check } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -14,6 +14,14 @@ import {
   TooltipTrigger,
   TooltipPortal,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +50,15 @@ interface SurahInfo {
   verses_count: number;
 }
 
+const RECITERS = [
+  { id: 7, name: "Mishary Rashid Alafasy" },
+  { id: 2, name: "AbdulBaset AbdulSamad (Murattal)" },
+  { id: 3, name: "Abdur-Rahman as-Sudais" },
+  { id: 6, name: "Mahmoud Khalil Al-Husary" },
+  { id: 12, name: "Saud al-Shuraim" },
+  { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
+];
+
 export default function SurahDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -55,9 +72,17 @@ export default function SurahDetailPage() {
   // Audio States
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
+  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
+  const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    // Load reciter preference
+    const savedReciter = localStorage.getItem('aqli_reciter_id');
+    if (savedReciter) {
+      setSelectedReciterId(parseInt(savedReciter));
+    }
+
     async function fetchData() {
       if (!id) return;
       
@@ -100,7 +125,22 @@ export default function SurahDetailPage() {
     };
   }, [id]);
 
+  const selectReciter = (reciterId: number) => {
+    setSelectedReciterId(reciterId);
+    localStorage.setItem('aqli_reciter_id', reciterId.toString());
+    setShowReciterDialog(false);
+    toast({
+      description: `Qari berhasil diubah menjadi: ${RECITERS.find(r => r.id === reciterId)?.name}`,
+    });
+  };
+
   const toggleAudio = async (verseKey: string) => {
+    // If no reciter is selected, show dialog first
+    if (!selectedReciterId) {
+      setShowReciterDialog(true);
+      return;
+    }
+
     if (playingKey === verseKey) {
       audioRef.current?.pause();
       setPlayingKey(null);
@@ -110,15 +150,13 @@ export default function SurahDetailPage() {
     setLoadingAudioKey(verseKey);
     
     try {
-      // Use recitation ID 7 (Mishary Rashid Alafasy)
-      const res = await fetch(`https://api.quran.com/api/v4/recitations/7/by_ayah/${verseKey}`);
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
       if (!res.ok) throw new Error("Gagal memuat audio.");
       const data = await res.json();
       const audioUrl = data.audio_files[0]?.url;
 
       if (!audioUrl) throw new Error("Audio tidak tersedia.");
 
-      // Handle relative URLs from API
       let fullUrl = audioUrl;
       if (audioUrl.startsWith('//')) {
         fullUrl = `https:${audioUrl}`;
@@ -140,11 +178,9 @@ export default function SurahDetailPage() {
 
       audio.onended = () => {
         setPlayingKey(null);
-        // AUTOPLAY LOGIC: Find next verse in current Surah
         const currentIndex = verses.findIndex(v => v.verse_key === verseKey);
         if (currentIndex !== -1 && currentIndex < verses.length - 1) {
           const nextVerse = verses[currentIndex + 1];
-          // Use setTimeout to avoid potential recursion issues with browser audio policy
           setTimeout(() => toggleAudio(nextVerse.verse_key), 300);
         }
       };
@@ -215,12 +251,45 @@ export default function SurahDetailPage() {
             <ChevronLeft className="h-6 w-6" />
           </Link>
         </Button>
-        <div className="flex flex-col">
+        <div className="flex flex-col flex-1">
           <h1 className="text-lg font-bold font-headline">{surah.id}. {surah.name_simple}</h1>
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
             {surah.translated_name.name} • {surah.verses_count} Ayat
           </p>
         </div>
+
+        <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold">
+              <Mic2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Pilih Qari</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Pilih Qari Favorit Anda</DialogTitle>
+              <DialogDescription>
+                Suara pilihan Anda akan digunakan untuk seluruh pemutaran murottal.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2 py-4">
+              {RECITERS.map((reciter) => (
+                <Button
+                  key={reciter.id}
+                  variant={selectedReciterId === reciter.id ? "default" : "outline"}
+                  className={cn(
+                    "justify-between font-bold h-12",
+                    selectedReciterId === reciter.id ? "bg-[#800000] hover:bg-[#800000]/90" : ""
+                  )}
+                  onClick={() => selectReciter(reciter.id)}
+                >
+                  {reciter.name}
+                  {selectedReciterId === reciter.id && <Check className="h-4 w-4" />}
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {id !== "1" && id !== "9" && (
