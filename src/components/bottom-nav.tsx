@@ -11,7 +11,7 @@ const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
   { href: "/study-circles", label: "Halaqah", icon: Users },
   { href: "/tilawah", label: "Qur'an", icon: BookOpen, isProminent: true },
-  { href: "/tajweed", label: "Tajwid", icon: GraduationCap },
+  { href: "/tajweed", label: "Hafalan", icon: GraduationCap },
   { href: "/leaderboard", label: "Juara", icon: Trophy },
 ];
 

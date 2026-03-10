@@ -38,7 +38,7 @@ const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
   { href: "/study-circles", label: "Halaqah", icon: Users },
   { href: "/tilawah", label: "Al-Qur'an", icon: BookOpen },
-  { href: "/tajweed", label: "Tajwid", icon: GraduationCap },
+  { href: "/tajweed", label: "Hafalan", icon: GraduationCap },
   { href: "/leaderboard", label: "Juara", icon: Trophy },
   { href: "/donate", label: "Donasi", icon: HeartHandshake },
 ];

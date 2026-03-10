@@ -185,7 +185,7 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {/* Tajweed Ad */}
+          {/* Hafalan Ad */}
           <Link href="/tajweed" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-emerald-800 to-emerald-600 text-white h-44 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
@@ -193,12 +193,12 @@ export default function DashboardPage() {
                   <PlayCircle className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">BELAJAR</Badge>
-                  <h4 className="font-bold text-lg">Modul Tajwid</h4>
-                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Kuasai seni tilawah dengan modul interaktif dan kuis yang mengasah pemahaman.</p>
+                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">LATIHAN</Badge>
+                  <h4 className="font-bold text-lg">Modul Hafalan</h4>
+                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Perkuat hafalan Anda dengan metode Tikrar harian dan kuis interaktif.</p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider">
-                  Pelajari Tajwid <ChevronRight className="w-3 h-3" />
+                  Mulai Menghafal <ChevronRight className="w-3 h-3" />
                 </div>
               </CardContent>
             </Card>

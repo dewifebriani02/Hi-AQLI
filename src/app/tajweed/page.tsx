@@ -63,9 +63,9 @@ export default function TajweedPage() {
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-24">
       <div className="flex flex-col gap-2 mt-4 px-1">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Tajwid & Tikrar</h1>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Hafalan & Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Kuasai teori Tajwid dan perkuat ingatan Anda melalui metode repetisi harian (Tikrar).
+          Perkuat hafalan Anda dan kuasai teori Tajwid melalui metode repetisi harian (Tikrar).
         </p>
       </div>
 
