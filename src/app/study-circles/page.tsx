@@ -3,12 +3,22 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Clock, User, ChevronRight, BookOpen } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap } from "lucide-react";
 import Link from "next/link";
 
 const studyCircles = [
+  {
+    id: "tikrar-j30-b1",
+    title: "TIKRAR DAILY JUZ 30 - BATCH 1",
+    instructor: "Tim Asatizah AQLI",
+    description: "Program hafalan terstruktur dengan metode Tikrar 40x. Infaq Rp 50rb/bulan termasuk bimbingan & ujian.",
+    schedule: "Setiap Hari (Mandiri)",
+    level: "All Levels",
+    isPremium: true,
+    tag: "PENDAFTARAN DIBUKA"
+  },
   {
     id: "1",
     title: "Tafsir Juz' Amma",
@@ -33,14 +43,6 @@ const studyCircles = [
     schedule: "Minggu, 14:00 WIB",
     level: "Semua Level",
   },
-  {
-    id: "4",
-    title: "Fikih Ibadah",
-    instructor: "Imam Omar Farooq",
-    description: "Pahami hukum dan hikmah di balik ibadah inti, termasuk Salat, Zakat, dan Puasa.",
-    schedule: "Kamis, 20:00 WIB",
-    level: "Menengah",
-  },
 ];
 
 export default function StudyCirclesPage() {
@@ -58,16 +60,16 @@ export default function StudyCirclesPage() {
           <BookOpen className="w-5 h-5" />
           <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Perpustakaan Halaqah</span>
         </div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Materi Belajar</h1>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
-          Pilih materi atau lingkar studi untuk mulai belajar dan lihat peringkat Anda di dalam grup.
+          Daftar program unggulan Tikrar Daily atau pilih materi lingkar studi lainnya.
         </p>
       </div>
 
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="Cari buku, materi, atau instruktur..." 
+          placeholder="Cari program, materi, atau instruktur..." 
           className="pl-11 h-12 bg-muted/50 border-none ring-offset-background text-sm" 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -76,17 +78,26 @@ export default function StudyCirclesPage() {
 
       <div className="flex flex-col gap-3 px-1">
         {filteredCircles.map((circle) => (
-          <Link key={circle.id} href={`/study-circles/${circle.id}`}>
+          <Link key={circle.id} href={circle.id === 'tikrar-j30-b1' ? '/tajweed' : `/study-circles/${circle.id}`}>
             <Card 
-              className="p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm bg-card/50"
+              className={cn(
+                "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
+                circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
+              )}
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#800000]/10 text-[#800000] font-bold group-hover:bg-[#800000] group-hover:text-white transition-colors">
-                    <Users className="w-6 h-6" />
+                  <div className={cn(
+                    "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
+                    circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+                  )}>
+                    {circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <h4 className="font-bold text-base leading-tight">{circle.title}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-base leading-tight">{circle.title}</h4>
+                      {circle.tag && <Badge className="bg-emerald-500 text-white border-none text-[8px] h-4 px-1.5">{circle.tag}</Badge>}
+                    </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <User className="w-3 h-3" />
                       <span>{circle.instructor}</span>
@@ -107,12 +118,11 @@ export default function StudyCirclesPage() {
             </Card>
           </Link>
         ))}
-        {filteredCircles.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            Materi tidak ditemukan. Silakan coba kata kunci lain.
-          </div>
-        )}
       </div>
     </div>
   );
+}
+
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(" ");
 }
