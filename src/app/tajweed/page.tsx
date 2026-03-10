@@ -15,11 +15,13 @@ import {
   BookOpen, 
   RotateCcw, 
   Layers,
-  BarChart3
+  BarChart3,
+  Trophy
 } from "lucide-react";
 import Link from "next/link";
 import { TikrarSystem } from "@/components/tikrar-system";
 import { ProgressClient } from "@/components/progress-client";
+import { HifzProgressChart } from "@/components/hifz-progress-chart";
 
 const tajweedRules = [
   {
@@ -35,7 +37,7 @@ const tajweedRules = [
   {
     title: "Qalqalah",
     category: "Pantulan",
-    content: "Suara memantul atau bergetar yang dibuat pada huruf-huruf tertentu (ق ط ب ج d) ketika mereka memiliki sukun. Ada berbagai tingkat Qalqalah tergantung pada posisi huruf dalam kata.",
+    content: "Suara memantul atau bergetar yang dibuat pada huruf-huruf tertentu (ق ط b ج d) ketika mereka memiliki sukun. Ada berbagai tingkat Qalqalah tergantung pada posisi huruf dalam kata.",
   },
   {
     title: "Madd (Panjang)",
@@ -76,17 +78,33 @@ export default function HafalanPage() {
         {/* PROGRESS TAB */}
         <TabsContent value="progress" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-            <div className="md:col-span-8 space-y-6">
+            <div className="md:col-span-8 space-y-8">
+              {/* 30 JUZ RADIAL PROGRESS */}
+              <Card className="border-none shadow-xl bg-card overflow-hidden">
+                <CardHeader className="bg-[#800000]/5 border-b border-[#800000]/10">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-[#D4AF37]" />
+                    <CardTitle className="text-lg font-headline">Pencapaian Hafalan 30 Juz</CardTitle>
+                  </div>
+                  <CardDescription>Visualisasi perkembangan hafalan Anda dari Juz 1 hingga 30.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-8">
+                  <HifzProgressChart />
+                </CardContent>
+              </Card>
+
+              {/* RECITATION ACCURACY LINE CHART */}
               <Card className="border-none shadow-md bg-muted/20">
                 <CardHeader>
-                  <CardTitle className="text-lg font-headline">Statistik Hafalan</CardTitle>
-                  <CardDescription>Ringkasan pencapaian Tikrar Anda dalam 6 bulan terakhir.</CardDescription>
+                  <CardTitle className="text-lg font-headline">Statistik Akurasi Tilawah</CardTitle>
+                  <CardDescription>Ringkasan skor akurasi dari asisten AI dalam 6 bulan terakhir.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ProgressClient />
                 </CardContent>
               </Card>
 
+              {/* TAJWEED REFERENCE ACCORDION */}
               <Accordion type="single" collapsible className="w-full">
                 <div className="px-1 mb-4">
                   <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Referensi Tajwid</h3>
