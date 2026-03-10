@@ -63,13 +63,11 @@ export function TikrarSystem() {
 
   const TARGET = 40;
 
-  // Determine starting page of current Juz
   const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1], [juz]);
 
-  // Function to check if a specific page is completed
   const checkPageCompletion = (pageNum: number) => {
     if (pageNum < 1) return true;
-    const saved = localStorage.getItem(`tikrar_progress_p${pageNum}`);
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(`tikrar_progress_p${pageNum}`) : null;
     if (!saved) return false;
     try {
       const data = JSON.parse(saved) as Record<number, BlockState>;
@@ -100,8 +98,7 @@ export function TikrarSystem() {
       }
     }
 
-    // Load progress from localStorage
-    const savedProgress = localStorage.getItem(`tikrar_progress_p${page}`);
+    const savedProgress = typeof window !== 'undefined' ? localStorage.getItem(`tikrar_progress_p${page}`) : null;
     if (savedProgress) {
       setBlocks(JSON.parse(savedProgress));
     } else {
@@ -113,14 +110,12 @@ export function TikrarSystem() {
       });
     }
 
-    // Logic: Page is unlocked if it's the START of a Juz OR the PREVIOUS page is done
     setIsPrevPageDone(page === currentJuzStartPage || checkPageCompletion(page - 1));
     fetchVerses();
   }, [page, currentJuzStartPage]);
 
-  // Save to localStorage whenever blocks change
   useEffect(() => {
-    if (!loading) {
+    if (!loading && typeof window !== 'undefined') {
       localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify(blocks));
     }
   }, [blocks, page, loading]);
@@ -271,6 +266,10 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
 }) {
   const isBlockDone = state.a.count === target && state.b.count === target && state.combined.count === target;
 
+  const mid = Math.ceil(verses.length / 2);
+  const versesA = verses.slice(0, mid);
+  const versesB = verses.slice(mid);
+
   let currentFocus = "";
   if (isLocked) {
     currentFocus = "Terkunci";
@@ -345,9 +344,10 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
             <BookOpen className="w-5 h-5 text-[#800000]" />
           </div>
           <div className="flex flex-wrap justify-center gap-x-1.5 gap-y-3 text-center" dir="rtl">
-            {verses.map((v) => (
+            {/* Maqta A Verses */}
+            {versesA.map((v) => (
               <span key={v.id} className="inline-block">
-                <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-foreground/90">
+                <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000]">
                   {v.text_uthmani}
                 </span>
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/30 text-[9px] font-bold text-[#800000] mx-1.5 align-middle bg-white shadow-sm">
@@ -355,6 +355,22 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
                 </span>
               </span>
             ))}
+            
+            {/* Visual separator or slight gap if needed */}
+            {versesB.length > 0 && <div className="w-full h-2" />}
+
+            {/* Maqta B Verses */}
+            {versesB.map((v) => (
+              <span key={v.id} className="inline-block">
+                <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46]">
+                  {v.text_uthmani}
+                </span>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#065f46]/30 text-[9px] font-bold text-[#065f46] mx-1.5 align-middle bg-white shadow-sm">
+                  ({v.verse_key.split(':')[1]})
+                </span>
+              </span>
+            ))}
+
             {verses.length === 0 && (
               <p className="text-xs italic text-muted-foreground" dir="ltr">Tidak ada ayat di bagian ini.</p>
             )}
@@ -370,6 +386,8 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
               onClick={() => !isLocked && onIncrement(id, 'a')} 
               isActive={currentFocus === `TM${id}a`}
               disabled={isLocked}
+              colorClass="text-[#800000]"
+              bgClass="bg-[#800000]/10"
             />
             <MaqtaCounter 
               label={`TM${id}b`} 
@@ -378,6 +396,8 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
               onClick={() => !isLocked && onIncrement(id, 'b')} 
               isActive={currentFocus === `TM${id}b`}
               disabled={isLocked}
+              colorClass="text-[#065f46]"
+              bgClass="bg-[#065f46]/10"
             />
           </div>
 
@@ -414,13 +434,15 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
   );
 }
 
-function MaqtaCounter({ label, count, target, onClick, isActive, disabled }: { 
+function MaqtaCounter({ label, count, target, onClick, isActive, disabled, colorClass, bgClass }: { 
   label: string, 
   count: number, 
   target: number, 
   onClick: () => void,
   isActive?: boolean,
-  disabled?: boolean
+  disabled?: boolean,
+  colorClass: string,
+  bgClass: string
 }) {
   const isDone = count === target;
 
@@ -431,22 +453,23 @@ function MaqtaCounter({ label, count, target, onClick, isActive, disabled }: {
         "group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all active:scale-95 select-none overflow-hidden h-32",
         disabled ? "bg-muted/20 border-muted grayscale cursor-not-allowed" :
         isDone ? "bg-emerald-100 border-emerald-500 shadow-emerald-100 cursor-pointer" : 
-        isActive ? "bg-white border-[#800000] shadow-xl scale-105 z-10 cursor-pointer" : 
-        "bg-white hover:border-[#800000]/30 shadow-sm border-border grayscale-[0.5] opacity-80 hover:opacity-100 cursor-pointer"
+        isActive ? "bg-white shadow-xl scale-105 z-10 cursor-pointer border-current" : 
+        "bg-white hover:border-current/30 shadow-sm border-border grayscale-[0.5] opacity-80 hover:opacity-100 cursor-pointer"
       )}
+      style={isActive ? { borderColor: 'currentColor' } : {}}
     >
       {!disabled && (
         <div 
           className={cn(
             "absolute bottom-0 left-0 right-0 transition-all duration-500 pointer-events-none",
-            isDone ? "bg-emerald-500/20" : "bg-[#800000]/10"
+            isDone ? "bg-emerald-500/20" : bgClass
           )}
           style={{ height: `${(count / target) * 100}%` }}
         />
       )}
 
       {isActive && !isDone && !disabled && (
-        <Badge className="absolute -top-2 bg-[#800000] text-white text-[8px] font-black px-2 h-5 animate-in fade-in slide-in-from-top-2 shadow-lg">
+        <Badge className={cn("absolute -top-2 text-white text-[8px] font-black px-2 h-5 animate-in fade-in slide-in-from-top-2 shadow-lg", colorClass.replace('text-', 'bg-'))}>
           FOKUS
         </Badge>
       )}
@@ -455,8 +478,8 @@ function MaqtaCounter({ label, count, target, onClick, isActive, disabled }: {
         "text-[11px] font-bold uppercase tracking-[0.2em] relative z-10 mb-2",
         disabled ? "text-muted-foreground" :
         isDone ? "text-emerald-700" : 
-        isActive ? "text-[#800000]" :
-        "text-muted-foreground group-hover:text-[#800000]"
+        isActive ? colorClass :
+        "text-muted-foreground group-hover:text-current"
       )}>
         {label}
       </span>
@@ -466,7 +489,7 @@ function MaqtaCounter({ label, count, target, onClick, isActive, disabled }: {
           "text-4xl font-black leading-none",
           disabled ? "text-muted-foreground/50" :
           isDone ? "text-emerald-600" : 
-          isActive ? "text-[#800000]" :
+          isActive ? colorClass :
           "text-foreground"
         )}>
           {count}
@@ -477,7 +500,7 @@ function MaqtaCounter({ label, count, target, onClick, isActive, disabled }: {
       {isDone ? (
         <CheckCircle2 className="absolute top-3 right-3 h-5 w-5 text-emerald-600" />
       ) : isActive && !disabled ? (
-        <Play className="absolute top-3 right-3 h-4 w-4 text-[#800000] animate-pulse" />
+        <Play className={cn("absolute top-3 right-3 h-4 w-4 animate-pulse", colorClass)} />
       ) : !disabled && (
         <Zap className="absolute top-3 right-3 h-4 w-4 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
       )}
