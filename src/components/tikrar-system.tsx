@@ -64,7 +64,8 @@ interface BlockState {
 }
 
 const TARGET_TM = 40;
-const TARGET_META = {
+const RECOMMENDED_META = 40;
+const MIN_META = {
   2: 10, // TM1 + TM2
   3: 5,  // TM1 + TM2 + TM3
   4: 3   // TM1 + TM2 + TM3 + TM4
@@ -108,7 +109,7 @@ export function TikrarSystem() {
         b[id]?.combined.count === TARGET_TM
       );
       
-      const metaDone = [2, 3, 4].every(id => m[id] === TARGET_META[id as keyof typeof TARGET_META]);
+      const metaDone = [2, 3, 4].every(id => m[id] >= MIN_META[id as keyof typeof MIN_META]);
       
       return blocksDone && metaDone;
     } catch (e) {
@@ -192,7 +193,7 @@ export function TikrarSystem() {
   const incrementMeta = (metaId: number) => {
     setMetaCombined(prev => ({
       ...prev,
-      [metaId]: Math.min(prev[metaId] + 1, TARGET_META[metaId as keyof typeof TARGET_META])
+      [metaId]: Math.min(prev[metaId] + 1, RECOMMENDED_META)
     }));
   };
 
@@ -213,7 +214,7 @@ export function TikrarSystem() {
   };
 
   const isMetaDone = (metaId: number) => {
-    return metaCombined[metaId] === TARGET_META[metaId as keyof typeof TARGET_META];
+    return metaCombined[metaId] >= MIN_META[metaId as keyof typeof MIN_META];
   };
 
   const calculateTotalProgress = () => {
@@ -221,7 +222,7 @@ export function TikrarSystem() {
     Object.values(blocks).forEach(b => total += b.a.count + b.b.count + b.combined.count);
     Object.entries(metaCombined).forEach(([id, count]) => total += count);
     
-    const totalTarget = (4 * 3 * TARGET_TM) + Object.values(TARGET_META).reduce((a, b) => a + b, 0);
+    const totalTarget = (4 * 3 * TARGET_TM) + (3 * RECOMMENDED_META);
     return (total / totalTarget) * 100;
   };
 
@@ -324,7 +325,8 @@ export function TikrarSystem() {
             id={2}
             title="Gabungan TM1 + TM2"
             count={metaCombined[2]}
-            target={TARGET_META[2]}
+            min={MIN_META[2]}
+            target={RECOMMENDED_META}
             verses={getVersesForRange(1, 2)}
             isLocked={!isTMDone(1) || !isTMDone(2)}
             onIncrement={() => incrementMeta(2)}
@@ -349,7 +351,8 @@ export function TikrarSystem() {
             id={3}
             title="Gabungan TM1 + TM2 + TM3"
             count={metaCombined[3]}
-            target={TARGET_META[3]}
+            min={MIN_META[3]}
+            target={RECOMMENDED_META}
             verses={getVersesForRange(1, 3)}
             isLocked={!isMetaDone(2) || !isTMDone(3)}
             onIncrement={() => incrementMeta(3)}
@@ -374,7 +377,8 @@ export function TikrarSystem() {
             id={4}
             title="Gabungan Seluruh Blok (TM1-4)"
             count={metaCombined[4]}
-            target={TARGET_META[4]}
+            min={MIN_META[4]}
+            target={RECOMMENDED_META}
             verses={getVersesForRange(1, 4)}
             isLocked={!isMetaDone(3) || !isTMDone(4)}
             onIncrement={() => incrementMeta(4)}
@@ -546,28 +550,33 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
   );
 }
 
-function MetaCombinedCard({ id, title, count, target, verses, isLocked, onIncrement, onReset }: {
+function MetaCombinedCard({ id, title, count, min, target, verses, isLocked, onIncrement, onReset }: {
   id: number,
   title: string,
   count: number,
+  min: number,
   target: number,
   verses: Verse[],
   isLocked: boolean,
   onIncrement: () => void,
   onReset: () => void
 }) {
-  const isDone = count === target;
+  const isMinDone = count >= min;
+  const isRecommendedDone = count === target;
 
   return (
     <Card className={cn(
       "border-2 transition-all duration-500 overflow-hidden shadow-xl",
       isLocked ? "border-muted bg-muted/5 opacity-60 grayscale pointer-events-none" :
-      isDone ? "border-amber-500 bg-amber-50/20" : "border-amber-200 bg-amber-50/50"
+      isRecommendedDone ? "border-emerald-500 bg-emerald-50/20" : 
+      isMinDone ? "border-emerald-200 bg-emerald-50/10" : "border-amber-200 bg-amber-50/50"
     )}>
-      <div className={cn("py-3 px-6 border-b flex items-center justify-between", isLocked ? "bg-muted/20" : "bg-amber-100/50")}>
+      <div className={cn("py-3 px-6 border-b flex items-center justify-between", isLocked ? "bg-muted/20" : isMinDone ? "bg-emerald-100/50" : "bg-amber-100/50")}>
         <div className="flex items-center gap-2 text-amber-800">
           <Layers className="w-4 h-4" />
-          <span className="text-[11px] font-bold uppercase tracking-widest">{isLocked ? "Terkunci" : "Sesi Gabungan Kumulatif"}</span>
+          <span className={cn("text-[11px] font-bold uppercase tracking-widest", isMinDone && "text-emerald-800")}>
+            {isLocked ? "Terkunci" : isMinDone ? "Syarat Minimal Terpenuhi" : "Sesi Gabungan Kumulatif"}
+          </span>
         </div>
         {!isLocked && <Button variant="ghost" size="sm" onClick={onReset} className="text-[9px] font-bold text-amber-700 h-6 px-2 uppercase">Reset</Button>}
       </div>
@@ -575,7 +584,10 @@ function MetaCombinedCard({ id, title, count, target, verses, isLocked, onIncrem
       <CardContent className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-black font-headline text-amber-900">{title}</h3>
-          <Badge className={cn(isDone ? "bg-emerald-500" : "bg-amber-600")}>Min. {target}x</Badge>
+          <div className="flex gap-2">
+            <Badge variant="outline" className="border-amber-300 text-amber-700 font-bold text-[9px]">MIN: {min}x</Badge>
+            <Badge className={cn(isRecommendedDone ? "bg-emerald-500" : "bg-amber-600")}>ANJURAN: {target}x</Badge>
+          </div>
         </div>
 
         <div className="bg-white/80 p-4 rounded-xl border border-amber-200 shadow-inner max-h-[200px] overflow-auto no-scrollbar" dir="rtl">
@@ -596,12 +608,14 @@ function MetaCombinedCard({ id, title, count, target, verses, isLocked, onIncrem
           onClick={onIncrement}
           className={cn(
             "w-full h-24 rounded-3xl flex flex-col items-center justify-center gap-1 transition-all shadow-xl active:scale-[0.97]",
-            isDone ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"
+            isRecommendedDone ? "bg-emerald-600 hover:bg-emerald-700" : 
+            isMinDone ? "bg-emerald-500 hover:bg-emerald-600" : "bg-amber-600 hover:bg-amber-700"
           )}
         >
-          {!isDone && !isLocked && <span className="text-[9px] font-black uppercase text-amber-100 animate-pulse tracking-widest">Lancarkan Seluruh Bagian Ini</span>}
+          {!isMinDone && !isLocked && <span className="text-[9px] font-black uppercase text-amber-100 animate-pulse tracking-widest">Lancarkan Seluruh Bagian Ini</span>}
+          {isMinDone && !isRecommendedDone && <span className="text-[9px] font-black uppercase text-white tracking-widest">Disarankan hingga {target}x</span>}
           <div className="flex items-center gap-4">
-            <RotateCcw className={cn("h-6 w-6 text-white", !isDone && "animate-spin-slow")} />
+            <RotateCcw className={cn("h-6 w-6 text-white", !isRecommendedDone && "animate-spin-slow")} />
             <span className="text-4xl font-black text-white">{count} <span className="text-xl opacity-50">/ {target}</span></span>
           </div>
         </Button>
