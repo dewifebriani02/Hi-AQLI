@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb, ArrowLeft, ArrowRight, Play, Pause } from "lucide-react";
@@ -36,6 +36,7 @@ interface VerseDetail {
 export default function VerseDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
@@ -114,45 +115,7 @@ export default function VerseDetailPage() {
     }
   }, []);
 
-  useEffect(() => {
-    async function fetchAll() {
-      if (!id || !verseNumber) return;
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch Surah Info
-        const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        const sData = await sRes.json();
-        setSurahName(sData.chapter.name_simple);
-        setTotalVerses(sData.chapter.verses_count);
-
-        // Fetch Verse Details
-        const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`);
-        if (!vRes.ok) throw new Error("Gagal memuat ayat.");
-        const vData = await vRes.json();
-        setVerse(vData.verse);
-
-        // Fetch Tafsir & AI Analysis
-        fetchOfficialTafsir(id, verseNumber);
-        if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseNumber), vData.verse.text_uthmani);
-      } catch (e: any) {
-        setError("Gagal memuat data ayat.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchAll();
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, [id, verseNumber, fetchAiAnalysis, fetchOfficialTafsir]);
-
-  const togglePlay = async () => {
+  const togglePlay = useCallback(async () => {
     if (isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
@@ -191,7 +154,13 @@ export default function VerseDetailPage() {
         setIsPlaying(true);
         setIsAudioLoading(false);
       };
-      audio.onended = () => setIsPlaying(false);
+      audio.onended = () => {
+        setIsPlaying(false);
+        // AUTOPLAY: Navigate to next verse and signal autoplay
+        if (currentVerseNum < totalVerses) {
+          router.push(`/tilawah/${id}/${currentVerseNum + 1}?autoplay=true`);
+        }
+      };
       audio.onerror = (e) => {
         console.error("Audio Error:", e);
         setIsAudioLoading(false);
@@ -205,7 +174,52 @@ export default function VerseDetailPage() {
       setIsAudioLoading(false);
       toast({ variant: "destructive", title: "Audio tidak tersedia" });
     }
-  };
+  }, [id, verseNumber, currentVerseNum, totalVerses, isPlaying, router, toast]);
+
+  useEffect(() => {
+    async function fetchAll() {
+      if (!id || !verseNumber) return;
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch Surah Info
+        const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
+        const sData = await sRes.json();
+        setSurahName(sData.chapter.name_simple);
+        setTotalVerses(sData.chapter.verses_count);
+
+        // Fetch Verse Details
+        const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`);
+        if (!vRes.ok) throw new Error("Gagal memuat ayat.");
+        const vData = await vRes.json();
+        setVerse(vData.verse);
+
+        // Fetch Tafsir & AI Analysis
+        fetchOfficialTafsir(id, verseNumber);
+        if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseNumber), vData.verse.text_uthmani);
+      } catch (e: any) {
+        setError("Gagal memuat data ayat.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAll();
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [id, verseNumber, fetchAiAnalysis, fetchOfficialTafsir]);
+
+  // Handle Autoplay from previous page signal
+  useEffect(() => {
+    if (!loading && searchParams.get('autoplay') === 'true' && !isPlaying && !isAudioLoading) {
+      togglePlay();
+    }
+  }, [loading, searchParams, togglePlay, isPlaying, isAudioLoading]);
 
   if (loading) {
     return (
@@ -326,7 +340,7 @@ export default function VerseDetailPage() {
           <CardFooter className="pt-6 border-t bg-muted/10 p-4">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 shadow-md border-b-4 border-amber-600 transition-all active:translate-y-0.5 active:border-b-2 h-14 text-lg">
               <Link href={`/tilawah/${id}/${verseNumber}/quiz`}>
-                <GraduationCap className="w-5 h-5 text-black" /> UJI HAFALAN KATA
+                < GraduationCap className="w-5 h-5 text-black" /> UJI HAFALAN KATA
               </Link>
             </Button>
           </CardFooter>

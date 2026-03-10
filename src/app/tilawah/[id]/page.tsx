@@ -140,6 +140,13 @@ export default function SurahDetailPage() {
 
       audio.onended = () => {
         setPlayingKey(null);
+        // AUTOPLAY LOGIC: Find next verse in current Surah
+        const currentIndex = verses.findIndex(v => v.verse_key === verseKey);
+        if (currentIndex !== -1 && currentIndex < verses.length - 1) {
+          const nextVerse = verses[currentIndex + 1];
+          // Use setTimeout to avoid potential recursion issues with browser audio policy
+          setTimeout(() => toggleAudio(nextVerse.verse_key), 300);
+        }
       };
 
       audio.onerror = (e) => {
