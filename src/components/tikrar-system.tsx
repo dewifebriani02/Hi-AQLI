@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -586,7 +585,6 @@ function MetaCombinedCard({ id, title, count, min, target, verses, isLocked, onI
           <h3 className="text-lg font-black font-headline text-amber-900">{title}</h3>
           <div className="flex gap-2">
             <Badge variant="outline" className="border-amber-300 text-amber-700 font-bold text-[9px]">MIN: {min}x</Badge>
-            <Badge className={cn(isRecommendedDone ? "bg-emerald-500" : "bg-amber-600")}>ANJURAN: {target}x</Badge>
           </div>
         </div>
 
@@ -613,7 +611,6 @@ function MetaCombinedCard({ id, title, count, min, target, verses, isLocked, onI
           )}
         >
           {!isMinDone && !isLocked && <span className="text-[9px] font-black uppercase text-amber-100 animate-pulse tracking-widest">Lancarkan Seluruh Bagian Ini</span>}
-          {isMinDone && !isRecommendedDone && <span className="text-[9px] font-black uppercase text-white tracking-widest">Disarankan hingga {target}x</span>}
           <div className="flex items-center gap-4">
             <RotateCcw className={cn("h-6 w-6 text-white", !isRecommendedDone && "animate-spin-slow")} />
             <span className="text-4xl font-black text-white">{count} <span className="text-xl opacity-50">/ {target}</span></span>
