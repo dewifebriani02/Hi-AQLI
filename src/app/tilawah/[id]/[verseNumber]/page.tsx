@@ -167,14 +167,19 @@ export default function VerseDetailPage() {
 
       <div className="grid grid-cols-1 gap-6">
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
-          <CardHeader className="border-b bg-muted/30 py-4 flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2 font-headline">
-              <ListTree className="w-4 h-4 text-[#800000]" />
-              Penjabaran Kata
-            </CardTitle>
+          <CardHeader className="border-b bg-muted/30 py-4 flex flex-row items-start justify-between">
+            <div className="flex flex-col gap-1.5">
+              <CardTitle className="text-base flex items-center gap-2 font-headline">
+                <ListTree className="w-4 h-4 text-[#800000]" />
+                Penjabaran Kata
+              </CardTitle>
+              <p className="text-[11px] text-amber-700 font-medium leading-snug">
+                <strong>Repetisi</strong>: Ulangi setiap kata sebanyak minimal 5 kali dengan mengetuk baris kata pada daftar di bawah.
+              </p>
+            </div>
             {Object.keys(wordCounts).length > 0 && (
-              <Button variant="ghost" size="sm" onClick={resetWordCounts} className="text-[10px] font-bold text-muted-foreground uppercase gap-1">
-                <RotateCcw className="w-3 h-3" /> Reset Hitungan
+              <Button variant="ghost" size="sm" onClick={resetWordCounts} className="text-[10px] font-bold text-muted-foreground uppercase gap-1 mt-1">
+                <RotateCcw className="w-3 h-3" /> Reset
               </Button>
             )}
           </CardHeader>
@@ -230,12 +235,6 @@ export default function VerseDetailPage() {
               </li>
               <li className="flex gap-3">
                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">2</div>
-                <p className="text-sm text-amber-900 leading-relaxed">
-                  <strong>Repetisi</strong>: Ulangi setiap kata sebanyak <strong>minimal 5 kali</strong> dengan mengetuk baris kata pada daftar di atas.
-                </p>
-              </li>
-              <li className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">3</div>
                 <p className="text-sm text-amber-900 leading-relaxed">
                   <strong>Koneksi</strong>: Fokuskan pikiran pada hubungan antara bunyi pengucapan Arab dan arti bahasa Indonesianya.
                 </p>
