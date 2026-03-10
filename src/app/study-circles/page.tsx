@@ -5,9 +5,11 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 const studyCircles = [
   {
@@ -18,7 +20,7 @@ const studyCircles = [
     schedule: "Setiap Hari (Mandiri)",
     level: "All Levels",
     isPremium: true,
-    tag: "PENDAFTARAN DIBUKA",
+    tag: "DAFTAR BUKA",
     regLink: "/study-circles/tikrar-registration"
   },
   {
@@ -49,6 +51,15 @@ const studyCircles = [
 
 export default function StudyCirclesPage() {
   const [search, setSearch] = useState("");
+  const { user } = useUser();
+  const db = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user]);
+
+  const { data: userData } = useDoc(userDocRef);
 
   const filteredCircles = studyCircles.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -79,47 +90,59 @@ export default function StudyCirclesPage() {
       </div>
 
       <div className="flex flex-col gap-3 px-1">
-        {filteredCircles.map((circle) => (
-          <Link key={circle.id} href={circle.id === 'tikrar-j30-b1' ? '/study-circles/tikrar-registration' : `/study-circles/${circle.id}`}>
-            <Card 
-              className={cn(
-                "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
-                circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
-              )}
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className={cn(
-                    "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
-                    circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
-                  )}>
-                    {circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-base leading-tight">{circle.title}</h4>
-                      {circle.tag && <Badge className="bg-emerald-500 text-white border-none text-[8px] h-4 px-1.5">{circle.tag}</Badge>}
+        {filteredCircles.map((circle) => {
+          // Check if this is the premium Tikrar program and if user is already paid
+          const isTikrar = circle.id === 'tikrar-j30-b1';
+          const isRegistered = isTikrar && userData?.isTikrarPaid;
+          const userPaidJuz = userData?.paidJuz;
+
+          return (
+            <Link key={circle.id} href={isTikrar ? '/study-circles/tikrar-registration' : `/study-circles/${circle.id}`}>
+              <Card 
+                className={cn(
+                  "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
+                  circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
+                )}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className={cn(
+                      "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
+                      isRegistered ? "bg-blue-600 text-white" : 
+                      circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+                    )}>
+                      {isRegistered ? <CheckCircle2 className="w-6 h-6" /> : circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <User className="w-3 h-3" />
-                      <span>{circle.instructor}</span>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground font-medium">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{circle.schedule}</span>
+                    <div className="flex flex-col gap-0.5 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-base leading-tight">{circle.title}</h4>
+                        {isRegistered ? (
+                          <Badge className="bg-blue-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">AKTIF - JUZ {userPaidJuz}</Badge>
+                        ) : (
+                          circle.tag && <Badge className="bg-emerald-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">{circle.tag}</Badge>
+                        )}
                       </div>
-                      <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 py-0 border-[#800000]/20 text-[#800000] uppercase">
-                        {circle.level}
-                      </Badge>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <User className="w-3 h-3" />
+                        <span>{circle.instructor}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground font-medium">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{circle.schedule}</span>
+                        </div>
+                        <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 py-0 border-[#800000]/20 text-[#800000] uppercase">
+                          {circle.level}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#800000] transition-colors" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#800000] transition-colors" />
-              </div>
-            </Card>
-          </Link>
-        ))}
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
