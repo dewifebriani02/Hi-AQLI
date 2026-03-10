@@ -164,8 +164,8 @@ service cloud.firestore {
 
     match /donations/{donationId} {
       // Aturan pembacaan standar untuk kepatuhan Query as a Point of Security (QAP).
-      // Menggunakan akses properti langsung (resource.data.userId) lebih andal untuk verifikasi QAP daripada .get().
-      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      // Memindahkan kepemilikan ke depan agar QAP bekerja lebih optimal bagi non-admin.
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }

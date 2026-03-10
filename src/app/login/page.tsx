@@ -31,22 +31,17 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     
-    // Using non-blocking pattern for login
-    try {
-      initiateEmailSignIn(auth, email, password);
-      // We don't await here. Auth state change is handled by onAuthStateChanged via useUser hook.
-    } catch (err: any) {
-      setError('Terjadi kesalahan saat mencoba masuk.');
-      setLoading(false);
-    }
+    // Pattern: Non-blocking call.
+    // Auth state changes are handled by the useUser hook and the useEffect above.
+    initiateEmailSignIn(auth, email, password);
 
-    // Timeout to reset loading state if no auth change occurs
-    // This allows the user to try again if the initial attempt failed silently
+    // Timeout to reset loading state if no auth change occurs within 3 seconds.
+    // This provides a feedback loop for the user without blocking UI.
     setTimeout(() => {
+      setLoading(false);
+      // If still not logged in, we inform the user to double check credentials.
       if (!user) {
-        setLoading(false);
-        // We set a generic hint, actual verification happens via auth state change
-        setError('Pastikan email dan kata sandi Anda benar.');
+        setError('Gagal masuk. Mohon periksa kembali email dan kata sandi Anda.');
       }
     }, 3000);
   };

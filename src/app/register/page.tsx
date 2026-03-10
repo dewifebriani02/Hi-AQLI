@@ -27,9 +27,10 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (user) {
-      // Sync profile data once user is created
+      // Sync profile data once user is created.
+      // Note: updateProfile is also non-blocking in terms of UI flow here.
       if (user.displayName !== username) {
-        updateProfile(user, { displayName: username }).catch(console.error);
+        updateProfile(user, { displayName: username }).catch(() => {});
         
         const userRef = doc(db, 'users', user.uid);
         setDocumentNonBlocking(userRef, {
@@ -50,16 +51,15 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
-    try {
-      initiateEmailSignUp(auth, email, password);
-    } catch (err: any) {
-      setError('Gagal memulai pendaftaran. Silakan periksa data Anda.');
-      setLoading(false);
-    }
+    // Non-blocking sign up call.
+    initiateEmailSignUp(auth, email, password);
 
-    // Timeout to reset loading state if no auth change occurs
+    // Timeout to reset loading state if registration doesn't complete quickly.
     setTimeout(() => {
-      if (!user) setLoading(false);
+      setLoading(false);
+      if (!user) {
+        setError('Gagal mendaftarkan akun. Silakan periksa kembali data Anda.');
+      }
     }, 5000);
   };
 
