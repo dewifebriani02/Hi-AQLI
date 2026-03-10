@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap, CheckCircle2 } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap, CheckCircle2, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -16,7 +16,7 @@ const studyCircles = [
     id: "tikrar-j30-b1",
     title: "TIKRAR DAILY JUZ 30 - BATCH 1",
     instructor: "Tim Asatizah AQLI",
-    description: "Program hafalan terstruktur dengan metode Tikrar 40x. Infaq Rp 50rb/bulan termasuk bimbingan & ujian.",
+    description: "Program hafalan terstruktur dengan metode Tikrar 40x. Infaq pendaftaran sudah termasuk bimbingan & ujian.",
     schedule: "Setiap Hari (Mandiri)",
     level: "All Levels",
     isPremium: true,
@@ -106,6 +106,7 @@ export default function StudyCirclesPage() {
               <Card 
                 className={cn(
                   "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
+                  isRegistered ? "bg-blue-50 border-l-4 border-blue-600" :
                   circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
                 )}
               >
@@ -116,11 +117,11 @@ export default function StudyCirclesPage() {
                       isRegistered ? "bg-blue-600 text-white" : 
                       circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
                     )}>
-                      {isRegistered ? <CheckCircle2 className="w-6 h-6" /> : circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                      {isRegistered ? <PlayCircle className="w-6 h-6 animate-pulse" /> : circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                     </div>
                     <div className="flex flex-col gap-0.5 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-bold text-base leading-tight">{circle.title}</h4>
+                        <h4 className={cn("font-bold text-base leading-tight", isRegistered && "text-blue-900")}>{circle.title}</h4>
                         {isRegistered ? (
                           <Badge className="bg-blue-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">AKTIF - JUZ {userPaidJuz}</Badge>
                         ) : (
@@ -136,17 +137,25 @@ export default function StudyCirclesPage() {
                         <span>{circle.instructor}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground font-medium">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{circle.schedule}</span>
-                        </div>
-                        <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 py-0 border-[#800000]/20 text-[#800000] uppercase">
-                          {circle.level}
-                        </Badge>
+                        {isRegistered ? (
+                          <span className="text-blue-600 font-black uppercase tracking-widest flex items-center gap-1">
+                            <PlayCircle className="w-3 h-3" /> MASUK KELAS SEKARANG
+                          </span>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{circle.schedule}</span>
+                            </div>
+                            <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 py-0 border-[#800000]/20 text-[#800000] uppercase">
+                              {circle.level}
+                            </Badge>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#800000] transition-colors" />
+                  <ChevronRight className={cn("w-5 h-5 transition-colors", isRegistered ? "text-blue-400" : "text-muted-foreground/30 group-hover:text-[#800000]")} />
                 </div>
               </Card>
             </Link>

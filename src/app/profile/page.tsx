@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -20,10 +21,13 @@ import {
   CheckCircle2,
   Medal,
   Star,
-  History
+  History,
+  ShieldCheck,
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 import { useEffect } from 'react';
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { 
   Table, 
@@ -34,6 +38,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -41,7 +46,7 @@ export default function ProfilePage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Fetch real donation history for the user with proper QAP filter and simple order
+  // Fetch real donation history
   const donationsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
@@ -50,9 +55,19 @@ export default function ProfilePage() {
       orderBy("donationDate", "desc"),
       limit(20)
     );
-  }, [db, user?.uid]); // Stabilize by using user.uid
+  }, [db, user?.uid]);
 
   const { data: donations } = useCollection(donationsQuery);
+
+  // Fetch user data for payment status
+  const userDocRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user]);
+
+  const { data: userData } = useDoc(userDocRef);
+  const isPaid = userData?.isTikrarPaid;
+  const paidJuz = userData?.paidJuz;
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -115,6 +130,26 @@ export default function ProfilePage() {
         </CardHeader>
 
         <CardContent className="px-6 sm:px-8 pt-4">
+          {/* Active Subscription Banner */}
+          {isPaid && (
+            <Card className="mb-8 border-2 border-blue-100 bg-blue-50/50 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg">
+                    <Zap className="w-5 h-5 fill-current" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-blue-900">Program Tikrar Aktif: Juz {paidJuz}</h4>
+                    <p className="text-[10px] text-blue-700 font-medium">Akses counter premium Anda terbuka.</p>
+                  </div>
+                </div>
+                <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-8">
+                  <Link href="/tajweed">BUKA <ArrowRight className="ml-1 w-3 h-3" /></Link>
+                </Button>
+              </div>
+            </Card>
+          )}
+
           <Tabs defaultValue="halaqah" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
               <TabsTrigger value="halaqah" className="font-bold gap-2 rounded-lg data-[state=active]:text-[#800000]">
@@ -132,9 +167,28 @@ export default function ProfilePage() {
             <TabsContent value="halaqah" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Materi Diikuti</h3>
-                <Badge variant="outline" className="text-[10px] font-bold">2 Aktif</Badge>
+                <Badge variant="outline" className="text-[10px] font-bold">{isPaid ? '3' : '2'} Aktif</Badge>
               </div>
               <div className="grid gap-3">
+                {isPaid && (
+                  <Card className="border-blue-200 bg-blue-50/20 shadow-none hover:bg-blue-50 transition-all cursor-pointer group">
+                    <CardContent className="p-4 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-md">
+                          <Zap className="w-5 h-5 fill-current" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-blue-900">Tikrar Daily Juz {paidJuz}</h4>
+                            <Badge className="bg-blue-600 text-[8px] h-4 px-1">PREMIUM</Badge>
+                          </div>
+                          <p className="text-[10px] text-blue-700 font-medium">Metode 40x Repetisi</p>
+                        </div>
+                      </div>
+                      <Link href="/tajweed"><ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600" /></Link>
+                    </CardContent>
+                  </Card>
+                )}
                 {[
                   { title: "Tafsir Juz' Amma", instructor: "Dr. Fatima Ahmed", progress: 45, status: "Lanjut Belajar" },
                   { title: "Tajwid Lanjutan: Sifaat", instructor: "Syekh Yusuf Ibrahim", progress: 12, status: "Mulai" }
@@ -168,7 +222,7 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Riwayat Infaq & Sedekah</h3>
                 <Button variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] gap-1" asChild>
-                  <a href="/donate"><History className="w-3 h-3" /> Tambah Donasi</a>
+                  <Link href="/donate"><History className="w-3 h-3" /> Tambah Donasi</Link>
                 </Button>
               </div>
               
@@ -252,7 +306,7 @@ export default function ProfilePage() {
                     <span className="text-xs font-medium italic text-muted-foreground">Butuh 150 poin lagi untuk naik peringkat...</span>
                   </div>
                   <Button variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000]" asChild>
-                    <a href="/leaderboard">Cek Papan Peringkat <ChevronRight className="w-3 h-3" /></a>
+                    <Link href="/leaderboard">Cek Papan Peringkat <ChevronRight className="w-3 h-3" /></Link>
                   </Button>
                 </CardContent>
               </Card>

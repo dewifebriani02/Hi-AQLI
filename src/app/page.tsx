@@ -23,10 +23,13 @@ import {
   Sparkles,
   Users,
   HeartHandshake,
-  Trophy
+  Trophy,
+  Zap,
+  ArrowRight
 } from "lucide-react";
 import Link from "next/link";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 
 const days = [
@@ -41,6 +44,16 @@ const days = [
 
 export default function DashboardPage() {
   const { user } = useUser();
+  const db = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user]);
+
+  const { data: userData } = useDoc(userDocRef);
+  const isPaid = userData?.isTikrarPaid;
+  const paidJuz = userData?.paidJuz;
 
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
@@ -65,6 +78,25 @@ export default function DashboardPage() {
           </span>
         </Link>
       </div>
+
+      {/* Active Program Shortcut (ONLY FOR PAID USERS) */}
+      {isPaid && (
+        <Card className="bg-blue-600 text-white border-none shadow-xl overflow-hidden relative group">
+          <div className="absolute right-[-10px] top-[-10px] opacity-20 group-hover:scale-110 transition-transform">
+            <Zap className="w-32 h-32" />
+          </div>
+          <CardContent className="p-5 flex items-center justify-between gap-4 relative z-10">
+            <div className="space-y-1">
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-80">Program Aktif</p>
+              <h3 className="font-bold text-lg">Tikrar Daily: Juz {paidJuz}</h3>
+              <p className="text-[10px] opacity-90 max-w-[180px]">Ketuk untuk lanjut menghafal di halaman terakhir.</p>
+            </div>
+            <Button asChild size="sm" className="bg-white text-blue-600 hover:bg-blue-50 font-bold gap-2 shadow-lg">
+              <Link href="/tajweed">MASUK KELAS <ArrowRight className="w-4 h-4" /></Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Streak Tracker Card */}
       <Card className="border-none shadow-sm bg-muted/30">
@@ -187,18 +219,23 @@ export default function DashboardPage() {
 
           {/* Hafalan Ad */}
           <Link href="/tajweed" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-emerald-800 to-emerald-600 text-white h-44 transition-transform group-hover:scale-[1.02]">
+            <Card className={cn(
+              "overflow-hidden border-none shadow-sm text-white h-44 transition-transform group-hover:scale-[1.02]",
+              isPaid ? "bg-gradient-to-br from-blue-800 to-blue-600" : "bg-gradient-to-br from-emerald-800 to-emerald-600"
+            )}>
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
-                  <PlayCircle className="w-32 h-32" />
+                  <Award className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
                   <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">LATIHAN</Badge>
-                  <h4 className="font-bold text-lg">Modul Hafalan</h4>
-                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Perkuat hafalan Anda dengan metode Tikrar harian dan kuis interaktif.</p>
+                  <h4 className="font-bold text-lg">{isPaid ? `Tikrar Juz ${paidJuz}` : 'Modul Hafalan'}</h4>
+                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">
+                    {isPaid ? 'Lanjutkan repetisi hafalan Anda hari ini sesuai target level.' : 'Perkuat hafalan Anda dengan metode Tikrar harian dan kuis interaktif.'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider">
-                  Mulai Menghafal <ChevronRight className="w-3 h-3" />
+                  {isPaid ? 'Buka Counter' : 'Mulai Menghafal'} <ChevronRight className="w-3 h-3" />
                 </div>
               </CardContent>
             </Card>
