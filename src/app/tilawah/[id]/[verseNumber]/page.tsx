@@ -233,6 +233,7 @@ export default function VerseDetailPage() {
                   </TooltipPortal>
                 </Tooltip>
               ))}
+              <span className="text-2xl md:text-4xl font-arabic text-[#800000] mx-2 align-middle select-none">({verseNumber})</span>
             </div>
           </TooltipProvider>
 
@@ -252,13 +253,16 @@ export default function VerseDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y" dir="rtl">
+            <div className="divide-y" dir="ltr">
               {verse?.words?.filter(w => w.text_uthmani).map((word, idx) => (
-                <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors" dir="ltr">
-                  <div className="flex flex-col gap-1 text-left">
-                    <span className="text-2xl font-arabic text-[#800000]">{word.text_uthmani}</span>
+                <div key={idx} className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-bold text-muted-foreground w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border/50">
+                      {idx + 1}
+                    </span>
+                    <span className="text-2xl font-arabic text-[#800000] text-right" dir="rtl">{word.text_uthmani}</span>
                   </div>
-                  <div className="text-right sm:max-w-[60%]">
+                  <div className="text-right flex-1">
                     <p className="text-sm font-medium">{word.translation.text}</p>
                   </div>
                 </div>

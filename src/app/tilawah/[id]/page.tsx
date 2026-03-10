@@ -391,6 +391,7 @@ export default function SurahDetailPage() {
                     </Tooltip>
                   );
                 })}
+                <span className="text-2xl md:text-3xl font-arabic text-[#800000] mx-2 align-middle select-none">({verse.verse_number})</span>
               </div>
 
               <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">
