@@ -5,12 +5,14 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { 
   RotateCcw, 
   CheckCircle2, 
   ChevronLeft, 
   ChevronRight,
-  Zap
+  Zap,
+  Play
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -114,12 +116,37 @@ function BlockCard({ id, state, onIncrement, onReset, target }: {
 }) {
   const isBlockDone = state.a.count === target && state.b.count === target && state.combined.count === target;
 
+  // Logic to determine what is currently being repeated (Sedang Ditikrar)
+  let currentFocus = "";
+  if (state.a.count < target) {
+    currentFocus = `TM${id}a`;
+  } else if (state.b.count < target) {
+    currentFocus = `TM${id}b`;
+  } else if (state.combined.count < target) {
+    currentFocus = `Gabungan TM${id}a+b`;
+  } else {
+    currentFocus = "Selesai";
+  }
+
   return (
     <Card className={cn(
-      "border-2 transition-all duration-500",
+      "border-2 transition-all duration-500 overflow-hidden",
       isBlockDone ? "border-emerald-500 bg-emerald-50/30" : "border-muted"
     )}>
-      <CardHeader className="flex flex-row items-center justify-between pb-4">
+      {/* Active Focus Header */}
+      {!isBlockDone && (
+        <div className="bg-[#800000]/5 py-2 px-4 border-b border-[#800000]/10 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#800000] animate-pulse" />
+            <span className="text-[10px] font-bold text-[#800000] uppercase tracking-wider">
+              Sedang Ditikrar: <span className="underline">{currentFocus}</span>
+            </span>
+          </div>
+          <Play className="w-3 h-3 text-[#800000]" />
+        </div>
+      )}
+
+      <CardHeader className="flex flex-row items-center justify-between pb-4 pt-4">
         <div className="space-y-1">
           <CardTitle className="text-lg font-headline flex items-center gap-2">
             TM{id}
@@ -127,7 +154,12 @@ function BlockCard({ id, state, onIncrement, onReset, target }: {
           </CardTitle>
           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Target: 40x per Maqta</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={onReset} className="text-[10px] font-bold text-muted-foreground">RESET</Button>
+        <div className="flex flex-col items-end gap-1">
+          {isBlockDone && (
+            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white text-[8px] font-bold py-0 h-4">LULUS TIKRAR</Badge>
+          )}
+          <Button variant="ghost" size="sm" onClick={onReset} className="text-[10px] font-bold text-muted-foreground h-6 px-2">RESET</Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
@@ -137,6 +169,7 @@ function BlockCard({ id, state, onIncrement, onReset, target }: {
             count={state.a.count} 
             target={target} 
             onClick={() => onIncrement(id, 'a')} 
+            isActive={currentFocus === `TM${id}a`}
           />
           {/* Maqta B */}
           <MaqtaCounter 
@@ -144,6 +177,7 @@ function BlockCard({ id, state, onIncrement, onReset, target }: {
             count={state.b.count} 
             target={target} 
             onClick={() => onIncrement(id, 'b')} 
+            isActive={currentFocus === `TM${id}b`}
           />
         </div>
 
@@ -154,10 +188,15 @@ function BlockCard({ id, state, onIncrement, onReset, target }: {
             onClick={() => onIncrement(id, 'combined')}
             className={cn(
               "w-full h-16 rounded-xl flex flex-col items-center justify-center gap-1 transition-all",
-              state.combined.count === target ? "bg-emerald-500 hover:bg-emerald-600" : 
-              (state.a.count === target && state.b.count === target) ? "bg-[#800000] hover:bg-[#800000]/90" : "bg-muted text-muted-foreground"
+              state.combined.count === target ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : 
+              (state.a.count === target && state.b.count === target) ? "bg-[#800000] hover:bg-[#800000]/90 shadow-lg shadow-[#800000]/20" : "bg-muted text-muted-foreground"
             )}
           >
+            {currentFocus === `Gabungan TM${id}a+b` && !isBlockDone && (
+              <span className="flex items-center gap-1 text-[8px] font-black uppercase text-white animate-bounce">
+                <Play className="w-2 h-2 fill-current" /> Fokus Sekarang
+              </span>
+            )}
             <span className="text-[9px] font-bold uppercase tracking-[0.2em]">Gabungan TM{id}a+b</span>
             <div className="flex items-center gap-2">
               <RotateCcw className="h-4 w-4" />
@@ -173,11 +212,12 @@ function BlockCard({ id, state, onIncrement, onReset, target }: {
   );
 }
 
-function MaqtaCounter({ label, count, target, onClick }: { 
+function MaqtaCounter({ label, count, target, onClick, isActive }: { 
   label: string, 
   count: number, 
   target: number, 
-  onClick: () => void 
+  onClick: () => void,
+  isActive?: boolean
 }) {
   const isDone = count === target;
 
@@ -186,18 +226,31 @@ function MaqtaCounter({ label, count, target, onClick }: {
       onClick={onClick}
       className={cn(
         "group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all active:scale-95 select-none overflow-hidden",
-        isDone ? "bg-emerald-100 border-emerald-500" : "bg-white hover:border-[#800000]/30 shadow-sm border-border"
+        isDone ? "bg-emerald-100 border-emerald-500" : 
+        isActive ? "bg-white border-[#800000] shadow-md scale-105 z-10" : 
+        "bg-white hover:border-[#800000]/30 shadow-sm border-border"
       )}
     >
       {/* Progress Background Overlay */}
       <div 
-        className="absolute bottom-0 left-0 right-0 bg-[#800000]/5 transition-all duration-300 pointer-events-none" 
+        className={cn(
+          "absolute bottom-0 left-0 right-0 transition-all duration-300 pointer-events-none",
+          isDone ? "bg-emerald-500/10" : "bg-[#800000]/5"
+        )}
         style={{ height: `${(count / target) * 100}%` }}
       />
 
+      {isActive && !isDone && (
+        <Badge className="absolute -top-2 bg-[#800000] text-white text-[7px] font-black px-1.5 h-4 animate-in fade-in slide-in-from-top-1">
+          FOKUS
+        </Badge>
+      )}
+
       <span className={cn(
         "text-[10px] font-bold uppercase tracking-widest relative z-10 mb-1",
-        isDone ? "text-emerald-700" : "text-muted-foreground group-hover:text-[#800000]"
+        isDone ? "text-emerald-700" : 
+        isActive ? "text-[#800000]" :
+        "text-muted-foreground group-hover:text-[#800000]"
       )}>
         {label}
       </span>
@@ -205,7 +258,9 @@ function MaqtaCounter({ label, count, target, onClick }: {
       <div className="flex flex-col items-center relative z-10">
         <span className={cn(
           "text-3xl font-black",
-          isDone ? "text-emerald-600" : "text-foreground"
+          isDone ? "text-emerald-600" : 
+          isActive ? "text-[#800000]" :
+          "text-foreground"
         )}>
           {count}
         </span>
@@ -214,6 +269,8 @@ function MaqtaCounter({ label, count, target, onClick }: {
 
       {isDone ? (
         <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-emerald-600" />
+      ) : isActive ? (
+        <Play className="absolute top-2 right-2 h-3 w-3 text-[#800000] animate-pulse" />
       ) : (
         <Zap className="absolute top-2 right-2 h-3 w-3 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
       )}
