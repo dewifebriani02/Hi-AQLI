@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,11 @@ import {
   Loader2,
   BookOpen,
   Lock,
-  Layers
+  Layers,
+  CalendarDays,
+  Target,
+  Trophy,
+  ArrowRight
 } from "lucide-react";
 import { 
   Tooltip,
@@ -70,6 +75,13 @@ const MIN_META = {
   4: 3   // TM1 + TM2 + TM3 + TM4
 };
 
+const LEVELS = [
+  { id: 1, name: "Level 1", desc: "1 Halaman / Pekan", days: 7 },
+  { id: 2, name: "Level 2", desc: "1 Halaman / 2 Pekan", days: 14 },
+  { id: 3, name: "Level 3", desc: "1 Halaman / 3 Pekan", days: 21 },
+  { id: 4, name: "Level 4", desc: "1 Halaman / Bulan", days: 28 },
+];
+
 export function TikrarSystem() {
   const [juz, setJuz] = useState(1);
   const [page, setPage] = useState(1);
@@ -77,6 +89,7 @@ export function TikrarSystem() {
   const [loading, setLoading] = useState(true);
   const [isPrevPageDone, setIsPrevPageDone] = useState(true);
   const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
+  const [level, setLevel] = useState<number | null>(null);
   
   const [blocks, setBlocks] = useState<Record<number, BlockState>>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -131,6 +144,12 @@ export function TikrarSystem() {
   };
 
   useEffect(() => {
+    // Initial load from localStorage
+    if (typeof window !== 'undefined') {
+      const savedLevel = localStorage.getItem('tikrar_level');
+      if (savedLevel) setLevel(parseInt(savedLevel));
+    }
+
     async function fetchVerses() {
       setLoading(true);
       try {
@@ -176,6 +195,13 @@ export function TikrarSystem() {
       localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({ blocks, metaCombined }));
     }
   }, [blocks, metaCombined, page, loading]);
+
+  const handleLevelSelect = (levelId: number) => {
+    setLevel(levelId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tikrar_level', levelId.toString());
+    }
+  };
 
   const handleJuzChange = (val: string) => {
     const newJuz = parseInt(val);
@@ -259,8 +285,111 @@ export function TikrarSystem() {
     return (total / totalTarget) * 100;
   };
 
+  // Schedule Logic
+  const getScheduleForLevel = () => {
+    if (!level) return [];
+    const l = LEVELS.find(l => l.id === level)!;
+    const totalSteps = 7; // TM1, TM2, META2, TM3, META3, TM4, META4
+    const daysPerStep = l.days / totalSteps;
+    
+    return [
+      { id: 1, title: "TM 1 (40x)", start: 1, end: Math.ceil(daysPerStep) },
+      { id: 2, title: "TM 2 (40x)", start: Math.ceil(daysPerStep) + 1, end: Math.ceil(daysPerStep * 2) },
+      { id: 3, title: "Gabungan 1+2", start: Math.ceil(daysPerStep * 2) + 1, end: Math.ceil(daysPerStep * 3) },
+      { id: 4, title: "TM 3 (40x)", start: Math.ceil(daysPerStep * 3) + 1, end: Math.ceil(daysPerStep * 4) },
+      { id: 5, title: "Gabungan 1+2+3", start: Math.ceil(daysPerStep * 4) + 1, end: Math.ceil(daysPerStep * 5) },
+      { id: 6, title: "TM 4 (40x)", start: Math.ceil(daysPerStep * 5) + 1, end: Math.ceil(daysPerStep * 6) },
+      { id: 7, title: "Gabungan Halaman", start: Math.ceil(daysPerStep * 6) + 1, end: l.days },
+    ];
+  };
+
+  const schedule = getScheduleForLevel();
+
+  if (!level) {
+    return (
+      <div className="flex flex-col gap-8 items-center justify-center py-10 animate-in fade-in duration-500">
+        <div className="text-center space-y-2 max-w-md px-4">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-[#800000]/10 flex items-center justify-center mb-4">
+            <Trophy className="w-8 h-8 text-[#800000]" />
+          </div>
+          <h2 className="text-2xl font-bold font-headline">Pilih Level Tikrar Daily</h2>
+          <p className="text-sm text-muted-foreground">Tentukan intensitas hafalan Anda. Kami akan menyesuaikan jadwal harian Anda secara otomatis.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4">
+          {LEVELS.map((l) => (
+            <Card 
+              key={l.id} 
+              className="cursor-pointer hover:border-[#800000] hover:bg-[#800000]/5 transition-all group"
+              onClick={() => handleLevelSelect(l.id)}
+            >
+              <CardContent className="p-6 flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="font-bold text-lg group-hover:text-[#800000] transition-colors">{l.name}</h3>
+                  <p className="text-xs text-muted-foreground font-medium">{l.desc}</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#800000] group-hover:text-white transition-all">
+                  <ArrowRight className="w-5 h-5" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
+      {/* Schedule Banner */}
+      <Card className="border-none bg-gradient-to-br from-[#800000] to-[#b30000] text-white shadow-xl overflow-hidden relative">
+        <div className="absolute right-[-20px] top-[-20px] opacity-10">
+          <CalendarDays className="w-40 h-40" />
+        </div>
+        <CardContent className="p-6 relative z-10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
+                  {LEVELS.find(l => l.id === level)?.name} ACTIVE
+                </Badge>
+                <button onClick={() => setLevel(null)} className="text-[9px] font-bold underline opacity-70 hover:opacity-100">Ganti Level</button>
+              </div>
+              <h3 className="text-xl font-bold font-headline">Jadwal Hafalan Halaman {page}</h3>
+              <p className="text-xs opacity-80 max-w-sm">Target selesai dalam {LEVELS.find(l => l.id === level)?.days} hari dengan metode Tikrar 40x.</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 w-full sm:w-auto">
+              <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
+                <p className="text-[9px] font-bold uppercase opacity-60">Status</p>
+                <p className="text-sm font-bold">On Track</p>
+              </div>
+              <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
+                <p className="text-[9px] font-bold uppercase opacity-60">Sisa Hari</p>
+                <p className="text-sm font-bold">{LEVELS.find(l => l.id === level)?.days} Hari</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest mb-1">
+              <Target className="w-3 h-3" /> Agenda Berdasarkan Level
+            </div>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+              {schedule.map((s, idx) => (
+                <div key={idx} className={cn(
+                  "min-w-[120px] p-3 rounded-xl border flex flex-col gap-1 transition-all",
+                  idx === 0 ? "bg-white text-[#800000] border-white shadow-lg" : "bg-white/10 border-white/10 opacity-60"
+                )}>
+                  <span className="text-[8px] font-bold uppercase opacity-70">Hari {s.start}-{s.end}</span>
+                  <span className="text-[10px] font-bold leading-tight">{s.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <div className="flex flex-col gap-1 w-full sm:w-32">
