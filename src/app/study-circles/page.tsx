@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const studyCircles = [
   {
@@ -17,7 +18,8 @@ const studyCircles = [
     schedule: "Setiap Hari (Mandiri)",
     level: "All Levels",
     isPremium: true,
-    tag: "PENDAFTARAN DIBUKA"
+    tag: "PENDAFTARAN DIBUKA",
+    regLink: "/study-circles/tikrar-registration"
   },
   {
     id: "1",
@@ -78,7 +80,7 @@ export default function StudyCirclesPage() {
 
       <div className="flex flex-col gap-3 px-1">
         {filteredCircles.map((circle) => (
-          <Link key={circle.id} href={circle.id === 'tikrar-j30-b1' ? '/tajweed' : `/study-circles/${circle.id}`}>
+          <Link key={circle.id} href={circle.id === 'tikrar-j30-b1' ? '/study-circles/tikrar-registration' : `/study-circles/${circle.id}`}>
             <Card 
               className={cn(
                 "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
@@ -121,8 +123,4 @@ export default function StudyCirclesPage() {
       </div>
     </div>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(" ");
 }
