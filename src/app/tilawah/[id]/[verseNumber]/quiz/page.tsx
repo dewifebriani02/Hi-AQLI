@@ -31,11 +31,12 @@ const mockVerseLeaderboard = [
 
 export default function WordQuizPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
   const { toast } = useToast();
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   const [words, setWords] = useState<WordData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +50,15 @@ export default function WordQuizPage() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [attempts, setAttempts] = useState(1);
   const [totalTime, setTotalTime] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60); // Question timer
+  const [timeLeft, setTimeLeft] = useState(60); 
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
+
+  // Auth Protection Redirect
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
 
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
@@ -87,15 +95,17 @@ export default function WordQuizPage() {
   }, [id, verseNumber]);
 
   useEffect(() => {
-    fetchWords();
-  }, [fetchWords]);
+    if (user) {
+      fetchWords();
+    }
+  }, [fetchWords, user]);
 
   const saveProgress = useCallback(async (finalScore: number) => {
     if (!user || !db) return;
     const isPerfect = finalScore === words.length;
     
     try {
-      await addDoc(collection(db, "users", user.uid, "quiz_attempts"), {
+      addDoc(collection(db, "users", user.uid, "quiz_attempts"), {
         userId: user.uid,
         quizId: `verse_${id}_${verseNumber}`,
         surahId: id,
@@ -137,7 +147,6 @@ export default function WordQuizPage() {
     } else {
       playSfx('incorrect');
       if (answer === "") {
-        // Wrap in setTimeout to avoid updating Toaster while WordQuizPage is rendering/updating
         setTimeout(() => {
           toast({
             variant: "destructive",
@@ -163,21 +172,19 @@ export default function WordQuizPage() {
     }, 1200);
   }, [selectedAnswer, words, currentIdx, score, playSfx, toast, saveProgress]);
 
-  // Total time effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (!isFinished && !loading) {
+    if (!isFinished && !loading && user) {
       interval = setInterval(() => {
         setTotalTime((prev) => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isFinished, loading]);
+  }, [isFinished, loading, user]);
 
-  // Question timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (!isFinished && !loading && !selectedAnswer) {
+    if (!isFinished && !loading && !selectedAnswer && user) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) return 0;
@@ -186,20 +193,19 @@ export default function WordQuizPage() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isFinished, loading, selectedAnswer]);
+  }, [isFinished, loading, selectedAnswer, user]);
 
-  // Watch for question timeout
   useEffect(() => {
-    if (timeLeft === 0 && !selectedAnswer && !isFinished && !loading) {
+    if (timeLeft === 0 && !selectedAnswer && !isFinished && !loading && user) {
       handleAnswer("");
     }
-  }, [timeLeft, selectedAnswer, isFinished, loading, handleAnswer]);
+  }, [timeLeft, selectedAnswer, isFinished, loading, handleAnswer, user]);
 
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
       setSelectedAnswer(null);
       setIsCorrect(null);
-      setTimeLeft(60); // Reset question timer for new word
+      setTimeLeft(60); 
 
       const currentWord = words[currentIdx];
       const correct = currentWord.translation.text;
@@ -241,7 +247,7 @@ export default function WordQuizPage() {
     });
   };
 
-  if (loading) {
+  if (isUserLoading || (loading && user)) {
     return (
       <div className="flex flex-col gap-6 max-w-3xl mx-auto py-32 items-center">
         <Loader2 className="w-10 h-10 animate-spin text-[#D4AF37]" />
@@ -249,6 +255,8 @@ export default function WordQuizPage() {
       </div>
     );
   }
+
+  if (!user) return null;
 
   if (error || words.length === 0) {
     return (
@@ -402,7 +410,6 @@ export default function WordQuizPage() {
           </div>
         </div>
         
-        {/* Question Timer Badge */}
         <div className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 transition-colors duration-300",
           timeLeft <= 10 ? "border-rose-500 bg-rose-50 text-rose-600 animate-pulse" : "border-muted bg-muted/50 text-muted-foreground"

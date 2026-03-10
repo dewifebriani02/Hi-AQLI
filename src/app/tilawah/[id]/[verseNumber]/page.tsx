@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -46,7 +45,7 @@ export default function VerseDetailPage() {
   const currentVerseNum = parseInt(verseNumber);
   
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   const [verse, setVerse] = useState<VerseDetail | null>(null);
   const [surahName, setSurahName] = useState("");
@@ -59,7 +58,6 @@ export default function VerseDetailPage() {
   
   const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
 
-  // Check progress to handle Next button locking
   const progressQuery = useMemoFirebase(() => {
     if (!db || !user || !id) return null;
     return query(
@@ -162,14 +160,14 @@ export default function VerseDetailPage() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    disabled={currentVerseNum >= totalVerses || !isCurrentVerseCompleted} 
+                    disabled={currentVerseNum >= totalVerses || (!isUserLoading && user && !isCurrentVerseCompleted)} 
                     onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
                   >
-                    {!isCurrentVerseCompleted ? <Lock className="h-4 w-4 text-muted-foreground" /> : <ArrowRight className="h-5 w-5" />}
+                    {!isUserLoading && user && !isCurrentVerseCompleted ? <Lock className="h-4 w-4 text-muted-foreground" /> : <ArrowRight className="h-5 w-5" />}
                   </Button>
                 </div>
               </TooltipTrigger>
-              {!isCurrentVerseCompleted && (
+              {!isUserLoading && user && !isCurrentVerseCompleted && (
                 <TooltipContent>
                   <p className="text-[10px]">Selesaikan kuis ayat ini (100%) untuk lanjut</p>
                 </TooltipContent>
@@ -258,12 +256,14 @@ export default function VerseDetailPage() {
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/10 p-4">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 h-14 text-lg">
-              <Link href={`/tilawah/${id}/${verseNumber}/quiz`}><GraduationCap className="w-5 h-5" /> MULAI UJI HAFALAN</Link>
+              <Link href={user ? `/tilawah/${id}/${verseNumber}/quiz` : "/login"}>
+                <GraduationCap className="w-5 h-5" /> 
+                {user ? "MULAI UJI HAFALAN" : "MASUK UNTUK UJI HAFALAN"}
+              </Link>
             </Button>
           </CardFooter>
         </Card>
 
-        {/* Tips Menghafal Static */}
         <Card className="border-amber-200 bg-amber-50 shadow-sm">
           <CardHeader className="py-4 border-b border-amber-100 flex flex-row items-center gap-2">
             <Lightbulb className="w-5 h-5 text-amber-600" />
@@ -287,7 +287,6 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Tafsir Resmi */}
         <Card className="border-[#800000]/10 shadow-sm">
           <CardHeader className="bg-[#800000] text-white py-4">
             <CardTitle className="text-sm flex items-center gap-2 font-headline"><BookOpen className="w-4 h-4" /> Tafsir Resmi</CardTitle>
@@ -297,7 +296,6 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Hikmah & Konteks AI */}
         <Card className="border-indigo-100 bg-indigo-50/30">
           <CardHeader className="py-4 border-b border-indigo-50">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-indigo-900">
