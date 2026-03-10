@@ -2,9 +2,9 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,8 @@ import {
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 
 interface WordData {
   id: number;
@@ -43,6 +45,9 @@ export default function VerseDetailPage() {
   const verseNumber = params.verseNumber as string;
   const currentVerseNum = parseInt(verseNumber);
   
+  const db = useFirestore();
+  const { user } = useUser();
+
   const [verse, setVerse] = useState<VerseDetail | null>(null);
   const [surahName, setSurahName] = useState("");
   const [totalVerses, setTotalVerses] = useState(0);
@@ -52,8 +57,26 @@ export default function VerseDetailPage() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
   
-  // Repetition Counter State
   const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
+
+  // Check progress to handle Next button locking
+  const progressQuery = useMemoFirebase(() => {
+    if (!db || !user || !id) return null;
+    return query(
+      collection(db, "users", user.uid, "quiz_attempts"),
+      where("surahId", "==", id),
+      where("isPassed", "==", true)
+    );
+  }, [db, user?.uid, id]);
+
+  const { data: progress } = useCollection(progressQuery);
+
+  const completedVerseNumbers = useMemo(() => {
+    if (!progress) return new Set<number>();
+    return new Set(progress.map(p => p.verseNumber));
+  }, [progress]);
+
+  const isCurrentVerseCompleted = completedVerseNumbers.has(currentVerseNum);
 
   const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
     setAnalysisLoading(true);
@@ -131,7 +154,28 @@ export default function VerseDetailPage() {
         <div className="flex items-center gap-1">
           <Button asChild variant="ghost" size="icon" className="text-amber-600"><Link href={`/tilawah/${id}/${verseNumber}/quiz`}><GraduationCap className="h-5 w-5" /></Link></Button>
           <Button variant="ghost" size="icon" disabled={currentVerseNum <= 1} onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}><ArrowLeft className="h-5 w-5" /></Button>
-          <Button variant="ghost" size="icon" disabled={currentVerseNum >= totalVerses} onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}><ArrowRight className="h-5 w-5" /></Button>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-block">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    disabled={currentVerseNum >= totalVerses || !isCurrentVerseCompleted} 
+                    onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
+                  >
+                    {!isCurrentVerseCompleted ? <Lock className="h-4 w-4 text-muted-foreground" /> : <ArrowRight className="h-5 w-5" />}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!isCurrentVerseCompleted && (
+                <TooltipContent>
+                  <p className="text-[10px]">Selesaikan kuis ayat ini (100%) untuk lanjut</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -219,7 +263,7 @@ export default function VerseDetailPage() {
           </CardFooter>
         </Card>
 
-        {/* Static Tips Menghafal Kata */}
+        {/* Tips Menghafal Static */}
         <Card className="border-amber-200 bg-amber-50 shadow-sm">
           <CardHeader className="py-4 border-b border-amber-100 flex flex-row items-center gap-2">
             <Lightbulb className="w-5 h-5 text-amber-600" />
@@ -253,7 +297,7 @@ export default function VerseDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Hikmah & Konteks AI (Bimbingan Hikmah) */}
+        {/* Hikmah & Konteks AI */}
         <Card className="border-indigo-100 bg-indigo-50/30">
           <CardHeader className="py-4 border-b border-indigo-50">
             <CardTitle className="text-base flex items-center gap-2 font-headline text-indigo-900">

@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock } from "lucide-react";
 import Link from "next/link";
 import {
   Tooltip,
@@ -20,6 +21,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import { cn } from "@/lib/utils";
 
 interface Word {
   id: number;
@@ -59,6 +63,8 @@ export default function SurahDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
+  const db = useFirestore();
+  const { user } = useUser();
   
   const [surah, setSurah] = useState<SurahInfo | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
@@ -70,6 +76,23 @@ export default function SurahDetailPage() {
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Fetch progress for the current surah to handle locking
+  const progressQuery = useMemoFirebase(() => {
+    if (!db || !user || !id) return null;
+    return query(
+      collection(db, "users", user.uid, "quiz_attempts"),
+      where("surahId", "==", id),
+      where("isPassed", "==", true)
+    );
+  }, [db, user?.uid, id]);
+
+  const { data: progress, isLoading: isProgressLoading } = useCollection(progressQuery);
+
+  const completedVerseNumbers = useMemo(() => {
+    if (!progress) return new Set<number>();
+    return new Set(progress.map(p => p.verseNumber));
+  }, [progress]);
 
   useEffect(() => {
     const savedReciter = localStorage.getItem('aqli_reciter_id');
@@ -165,7 +188,7 @@ export default function SurahDetailPage() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-32"><Loader2 className="animate-spin text-[#800000]" /></div>;
+  if (loading || isProgressLoading) return <div className="flex justify-center py-32"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
@@ -194,59 +217,116 @@ export default function SurahDetailPage() {
 
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>
-          {verses.map((verse) => (
-            <div key={verse.id} className="py-12 px-4 space-y-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Link 
-                    href={`/tilawah/${id}/${verse.verse_number}`}
-                    className="flex items-center justify-center w-12 h-10 rounded-full bg-muted text-foreground text-xs font-bold border hover:bg-[#800000] hover:text-white transition-all"
-                  >
-                    ({verse.verse_number})
-                  </Link>
-                  <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] gap-1">
-                    <Link href={`/tilawah/${id}/${verse.verse_number}`}><Info className="h-3 w-3" /> DETAIL</Link>
-                  </Button>
-                  <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-amber-600 gap-1">
-                    <Link href={`/tilawah/${id}/${verse.verse_number}/quiz`}><GraduationCap className="h-3 w-3" /> UJI HAFALAN</Link>
+          {verses.map((verse) => {
+            const isFirstVerse = verse.verse_number === 1;
+            const prevVerseCompleted = completedVerseNumbers.has(verse.verse_number - 1);
+            const isLocked = !isFirstVerse && !prevVerseCompleted;
+            const isCompleted = completedVerseNumbers.has(verse.verse_number);
+
+            return (
+              <div key={verse.id} className={cn("py-12 px-4 space-y-8 transition-opacity", isLocked && "opacity-60")}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Link 
+                      href={isLocked ? "#" : `/tilawah/${id}/${verse.verse_number}`}
+                      className={cn(
+                        "flex items-center justify-center w-12 h-10 rounded-full text-xs font-bold border transition-all",
+                        isLocked ? "bg-muted text-muted-foreground cursor-not-allowed" : 
+                        isCompleted ? "bg-emerald-500 text-white border-emerald-600" :
+                        "bg-muted text-foreground border-border hover:bg-[#800000] hover:text-white"
+                      )}
+                      onClick={(e) => isLocked && e.preventDefault()}
+                    >
+                      {isLocked ? <Lock className="h-4 w-4" /> : `(${verse.verse_number})`}
+                    </Link>
+                    
+                    <Button asChild={!isLocked} variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] gap-1" disabled={isLocked}>
+                      {isLocked ? (
+                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> TERKUNCI</span>
+                      ) : (
+                        <Link href={`/tilawah/${id}/${verse.verse_number}`}><Info className="h-3 w-3" /> DETAIL</Link>
+                      )}
+                    </Button>
+                    
+                    <Button asChild={!isLocked} variant="ghost" size="sm" className={cn("text-[10px] font-bold gap-1", isCompleted ? "text-emerald-600" : "text-amber-600")} disabled={isLocked}>
+                      {isLocked ? (
+                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> TERKUNCI</span>
+                      ) : (
+                        <Link href={`/tilawah/${id}/${verse.verse_number}/quiz`}>
+                          {isCompleted ? <CheckCircle2 className="h-3 w-3" /> : <GraduationCap className="h-3 w-3" />}
+                          {isCompleted ? "SUDAH HAFAL" : "UJI HAFALAN"}
+                        </Link>
+                      )}
+                    </Button>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => toggleAudio(verse.verse_key)} disabled={isLocked}>
+                    {loadingAudioKey === verse.verse_key ? <Loader2 className="animate-spin h-4 w-4" /> : playingKey === verse.verse_key ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4" />}
                   </Button>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => toggleAudio(verse.verse_key)}>
-                  {loadingAudioKey === verse.verse_key ? <Loader2 className="animate-spin h-4 w-4" /> : playingKey === verse.verse_key ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4" />}
-                </Button>
-              </div>
 
-              <div className="flex flex-wrap justify-end gap-x-3 gap-y-4 w-full" dir="rtl">
-                {verse.words?.map((word, wordIdx) => {
-                  const wordKey = `${verse.verse_key}-${wordIdx}`;
-                  return (
-                    <Tooltip key={wordIdx} open={activeWordKey === wordKey} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
-                      <TooltipTrigger asChild>
-                        <span 
-                          tabIndex={0} role="button" onPointerEnter={() => setActiveWordKey(wordKey)}
-                          className="text-2xl md:text-3xl font-arabic leading-[1.8] text-foreground/90 hover:text-[#800000] focus:text-[#800000] outline-none cursor-help px-0.5 inline-block"
-                        >
-                          {word.text_uthmani}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipPortal>
-                        <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                          <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
-                        </TooltipContent>
-                      </TooltipPortal>
-                    </Tooltip>
-                  );
-                })}
-              </div>
+                <div className={cn("flex flex-wrap justify-end gap-x-3 gap-y-4 w-full", isLocked && "blur-[2px] select-none")} dir="rtl">
+                  {verse.words?.map((word, wordIdx) => {
+                    const wordKey = `${verse.verse_key}-${wordIdx}`;
+                    return (
+                      <Tooltip key={wordIdx} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                        <TooltipTrigger asChild>
+                          <span 
+                            tabIndex={isLocked ? -1 : 0} 
+                            role="button" 
+                            onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                            className={cn(
+                              "text-2xl md:text-3xl font-arabic leading-[1.8] text-foreground/90 outline-none transition-colors px-0.5 inline-block",
+                              !isLocked && "hover:text-[#800000] focus:text-[#800000] cursor-help"
+                            )}
+                          >
+                            {word.text_uthmani}
+                          </span>
+                        </TooltipTrigger>
+                        {!isLocked && (
+                          <TooltipPortal>
+                            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                              <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
+                            </TooltipContent>
+                          </TooltipPortal>
+                        )}
+                      </Tooltip>
+                    );
+                  })}
+                </div>
 
-              <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">
-                <p className="text-[10px] font-bold text-[#800000] mb-2 uppercase tracking-widest">Terjemahan Kemenag RI</p>
-                <div className="text-base text-foreground/90 leading-relaxed" dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }} />
+                <div className={cn("text-left bg-muted/30 p-5 rounded-xl border-l-4", isLocked ? "border-muted" : "border-[#800000]")}>
+                  <p className={cn("text-[10px] font-bold mb-2 uppercase tracking-widest", isLocked ? "text-muted-foreground" : "text-[#800000]")}>
+                    Terjemahan Kemenag RI
+                  </p>
+                  <div className={cn("text-base leading-relaxed", isLocked ? "text-muted-foreground italic" : "text-foreground/90")}>
+                    {isLocked ? "Selesaikan kuis ayat sebelumnya untuk membaca terjemahan ini." : <div dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }} />}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </TooltipProvider>
       </div>
     </div>
   );
+}
+
+function CheckCircle2(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  )
 }

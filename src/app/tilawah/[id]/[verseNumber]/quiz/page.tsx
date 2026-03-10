@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useFirestore, useUser } from "@/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 interface WordData {
   id: number;
@@ -33,6 +35,8 @@ export default function WordQuizPage() {
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
   const { toast } = useToast();
+  const db = useFirestore();
+  const { user } = useUser();
 
   const [words, setWords] = useState<WordData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,6 +118,30 @@ export default function WordQuizPage() {
     }
   }, [words, currentIdx]);
 
+  const saveProgress = useCallback(async (finalScore: number) => {
+    if (!user || !db) return;
+    const isPerfect = finalScore === words.length;
+    
+    try {
+      // Save attempt to Firestore matching backend.json structure
+      await addDoc(collection(db, "users", user.uid, "quiz_attempts"), {
+        userId: user.uid,
+        quizId: `verse_${id}_${verseNumber}`,
+        surahId: id,
+        verseNumber: parseInt(verseNumber),
+        score: finalScore,
+        totalQuestions: words.length,
+        isPassed: isPerfect,
+        durationSeconds: time,
+        createdAt: serverTimestamp(),
+        startTime: serverTimestamp(), // Approximate
+        endTime: serverTimestamp(),
+      });
+    } catch (e) {
+      console.error("Error saving progress:", e);
+    }
+  }, [user, db, id, verseNumber, words.length, time]);
+
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
@@ -127,25 +155,26 @@ export default function WordQuizPage() {
     setSelectedAnswer(answer);
     setIsCorrect(isAnsCorrect);
     
+    let nextScore = score;
     if (isAnsCorrect) {
       playSfx('correct');
-      setScore(s => s + 1);
+      nextScore = score + 1;
+      setScore(nextScore);
     } else {
       playSfx('incorrect');
     }
-
-    const finalScoreIfCorrect = isAnsCorrect ? score + 1 : score;
 
     setTimeout(() => {
       if (currentIdx + 1 < words.length) {
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
-        if (finalScoreIfCorrect === words.length) {
+        if (nextScore === words.length) {
           playSfx('perfect');
         } else {
           playSfx('fail');
         }
+        saveProgress(nextScore);
       }
     }, 1200);
   };
@@ -227,12 +256,20 @@ export default function WordQuizPage() {
             
             <div className="bg-muted/30 p-4 rounded-xl space-y-3">
               <p className="text-sm font-medium">Percobaan ke-{attempts}</p>
-              {!isPerfect && (
+              {!isPerfect ? (
                 <Alert className="bg-rose-50 border-rose-200 text-rose-800 text-left">
                   <RotateCcw className="h-4 w-4 text-rose-800" />
                   <AlertTitle className="text-xs font-bold uppercase">Target Harus 100%</AlertTitle>
                   <AlertDescription className="text-[10px]">
-                    Silakan ulangi kuis hingga Anda benar-benar hafal seluruh arti kata dalam ayat ini.
+                    Silakan ulangi kuis hingga Anda benar-benar hafal seluruh arti kata dalam ayat ini untuk membuka ayat selanjutnya.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className="bg-emerald-50 border-emerald-200 text-emerald-800 text-left">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-800" />
+                  <AlertTitle className="text-xs font-bold uppercase">Berhasil!</AlertTitle>
+                  <AlertDescription className="text-[10px]">
+                    Masyallah! Anda telah menguasai ayat ini. Ayat selanjutnya telah terbuka untuk Anda pelajari.
                   </AlertDescription>
                 </Alert>
               )}
@@ -241,7 +278,7 @@ export default function WordQuizPage() {
           <CardFooter className="flex flex-col gap-3 p-6">
             {isPerfect ? (
               <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12 shadow-lg">
-                <Link href={`/tilawah/${id}/${verseNumber}`}>SELESAI & LANJUT</Link>
+                <Link href={`/tilawah/${id}`}>KEMBALI KE DAFTAR</Link>
               </Button>
             ) : (
               <Button 
