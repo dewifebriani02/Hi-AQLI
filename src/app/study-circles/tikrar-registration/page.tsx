@@ -25,7 +25,6 @@ import {
   ArrowRight,
   User,
   Phone,
-  Calendar,
   ShieldCheck,
   Image as ImageIcon,
   Check
@@ -42,10 +41,10 @@ const paymentMethods = [
 ];
 
 const levels = [
-  { id: "1", name: "Level 1 (1 Hal / Pekan)" },
-  { id: "2", name: "Level 2 (1 Hal / 2 Pekan)" },
-  { id: "3", name: "Level 3 (1 Hal / 3 Pekan)" },
-  { id: "4", name: "Level 4 (1 Hal / Bulan)" },
+  { id: "1", name: "Level 1 (1 Hal / Pekan)", price: 100000 },
+  { id: "2", name: "Level 2 (1 Hal / 2 Pekan)", price: 75000 },
+  { id: "3", name: "Level 3 (1 Hal / 3 Pekan)", price: 50000 },
+  { id: "4", name: "Level 4 (1 Hal / Bulan)", price: 50000 },
 ];
 
 export default function TikrarRegistrationPage() {
@@ -62,14 +61,20 @@ export default function TikrarRegistrationPage() {
   // Form States
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [level, setLevel] = useState("1");
+  const [level, setLevel] = useState("3");
   const [targetJuz, setTargetJuz] = useState("30");
   const [method, setMethod] = useState("transfer");
   const [uniqueCode, setUniqueCode] = useState(0);
   const [senderName, setSenderName] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
 
-  const PRICE = 50000;
+  // Dynamic Price based on level
+  const getBasePrice = (levelId: string) => {
+    const selectedLevel = levels.find(l => l.id === levelId);
+    return selectedLevel ? selectedLevel.price : 50000;
+  };
+
+  const PRICE = getBasePrice(level);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -119,8 +124,6 @@ export default function TikrarRegistrationPage() {
     try {
       const finalAmount = PRICE + uniqueCode;
       
-      // We simulate file upload by storing the name and metadata.
-      // Real file upload would use Firebase Storage.
       await addDoc(collection(db, "tikrar_registrations"), {
         userId: user?.uid,
         userName: name,
@@ -213,7 +216,7 @@ export default function TikrarRegistrationPage() {
               <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 space-y-2">
                 <h4 className="text-xs font-bold text-amber-900 flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> PAKET PREMIUM</h4>
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Infaq <strong>Rp 50.000 / Bulan</strong> untuk akses counter hafalan Juz pilihan, bimbingan berkala, dan sertifikat ujian.
+                  Infaq pendaftaran sudah termasuk akses counter hafalan Juz pilihan, bimbingan berkala, dan sertifikat ujian.
                 </p>
               </div>
 
@@ -233,7 +236,7 @@ export default function TikrarRegistrationPage() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Pilih Level</Label>
                     <Select value={level} onValueChange={setLevel}>
@@ -241,7 +244,11 @@ export default function TikrarRegistrationPage() {
                         <SelectValue placeholder="Pilih Level" />
                       </SelectTrigger>
                       <SelectContent>
-                        {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                        {levels.map(l => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.name} - Rp {l.price.toLocaleString('id-ID')}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
