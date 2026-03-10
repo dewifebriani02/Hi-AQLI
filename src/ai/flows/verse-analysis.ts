@@ -17,7 +17,8 @@ const AnalyzeVerseInputSchema = z.object({
 export type AnalyzeVerseInput = z.infer<typeof AnalyzeVerseInputSchema>;
 
 const AnalyzeVerseOutputSchema = z.object({
-  context: z.string().describe('Konteks sejarah (Asbabun Nuzul), pelajaran praktis, dan tips khusus untuk menghafal ayat ini'),
+  hikmah: z.string().describe('Pelajaran praktis dan konteks sejarah ayat ini.'),
+  tipsHafalan: z.string().describe('Tips khusus atau jembatan keledai untuk membantu menghafal kata-kata dalam ayat ini.'),
 });
 export type AnalyzeVerseOutput = z.infer<typeof AnalyzeVerseOutputSchema>;
 
@@ -55,11 +56,10 @@ Ayat: {{{verseNumber}}}
 Teks: {{{verseText}}}
 
 Tugas Anda:
-1. Jelaskan hikmah atau pelajaran praktis dari ayat ini.
-2. Berikan konteks sejarah (Asbabun Nuzul) jika relevan.
-3. Berikan satu tips praktis atau jembatan keledai untuk membantu menghafal ayat ini berdasarkan bunyi atau maknanya.
+1. Pada bagian 'hikmah', jelaskan pelajaran praktis atau Asbabun Nuzul (jika ada).
+2. Pada bagian 'tipsHafalan', berikan satu tips praktis atau jembatan keledai khusus untuk membantu menghafal kata-kata atau bunyi unik dalam ayat ini agar mudah diingat.
 
-Pastikan respons dalam Bahasa Indonesia yang inspiratif, akurat secara keilmuan Islam, dan disusun dengan poin-poin yang mudah dibaca.`,
+Pastikan respons dalam Bahasa Indonesia yang inspiratif dan disusun dengan poin-poin yang mudah dibaca.`,
 });
 
 const analyzeVerseFlow = ai.defineFlow(

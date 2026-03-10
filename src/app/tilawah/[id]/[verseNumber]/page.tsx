@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +57,10 @@ export default function VerseDetailPage() {
     setAnalysisLoading(true);
     try {
       const result = await getVerseAnalysis({ surahName: name, verseNumber: num, verseText: text });
-      setAnalysis(result);
+      // Although getVerseAnalysis returns AnalyzeVerseOutput, we handle the case where it might be empty
+      if (result) {
+        setAnalysis(result);
+      }
     } catch (e) {
       console.error("AI Analysis Error:", e);
     } finally {
@@ -161,6 +164,23 @@ export default function VerseDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Tips Hafalan - Ditempatkan sebelum penjabaran kata */}
+      <Card className="border-amber-200 bg-amber-50/50 shadow-sm">
+        <CardHeader className="py-3 border-b border-amber-100 flex flex-row items-center gap-2">
+          <Lightbulb className="w-5 h-5 text-amber-600" />
+          <CardTitle className="text-sm font-bold font-headline text-amber-800">Tips Menghafal Kata</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          {analysisLoading ? (
+            <Skeleton className="h-4 w-full" />
+          ) : (
+            <p className="text-sm text-amber-900 leading-relaxed italic">
+              {analysis?.tipsHafalan || "Memuat tips hafalan khusus untuk Anda..."}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 gap-6">
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-muted/30 py-4 flex flex-row items-center justify-between">
@@ -197,7 +217,7 @@ export default function VerseDetailPage() {
                   </div>
                   <div className="text-right flex-1">
                     <p className="text-sm font-medium">{word.translation.text}</p>
-                    <p className="text-[10px] text-muted-foreground italic">Ketuk untuk menghitung repetisi</p>
+                    <p className="text-[10px] text-muted-foreground italic">Ketuk untuk repetisi hafalan</p>
                   </div>
                 </div>
               ))}
@@ -205,16 +225,16 @@ export default function VerseDetailPage() {
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/10 p-4">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 h-14 text-lg">
-              <Link href={`/tilawah/${id}/${verseNumber}/quiz`}><GraduationCap className="w-5 h-5" /> UJI HAFALAN KATA</Link>
+              <Link href={`/tilawah/${id}/${verseNumber}/quiz`}><GraduationCap className="w-5 h-5" /> MULAI UJI HAFALAN</Link>
             </Button>
           </CardFooter>
         </Card>
 
-        {/* Hikmah & Tips Menghafal AI - Dikembalikan dan diperluas */}
-        <Card className="border-accent/20 bg-accent/5 shadow-inner">
-          <CardHeader className="py-4 border-b border-accent/10">
-            <CardTitle className="text-base flex items-center gap-2 font-headline text-[#800000]">
-              <BrainCircuit className="w-5 h-5" /> Hikmah & Tips Menghafal AI
+        {/* Hikmah & Konteks - Diletakkan di bawah setelah detail kata */}
+        <Card className="border-indigo-100 bg-indigo-50/30">
+          <CardHeader className="py-4 border-b border-indigo-50">
+            <CardTitle className="text-base flex items-center gap-2 font-headline text-indigo-900">
+              <BrainCircuit className="w-5 h-5" /> Bimbingan Hikmah & Konteks
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
@@ -222,12 +242,11 @@ export default function VerseDetailPage() {
               <div className="space-y-3">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-4/6" />
               </div>
             ) : (
-              <div className="prose prose-sm max-w-none text-foreground/90">
+              <div className="prose prose-sm max-w-none text-indigo-950">
                 <p className="leading-relaxed whitespace-pre-wrap italic">
-                  {analysis?.context || "Sedang memformulasikan hikmah dan tips hafalan untuk Anda..."}
+                  {analysis?.hikmah || "Memformulasikan bimbingan hikmah untuk Anda..."}
                 </p>
               </div>
             )}
