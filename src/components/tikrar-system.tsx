@@ -15,7 +15,8 @@ import {
   Play,
   Loader2,
   BookOpen,
-  Lock
+  Lock,
+  ShieldAlert
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ export function TikrarSystem() {
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPrevPageDone, setIsPrevPageDone] = useState(true);
   const [blocks, setBlocks] = useState<Record<number, BlockState>>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
     2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -47,6 +49,23 @@ export function TikrarSystem() {
   });
 
   const TARGET = 40;
+
+  // Function to check if a specific page is completed
+  const checkPageCompletion = (pageNum: number) => {
+    if (pageNum < 1) return true;
+    const saved = localStorage.getItem(`tikrar_progress_p${pageNum}`);
+    if (!saved) return false;
+    try {
+      const data = JSON.parse(saved) as Record<number, BlockState>;
+      return [1, 2, 3, 4].every(id => 
+        data[id].a.count === TARGET && 
+        data[id].b.count === TARGET && 
+        data[id].combined.count === TARGET
+      );
+    } catch (e) {
+      return false;
+    }
+  };
 
   useEffect(() => {
     async function fetchVerses() {
@@ -64,14 +83,31 @@ export function TikrarSystem() {
         setLoading(false);
       }
     }
+
+    // Load progress from localStorage
+    const savedProgress = localStorage.getItem(`tikrar_progress_p${page}`);
+    if (savedProgress) {
+      setBlocks(JSON.parse(savedProgress));
+    } else {
+      setBlocks({
+        1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+      });
+    }
+
+    // Check if previous page is done
+    setIsPrevPageDone(page === 1 || checkPageCompletion(page - 1));
     fetchVerses();
-    setBlocks({
-      1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-    });
   }, [page]);
+
+  // Save to localStorage whenever blocks change
+  useEffect(() => {
+    if (!loading) {
+      localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify(blocks));
+    }
+  }, [blocks, page, loading]);
 
   const getVersesForBlock = (blockId: number) => {
     if (verses.length === 0) return [];
@@ -143,10 +179,27 @@ export function TikrarSystem() {
           <Loader2 className="h-8 w-8 animate-spin text-[#800000]" />
           <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Menyiapkan Ayat Hafalan...</p>
         </div>
+      ) : !isPrevPageDone ? (
+        <Card className="border-none bg-muted/20 py-20">
+          <CardContent className="flex flex-col items-center justify-center text-center gap-6">
+            <div className="w-20 h-20 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+              <Lock className="w-10 h-10" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold font-headline">Halaman Terkunci</h3>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                Anda harus menuntaskan seluruh Tikrar di <strong>Halaman {page - 1}</strong> hingga 100% untuk membuka halaman ini.
+              </p>
+            </div>
+            <Button onClick={() => setPage(page - 1)} variant="outline" className="font-bold gap-2">
+              <ChevronLeft className="w-4 h-4" /> Kembali ke Halaman {page - 1}
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 gap-8">
           {[1, 2, 3, 4].map((id) => {
-            const isLocked = id > 1 && !isBlockDone(id - 1);
+            const isSequentialLocked = id > 1 && !isBlockDone(id - 1);
             return (
               <BlockCard 
                 key={id} 
@@ -156,7 +209,7 @@ export function TikrarSystem() {
                 onIncrement={increment} 
                 onReset={() => resetBlock(id)}
                 target={TARGET}
-                isLocked={isLocked}
+                isLocked={isSequentialLocked}
               />
             );
           })}
@@ -196,7 +249,6 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
       isLocked ? "border-muted bg-muted/5 opacity-60 pointer-events-none" :
       isBlockDone ? "border-emerald-500 bg-emerald-50/30" : "border-muted"
     )}>
-      {/* Active Focus Header */}
       <div className={cn(
         "py-3 px-6 border-b flex items-center justify-between",
         isLocked ? "bg-muted/20 border-muted" : "bg-[#800000]/5 border-[#800000]/10"
