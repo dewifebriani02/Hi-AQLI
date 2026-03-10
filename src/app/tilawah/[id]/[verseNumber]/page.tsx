@@ -164,36 +164,6 @@ export default function VerseDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Static Tips Menghafal Kata */}
-      <Card className="border-amber-200 bg-amber-50 shadow-sm">
-        <CardHeader className="py-4 border-b border-amber-100 flex flex-row items-center gap-2">
-          <Lightbulb className="w-5 h-5 text-amber-600" />
-          <CardTitle className="text-base font-bold font-headline text-amber-900">Tips Menghafal Terjemahan Per Kata</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <ul className="space-y-4">
-            <li className="flex gap-3">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">1</div>
-              <p className="text-sm text-amber-900 leading-relaxed">
-                <strong>Visualisasi</strong>: Bayangkan makna kata tersebut secara visual di dalam pikiran Anda saat membacanya.
-              </p>
-            </li>
-            <li className="flex gap-3">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">2</div>
-              <p className="text-sm text-amber-900 leading-relaxed">
-                <strong>Repetisi</strong>: Ulangi setiap kata sebanyak <strong>minimal 5 kali</strong> dengan mengetuk baris kata pada daftar di bawah.
-              </p>
-            </li>
-            <li className="flex gap-3">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">3</div>
-              <p className="text-sm text-amber-900 leading-relaxed">
-                <strong>Koneksi</strong>: Fokuskan pikiran pada hubungan antara bunyi pengucapan Arab dan arti bahasa Indonesianya.
-              </p>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 gap-6">
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-muted/30 py-4 flex flex-row items-center justify-between">
@@ -241,6 +211,36 @@ export default function VerseDetailPage() {
               <Link href={`/tilawah/${id}/${verseNumber}/quiz`}><GraduationCap className="w-5 h-5" /> MULAI UJI HAFALAN</Link>
             </Button>
           </CardFooter>
+        </Card>
+
+        {/* Static Tips Menghafal Kata (Moved below Start Quiz button) */}
+        <Card className="border-amber-200 bg-amber-50 shadow-sm">
+          <CardHeader className="py-4 border-b border-amber-100 flex flex-row items-center gap-2">
+            <Lightbulb className="w-5 h-5 text-amber-600" />
+            <CardTitle className="text-base font-bold font-headline text-amber-900">Tips Menghafal Terjemahan Per Kata</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <ul className="space-y-4">
+              <li className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">1</div>
+                <p className="text-sm text-amber-900 leading-relaxed">
+                  <strong>Visualisasi</strong>: Bayangkan makna kata tersebut secara visual di dalam pikiran Anda saat membacanya.
+                </p>
+              </li>
+              <li className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">2</div>
+                <p className="text-sm text-amber-900 leading-relaxed">
+                  <strong>Repetisi</strong>: Ulangi setiap kata sebanyak <strong>minimal 5 kali</strong> dengan mengetuk baris kata pada daftar di atas.
+                </p>
+              </li>
+              <li className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">3</div>
+                <p className="text-sm text-amber-900 leading-relaxed">
+                  <strong>Koneksi</strong>: Fokuskan pikiran pada hubungan antara bunyi pengucapan Arab dan arti bahasa Indonesianya.
+                </p>
+              </li>
+            </ul>
+          </CardContent>
         </Card>
 
         {/* Hikmah & Konteks AI (Terpisah di bagian bawah) */}
