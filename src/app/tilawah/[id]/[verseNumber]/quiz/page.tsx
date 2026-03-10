@@ -4,7 +4,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer, Star, Heart } from "lucide-react";
+import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer, Star, Heart, Clock } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -49,15 +49,16 @@ export default function WordQuizPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [attempts, setAttempts] = useState(1);
-  const [time, setTime] = useState(0);
+  const [totalTime, setTotalTime] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(60); // Question timer
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
 
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
-      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Blip
-      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3', // Ding
-      perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Fanfare
-      fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3', // Fail
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
+      perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
+      fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3',
     };
     
     try {
@@ -90,20 +91,29 @@ export default function WordQuizPage() {
     fetchWords();
   }, [fetchWords]);
 
+  // Total time and question countdown effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (!isFinished && !loading) {
+    if (!isFinished && !loading && !selectedAnswer) {
       interval = setInterval(() => {
-        setTime((prev) => prev + 1);
+        setTotalTime((prev) => prev + 1);
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            handleAnswer(""); // Timeout triggers an incorrect answer
+            return 60;
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isFinished, loading]);
+  }, [isFinished, loading, selectedAnswer]);
 
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
       setSelectedAnswer(null);
       setIsCorrect(null);
+      setTimeLeft(60); // Reset question timer for new word
 
       const currentWord = words[currentIdx];
       const correct = currentWord.translation.text;
@@ -123,7 +133,6 @@ export default function WordQuizPage() {
     const isPerfect = finalScore === words.length;
     
     try {
-      // Save attempt to Firestore matching backend.json structure
       await addDoc(collection(db, "users", user.uid, "quiz_attempts"), {
         userId: user.uid,
         quizId: `verse_${id}_${verseNumber}`,
@@ -132,15 +141,15 @@ export default function WordQuizPage() {
         score: finalScore,
         totalQuestions: words.length,
         isPassed: isPerfect,
-        durationSeconds: time,
+        durationSeconds: totalTime,
         createdAt: serverTimestamp(),
-        startTime: serverTimestamp(), // Approximate
+        startTime: serverTimestamp(),
         endTime: serverTimestamp(),
       });
     } catch (e) {
       console.error("Error saving progress:", e);
     }
-  }, [user, db, id, verseNumber, words.length, time]);
+  }, [user, db, id, verseNumber, words.length, totalTime]);
 
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
@@ -149,10 +158,10 @@ export default function WordQuizPage() {
       (document.activeElement as HTMLElement)?.blur();
     }
 
-    const correct = words[currentIdx].translation.text;
+    const correct = words[currentIdx]?.translation.text;
     const isAnsCorrect = answer === correct;
     
-    setSelectedAnswer(answer);
+    setSelectedAnswer(answer === "" ? "Waktu Habis" : answer);
     setIsCorrect(isAnsCorrect);
     
     let nextScore = score;
@@ -162,6 +171,13 @@ export default function WordQuizPage() {
       setScore(nextScore);
     } else {
       playSfx('incorrect');
+      if (answer === "") {
+        toast({
+          variant: "destructive",
+          title: "Waktu Habis!",
+          description: "Satu soal maksimal 1 menit.",
+        });
+      }
     }
 
     setTimeout(() => {
@@ -186,7 +202,8 @@ export default function WordQuizPage() {
     setSelectedAnswer(null);
     setIsCorrect(null);
     setAttempts(a => a + 1);
-    setTime(0);
+    setTotalTime(0);
+    setTimeLeft(60);
     setSentCongrats([]);
   };
 
@@ -249,8 +266,8 @@ export default function WordQuizPage() {
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skor</p>
               </div>
               <div className="space-y-1">
-                <div className="text-4xl font-bold">{formatTime(time)}</div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Waktu</p>
+                <div className="text-4xl font-bold">{formatTime(totalTime)}</div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Waktu</p>
               </div>
             </div>
             
@@ -291,7 +308,6 @@ export default function WordQuizPage() {
           </CardFooter>
         </Card>
 
-        {/* Leaderboard Section */}
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
@@ -347,9 +363,6 @@ export default function WordQuizPage() {
               </div>
             </CardContent>
           </Card>
-          <p className="text-[10px] text-center text-muted-foreground italic px-4">
-            Teruslah melatih repetisi kata untuk meningkatkan kecepatan dan masuk ke daftar juara.
-          </p>
         </div>
       </div>
     );
@@ -366,18 +379,27 @@ export default function WordQuizPage() {
           <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
             <span className="text-[#D4AF37]">Percobaan {attempts}</span>
             <span>•</span>
-            <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {formatTime(time)}</span>
+            <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {formatTime(totalTime)}</span>
           </div>
         </div>
-        <div className="text-sm font-bold bg-muted px-3 py-1 rounded-full">{currentIdx + 1} / {words.length}</div>
+        
+        {/* Question Timer Badge */}
+        <div className={cn(
+          "flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 transition-colors duration-300",
+          timeLeft <= 10 ? "border-rose-500 bg-rose-50 text-rose-600 animate-pulse" : "border-muted bg-muted/50 text-muted-foreground"
+        )}>
+          <Clock className="w-3.5 h-3.5" />
+          <span className="text-sm font-black font-mono">{timeLeft}s</span>
+        </div>
       </div>
 
       <Progress value={((currentIdx + 1) / words.length) * 100} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
       <Card className="border-[#D4AF37]/10 shadow-2xl overflow-hidden rounded-2xl">
-        <CardHeader className="text-center pb-10 pt-12 bg-muted/10">
-          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Pilih Arti yang Tepat:</CardTitle>
+        <CardHeader className="text-center pb-10 pt-12 bg-muted/10 relative">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Pilih Arti yang Tepat:</div>
           <div className="text-6xl md:text-8xl font-arabic leading-relaxed text-[#B8860B]">{words[currentIdx]?.text_uthmani}</div>
+          <div className="absolute top-4 right-4 text-[9px] font-bold text-muted-foreground">KATA {currentIdx + 1} / {words.length}</div>
         </CardHeader>
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {options.map((option, idx) => (
@@ -404,6 +426,10 @@ export default function WordQuizPage() {
           ))}
         </CardContent>
       </Card>
+      
+      <p className="text-[10px] text-center text-muted-foreground italic">
+        Selesaikan setiap kata dalam kurang dari 60 detik. Fokus pada hubungan makna dan bunyi.
+      </p>
     </div>
   );
 }
