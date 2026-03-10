@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -20,7 +19,7 @@ const studyCircles = [
     schedule: "Setiap Hari (Mandiri)",
     level: "All Levels",
     isPremium: true,
-    tag: "DAFTAR BUKA",
+    tag: "PENDAFTARAN DIBUKA",
     regLink: "/study-circles/tikrar-registration"
   },
   {
@@ -119,7 +118,7 @@ export default function StudyCirclesPage() {
                         {isRegistered ? (
                           <Badge className="bg-blue-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">AKTIF - JUZ {userPaidJuz}</Badge>
                         ) : (
-                          circle.tag && <Badge className="bg-emerald-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">{circle.tag}</Badge>
+                          circle.tag && <Badge className="bg-emerald-500 text-white border-none text-[6px] sm:text-[7px] h-4 px-1.5 font-black uppercase tracking-tighter sm:tracking-normal">{circle.tag}</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
