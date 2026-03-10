@@ -273,22 +273,29 @@ export function TikrarSystem() {
   );
 }
 
-// Logic to find split points (waqaf marks) in Uthmani text
-const findBestSplitPoint = (allWords: Array<Word & { verseKey: string }>) => {
-  const waqafChars = /[\u06D6-\u06DC]/;
+// Logic to find split points (waqaf marks or end of verses) in Uthmani text
+const findBestSplitPoint = (allWords: Array<Word & { verseKey: string, isLastOfVerse: boolean }>) => {
+  // Regex for common waqaf marks and end of verse
+  const waqafChars = /[\u06D6-\u06DC\u06DF-\u06E2\u06E4\u06E7\u06E8]/;
   const potentialPoints: number[] = [];
 
   allWords.forEach((word, idx) => {
-    // If word contains a waqaf mark, it's a potential split point
-    if (waqafChars.test(word.text_uthmani)) {
+    // End of a verse is always a great split point
+    if (word.isLastOfVerse) {
+      potentialPoints.push(idx + 1);
+    }
+    // Word containing a waqaf mark
+    else if (waqafChars.test(word.text_uthmani)) {
       potentialPoints.push(idx + 1);
     }
   });
 
+  // If no waqaf or end of verse found, split at half
   if (potentialPoints.length === 0) {
     return Math.ceil(allWords.length / 2);
   }
 
+  // Find the split point closest to the middle
   const middle = allWords.length / 2;
   let bestPoint = potentialPoints[0];
   let minDiff = Math.abs(bestPoint - middle);
@@ -335,7 +342,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
       return <p className="text-xs italic text-muted-foreground" dir="ltr">Tidak ada ayat di bagian ini.</p>;
     }
 
-    // Flatten all words with context
+    // Flatten all words with context for a single continuous flow
     const allWords: Array<Word & { verseKey: string, isLastOfVerse: boolean }> = [];
     verses.forEach(v => {
       v.words.forEach((w, wIdx) => {
@@ -347,75 +354,53 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
       });
     });
 
-    // Find best point to split into 'a' and 'b' (based on waqaf)
+    // Find best point to split into color regions 'a' and 'b' (based on waqaf)
     const splitIdx = findBestSplitPoint(allWords);
-    const wordsA = allWords.slice(0, splitIdx);
-    const wordsB = allWords.slice(splitIdx);
 
     return (
       <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-        <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 text-center" dir="rtl">
-          {/* Render Part A */}
-          <span className="inline-block">
-            {wordsA.map((word, idx) => {
-              const wordKey = `tm${id}-a-${idx}`;
-              return (
-                <React.Fragment key={wordKey}>
-                  <Tooltip open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
-                    <TooltipTrigger asChild>
-                      <span 
-                        className="text-xl md:text-2xl font-arabic leading-[2.6] text-[#800000] cursor-help px-0.5"
-                        onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
-                      >
-                        {word.text_uthmani}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipPortal>
-                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                        <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
-                      </TooltipContent>
-                    </TooltipPortal>
-                  </Tooltip>
-                  {word.isLastOfVerse && (
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#800000]/30 text-[8px] font-bold text-[#800000] mx-1 align-middle bg-white shadow-xs">
-                      ({word.verseKey.split(':')[1]})
-                    </span>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </span>
+        <div 
+          className="flex flex-wrap justify-center items-center gap-x-0 gap-y-2 text-center w-full" 
+          dir="rtl"
+        >
+          {allWords.map((word, idx) => {
+            const isPartA = idx < splitIdx;
+            const wordKey = `tm${id}-${isPartA ? 'a' : 'b'}-${idx}`;
+            const textColor = isPartA ? "text-[#800000]" : "text-[#065f46]";
+            const tooltipBg = isPartA ? "bg-[#800000]" : "bg-[#065f46]";
 
-          {/* Render Part B */}
-          <span className="inline-block">
-            {wordsB.map((word, idx) => {
-              const wordKey = `tm${id}-b-${idx}`;
-              return (
-                <React.Fragment key={wordKey}>
-                  <Tooltip open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
-                    <TooltipTrigger asChild>
-                      <span 
-                        className="text-xl md:text-2xl font-arabic leading-[2.6] text-[#065f46] cursor-help px-0.5"
-                        onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
-                      >
-                        {word.text_uthmani}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipPortal>
-                      <TooltipContent className="bg-[#065f46] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                        <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
-                      </TooltipContent>
-                    </TooltipPortal>
-                  </Tooltip>
-                  {word.isLastOfVerse && (
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#065f46]/30 text-[8px] font-bold text-[#065f46] mx-1 align-middle bg-white shadow-xs">
-                      ({word.verseKey.split(':')[1]})
+            return (
+              <React.Fragment key={wordKey}>
+                <Tooltip open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                  <TooltipTrigger asChild>
+                    <span 
+                      className={cn(
+                        "text-xl md:text-2xl font-arabic leading-[2.6] cursor-help px-0.5 transition-colors",
+                        textColor
+                      )}
+                      onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                    >
+                      {word.text_uthmani}
                     </span>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </span>
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent className={cn("text-white border-none shadow-lg py-1.5 px-3 z-[100]", tooltipBg)}>
+                      <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
+                    </TooltipContent>
+                  </TooltipPortal>
+                </Tooltip>
+                
+                {word.isLastOfVerse && (
+                  <span className={cn(
+                    "inline-flex items-center justify-center w-6 h-6 rounded-full border text-[8px] font-bold mx-1 align-middle bg-white shadow-xs shrink-0",
+                    isPartA ? "border-[#800000]/30 text-[#800000]" : "border-[#065f46]/30 text-[#065f46]"
+                  )}>
+                    ({word.verseKey.split(':')[1]})
+                  </span>
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
       </TooltipProvider>
     );
@@ -475,7 +460,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
 
       <CardContent className="space-y-8 px-6 pb-8">
         <div className={cn(
-          "bg-[#fffdf5] p-5 rounded-2xl border-2 shadow-inner relative group min-h-[140px] flex flex-col justify-center transition-all overflow-hidden",
+          "bg-[#fffdf5] p-5 rounded-2xl border-2 shadow-inner relative group min-h-[140px] flex flex-col justify-center items-center transition-all overflow-hidden",
           isLocked ? "border-muted grayscale blur-[1px]" : "border-[#800000]/10"
         )}>
           <div className="absolute top-3 left-3 opacity-20">
