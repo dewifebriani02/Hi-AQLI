@@ -14,10 +14,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BookOpen, 
   RotateCcw, 
-  Layers
+  Layers,
+  BarChart3
 } from "lucide-react";
 import Link from "next/link";
 import { TikrarSystem } from "@/components/tikrar-system";
+import { ProgressClient } from "@/components/progress-client";
 
 const tajweedRules = [
   {
@@ -52,30 +54,43 @@ export default function HafalanPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Hafalan & Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Gunakan sistem 4 TM untuk memperkuat hafalan satu halaman Mushaf melalui 40x repetisi per maqta.
+          Gunakan Tikrar Daily untuk memperkuat hafalan satu halaman Mushaf melalui 40x repetisi per maqta.
         </p>
       </div>
 
-      <Tabs defaultValue="tikrar-4-tm" className="w-full">
+      <Tabs defaultValue="tikrar-daily" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="tikrar-4-tm" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
-            <Layers className="w-4 h-4" /> Sistem 4 TM
+          <TabsTrigger value="tikrar-daily" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
+            <Layers className="w-4 h-4" /> Tikrar Daily
           </TabsTrigger>
-          <TabsTrigger value="theory" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
-            <BookOpen className="w-4 h-4" /> Teori Tajwid
+          <TabsTrigger value="progress" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
+            <BarChart3 className="w-4 h-4" /> Progres Hafalan
           </TabsTrigger>
         </TabsList>
 
-        {/* SYSTEM 4 TM TAB */}
-        <TabsContent value="tikrar-4-tm" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {/* SYSTEM TIKRAR DAILY TAB */}
+        <TabsContent value="tikrar-daily" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <TikrarSystem />
         </TabsContent>
 
-        {/* THEORY TAB */}
-        <TabsContent value="theory" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+        {/* PROGRESS TAB */}
+        <TabsContent value="progress" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-            <div className="md:col-span-8">
+            <div className="md:col-span-8 space-y-6">
+              <Card className="border-none shadow-md bg-muted/20">
+                <CardHeader>
+                  <CardTitle className="text-lg font-headline">Statistik Hafalan</CardTitle>
+                  <CardDescription>Ringkasan pencapaian Tikrar Anda dalam 6 bulan terakhir.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ProgressClient />
+                </CardContent>
+              </Card>
+
               <Accordion type="single" collapsible className="w-full">
+                <div className="px-1 mb-4">
+                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Referensi Tajwid</h3>
+                </div>
                 {tajweedRules.map((rule, index) => (
                   <AccordionItem value={`item-${index}`} key={index} className="border-b border-[#800000]/10">
                     <AccordionTrigger className="text-lg font-headline hover:no-underline py-6">
@@ -92,8 +107,9 @@ export default function HafalanPage() {
                 ))}
               </Accordion>
             </div>
+            
             <div className="md:col-span-4">
-              <Card className="border-[#800000]/10 shadow-lg">
+              <Card className="border-[#800000]/10 shadow-lg sticky top-24">
                 <CardHeader className="bg-[#800000]/5">
                   <CardTitle className="text-lg font-headline text-[#800000]">Uji Pengetahuan</CardTitle>
                   <CardDescription>Ikuti kuis untuk memeriksa pemahaman Anda tentang aturan Tajwid.</CardDescription>
