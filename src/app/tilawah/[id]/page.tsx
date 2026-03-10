@@ -69,6 +69,9 @@ export default function SurahDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Tooltip persistence state
+  const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
+
   // Audio States
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
@@ -348,24 +351,38 @@ export default function SurahDetailPage() {
                 className="flex flex-wrap justify-end gap-x-3 gap-y-4 w-full" 
                 dir="rtl"
               >
-                {verse.words?.map((word, wordIdx) => (
-                  <Tooltip key={wordIdx}>
-                    <TooltipTrigger asChild>
-                      <span 
-                        tabIndex={0}
-                        role="button"
-                        className="text-2xl md:text-3xl font-arabic leading-[1.8] text-right text-foreground/90 hover:text-[#800000] focus:text-[#800000] outline-none transition-colors duration-200 cursor-help select-none"
-                      >
-                        {word.text_uthmani}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipPortal>
-                      <TooltipContent side="top" sideOffset={10} className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100] animate-in fade-in-0 zoom-in-95">
-                        <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
-                      </TooltipContent>
-                    </TooltipPortal>
-                  </Tooltip>
-                ))}
+                {verse.words?.map((word, wordIdx) => {
+                  const wordKey = `${verse.verse_key}-${wordIdx}`;
+                  return (
+                    <Tooltip 
+                      key={wordIdx} 
+                      open={activeWordKey === wordKey}
+                      onOpenChange={(open) => {
+                        if (open) setActiveWordKey(wordKey);
+                      }}
+                    >
+                      <TooltipTrigger asChild>
+                        <span 
+                          tabIndex={0}
+                          role="button"
+                          onPointerEnter={() => setActiveWordKey(wordKey)}
+                          className="text-2xl md:text-3xl font-arabic leading-[1.8] text-right text-foreground/90 hover:text-[#800000] focus:text-[#800000] outline-none transition-colors duration-200 cursor-help select-none px-0.5 inline-block"
+                        >
+                          {word.text_uthmani}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipPortal>
+                        <TooltipContent 
+                          side="top" 
+                          sideOffset={8} 
+                          className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100] animate-in fade-in-0 zoom-in-95"
+                        >
+                          <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
+                        </TooltipContent>
+                      </TooltipPortal>
+                    </Tooltip>
+                  );
+                })}
               </div>
 
               <div className="text-left bg-muted/30 p-5 rounded-xl border-l-4 border-[#800000]">

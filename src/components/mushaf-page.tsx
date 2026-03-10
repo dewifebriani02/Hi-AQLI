@@ -30,6 +30,9 @@ export function MushafPage() {
   const [inputPage, setInputPage] = useState("1");
   const [showTranslation, setShowTranslation] = useState(false);
 
+  // Tooltip persistence state
+  const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
+
   useEffect(() => {
     async function fetchPageVerses() {
       setLoading(true);
@@ -48,6 +51,7 @@ export function MushafPage() {
     }
     fetchPageVerses();
     setInputPage(page.toString());
+    setActiveWordKey(null); // Reset when page changes
   }, [page]);
 
   const handlePageChange = (e: React.FormEvent) => {
@@ -138,24 +142,38 @@ export function MushafPage() {
               <TooltipProvider delayDuration={0} skipDelayDuration={0}>
                 {verses.map((verse) => (
                   <React.Fragment key={verse.id}>
-                    {verse.words.map((word, wordIdx) => (
-                      <Tooltip key={`${verse.id}-${wordIdx}`}>
-                        <TooltipTrigger asChild>
-                          <span 
-                            tabIndex={0}
-                            role="button"
-                            className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[2.4] md:leading-[2.6] text-foreground/90 hover:text-[#800000] focus:text-[#800000] outline-none transition-colors cursor-help select-none px-0.5"
-                          >
-                            {word.text_uthmani}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipPortal>
-                          <TooltipContent side="top" sideOffset={10} className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100] animate-in fade-in-0 zoom-in-95">
-                            <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
-                          </TooltipContent>
-                        </TooltipPortal>
-                      </Tooltip>
-                    ))}
+                    {verse.words.map((word, wordIdx) => {
+                      const wordKey = `${verse.verse_key}-${wordIdx}`;
+                      return (
+                        <Tooltip 
+                          key={`${verse.id}-${wordIdx}`}
+                          open={activeWordKey === wordKey}
+                          onOpenChange={(open) => {
+                            if (open) setActiveWordKey(wordKey);
+                          }}
+                        >
+                          <TooltipTrigger asChild>
+                            <span 
+                              tabIndex={0}
+                              role="button"
+                              onPointerEnter={() => setActiveWordKey(wordKey)}
+                              className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[2.4] md:leading-[2.6] text-foreground/90 hover:text-[#800000] focus:text-[#800000] outline-none transition-colors cursor-help select-none px-0.5 inline-block"
+                            >
+                              {word.text_uthmani}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipPortal>
+                            <TooltipContent 
+                              side="top" 
+                              sideOffset={8} 
+                              className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100] animate-in fade-in-0 zoom-in-95"
+                            >
+                              <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
+                            </TooltipContent>
+                          </TooltipPortal>
+                        </Tooltip>
+                      );
+                    })}
                     {/* Compact Verse Marker */}
                     <span className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#800000]/20 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white/50 shadow-xs shrink-0 translate-y-[-2px]">
                       {verse.verse_key.split(':')[1]}
