@@ -24,7 +24,9 @@ import {
   History,
   ShieldCheck,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Copy,
+  Fingerprint
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
@@ -39,12 +41,14 @@ import {
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
   // Fetch real donation history
   const donationsQuery = useMemoFirebase(() => {
@@ -78,6 +82,16 @@ export default function ProfilePage() {
   const handleSignOut = async () => {
     await signOut(auth);
     router.push('/');
+  };
+
+  const copyUid = () => {
+    if (user?.uid) {
+      navigator.clipboard.writeText(user.uid);
+      toast({
+        title: "UID Berhasil Disalin",
+        description: "Gunakan UID ini di Firebase Console untuk mengatur peran admin.",
+      });
+    }
   };
 
   if (isUserLoading || !user) {
@@ -130,6 +144,24 @@ export default function ProfilePage() {
         </CardHeader>
 
         <CardContent className="px-6 sm:px-8 pt-4">
+          {/* Admin UID Card (Quick Setup Helper) */}
+          <Card className="mb-8 border-dashed border-2 bg-muted/20">
+            <CardContent className="p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-white shadow-sm">
+                  <Fingerprint className="w-5 h-5 text-[#800000]" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID Anda (UID)</p>
+                  <p className="text-xs font-mono font-bold truncate max-w-[150px] sm:max-w-none">{user.uid}</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 gap-2 text-[#800000] font-bold" onClick={copyUid}>
+                <Copy className="w-3 h-3" /> SALIN
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Active Subscription Banner */}
           {isPaid && (
             <Card className="mb-8 border-2 border-blue-100 bg-blue-50/50 p-4">
