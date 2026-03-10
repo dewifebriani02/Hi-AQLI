@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Bookmark, AlertCircle, Loader2, Info } from "lucide-react";
+import { ChevronLeft, Play, Pause, Bookmark, AlertCircle, Loader2, Info } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -13,6 +14,7 @@ import {
   TooltipTrigger,
   TooltipPortal,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface Word {
@@ -26,6 +28,7 @@ interface Word {
 interface Verse {
   id: number;
   verse_number: number;
+  verse_key: string;
   text_uthmani?: string;
   words: Word[];
   translations: { text: string }[];
@@ -42,10 +45,17 @@ interface SurahInfo {
 export default function SurahDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const { toast } = useToast();
+  
   const [surah, setSurah] = useState<SurahInfo | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Audio States
+  const [playingKey, setPlayingKey] = useState<string | null>(null);
+  const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -81,12 +91,76 @@ export default function SurahDetailPage() {
       }
     }
     fetchData();
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, [id]);
+
+  const toggleAudio = async (verseKey: string) => {
+    if (playingKey === verseKey) {
+      audioRef.current?.pause();
+      setPlayingKey(null);
+      return;
+    }
+
+    setLoadingAudioKey(verseKey);
+    
+    try {
+      // Use recitation ID 7 (Mishary Rashid Alafasy)
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/7/by_ayah/${verseKey}`);
+      if (!res.ok) throw new Error("Gagal memuat audio.");
+      const data = await res.json();
+      const audioUrl = data.audio_files[0]?.url;
+
+      if (!audioUrl) throw new Error("Audio tidak tersedia.");
+
+      const fullUrl = audioUrl.startsWith('//') ? `https:${audioUrl}` : audioUrl;
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(fullUrl);
+      audioRef.current = audio;
+
+      audio.onplay = () => {
+        setPlayingKey(verseKey);
+        setLoadingAudioKey(null);
+      };
+
+      audio.onended = () => {
+        setPlayingKey(null);
+      };
+
+      audio.onerror = () => {
+        setLoadingAudioKey(null);
+        setPlayingKey(null);
+        toast({
+          variant: "destructive",
+          title: "Audio Error",
+          description: "Gagal memutar murottal. Silakan coba lagi.",
+        });
+      };
+
+      await audio.play();
+    } catch (err) {
+      setLoadingAudioKey(null);
+      toast({
+        variant: "destructive",
+        title: "Audio Error",
+        description: "Tidak dapat mengambil data murottal.",
+      });
+    }
+  };
 
   if (loading) {
     return (
       <div className="flex flex-col gap-6 max-w-4xl mx-auto py-32 items-center">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
         <p className="text-muted-foreground font-medium">Memuat Ayat Suci...</p>
       </div>
     );
@@ -160,9 +234,25 @@ export default function SurahDetailPage() {
                       <Info className="h-3 w-3" /> DETAIL & TAFSIR
                     </Link>
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <Play className="h-4 w-4" />
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn(
+                      "h-8 w-8 transition-colors",
+                      playingKey === verse.verse_key ? "text-[#800000] bg-[#800000]/10" : "text-muted-foreground"
+                    )}
+                    onClick={() => toggleAudio(verse.verse_key)}
+                  >
+                    {loadingAudioKey === verse.verse_key ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : playingKey === verse.verse_key ? (
+                      <Pause className="h-4 w-4 fill-current" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
                   </Button>
+
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                     <Bookmark className="h-4 w-4" />
                   </Button>

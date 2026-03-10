@@ -4,7 +4,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb, ArrowLeft, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, BookOpen, BrainCircuit, ListTree, RefreshCw, GraduationCap, Lightbulb, ArrowLeft, ArrowRight, Play, Pause } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface WordData {
   id: number;
@@ -25,6 +27,7 @@ interface WordData {
 interface VerseDetail {
   id: number;
   verse_number: number;
+  verse_key: string;
   text_uthmani: string;
   translations: { text: string }[];
   words: WordData[];
@@ -33,6 +36,7 @@ interface VerseDetail {
 export default function VerseDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
   const currentVerseNum = parseInt(verseNumber);
@@ -41,11 +45,15 @@ export default function VerseDetailPage() {
   const [surahName, setSurahName] = useState("");
   const [totalVerses, setTotalVerses] = useState(0);
   const [apiTafsir, setApiTafsir] = useState<string | null>(null);
-  const [tafsirSource, setTafsirSource] = useState<string>("Kemenag RI");
   const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Audio States
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Swipe Detection Logic
   const touchStartX = useRef<number | null>(null);
@@ -63,11 +71,9 @@ export default function VerseDetailPage() {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
     
-    // Swipe Left (distance > 0) -> Next Verse
     if (distance > 70 && currentVerseNum < totalVerses) {
       router.push(`/tilawah/${id}/${currentVerseNum + 1}`);
     } 
-    // Swipe Right (distance < 0) -> Prev Verse
     else if (distance < -70 && currentVerseNum > 1) {
       router.push(`/tilawah/${id}/${currentVerseNum - 1}`);
     }
@@ -121,7 +127,7 @@ export default function VerseDetailPage() {
         setSurahName(sData.chapter.name_simple);
         setTotalVerses(sData.chapter.verses_count);
 
-        // Fetch Verse Details (including word breakdown)
+        // Fetch Verse Details
         const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`);
         if (!vRes.ok) throw new Error("Gagal memuat ayat.");
         const vData = await vRes.json();
@@ -137,7 +143,58 @@ export default function VerseDetailPage() {
       }
     }
     fetchAll();
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, [id, verseNumber, fetchAiAnalysis, fetchOfficialTafsir]);
+
+  const togglePlay = async () => {
+    if (isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+      return;
+    }
+
+    setIsAudioLoading(true);
+    try {
+      const verseKey = `${id}:${verseNumber}`;
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/7/by_ayah/${verseKey}`);
+      const data = await res.json();
+      const audioUrl = data.audio_files[0]?.url;
+
+      if (!audioUrl) throw new Error();
+
+      const fullUrl = audioUrl.startsWith('//') ? `https:${audioUrl}` : audioUrl;
+      const audio = new Audio(fullUrl);
+      audioRef.current = audio;
+
+      audio.onplay = () => {
+        setIsPlaying(true);
+        setIsAudioLoading(false);
+      };
+      audio.onended = () => setIsPlaying(false);
+      audio.onerror = () => {
+        setIsAudioLoading(false);
+        setIsPlaying(false);
+        toast({ variant: "destructive", title: "Gagal memuat audio" });
+      };
+
+      await audio.play();
+    } catch {
+      setIsAudioLoading(false);
+      toast({ variant: "destructive", title: "Audio tidak tersedia" });
+    }
+  };
 
   if (loading) {
     return (
@@ -187,7 +244,7 @@ export default function VerseDetailPage() {
       </div>
 
       {/* Verse Card */}
-      <Card className="border-none bg-muted/20">
+      <Card className="border-none bg-muted/20 relative overflow-hidden">
         <CardContent className="pt-8 pb-10 px-6 space-y-8 text-right" dir="rtl">
           <h2 className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground">
             {verse?.text_uthmani}
@@ -195,6 +252,26 @@ export default function VerseDetailPage() {
           <div className="max-w-2xl ml-auto text-left" dir="ltr">
             <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20 text-[10px] font-bold">TERJEMAHAN KEMENAG RI</Badge>
             <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse?.translations[0]?.text || "" }} />
+          </div>
+          
+          {/* Audio Action in Card */}
+          <div className="flex justify-center pt-4" dir="ltr">
+            <Button 
+              onClick={togglePlay}
+              disabled={isAudioLoading}
+              className={cn(
+                "rounded-full w-14 h-14 shadow-lg transition-all",
+                isPlaying ? "bg-[#800000] hover:bg-[#800000]/90" : "bg-white text-[#800000] hover:bg-muted border-2 border-[#800000]/20"
+              )}
+            >
+              {isAudioLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : isPlaying ? (
+                <Pause className="h-6 w-6 fill-current" />
+              ) : (
+                <Play className="h-6 w-6 fill-current ml-1" />
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
