@@ -36,6 +36,7 @@ interface Verse {
   id: number;
   verse_key: string;
   text_uthmani: string;
+  words?: { text_uthmani: string }[];
 }
 
 interface MaqtaState {
@@ -86,7 +87,7 @@ export function TikrarSystem() {
       setLoading(true);
       try {
         const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani`
         );
         if (!res.ok) throw new Error("Gagal memuat ayat");
         const data = await res.json();
@@ -266,10 +267,6 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
 }) {
   const isBlockDone = state.a.count === target && state.b.count === target && state.combined.count === target;
 
-  const mid = Math.ceil(verses.length / 2);
-  const versesA = verses.slice(0, mid);
-  const versesB = verses.slice(mid);
-
   let currentFocus = "";
   if (isLocked) {
     currentFocus = "Terkunci";
@@ -282,6 +279,72 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
   } else {
     currentFocus = "Selesai";
   }
+
+  const renderArabicContent = () => {
+    if (verses.length === 0) {
+      return <p className="text-xs italic text-muted-foreground" dir="ltr">Tidak ada ayat di bagian ini.</p>;
+    }
+
+    if (verses.length > 1) {
+      // Logic: Split multiple verses by verse count
+      const mid = Math.ceil(verses.length / 2);
+      const versesA = verses.slice(0, mid);
+      const versesB = verses.slice(mid);
+
+      return (
+        <div className="flex flex-wrap justify-center gap-x-1.5 gap-y-3 text-center" dir="rtl">
+          {versesA.map((v) => (
+            <span key={v.id} className="inline-block">
+              <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000]">
+                {v.text_uthmani}
+              </span>
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/30 text-[9px] font-bold text-[#800000] mx-1.5 align-middle bg-white shadow-sm">
+                ({v.verse_key.split(':')[1]})
+              </span>
+            </span>
+          ))}
+          
+          <div className="w-full h-2" />
+
+          {versesB.map((v) => (
+            <span key={v.id} className="inline-block">
+              <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46]">
+                {v.text_uthmani}
+              </span>
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#065f46]/30 text-[9px] font-bold text-[#065f46] mx-1.5 align-middle bg-white shadow-sm">
+                ({v.verse_key.split(':')[1]})
+              </span>
+            </span>
+          ))}
+        </div>
+      );
+    } else {
+      // Logic: Split single verse into two parts by words
+      const v = verses[0];
+      const words = v.words || [];
+      const midWord = Math.ceil(words.length / 2);
+      const wordsA = words.slice(0, midWord);
+      const wordsB = words.slice(midWord);
+
+      return (
+        <div className="flex flex-wrap justify-center gap-x-1 gap-y-3 text-center" dir="rtl">
+          <span className="inline-block">
+            <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000]">
+              {wordsA.map(w => w.text_uthmani).join(' ')}
+            </span>
+            {wordsB.length > 0 && (
+              <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46] mr-2">
+                {wordsB.map(w => w.text_uthmani).join(' ')}
+              </span>
+            )}
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-muted text-[9px] font-bold text-muted-foreground mx-1.5 align-middle bg-white shadow-sm">
+              ({v.verse_key.split(':')[1]})
+            </span>
+          </span>
+        </div>
+      );
+    }
+  };
 
   return (
     <Card className={cn(
@@ -343,38 +406,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked }
           <div className="absolute top-3 left-3 opacity-20">
             <BookOpen className="w-5 h-5 text-[#800000]" />
           </div>
-          <div className="flex flex-wrap justify-center gap-x-1.5 gap-y-3 text-center" dir="rtl">
-            {/* Maqta A Verses */}
-            {versesA.map((v) => (
-              <span key={v.id} className="inline-block">
-                <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000]">
-                  {v.text_uthmani}
-                </span>
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/30 text-[9px] font-bold text-[#800000] mx-1.5 align-middle bg-white shadow-sm">
-                  ({v.verse_key.split(':')[1]})
-                </span>
-              </span>
-            ))}
-            
-            {/* Visual separator or slight gap if needed */}
-            {versesB.length > 0 && <div className="w-full h-2" />}
-
-            {/* Maqta B Verses */}
-            {versesB.map((v) => (
-              <span key={v.id} className="inline-block">
-                <span className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46]">
-                  {v.text_uthmani}
-                </span>
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#065f46]/30 text-[9px] font-bold text-[#065f46] mx-1.5 align-middle bg-white shadow-sm">
-                  ({v.verse_key.split(':')[1]})
-                </span>
-              </span>
-            ))}
-
-            {verses.length === 0 && (
-              <p className="text-xs italic text-muted-foreground" dir="ltr">Tidak ada ayat di bagian ini.</p>
-            )}
-          </div>
+          {renderArabicContent()}
         </div>
 
         <div className="space-y-6">
