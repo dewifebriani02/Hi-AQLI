@@ -301,7 +301,7 @@ export default function SurahDetailPage() {
       )}
 
       <div className="flex flex-col divide-y divide-border/50">
-        <TooltipProvider delayDuration={100}>
+        <TooltipProvider delayDuration={0}>
           {verses.map((verse) => (
             <div key={verse.id} className="py-12 px-4 space-y-8 group">
               <div className="flex items-center justify-between">
@@ -354,13 +354,13 @@ export default function SurahDetailPage() {
                       <span 
                         tabIndex={0}
                         role="button"
-                        className="text-2xl md:text-3xl font-arabic leading-[1.8] text-right text-foreground/90 hover:text-[#800000] focus:text-[#800000] focus:outline-none transition-colors duration-200 cursor-help"
+                        className="text-2xl md:text-3xl font-arabic leading-[1.8] text-right text-foreground/90 hover:text-[#800000] focus:text-[#800000] focus:outline-none transition-colors duration-200 cursor-help select-none"
                       >
                         {word.text_uthmani}
                       </span>
                     </TooltipTrigger>
                     <TooltipPortal>
-                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg z-[100]">
+                      <TooltipContent side="top" sideOffset={8} className="bg-[#800000] text-white border-none shadow-lg z-[100] animate-in fade-in-0 zoom-in-95">
                         <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
                       </TooltipContent>
                     </TooltipPortal>

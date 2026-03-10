@@ -16,6 +16,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipPortal,
+} from "@/components/ui/tooltip";
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -344,9 +351,29 @@ export default function VerseDetailPage() {
 
       <Card className="border-none bg-muted/20 relative overflow-hidden">
         <CardContent className="pt-8 pb-10 px-6 space-y-8 text-right" dir="rtl">
-          <h2 className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground">
-            {verse?.text_uthmani}
-          </h2>
+          <TooltipProvider delayDuration={0}>
+            <div className="flex flex-wrap justify-end gap-x-2 gap-y-4 w-full">
+              {verse?.words?.filter(w => w.text_uthmani).map((word, wordIdx) => (
+                <Tooltip key={wordIdx}>
+                  <TooltipTrigger asChild>
+                    <span 
+                      tabIndex={0}
+                      role="button"
+                      className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground hover:text-[#800000] focus:text-[#800000] focus:outline-none transition-colors duration-200 cursor-help select-none"
+                    >
+                      {word.text_uthmani}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent side="top" sideOffset={8} className="bg-[#800000] text-white border-none shadow-lg z-[100] animate-in fade-in-0 zoom-in-95">
+                      <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
+                    </TooltipContent>
+                  </TooltipPortal>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
+
           <div className="max-w-2xl ml-auto text-left" dir="ltr">
             <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20 text-[10px] font-bold">TERJEMAHAN KEMENAG RI</Badge>
             <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse?.translations[0]?.text || "" }} />
