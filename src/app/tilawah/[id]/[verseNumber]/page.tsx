@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, Lightbulb, ArrowLeft, ArrowRight, Info } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, Lightbulb, ArrowLeft, ArrowRight, Info, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,9 @@ export default function VerseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
+  
+  // State for repetition counting per word
+  const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
 
   const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
     setAnalysisLoading(true);
@@ -105,6 +109,17 @@ export default function VerseDetailPage() {
     fetchAll();
   }, [id, verseNumber, fetchAiAnalysis, fetchOfficialTafsir]);
 
+  const incrementWordCount = (idx: number) => {
+    setWordCounts(prev => ({
+      ...prev,
+      [idx]: (prev[idx] || 0) + 1
+    }));
+  };
+
+  const resetWordCounts = () => {
+    setWordCounts({});
+  };
+
   if (loading) return <div className="flex flex-col items-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-sm">Menyiapkan Penjabaran...</p></div>;
 
   return (
@@ -154,24 +169,41 @@ export default function VerseDetailPage() {
 
       <div className="grid grid-cols-1 gap-6">
         <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
-          <CardHeader className="border-b bg-muted/30 py-4">
+          <CardHeader className="border-b bg-muted/30 py-4 flex flex-row items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2 font-headline">
               <ListTree className="w-4 h-4 text-[#800000]" />
               Penjabaran Kata
             </CardTitle>
+            {Object.keys(wordCounts).length > 0 && (
+              <Button variant="ghost" size="sm" onClick={resetWordCounts} className="text-[10px] font-bold text-muted-foreground uppercase gap-1">
+                <RotateCcw className="w-3 h-3" /> Reset Hitungan
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y" dir="ltr">
               {verse?.words?.filter(w => w.text_uthmani).map((word, idx) => (
-                <div key={idx} className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50 transition-colors">
+                <div 
+                  key={idx} 
+                  className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50 transition-all cursor-pointer active:scale-[0.98] select-none"
+                  onClick={() => incrementWordCount(idx)}
+                >
                   <div className="flex items-center gap-4">
                     <span className="text-[10px] font-bold text-muted-foreground w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border/50">
                       {idx + 1}
                     </span>
-                    <span className="text-2xl font-arabic text-[#800000] text-right" dir="rtl">{word.text_uthmani}</span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="text-2xl font-arabic text-[#800000] text-right" dir="rtl">{word.text_uthmani}</span>
+                      {wordCounts[idx] > 0 && (
+                        <Badge className="bg-[#D4AF37] hover:bg-[#D4AF37] text-black text-[9px] font-bold h-4 px-1 animate-in zoom-in-50 duration-200">
+                          x{wordCounts[idx]}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right flex-1">
                     <p className="text-sm font-medium">{word.translation.text}</p>
+                    <p className="text-[10px] text-muted-foreground italic">Ketuk untuk menghitung hafalan</p>
                   </div>
                 </div>
               ))}
