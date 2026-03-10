@@ -351,7 +351,7 @@ export default function VerseDetailPage() {
 
       <Card className="border-none bg-muted/20 relative overflow-hidden">
         <CardContent className="pt-8 pb-10 px-6 space-y-8 text-right" dir="rtl">
-          <TooltipProvider delayDuration={0}>
+          <TooltipProvider delayDuration={0} skipDelayDuration={0}>
             <div className="flex flex-wrap justify-end gap-x-2 gap-y-4 w-full">
               {verse?.words?.filter(w => w.text_uthmani).map((word, wordIdx) => (
                 <Tooltip key={wordIdx}>
@@ -359,13 +359,13 @@ export default function VerseDetailPage() {
                     <span 
                       tabIndex={0}
                       role="button"
-                      className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground hover:text-[#800000] focus:text-[#800000] focus:outline-none transition-colors duration-200 cursor-help select-none"
+                      className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground hover:text-[#800000] focus:text-[#800000] outline-none transition-colors duration-200 cursor-help select-none"
                     >
                       {word.text_uthmani}
                     </span>
                   </TooltipTrigger>
                   <TooltipPortal>
-                    <TooltipContent side="top" sideOffset={8} className="bg-[#800000] text-white border-none shadow-lg z-[100] animate-in fade-in-0 zoom-in-95">
+                    <TooltipContent side="top" sideOffset={10} className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100] animate-in fade-in-0 zoom-in-95">
                       <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
                     </TooltipContent>
                   </TooltipPortal>

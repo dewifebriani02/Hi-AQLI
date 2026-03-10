@@ -135,7 +135,7 @@ export function MushafPage() {
               className="flex flex-wrap justify-center items-center gap-x-1 gap-y-3 w-full max-w-[500px] text-center px-2 md:px-4" 
               dir="rtl"
             >
-              <TooltipProvider delayDuration={0}>
+              <TooltipProvider delayDuration={0} skipDelayDuration={0}>
                 {verses.map((verse) => (
                   <React.Fragment key={verse.id}>
                     {verse.words.map((word, wordIdx) => (
@@ -144,14 +144,14 @@ export function MushafPage() {
                           <span 
                             tabIndex={0}
                             role="button"
-                            className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[2.4] md:leading-[2.6] text-foreground/90 hover:text-[#800000] focus:text-[#800000] focus:outline-none transition-colors cursor-help select-none px-0.5"
+                            className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[2.4] md:leading-[2.6] text-foreground/90 hover:text-[#800000] focus:text-[#800000] outline-none transition-colors cursor-help select-none px-0.5"
                           >
                             {word.text_uthmani}
                           </span>
                         </TooltipTrigger>
                         <TooltipPortal>
-                          <TooltipContent side="top" sideOffset={8} className="bg-[#800000] text-white border-none shadow-lg py-1 px-2 z-[100] animate-in fade-in-0 zoom-in-95">
-                            <p className="text-[10px] font-medium">{word.translation?.text || "..."}</p>
+                          <TooltipContent side="top" sideOffset={10} className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100] animate-in fade-in-0 zoom-in-95">
+                            <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
                           </TooltipContent>
                         </TooltipPortal>
                       </Tooltip>
