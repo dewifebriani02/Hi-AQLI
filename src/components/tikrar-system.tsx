@@ -306,7 +306,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
 
     return (
       <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-        <div className="flex flex-wrap justify-center gap-x-1.5 gap-y-3 text-center" dir="rtl">
+        <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 text-center" dir="rtl">
           {verses.length > 1 ? (
             <>
               {/* Logic: Split multiple verses by verse count */}
@@ -325,7 +325,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
                             <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
                               <TooltipTrigger asChild>
                                 <span 
-                                  className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000] cursor-help px-0.5"
+                                  className="text-xl md:text-2xl font-arabic leading-[2.4] text-[#800000] cursor-help px-0.5"
                                   onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
                                 >
                                   {word.text_uthmani}
@@ -339,13 +339,13 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
                             </Tooltip>
                           );
                         })}
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/30 text-[9px] font-bold text-[#800000] mx-1.5 align-middle bg-white shadow-sm">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#800000]/30 text-[8px] font-bold text-[#800000] mx-1 align-middle bg-white shadow-xs">
                           ({v.verse_key.split(':')[1]})
                         </span>
                       </span>
                     ))}
                     
-                    <div className="w-full h-2" />
+                    <div className="w-full h-1" />
 
                     {versesB.map((v) => (
                       <span key={v.id} className="inline-block">
@@ -355,7 +355,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
                             <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
                               <TooltipTrigger asChild>
                                 <span 
-                                  className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46] cursor-help px-0.5"
+                                  className="text-xl md:text-2xl font-arabic leading-[2.4] text-[#065f46] cursor-help px-0.5"
                                   onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
                                 >
                                   {word.text_uthmani}
@@ -369,7 +369,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
                             </Tooltip>
                           );
                         })}
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#065f46]/30 text-[9px] font-bold text-[#065f46] mx-1.5 align-middle bg-white shadow-sm">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#065f46]/30 text-[8px] font-bold text-[#065f46] mx-1 align-middle bg-white shadow-xs">
                           ({v.verse_key.split(':')[1]})
                         </span>
                       </span>
@@ -396,7 +396,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
                         <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
                           <TooltipTrigger asChild>
                             <span 
-                              className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#800000] cursor-help px-0.5"
+                              className="text-xl md:text-2xl font-arabic leading-[2.4] text-[#800000] cursor-help px-0.5"
                               onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
                             >
                               {word.text_uthmani}
@@ -416,7 +416,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
                         <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
                           <TooltipTrigger asChild>
                             <span 
-                              className="text-2xl md:text-3xl font-arabic leading-[1.8] text-[#065f46] cursor-help px-0.5"
+                              className="text-xl md:text-2xl font-arabic leading-[2.4] text-[#065f46] cursor-help px-0.5"
                               onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
                             >
                               {word.text_uthmani}
@@ -430,7 +430,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
                         </Tooltip>
                       );
                     })}
-                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-muted text-[9px] font-bold text-muted-foreground mx-1.5 align-middle bg-white shadow-sm">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-muted text-[8px] font-bold text-muted-foreground mx-1 align-middle bg-white shadow-xs">
                       ({v.verse_key.split(':')[1]})
                     </span>
                   </span>
@@ -497,7 +497,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
 
       <CardContent className="space-y-8 px-6 pb-8">
         <div className={cn(
-          "bg-[#fffdf5] p-6 rounded-2xl border-2 shadow-inner relative group min-h-[120px] flex flex-col justify-center transition-all",
+          "bg-[#fffdf5] p-5 rounded-2xl border-2 shadow-inner relative group min-h-[140px] flex flex-col justify-center transition-all overflow-hidden",
           isLocked ? "border-muted grayscale blur-[1px]" : "border-[#800000]/10"
         )}>
           <div className="absolute top-3 left-3 opacity-20">
