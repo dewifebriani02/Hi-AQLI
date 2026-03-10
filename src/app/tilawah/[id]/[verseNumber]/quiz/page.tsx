@@ -2,13 +2,15 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer } from "lucide-react";
+import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer, Star } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface WordData {
@@ -18,6 +20,12 @@ interface WordData {
     text: string;
   };
 }
+
+const mockVerseLeaderboard = [
+  { name: "Abdullah Mansur", time: "0:08", attempts: 1, rank: 1, avatar: "https://picsum.photos/seed/user1/100/100" },
+  { name: "Siti Aminah", time: "0:12", attempts: 1, rank: 2, avatar: "https://picsum.photos/seed/user2/100/100" },
+  { name: "Yusuf Ibrahim", time: "0:15", attempts: 2, rank: 3, avatar: "https://picsum.photos/seed/user3/100/100" },
+];
 
 export default function WordQuizPage() {
   const params = useParams();
@@ -106,7 +114,6 @@ export default function WordQuizPage() {
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return;
     
-    // Remove focus rings by blurring active element
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -182,10 +189,10 @@ export default function WordQuizPage() {
     const percentage = Math.round((score / words.length) * 100);
     
     return (
-      <div className="max-w-md mx-auto py-10 flex flex-col gap-8">
-        <Card className="text-center border-[#D4AF37]/20 shadow-xl overflow-hidden">
+      <div className="max-w-md mx-auto py-10 flex flex-col gap-10 pb-32">
+        <Card className="text-center border-[#D4AF37]/20 shadow-xl overflow-hidden animate-in fade-in zoom-in duration-500">
           <div className={cn(
-            "p-8 flex flex-col items-center gap-4 text-white",
+            "p-8 flex flex-col items-center gap-4 text-white transition-colors duration-500",
             isPerfect ? "bg-[#D4AF37]" : "bg-rose-900"
           )}>
             <Trophy className={cn("w-16 h-16", isPerfect && "animate-bounce")} />
@@ -220,12 +227,12 @@ export default function WordQuizPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6">
             {isPerfect ? (
-              <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12">
+              <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12 shadow-lg">
                 <Link href={`/tilawah/${id}/${verseNumber}`}>SELESAI & LANJUT</Link>
               </Button>
             ) : (
               <Button 
-                className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold h-12 gap-2"
+                className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold h-12 gap-2 shadow-lg"
                 onClick={handleReset}
               >
                 <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
@@ -233,12 +240,61 @@ export default function WordQuizPage() {
             )}
           </CardFooter>
         </Card>
+
+        {/* Leaderboard Section */}
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-[#D4AF37] fill-current" />
+              <h3 className="text-sm font-bold font-headline uppercase tracking-widest">Papan Juara Ayat Ini</h3>
+            </div>
+            <Badge variant="outline" className="text-[8px] font-bold border-[#D4AF37]/30 text-[#D4AF37]">GLOBAL</Badge>
+          </div>
+          
+          <Card className="border-none shadow-sm bg-muted/20">
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {mockVerseLeaderboard.map((user) => (
+                  <div key={user.name} className="flex items-center justify-between p-3.5 hover:bg-white/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className={cn(
+                        "text-[10px] font-bold w-4",
+                        user.rank === 1 ? "text-[#D4AF37]" : "text-muted-foreground"
+                      )}>{user.rank}</span>
+                      <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
+                        <AvatarImage src={user.avatar} />
+                        <AvatarFallback>{user.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold">{user.name}</span>
+                        <div className="flex items-center gap-2">
+                           <span className="text-[9px] text-muted-foreground font-medium flex items-center gap-1">
+                             <Timer className="w-2.5 h-2.5" /> {user.time}
+                           </span>
+                           <span className="text-[9px] text-muted-foreground">•</span>
+                           <span className="text-[9px] text-muted-foreground font-medium">{user.attempts} Percobaan</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[8px] font-bold h-5 px-1.5">100%</Badge>
+                      {user.rank === 1 && <Star className="w-3 h-3 fill-current text-[#D4AF37]" />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <p className="text-[10px] text-center text-muted-foreground italic px-4">
+            Teruslah melatih repetisi kata untuk meningkatkan kecepatan dan masuk ke daftar juara.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col gap-6 px-4 sm:px-0">
+    <div className="max-w-2xl mx-auto flex flex-col gap-6 px-4 sm:px-0 pb-32">
       <div className="flex items-center gap-4">
         <Button asChild variant="ghost" size="icon">
           <Link href={`/tilawah/${id}/${verseNumber}`}><ChevronLeft className="h-6 w-6" /></Link>
