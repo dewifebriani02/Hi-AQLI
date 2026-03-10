@@ -273,6 +273,37 @@ export function TikrarSystem() {
   );
 }
 
+// Logic to find split points (waqaf marks) in Uthmani text
+const findBestSplitPoint = (allWords: Array<Word & { verseKey: string }>) => {
+  const waqafChars = /[\u06D6-\u06DC]/;
+  const potentialPoints: number[] = [];
+
+  allWords.forEach((word, idx) => {
+    // If word contains a waqaf mark, it's a potential split point
+    if (waqafChars.test(word.text_uthmani)) {
+      potentialPoints.push(idx + 1);
+    }
+  });
+
+  if (potentialPoints.length === 0) {
+    return Math.ceil(allWords.length / 2);
+  }
+
+  const middle = allWords.length / 2;
+  let bestPoint = potentialPoints[0];
+  let minDiff = Math.abs(bestPoint - middle);
+
+  potentialPoints.forEach(point => {
+    const diff = Math.abs(point - middle);
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestPoint = point;
+    }
+  });
+
+  return bestPoint;
+};
+
 function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, activeWordKey, setActiveWordKey }: { 
   id: number, 
   state: BlockState, 
@@ -304,140 +335,87 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
       return <p className="text-xs italic text-muted-foreground" dir="ltr">Tidak ada ayat di bagian ini.</p>;
     }
 
+    // Flatten all words with context
+    const allWords: Array<Word & { verseKey: string, isLastOfVerse: boolean }> = [];
+    verses.forEach(v => {
+      v.words.forEach((w, wIdx) => {
+        allWords.push({
+          ...w,
+          verseKey: v.verse_key,
+          isLastOfVerse: wIdx === v.words.length - 1
+        });
+      });
+    });
+
+    // Find best point to split into 'a' and 'b' (based on waqaf)
+    const splitIdx = findBestSplitPoint(allWords);
+    const wordsA = allWords.slice(0, splitIdx);
+    const wordsB = allWords.slice(splitIdx);
+
     return (
       <TooltipProvider delayDuration={0} skipDelayDuration={0}>
         <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 text-center" dir="rtl">
-          {verses.length > 1 ? (
-            <>
-              {/* Logic: Split multiple verses by verse count */}
-              {(() => {
-                const mid = Math.ceil(verses.length / 2);
-                const versesA = verses.slice(0, mid);
-                const versesB = verses.slice(mid);
-
-                return (
-                  <>
-                    {versesA.map((v) => (
-                      <span key={v.id} className="inline-block">
-                        {v.words.map((word, wIdx) => {
-                          const wordKey = `tm${id}-${v.id}-${wIdx}`;
-                          return (
-                            <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
-                              <TooltipTrigger asChild>
-                                <span 
-                                  className="text-xl md:text-2xl font-arabic leading-[2.4] text-[#800000] cursor-help px-0.5"
-                                  onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
-                                >
-                                  {word.text_uthmani}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipPortal>
-                                <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                                  <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
-                                </TooltipContent>
-                              </TooltipPortal>
-                            </Tooltip>
-                          );
-                        })}
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#800000]/30 text-[8px] font-bold text-[#800000] mx-1 align-middle bg-white shadow-xs">
-                          ({v.verse_key.split(':')[1]})
-                        </span>
+          {/* Render Part A */}
+          <span className="inline-block">
+            {wordsA.map((word, idx) => {
+              const wordKey = `tm${id}-a-${idx}`;
+              return (
+                <React.Fragment key={wordKey}>
+                  <Tooltip open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                    <TooltipTrigger asChild>
+                      <span 
+                        className="text-xl md:text-2xl font-arabic leading-[2.6] text-[#800000] cursor-help px-0.5"
+                        onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                      >
+                        {word.text_uthmani}
                       </span>
-                    ))}
-                    
-                    <div className="w-full h-1" />
-
-                    {versesB.map((v) => (
-                      <span key={v.id} className="inline-block">
-                        {v.words.map((word, wIdx) => {
-                          const wordKey = `tm${id}-${v.id}-${wIdx}`;
-                          return (
-                            <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
-                              <TooltipTrigger asChild>
-                                <span 
-                                  className="text-xl md:text-2xl font-arabic leading-[2.4] text-[#065f46] cursor-help px-0.5"
-                                  onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
-                                >
-                                  {word.text_uthmani}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipPortal>
-                                <TooltipContent className="bg-[#065f46] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                                  <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
-                                </TooltipContent>
-                              </TooltipPortal>
-                            </Tooltip>
-                          );
-                        })}
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#065f46]/30 text-[8px] font-bold text-[#065f46] mx-1 align-middle bg-white shadow-xs">
-                          ({v.verse_key.split(':')[1]})
-                        </span>
-                      </span>
-                    ))}
-                  </>
-                );
-              })()}
-            </>
-          ) : (
-            <>
-              {/* Logic: Split single verse into two parts by words */}
-              {(() => {
-                const v = verses[0];
-                const words = v.words || [];
-                const midWord = Math.ceil(words.length / 2);
-                const wordsA = words.slice(0, midWord);
-                const wordsB = words.slice(midWord);
-
-                return (
-                  <span className="inline-block">
-                    {wordsA.map((word, wIdx) => {
-                      const wordKey = `tm${id}-a-${wIdx}`;
-                      return (
-                        <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
-                          <TooltipTrigger asChild>
-                            <span 
-                              className="text-xl md:text-2xl font-arabic leading-[2.4] text-[#800000] cursor-help px-0.5"
-                              onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
-                            >
-                              {word.text_uthmani}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipPortal>
-                            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                              <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
-                            </TooltipContent>
-                          </TooltipPortal>
-                        </Tooltip>
-                      );
-                    })}
-                    {wordsB.length > 0 && wordsB.map((word, wIdx) => {
-                      const wordKey = `tm${id}-b-${wIdx}`;
-                      return (
-                        <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
-                          <TooltipTrigger asChild>
-                            <span 
-                              className="text-xl md:text-2xl font-arabic leading-[2.4] text-[#065f46] cursor-help px-0.5"
-                              onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
-                            >
-                              {word.text_uthmani}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipPortal>
-                            <TooltipContent className="bg-[#065f46] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                              <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
-                            </TooltipContent>
-                          </TooltipPortal>
-                        </Tooltip>
-                      );
-                    })}
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-muted text-[8px] font-bold text-muted-foreground mx-1 align-middle bg-white shadow-xs">
-                      ({v.verse_key.split(':')[1]})
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                        <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
+                      </TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
+                  {word.isLastOfVerse && (
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#800000]/30 text-[8px] font-bold text-[#800000] mx-1 align-middle bg-white shadow-xs">
+                      ({word.verseKey.split(':')[1]})
                     </span>
-                  </span>
-                );
-              })()}
-            </>
-          )}
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </span>
+
+          {/* Render Part B */}
+          <span className="inline-block">
+            {wordsB.map((word, idx) => {
+              const wordKey = `tm${id}-b-${idx}`;
+              return (
+                <React.Fragment key={wordKey}>
+                  <Tooltip open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                    <TooltipTrigger asChild>
+                      <span 
+                        className="text-xl md:text-2xl font-arabic leading-[2.6] text-[#065f46] cursor-help px-0.5"
+                        onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                      >
+                        {word.text_uthmani}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent className="bg-[#065f46] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                        <p className="text-[11px] font-medium">{word.translation?.text || "..."}</p>
+                      </TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
+                  {word.isLastOfVerse && (
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#065f46]/30 text-[8px] font-bold text-[#065f46] mx-1 align-middle bg-white shadow-xs">
+                      ({word.verseKey.split(':')[1]})
+                    </span>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </span>
         </div>
       </TooltipProvider>
     );
