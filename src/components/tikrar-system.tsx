@@ -275,27 +275,22 @@ export function TikrarSystem() {
 
 // Logic to find split points (waqaf marks or end of verses) in Uthmani text
 const findBestSplitPoint = (allWords: Array<Word & { verseKey: string, isLastOfVerse: boolean }>) => {
-  // Regex for common waqaf marks and end of verse
   const waqafChars = /[\u06D6-\u06DC\u06DF-\u06E2\u06E4\u06E7\u06E8]/;
   const potentialPoints: number[] = [];
 
   allWords.forEach((word, idx) => {
-    // End of a verse is always a great split point
     if (word.isLastOfVerse) {
       potentialPoints.push(idx + 1);
     }
-    // Word containing a waqaf mark
     else if (waqafChars.test(word.text_uthmani)) {
       potentialPoints.push(idx + 1);
     }
   });
 
-  // If no waqaf or end of verse found, split at half
   if (potentialPoints.length === 0) {
     return Math.ceil(allWords.length / 2);
   }
 
-  // Find the split point closest to the middle
   const middle = allWords.length / 2;
   let bestPoint = potentialPoints[0];
   let minDiff = Math.abs(bestPoint - middle);
@@ -342,7 +337,6 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
       return <p className="text-xs italic text-muted-foreground" dir="ltr">Tidak ada ayat di bagian ini.</p>;
     }
 
-    // Flatten all words with context for a single continuous flow
     const allWords: Array<Word & { verseKey: string, isLastOfVerse: boolean }> = [];
     verses.forEach(v => {
       v.words.forEach((w, wIdx) => {
@@ -354,7 +348,6 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
       });
     });
 
-    // Find best point to split into color regions 'a' and 'b' (based on waqaf)
     const splitIdx = findBestSplitPoint(allWords);
 
     return (
@@ -485,9 +478,9 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
               label={`TM${id}b`} 
               count={state.b.count} 
               target={target} 
-              onClick={() => !isLocked && onIncrement(id, 'b')} 
+              onClick={() => !isLocked && state.a.count === target && onIncrement(id, 'b')} 
               isActive={currentFocus === `TM${id}b`}
-              disabled={isLocked}
+              disabled={isLocked || state.a.count < target}
               colorClass="text-[#065f46]"
               bgClass="bg-[#065f46]/10"
             />
@@ -516,7 +509,7 @@ function BlockCard({ id, state, verses, onIncrement, onReset, target, isLocked, 
             </Button>
             {!isLocked && (state.a.count < target || state.b.count < target) && (
               <p className="text-[10px] text-center mt-3 text-muted-foreground italic font-semibold flex items-center justify-center gap-1">
-                <Zap className="w-3 h-3 text-amber-500" /> Selesaikan TM{id}a & TM{id}b untuk lanjut
+                <Zap className="w-3 h-3 text-amber-500" /> Selesaikan {state.a.count < target ? `TM${id}a` : `TM${id}b`} untuk lanjut
               </p>
             )}
           </div>
