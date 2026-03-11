@@ -17,7 +17,10 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
-  Layers
+  Layers,
+  Circle,
+  Zap,
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,11 +36,13 @@ const LEVELS = [
   { id: 4, name: "Pemula", days: 28 },
 ];
 
+const TARGET_TM = 40;
+
 // Helper to skip weekends
 function addWorkDays(startDate: Date, days: number): Date {
   const result = new Date(startDate);
   let added = 0;
-  while (added < days) {
+  while (added < Math.floor(days)) {
     result.setDate(result.getDate() + 1);
     const day = result.getDay();
     if (day !== 0 && day !== 6) { // 0: Sunday, 6: Saturday
@@ -75,26 +80,28 @@ export function TikrarSchedule() {
     
     let currentDate = new Date(adminStartDate);
     
-    const daysPerBlock = Math.floor(level.days / 4);
+    // Distribution of 7 steps across total days per page
+    // Steps 1-4 take ~15% each (total 60%)
+    // Steps 5-7 take ~13.3% each (total 40%)
+    const dayAllocation = [0.15, 0.15, 0.15, 0.15, 0.133, 0.133, 0.134];
 
     for (let p = startPage; p <= endPage; p++) {
       const pageStart = new Date(currentDate);
-      
-      // Calculate individual block dates
-      const blockDates = [];
-      let bCurrentDate = new Date(pageStart);
-      for (let i = 1; i <= 4; i++) {
-        const bStart = new Date(bCurrentDate);
-        const bDays = i === 4 ? level.days - (daysPerBlock * 3) : daysPerBlock;
-        const bEnd = addWorkDays(bStart, bDays);
-        blockDates.push({ id: i, start: bStart, end: bEnd });
-        bCurrentDate = new Date(bEnd);
+      const stepsDates: any[] = [];
+      let stepCurrentDate = new Date(pageStart);
+
+      for (let i = 0; i < 7; i++) {
+        const sStart = new Date(stepCurrentDate);
+        const sDays = Math.max(1, Math.round(level.days * dayAllocation[i]));
+        const sEnd = addWorkDays(sStart, sDays);
+        stepsDates.push({ start: sStart, end: sEnd });
+        stepCurrentDate = new Date(sEnd);
       }
 
-      const pageEnd = new Date(bCurrentDate);
+      const pageEnd = new Date(stepCurrentDate);
       
-      let isDone = false;
-      let blockProgress = { 1: false, 2: false, 3: false, 4: false };
+      let stepProgress: Record<number, any> = {};
+      let isAllDone = false;
 
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem(`tikrar_progress_p${p}`);
@@ -104,15 +111,29 @@ export function TikrarSchedule() {
             const b = data.blocks || {};
             const m = data.metaCombined || {};
             
-            blockProgress = {
-              1: b[1]?.combined?.count >= 40,
-              2: b[2]?.combined?.count >= 40,
-              3: b[3]?.combined?.count >= 40,
-              4: b[4]?.combined?.count >= 40,
-            };
+            // Steps 1-4 (Blocks)
+            for (let i = 1; i <= 4; i++) {
+              stepProgress[i] = {
+                a: b[i]?.a?.count >= TARGET_TM,
+                b: b[i]?.b?.count >= TARGET_TM,
+                combined: b[i]?.combined?.count >= TARGET_TM,
+                isFullDone: b[i]?.combined?.count >= TARGET_TM
+              };
+            }
+            // Steps 5-7 (Meta)
+            stepProgress[5] = { isFullDone: m[2] >= 3 }; // Meta 2
+            stepProgress[6] = { isFullDone: m[3] >= 3 }; // Meta 3
+            stepProgress[7] = { isFullDone: m[4] >= 3 }; // Meta 4
 
-            isDone = Object.values(blockProgress).every(v => v) && (m[4] >= 3);
+            isAllDone = [1,2,3,4,5,6,7].every(id => stepProgress[id].isFullDone);
           } catch (e) {}
+        }
+      }
+
+      // Default empty progress
+      if (Object.keys(stepProgress).length === 0) {
+        for (let i = 1; i <= 7; i++) {
+          stepProgress[i] = { isFullDone: false, a: false, b: false, combined: false };
         }
       }
 
@@ -120,9 +141,9 @@ export function TikrarSchedule() {
         page: p,
         start: pageStart,
         end: pageEnd,
-        blocks: blockDates,
-        blockProgress,
-        isDone,
+        steps: stepsDates,
+        stepProgress,
+        isDone: isAllDone,
       });
 
       currentDate = new Date(pageEnd);
@@ -162,7 +183,7 @@ export function TikrarSchedule() {
             <CalendarDays className="w-6 h-6 text-[#800000]" /> Rencana Belajar Juz {juz}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Level: <strong className="text-[#800000]">{level.name}</strong> • Melompati Sabtu & Ahad
+            Level: <strong className="text-[#800000]">{level.name}</strong> • Libur Sabtu & Ahad
           </p>
         </div>
         <div className="flex gap-3">
@@ -210,9 +231,9 @@ export function TikrarSchedule() {
                       </div>
                       <div className="h-10 w-px bg-border mx-2" />
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Estimasi</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Target Selesai</span>
                         <span className="text-xs font-bold text-foreground">
-                          {item.start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - {item.end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          {item.end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
                       </div>
                     </div>
@@ -225,55 +246,86 @@ export function TikrarSchedule() {
                   </div>
 
                   {isExpanded && (
-                    <div className="mt-6 pt-6 border-t border-dashed space-y-4 animate-in slide-in-from-top-2 duration-300">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Layers className="w-4 h-4 text-[#800000]" />
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Breakdown Jadwal Per Blok</h4>
+                    <div className="mt-6 pt-6 border-t border-dashed space-y-6 animate-in slide-in-from-top-2 duration-300">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-[#800000]" />
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">7 Langkah Tikrar</h4>
+                        </div>
+                        <span className="text-[9px] font-bold text-muted-foreground">Progres Detail</span>
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {item.blocks.map((block) => (
-                          <div 
-                            key={block.id}
-                            className={cn(
-                              "p-3 rounded-xl border-2 flex items-center justify-between gap-3 transition-colors",
-                              item.blockProgress[block.id as keyof typeof item.blockProgress] 
-                                ? "bg-emerald-50 border-emerald-200" 
-                                : "bg-muted/30 border-muted"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shadow-sm",
-                                item.blockProgress[block.id as keyof typeof item.blockProgress] 
-                                  ? "bg-emerald-500 text-white" 
-                                  : "bg-white text-muted-foreground border"
-                              )}>
-                                {block.id}
+                      <div className="flex flex-col gap-3">
+                        {[1, 2, 3, 4].map((stepNum) => (
+                          <div key={stepNum} className="flex flex-col gap-2 p-3 rounded-xl border bg-muted/10">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-[#800000] text-white flex items-center justify-center text-[10px] font-black">{stepNum}</span>
+                                <span className="text-xs font-bold">TM {stepNum} (Blok Individu)</span>
                               </div>
-                              <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Blok TM{block.id}</span>
-                                <span className="text-[10px] font-bold">
-                                  {block.start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - {block.end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                                </span>
-                              </div>
+                              <span className="text-[9px] font-bold text-muted-foreground">
+                                {item.steps[stepNum-1].start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - {item.steps[stepNum-1].end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                              </span>
                             </div>
-                            {item.blockProgress[block.id as keyof typeof item.blockProgress] && (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            )}
+                            <div className="grid grid-cols-3 gap-2 mt-1">
+                              {['a', 'b', 'combined'].map((sub) => {
+                                const isDone = item.stepProgress[stepNum][sub as keyof typeof item.stepProgress[number]];
+                                return (
+                                  <div key={sub} className={cn(
+                                    "flex flex-col items-center justify-center py-1.5 rounded-lg border text-[8px] font-black uppercase tracking-tighter transition-all",
+                                    isDone ? "bg-emerald-500 border-emerald-600 text-white" : "bg-white text-muted-foreground border-dashed"
+                                  )}>
+                                    {sub === 'combined' ? 'Gabungan' : `Bag. ${sub}`}
+                                    {isDone && <Check className="w-2.5 h-2.5 mt-0.5" />}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         ))}
+
+                        {[5, 6, 7].map((stepNum) => {
+                          const metaLabel = stepNum === 5 ? "Blok 1+2" : stepNum === 6 ? "Blok 1+2+3" : "Blok 1-4 (Final)";
+                          const isDone = item.stepProgress[stepNum].isFullDone;
+                          return (
+                            <div key={stepNum} className={cn(
+                              "flex items-center justify-between p-3 rounded-xl border transition-all",
+                              isDone ? "bg-emerald-50 border-emerald-200" : "bg-white"
+                            )}>
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black",
+                                  isDone ? "bg-emerald-500 text-white" : "bg-amber-100 text-amber-700"
+                                )}>{stepNum}</span>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold">TM {stepNum} ({metaLabel})</span>
+                                  <span className="text-[9px] font-medium text-muted-foreground">Repetisi Gabungan</span>
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end">
+                                <span className="text-[9px] font-bold text-muted-foreground">
+                                  {item.steps[stepNum-1].start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - {item.steps[stepNum-1].end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                </span>
+                                {isDone && <CheckCircle2 className="w-3 h-3 text-emerald-500 mt-0.5" />}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
 
-                      <div className="bg-[#800000]/5 p-4 rounded-xl border-2 border-dashed border-[#800000]/10 flex items-center justify-between mt-2">
+                      <div className="bg-[#800000] p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-[#800000]/20">
                         <div className="flex items-center gap-3">
-                          <GraduationCap className="w-5 h-5 text-[#800000]" />
+                          <div className="p-2 bg-white/20 rounded-xl">
+                            <GraduationCap className="w-5 h-5 text-white" />
+                          </div>
                           <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-[#800000] uppercase tracking-widest leading-none mb-1">Target Ujian Lisan</span>
-                            <span className="text-sm font-black">{item.end.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            <span className="text-[9px] font-black text-white/70 uppercase tracking-widest leading-none mb-1">Target Ujian Lisan</span>
+                            <span className="text-sm font-black text-white">{item.end.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                           </div>
                         </div>
-                        <Badge variant="outline" className="border-[#800000]/20 text-[#800000] font-black text-[9px] px-2">#{idx + 1}</Badge>
+                        <div className="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-widest">
+                          STEP FINAL
+                        </div>
                       </div>
                     </div>
                   )}
@@ -290,9 +342,9 @@ export function TikrarSchedule() {
             <Info className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-black text-blue-900 uppercase tracking-widest">Panduan Rencana Belajar</p>
+            <p className="text-xs font-black text-blue-900 uppercase tracking-widest">Informasi Penjadwalan</p>
             <p className="text-[11px] text-blue-800 leading-relaxed font-medium">
-              Ketuk kartu halaman untuk melihat rincian tanggal per blok. Jadwal ini dihitung secara sistematis berdasarkan tanggal mulai pendaftaran Anda dan level pengerjaan yang dipilih.
+              Jadwal di atas adalah estimasi ideal. Satu halaman Al-Qur'an memiliki 7 langkah pengerjaan (TM 1 s/d TM 7). Pastikan Anda mencentang repetisi di tab "Tikrar Daily" untuk memperbarui status di sini secara otomatis.
             </p>
           </div>
         </CardContent>
