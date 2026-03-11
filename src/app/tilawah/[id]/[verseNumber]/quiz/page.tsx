@@ -4,7 +4,22 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer, Star, Heart, Clock, Zap } from "lucide-react";
+import { 
+  ChevronLeft, 
+  Loader2, 
+  GraduationCap, 
+  CheckCircle2, 
+  XCircle, 
+  RefreshCw, 
+  Trophy, 
+  RotateCcw, 
+  Timer, 
+  Star, 
+  Heart, 
+  Clock, 
+  Zap,
+  ArrowRight
+} from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -30,11 +45,13 @@ export default function WordQuizPage() {
   const router = useRouter();
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
+  const currentVerseNum = parseInt(verseNumber);
   const { toast } = useToast();
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
 
   const [words, setWords] = useState<WordData[]>([]);
+  const [totalVerses, setTotalVerses] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -85,9 +102,10 @@ export default function WordQuizPage() {
     }
   }, []);
 
-  const fetchWords = useCallback(async () => {
+  const fetchWordsAndSurah = useCallback(async () => {
     try {
       setLoading(true);
+      // Fetch Words
       const res = await fetch(
         `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id`
       );
@@ -95,6 +113,12 @@ export default function WordQuizPage() {
       const data = await res.json();
       const validWords = data.verse.words.filter((w: any) => w.text_uthmani && w.translation.text);
       setWords(validWords);
+
+      // Fetch Surah Info for Navigation
+      const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
+      const sData = await sRes.json();
+      setTotalVerses(sData.chapter.verses_count);
+
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -104,9 +128,9 @@ export default function WordQuizPage() {
 
   useEffect(() => {
     if (user) {
-      fetchWords();
+      fetchWordsAndSurah();
     }
-  }, [fetchWords, user]);
+  }, [fetchWordsAndSurah, user]);
 
   const saveProgress = useCallback(async (finalScore: number) => {
     if (!user || !db) return;
@@ -340,9 +364,18 @@ export default function WordQuizPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6">
             {isPerfect ? (
-              <Button asChild className="w-full bg-black hover:bg-black/90 text-white font-bold h-12 shadow-lg">
-                <Link href={`/tilawah/${id}`}>KEMBALI KE DAFTAR</Link>
-              </Button>
+              <div className="flex flex-col gap-3 w-full">
+                {currentVerseNum < totalVerses && (
+                  <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-14 rounded-2xl shadow-xl gap-2 uppercase tracking-widest">
+                    <Link href={`/tilawah/${id}/${currentVerseNum + 1}`}>
+                      LANJUT KE AYAT {currentVerseNum + 1} <ArrowRight className="w-5 h-5" />
+                    </Link>
+                  </Button>
+                )}
+                <Button asChild variant="outline" className="w-full border-2 border-black hover:bg-black/5 text-black font-bold h-12">
+                  <Link href={`/tilawah/${id}`}>KEMBALI KE DAFTAR SURAT</Link>
+                </Button>
+              </div>
             ) : (
               <Button 
                 className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold h-12 gap-2 shadow-lg"
