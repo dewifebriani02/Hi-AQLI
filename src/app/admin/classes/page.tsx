@@ -27,7 +27,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users, Timer, GraduationCap, Award, UserPlus, X } from "lucide-react";
+import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users, Timer, GraduationCap, Award, UserPlus, X, Info } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -74,6 +74,17 @@ export default function AdminClassesPage() {
 
   const { data: halaqahs, isLoading } = useCollection(halaqahQuery);
 
+  // Fetch ALL registrations to calculate remaining quota for each card
+  const allRegistrationsQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, "halaqah_registrations"),
+      where("status", "in", ["active", "pending_verification"])
+    );
+  }, [db, user?.uid]);
+
+  const { data: allRegistrations } = useCollection(allRegistrationsQuery);
+
   // Fetch Users for Selection
   const usersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -82,7 +93,7 @@ export default function AdminClassesPage() {
 
   const { data: allUsers } = useCollection(usersQuery);
 
-  // Fetch Registrations for Selected Halaqah
+  // Fetch Registrations for Selected Halaqah (Detailed view in Dialog)
   const participantsQuery = useMemoFirebase(() => {
     if (!db || !selectedHalaqah?.id) return null;
     return query(
@@ -93,6 +104,12 @@ export default function AdminClassesPage() {
   }, [db, selectedHalaqah?.id]);
 
   const { data: participants, isLoading: isParticipantsLoading } = useCollection(participantsQuery);
+
+  // Helper to get sisa kuota for a specific class
+  const getSisaKuota = (halaqah: any) => {
+    const totalReg = allRegistrations?.filter(r => r.halaqahId === halaqah.id).length || 0;
+    return Math.max(0, (halaqah.quota || 0) - totalReg);
+  };
 
   // Calculate End Date
   const calculatedEndDate = useMemo(() => {
@@ -230,7 +247,6 @@ export default function AdminClassesPage() {
     if (!confirm("Hapus akses kelas santri ini?")) return;
     try {
       await deleteDoc(doc(db, "halaqah_registrations", regId));
-      // Note: In a full implementation, we should also remove from user's followedHalaqahs array
       toast({ title: "Peserta Dihapus dari Kelas" });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal menghapus peserta." });
@@ -273,62 +289,69 @@ export default function AdminClassesPage() {
             <p className="text-sm text-muted-foreground italic">Belum ada kelas yang terdaftar.</p>
           </div>
         ) : (
-          halaqahs.map((h) => (
-            <Card key={h.id} className={cn("border-none shadow-sm group overflow-hidden border-l-4", h.isPremium ? "border-l-[#800000]" : "border-l-blue-500")}>
-              <CardContent className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-black text-sm uppercase text-[#800000]">{h.title}</h3>
-                      {h.isPremium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
+          halaqahs.map((h) => {
+            const sisa = getSisaKuota(h);
+            const total = h.quota || 0;
+            return (
+              <Card key={h.id} className={cn("border-none shadow-sm group overflow-hidden border-l-4", h.isPremium ? "border-l-[#800000]" : "border-l-blue-500")}>
+                <CardContent className="p-5">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-black text-sm uppercase text-[#800000]">{h.title}</h3>
+                        {h.isPremium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                          <User className="w-3 h-3 text-[#800000]" /> Mu'allimah: {h.muallimah}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                        <User className="w-3 h-3 text-[#800000]" /> Mu'allimah: {h.muallimah}
-                      </p>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => handleOpenEdit(h)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5" onClick={() => handleDelete(h.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => handleOpenEdit(h)}>
-                      <Edit className="w-4 h-4" />
+                  
+                  <div className="flex items-center gap-2 mb-4">
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      className="h-7 text-[9px] font-black uppercase tracking-widest gap-1.5"
+                      onClick={() => { setSelectedHalaqah(h); setIsParticipantsOpen(true); }}
+                    >
+                      <Users className="w-3 h-3" /> Kelola Peserta
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5" onClick={() => handleDelete(h.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <Badge variant="secondary" className={cn("text-[8px] font-black h-4 border uppercase gap-1", sisa === 0 ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
+                      <Info className="w-2.5 h-2.5" /> Sisa Kuota: {sisa} / {total}
+                    </Badge>
+                    {h.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4">UJIAN</Badge>}
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2 mb-4">
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    className="h-7 text-[9px] font-black uppercase tracking-widest gap-1.5"
-                    onClick={() => { setSelectedHalaqah(h); setIsParticipantsOpen(true); }}
-                  >
-                    <Users className="w-3 h-3" /> Kelola Peserta
-                  </Button>
-                  {h.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50">UJIAN</Badge>}
-                </div>
 
-                <div className="flex items-center justify-between border-t pt-3 mt-auto">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{h.level}</span>
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Timer className="w-2.5 h-2.5" /> {h.durationWeeks || '-'} Pekan</span>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
-                      <Calendar className="w-3 h-3 text-[#800000]" />
-                      {h.startDate ? new Date(h.startDate).toLocaleDateString('id-ID') : '-'} s/d {h.endDate ? new Date(h.endDate).toLocaleDateString('id-ID') : '-'}
+                  <div className="flex items-center justify-between border-t pt-3 mt-auto">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{h.level}</span>
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Timer className="w-2.5 h-2.5" /> {h.durationWeeks || '-'} Pekan</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground uppercase">
-                      <Clock className="w-3 h-3 text-[#800000]" />
-                      {h.schedule}
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
+                        <Calendar className="w-3 h-3 text-[#800000]" />
+                        {h.startDate ? new Date(h.startDate).toLocaleDateString('id-ID') : '-'} s/d {h.endDate ? new Date(h.endDate).toLocaleDateString('id-ID') : '-'}
+                      </div>
+                      <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground uppercase">
+                        <Clock className="w-3 h-3 text-[#800000]" />
+                        {h.schedule}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
 
