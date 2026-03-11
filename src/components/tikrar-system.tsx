@@ -82,7 +82,6 @@ export function TikrarSystem() {
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(32);
   
-  // State for Blocks 1-4 (Steps 1-4)
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
     2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -90,11 +89,8 @@ export function TikrarSystem() {
     4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
   });
 
-  // State for Meta Steps (Steps 5-7)
   const [metaCombined, setMetaCombined] = useState<Record<number, number>>({
-    2: 0, // Meta 2 (Step 5)
-    3: 0, // Meta 3 (Step 6)
-    4: 0, // Meta 4 (Step 7)
+    2: 0, 3: 0, 4: 0,
   });
 
   useEffect(() => {
@@ -165,13 +161,11 @@ export function TikrarSystem() {
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
-    // TM 1-4
     Object.values(blocks).forEach((b: any) => {
       totalDone += Math.min(b.a.count, TARGET_TM);
       totalDone += Math.min(b.b.count, TARGET_TM);
       totalDone += Math.min(b.combined.count, TARGET_TM);
     });
-    // TM 5-7
     Object.values(metaCombined).forEach((val) => {
       totalDone += (val / TARGET_META) * TARGET_TM;
     });
@@ -202,7 +196,6 @@ export function TikrarSystem() {
 
   return (
     <div className="space-y-8">
-      {/* Header Progres */}
       <Card className="border-none bg-gradient-to-br from-[#800000] to-[#b30000] text-white shadow-xl overflow-hidden relative">
         <div className="absolute right-[-20px] top-[-20px] opacity-10"><CalendarDays className="w-40 h-40" /></div>
         <CardContent className="p-6 relative z-10">
@@ -243,7 +236,6 @@ export function TikrarSystem() {
         </CardContent>
       </Card>
 
-      {/* Navigasi Halaman & Font */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-12 w-12 border-2">
@@ -279,7 +271,7 @@ export function TikrarSystem() {
           <div className="grid grid-cols-1 gap-8 pb-32">
             <div className="px-1 flex items-center gap-2">
               <Layers className="w-5 h-5 text-[#800000]" />
-              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 1: Penguasaan Blok (TM 1-4)</h4>
+              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 1: Penguasaan Blok (Langkah 1-4)</h4>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -309,12 +301,12 @@ export function TikrarSystem() {
 
             <div className="px-1 flex items-center gap-2 mt-8">
               <Zap className="w-5 h-5 text-amber-500 fill-current" />
-              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 2: Repetisi Gabungan (TM 5-7)</h4>
+              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 2: Repetisi Gabungan (Langkah 5-7)</h4>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
               {[5, 6, 7].map((stepNum) => {
-                const metaIdx = stepNum - 3; // Mapping Step 5 -> Meta 2, Step 6 -> Meta 3, Step 7 -> Meta 4
+                const metaIdx = stepNum - 3;
                 const metaLabel = stepNum === 5 ? "Blok 1+2" : stepNum === 6 ? "Blok 1+2+3" : "Halaman Penuh (1-4)";
                 const count = metaCombined[metaIdx] || 0;
                 const isDone = count >= TARGET_META;
@@ -328,7 +320,7 @@ export function TikrarSystem() {
                             {stepNum}
                           </div>
                           <div className="flex flex-col">
-                            <h5 className="font-black uppercase tracking-widest text-[#800000]">Langkah {stepNum} (TM {stepNum})</h5>
+                            <h5 className="font-black uppercase tracking-widest text-[#800000]">Langkah {stepNum}</h5>
                             <p className="text-xs font-bold text-muted-foreground">Gabungan {metaLabel}</p>
                           </div>
                         </div>
@@ -369,69 +361,68 @@ export function TikrarSystem() {
 function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
   const isDone = state.combined.count >= target;
   
-  // Split verses into part A and B for coloring
-  const midIndex = Math.ceil(verses.length / 2);
-  const versesA = verses.slice(0, midIndex);
-  const versesB = verses.slice(midIndex);
+  const tokens = useMemo(() => {
+    const items: any[] = [];
+    verses.forEach((v: any) => {
+      v.words.forEach((w: any, idx: number) => {
+        items.push({ type: 'word', data: w, verse_key: v.verse_key, word_idx: idx });
+      });
+      items.push({ type: 'marker', text: `(${v.verse_key.split(':')[1]})`, verse_key: v.verse_key });
+    });
+    return items;
+  }, [verses]);
+
+  const midPoint = Math.ceil(tokens.length / 2);
+  const tokensA = tokens.slice(0, midPoint);
+  const tokensB = tokens.slice(midPoint);
+
+  const renderToken = (token: any, color: string) => {
+    if (token.type === 'word') {
+      const wordKey = `${token.verse_key}-${token.word_idx}`;
+      return (
+        <Tooltip key={wordKey}>
+          <TooltipTrigger asChild>
+            <span 
+              tabIndex={0} 
+              role="button"
+              style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
+              className={cn("font-arabic cursor-help hover:bg-muted/50 rounded px-0.5 transition-colors outline-none", color)}
+            >
+              {token.data.text_uthmani}
+            </span>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+              <p className="text-xs font-medium">{token.data.translation?.text || "..."}</p>
+            </TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      );
+    } else {
+      return (
+        <span 
+          key={`${token.verse_key}-marker`}
+          className={cn("inline-flex items-center justify-center px-2 rounded-full border text-[10px] font-bold mx-1 bg-white/50 shadow-sm translate-y-[-2px]", 
+            color === "text-rose-600" ? "border-rose-200 text-rose-600" : "border-emerald-200 text-emerald-600"
+          )}
+        >
+          {token.text}
+        </span>
+      );
+    }
+  };
 
   return (
     <Card className={cn("border-2 transition-all shadow-lg overflow-hidden", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
       <div className="bg-[#800000]/5 py-3 px-6 border-b flex flex-row items-center justify-between">
-        <h4 className="text-sm font-black uppercase tracking-widest text-[#800000]">Langkah {id}: Blok {id}</h4>
+        <h4 className="text-sm font-black uppercase tracking-widest text-[#800000]">Blok {id}</h4>
         {isDone && <Badge className="bg-emerald-500 text-white font-black text-[10px] tracking-widest">DONE</Badge>}
       </div>
       <CardContent className="p-6 space-y-6">
         <div className="bg-[#fffcf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[300px] overflow-y-auto no-scrollbar" dir="rtl">
           <div className="flex flex-wrap justify-center gap-x-1 gap-y-3">
-            {/* PART A - RED TEXT */}
-            {versesA.map((v: any) => (
-              <React.Fragment key={v.id}>
-                {v.words.map((w: any, idx: number) => (
-                  <Tooltip key={`${v.id}-${idx}`}>
-                    <TooltipTrigger asChild>
-                      <span 
-                        tabIndex={0} 
-                        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
-                        className="font-arabic text-rose-600 cursor-help hover:bg-rose-50 rounded px-0.5 transition-colors"
-                      >
-                        {w.text_uthmani}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipPortal>
-                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                        <p className="text-xs font-medium">{w.translation?.text || "..."}</p>
-                      </TooltipContent>
-                    </TooltipPortal>
-                  </Tooltip>
-                ))}
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-rose-200 text-[10px] font-bold mx-1 text-rose-600 bg-white/50 shadow-sm translate-y-[-2px]">({v.verse_key.split(':')[1]})</span>
-              </React.Fragment>
-            ))}
-
-            {/* PART B - GREEN TEXT */}
-            {versesB.map((v: any) => (
-              <React.Fragment key={v.id}>
-                {v.words.map((w: any, idx: number) => (
-                  <Tooltip key={`${v.id}-${idx}`}>
-                    <TooltipTrigger asChild>
-                      <span 
-                        tabIndex={0} 
-                        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
-                        className="font-arabic text-emerald-600 cursor-help hover:bg-emerald-50 rounded px-0.5 transition-colors"
-                      >
-                        {w.text_uthmani}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipPortal>
-                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                        <p className="text-xs font-medium">{w.translation?.text || "..."}</p>
-                      </TooltipContent>
-                    </TooltipPortal>
-                  </Tooltip>
-                ))}
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-emerald-200 text-[10px] font-bold mx-1 text-emerald-600 bg-white/50 shadow-sm translate-y-[-2px]">({v.verse_key.split(':')[1]})</span>
-              </React.Fragment>
-            ))}
+            {tokensA.map((t, idx) => renderToken(t, "text-rose-600"))}
+            {tokensB.map((t, idx) => renderToken(t, "text-emerald-600"))}
           </div>
         </div>
         
