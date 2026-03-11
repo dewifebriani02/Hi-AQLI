@@ -57,6 +57,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Catch-all admin access
     match /{path=**} {
       allow read, write: if isAdmin();
     }

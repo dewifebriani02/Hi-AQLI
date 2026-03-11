@@ -37,19 +37,21 @@ export default function AdminRegistrationsPage() {
     try {
       const batch = writeBatch(db);
 
+      // 1. Update Registration Status
       const regRef = doc(db, "halaqah_registrations", reg.id);
       batch.update(regRef, { 
         status: "active",
         verifiedAt: serverTimestamp()
       });
 
+      // 2. Update User Profile Access
       const userRef = doc(db, "users", reg.userId);
       const updateData: any = {
         followedHalaqahs: arrayUnion(reg.halaqahId),
         updatedAt: serverTimestamp()
       };
 
-      // Special logic for Tikrar
+      // Special logic for Tikrar Premium
       if (reg.halaqahId === 'tikrar-j30-b1') {
         updateData.isTikrarPaid = true;
         updateData.paidJuz = reg.targetJuz;
@@ -58,20 +60,19 @@ export default function AdminRegistrationsPage() {
 
       batch.update(userRef, updateData);
 
-      batch.commit().catch(async (error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `halaqah_registrations/${reg.id}`,
-          operation: 'update',
-          requestResourceData: { status: 'active' }
-        }));
-      });
+      // Commit the batch and wait for it
+      await batch.commit();
       
       toast({
-        title: "Pendaftaran Berhasil Diverifikasi",
-        description: `Akses ${reg.halaqahTitle} telah dibuka.`,
+        title: "Berhasil Diverifikasi",
+        description: `Akses ${reg.halaqahTitle} telah aktif untuk ${reg.userName}.`,
       });
-    } catch (error) {
-      // Handled centrally
+    } catch (err: any) {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: `halaqah_registrations/${reg.id} & users/${reg.userId}`,
+        operation: 'write',
+        requestResourceData: { status: 'active', grantAccess: reg.halaqahId }
+      }));
     } finally {
       setProcessingId(null);
     }
@@ -90,7 +91,7 @@ export default function AdminRegistrationsPage() {
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
         <ShieldAlert className="w-12 h-12 text-destructive" />
         <h2 className="text-xl font-bold">Akses Ditolak</h2>
-        <p className="text-muted-foreground max-w-md">Perlu hak akses administrator. {error.message}</p>
+        <p className="text-muted-foreground max-w-md">Perlu hak akses administrator untuk melihat daftar ini.</p>
         <Button asChild variant="outline"><Link href="/">Kembali</Link></Button>
       </div>
     );
@@ -98,22 +99,22 @@ export default function AdminRegistrationsPage() {
 
   return (
     <div className="flex flex-col gap-8 max-w-5xl mx-auto pb-20">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 px-1">
         <Button asChild variant="ghost" size="icon">
           <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold font-headline">Verifikasi Pendaftaran</h1>
-          <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest text-[#800000]">Semua Program Halaqah</p>
+          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-[#800000]">Semua Program Halaqah</p>
         </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 px-1">
         {!registrations || registrations.length === 0 ? (
           <Card className="border-2 border-dashed py-20">
             <CardContent className="flex flex-col items-center justify-center text-center gap-4 text-muted-foreground">
               <CheckCircle2 className="w-12 h-12 opacity-20" />
-              <p className="font-medium italic">Tidak ada pendaftaran baru.</p>
+              <p className="font-medium italic">Tidak ada pendaftaran baru yang menunggu verifikasi.</p>
             </CardContent>
           </Card>
         ) : (
@@ -124,7 +125,9 @@ export default function AdminRegistrationsPage() {
                   <Badge variant="outline" className="text-[10px] font-bold flex items-center gap-1">
                     <BookOpen className="w-3 h-3" /> {reg.halaqahTitle}
                   </Badge>
-                  <span className="text-[10px] text-muted-foreground font-medium">Daftar pada: {reg.createdAt?.toDate?.().toLocaleString('id-ID')}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    Daftar pada: {reg.createdAt?.toDate?.().toLocaleString('id-ID')}
+                  </span>
                 </div>
                 <Badge className={cn("text-white border-none font-bold text-[10px]", reg.isPaid ? "bg-amber-500" : "bg-blue-500")}>
                   {reg.isPaid ? 'BERBAYAR' : 'GRATIS'}
@@ -158,10 +161,10 @@ export default function AdminRegistrationsPage() {
                         <span className="text-sm font-black text-[#800000]">Rp {reg.amount?.toLocaleString('id-ID')}</span>
                       </div>
                     )}
-                    {reg.halaqahId === 'tikrar-j30-b1' && (
+                    {reg.targetJuz && (
                       <div className="flex items-center justify-between border-t pt-2 border-dashed border-[#800000]/20">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">Target</span>
-                        <Badge className="bg-[#800000]">JUZ {reg.targetJuz}</Badge>
+                        <Badge className="bg-[#800000] text-[10px]">JUZ {reg.targetJuz}</Badge>
                       </div>
                     )}
                   </div>
@@ -170,16 +173,16 @@ export default function AdminRegistrationsPage() {
                     {reg.isPaid && (
                       <div className="bg-muted p-2 rounded flex items-center gap-2 text-[10px] mb-2 font-medium overflow-hidden">
                         <ImageIcon className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{reg.proofFileName || "No-File.jpg"}</span>
+                        <span className="truncate">{reg.proofFileName || "Bukti-Transfer.jpg"}</span>
                       </div>
                     )}
                     <Button 
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 gap-2"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 gap-2 shadow-sm"
                       onClick={() => handleApprove(reg)}
                       disabled={processingId === reg.id}
                     >
                       {processingId === reg.id ? <Loader2 className="animate-spin w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                      VERIFIKASI AKSES
+                      KONFIRMASI & BUKA AKSES
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -187,7 +190,7 @@ export default function AdminRegistrationsPage() {
                       onClick={() => handleReject(reg.id)}
                       disabled={processingId === reg.id}
                     >
-                      TOLAK
+                      TOLAK PENDAFTARAN
                     </Button>
                   </div>
                 </div>
