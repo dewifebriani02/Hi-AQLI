@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname } from "next/navigation";
@@ -78,7 +79,10 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-[#D4AF37]/30 py-4 bg-[#800000]">
         <div className="flex items-center justify-between px-2">
           <Link href="/" className="flex items-center gap-2" onClick={handleLinkClick}>
-            <Logo className="group-data-[collapsible=icon]:hidden scale-90 origin-left" />
+            <Logo 
+              className="group-data-[collapsible=icon]:hidden scale-90 origin-left" 
+              textClassName="text-white" 
+            />
           </Link>
           <SidebarTrigger className="hidden md:flex text-white hover:bg-white/10" />
         </div>
@@ -121,7 +125,7 @@ export function AppSidebar() {
           </h2>
           <SidebarMenu>
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
               return (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
@@ -149,8 +153,8 @@ export function AppSidebar() {
             <SidebarMenuItem>
                 <SidebarMenuButton 
                   tooltip="Pengaturan Admin" 
-                  onClick={handleLinkClick}
                   className="text-white hover:bg-white/10"
+                  onClick={handleLinkClick}
                 >
                     <Settings className="text-white" />
                     <span className="font-bold">Pengaturan</span>
