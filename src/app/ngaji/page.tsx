@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Banknote } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Banknote, Calendar, GraduationCap, Award } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -35,7 +35,7 @@ export default function NgajiPage() {
 
   const { data: dbHalaqahs, isLoading: isHalaqahsLoading } = useCollection(halaqahQuery);
 
-  // Fetch all registrations across all users to calculate quota
+  // Fetch all registrations global to calculate quota
   const allRegsGlobalQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(
@@ -69,7 +69,7 @@ export default function NgajiPage() {
       if (userData?.followedHalaqahs?.includes(id)) return 'active';
       return 'none';
     }
-    return reg.status; // 'active', 'pending_verification', 'rejected'
+    return reg.status; 
   };
 
   const isHalaqahActive = (id: string) => getHalaqahStatus(id) === 'active';
@@ -103,61 +103,77 @@ export default function NgajiPage() {
             isFull && "opacity-60"
           )}
         >
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 flex-1">
-              <div className={cn(
-                "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:scale-105 transition-transform",
-                isActive ? "bg-[#D4AF37] text-black" : 
-                isPending ? "bg-amber-500 text-white" :
-                circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
-              )}>
-                {isActive ? <PlayCircle className="w-6 h-6" /> : 
-                 isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
-                 circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
-              </div>
-              <div className="flex flex-col gap-0.5 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className={cn("font-black text-sm uppercase leading-tight", isActive ? "text-black" : "text-[#800000]")}>{circle.title}</h4>
-                  {isActive ? (
-                    <Badge className="bg-[#D4AF37] text-black border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">AKTIF</Badge>
-                  ) : isPending ? (
-                    <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">VERIFIKASI</Badge>
-                  ) : isFull ? (
-                    <Badge variant="outline" className="text-destructive border-destructive text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">PENUH</Badge>
-                  ) : (
-                    circle.isPremium && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">PREMIUM</Badge>
-                  )}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1">
+                <div className={cn(
+                  "flex items-center justify-center w-12 h-12 rounded-xl font-bold shrink-0",
+                  isActive ? "bg-[#D4AF37] text-black" : 
+                  isPending ? "bg-amber-500 text-white" :
+                  circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+                )}>
+                  {isActive ? <PlayCircle className="w-6 h-6" /> : 
+                   isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
+                   circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground mt-1">
-                  <User className="w-3 h-3 text-[#800000]" />
-                  <span>Mu'allimah: {circle.muallimah}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-2.5 h-2.5 text-[#800000]" />
-                    <span>{circle.schedule}</span>
+                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className={cn("font-black text-sm uppercase leading-tight truncate", isActive ? "text-black" : "text-[#800000]")}>{circle.title}</h4>
+                    {isActive ? (
+                      <Badge className="bg-[#D4AF37] text-black border-none text-[7px] h-4 px-1.5 font-black uppercase">AKTIF</Badge>
+                    ) : isPending ? (
+                      <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">VERIFIKASI</Badge>
+                    ) : isFull ? (
+                      <Badge variant="outline" className="text-destructive border-destructive text-[7px] h-4 px-1.5 font-black uppercase">PENUH</Badge>
+                    ) : (
+                      circle.isPremium && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">PREMIUM</Badge>
+                    )}
                   </div>
-                  <span className="text-[#800000]/40">•</span>
-                  <div className="flex items-center gap-1">
-                    <Users className="w-2.5 h-2.5 text-[#800000]" />
-                    <span>Sisa Kuota: {sisaKuota}</span>
-                  </div>
-                  {circle.isPremium && !isActive && !isPending && (
-                    <>
-                      <span className="text-[#800000]/40">•</span>
-                      <div className="flex items-center gap-1 text-[#800000]">
-                        <Banknote className="w-2.5 h-2.5" />
-                        <span>Rp {circle.basePrice?.toLocaleString('id-ID')}</span>
+                  <div className="flex flex-col gap-0.5 mt-1">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                      <User className="w-3 h-3 text-[#800000]" />
+                      <span>Mu'allimah: {circle.muallimah}</span>
+                    </div>
+                    {circle.musyrifah && (
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                        <User className="w-3 h-3 text-[#D4AF37]" />
+                        <span>Musyrifah: {circle.musyrifah}</span>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </div>
+              </div>
+              {!isPending && !isFull && <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#800000]" />}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-dashed">
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-muted-foreground uppercase">Jadwal</span>
+                <span className="text-[10px] font-bold flex items-center gap-1"><Clock className="w-2.5 h-2.5 text-[#800000]" /> {circle.schedule}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-muted-foreground uppercase">Mulai</span>
+                <span className="text-[10px] font-bold flex items-center gap-1"><Calendar className="w-2.5 h-2.5 text-[#800000]" /> {circle.startDate ? new Date(circle.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-muted-foreground uppercase">Durasi</span>
+                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {circle.duration || '-'}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[8px] font-black text-muted-foreground uppercase">Sisa Kuota</span>
+                <span className="text-[10px] font-bold flex items-center gap-1">{sisaKuota} <Users className="w-2.5 h-2.5 text-[#800000]" /></span>
               </div>
             </div>
-            {!isPending && !isFull && <ChevronRight className={cn(
-              "w-5 h-5 transition-colors", 
-              isActive ? "text-[#D4AF37]" : "text-muted-foreground/30 group-hover:text-[#800000]"
-            )} />}
+
+            <div className="flex items-center justify-between mt-1">
+              <div className="flex gap-2">
+                {circle.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4 flex items-center gap-1"><GraduationCap className="w-2 h-2" /> UJIAN</Badge>}
+                {circle.hasCertificate && <Badge variant="outline" className="text-[8px] border-blue-200 text-blue-700 bg-blue-50 h-4 flex items-center gap-1"><Award className="w-2 h-2" /> SERTIFIKAT</Badge>}
+              </div>
+              {circle.isPremium && !isActive && !isPending && (
+                <span className="text-xs font-black text-[#800000]">Rp {circle.basePrice?.toLocaleString('id-ID')}</span>
+              )}
+            </div>
           </div>
         </Card>
       </Link>
@@ -173,7 +189,7 @@ export default function NgajiPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
-          Pilih program Tahsin, Tafsir, atau Tahfidz sesuai level Anda. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
+          Pilih program sesuai level Anda. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
         </p>
       </div>
 
