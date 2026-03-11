@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -54,8 +55,8 @@ export default function AdminRegistrationsPage() {
       // Special logic for Tikrar Premium
       if (reg.halaqahId === 'tikrar-j30-b1') {
         updateData.isTikrarPaid = true;
-        updateData.paidJuz = reg.targetJuz;
-        updateData.tikrarLevel = reg.level;
+        updateData.paidJuz = reg.targetJuz || 30;
+        updateData.tikrarLevel = reg.level || 3;
       }
 
       batch.update(userRef, updateData);

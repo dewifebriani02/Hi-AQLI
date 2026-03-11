@@ -77,7 +77,7 @@ function RegistrationForm() {
       collection(db, "halaqah_registrations"),
       where("userId", "==", user.uid),
       where("halaqahId", "==", halaqahId),
-      limit(1)
+      where("status", "in", ["active", "pending_verification"])
     );
   }, [db, user?.uid, halaqahId]);
 
