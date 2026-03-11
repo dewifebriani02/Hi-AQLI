@@ -17,7 +17,8 @@ import {
   Clock,
   BookOpen,
   Globe,
-  Mic2
+  Mic2,
+  LayoutGrid
 } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -110,7 +111,26 @@ export default function DashboardPage() {
         <h2 className="text-lg font-bold font-headline">Layanan HI AQLI</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           
-          {/* 1. HI NGAJI */}
+          {/* 1. HI HALAQAH (Daftar Kelas) */}
+          <Link href="/study-circles" className="block group sm:col-span-2">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-32 transition-transform group-hover:scale-[1.01] relative border-b-4 border-[#D4AF37]">
+              <CardContent className="p-5 flex items-center justify-between h-full relative overflow-hidden gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-[#D4AF37]">
+                    <LayoutGrid className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Pendaftaran</Badge>
+                    <h4 className="font-black text-xl text-white">Hi Halaqah</h4>
+                    <p className="text-[10px] text-white/70">Daftar kelas Tahsin, Tafsir, & Tikrar.</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-[#D4AF37]" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* 2. HI NGAJI */}
           <Link href="/tilawah" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
@@ -125,9 +145,9 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {/* 2. HI HAFAL */}
+          {/* 3. HI HAFAL */}
           <Link href="/tajweed" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative border-b-4 border-[#D4AF37]">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Award className="w-24 h-24" /></div>
                 <div className="space-y-1 relative z-10">
@@ -140,7 +160,7 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {/* 3. HI MUFRADAT */}
+          {/* 4. HI MUFRADAT */}
           <Link href="/ai-scholar" className="block group sm:col-span-2">
             <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-40 transition-transform group-hover:scale-[1.01] relative">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
@@ -157,7 +177,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4. HI BERBAGI (Donation Ad) */}
+      {/* 5. HI BERBAGI (Donation Ad) */}
       <Link href="/donate" className="block group">
         <Card className="overflow-hidden border-2 border-[#800000]/10 bg-white text-[#800000] h-32 transition-all group-hover:border-[#D4AF37] shadow-sm">
           <CardContent className="p-5 flex items-center justify-between h-full gap-4">

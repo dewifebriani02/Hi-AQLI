@@ -24,6 +24,7 @@ import {
   Trophy,
   UserCog,
   Globe,
+  LayoutGrid,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const adminItems = [
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
+  { href: "/study-circles", label: "Hi Halaqah", icon: LayoutGrid },
   { href: "/tilawah", label: "Hi Ngaji", icon: BookOpen },
   { href: "/tajweed", label: "Hi Hafal", icon: GraduationCap },
   { href: "/ai-scholar", label: "Hi Mufradat", icon: Globe },

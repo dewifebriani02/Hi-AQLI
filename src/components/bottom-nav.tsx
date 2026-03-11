@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, GraduationCap, HeartHandshake, Globe } from "lucide-react";
+import { LayoutDashboard, BookOpen, GraduationCap, HeartHandshake, Globe, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
+  { href: "/study-circles", label: "Hi Halaqah", icon: LayoutGrid },
   { href: "/tilawah", label: "Hi Ngaji", icon: BookOpen, isProminent: true },
   { href: "/tajweed", label: "Hi Hafal", icon: GraduationCap },
   { href: "/ai-scholar", label: "Hi Mufradat", icon: Globe },
-  { href: "/donate", label: "Hi Berbagi", icon: HeartHandshake },
 ];
 
 export function BottomNav() {
