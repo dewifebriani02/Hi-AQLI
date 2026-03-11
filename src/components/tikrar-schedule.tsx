@@ -10,11 +10,11 @@ import {
   CheckCircle2, 
   CalendarDays, 
   GraduationCap, 
-  Info,
   Lock,
   ChevronDown,
   ChevronUp,
   Layers,
+  Zap,
   Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -77,17 +77,18 @@ export function TikrarSchedule() {
                           new Date();
     
     let currentDate = new Date(adminStartDate);
-    const dayAllocation = [0.15, 0.15, 0.1, 0.15, 0.1, 0.1, 0.15, 0.1]; // Distribution across Maqtas and Meta
+    
+    // Time distribution across 10 logical stages
+    const dayAllocation = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]; 
 
     for (let p = startPage; p <= endPage; p++) {
       const pageStart = new Date(currentDate);
       const stepsDates: any[] = [];
       let stepCurrentDate = new Date(pageStart);
 
-      // We have roughly 10 visual steps now
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 10; i++) {
         const sStart = new Date(stepCurrentDate);
-        const sDays = Math.max(1, Math.round(level.days * (dayAllocation[i] || 0.1)));
+        const sDays = Math.max(1, Math.round(level.days * dayAllocation[i]));
         const sEnd = addWorkDays(sStart, sDays);
         stepsDates.push({ start: sStart, end: sEnd });
         stepCurrentDate = new Date(sEnd);
@@ -95,7 +96,8 @@ export function TikrarSchedule() {
 
       const pageEnd = new Date(stepCurrentDate);
       
-      let maqtaProgress: Record<number, any> = {};
+      // Progres check based on localStorage (same keys as TikrarSystem)
+      let maqtaProgress: Record<number, boolean> = {};
       let metaProgress: Record<string, boolean> = {};
       let isAllDone = false;
 
@@ -108,24 +110,28 @@ export function TikrarSchedule() {
             const m = data.metaCounts || {};
             
             for (let i = 1; i <= 4; i++) {
-              maqtaProgress[i] = {
-                a: (b[i]?.a?.count || 0) >= PASS_THRESHOLD,
-                b: (b[i]?.b?.count || 0) >= PASS_THRESHOLD,
-                combined: (b[i]?.combined?.count || 0) >= PASS_THRESHOLD
-              };
+              // TM is tuntas if internal a, b, and combined all >= threshold
+              const a = (b[i]?.a?.count || 0) >= PASS_THRESHOLD;
+              const b_ = (b[i]?.b?.count || 0) >= PASS_THRESHOLD;
+              const g = (b[i]?.combined?.count || 0) >= PASS_THRESHOLD;
+              maqtaProgress[i] = a && b_ && g;
             }
+            
             metaProgress['1_2'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['2_3'] = (m['2_3'] || 0) >= META_PASS_THRESHOLD;
             metaProgress['1_2_3'] = (m['1_2_3'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['3_4'] = (m['3_4'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['2_3_4'] = (m['2_3_4'] || 0) >= META_PASS_THRESHOLD;
             metaProgress['1_2_3_4'] = (m['1_2_3_4'] || 0) >= META_PASS_THRESHOLD;
 
-            isAllDone = maqtaProgress[4].combined && metaProgress['1_2_3_4'];
+            isAllDone = metaProgress['1_2_3_4'];
           } catch (e) {}
         }
       }
 
       if (Object.keys(maqtaProgress).length === 0) {
-        for (let i = 1; i <= 4; i++) maqtaProgress[i] = { a: false, b: false, combined: false };
-        metaProgress = { '1_2': false, '1_2_3': false, '1_2_3_4': false };
+        for (let i = 1; i <= 4; i++) maqtaProgress[i] = false;
+        metaProgress = { '1_2': false, '2_3': false, '1_2_3': false, '3_4': false, '2_3_4': false, '1_2_3_4': false };
       }
 
       items.push({
@@ -241,48 +247,30 @@ export function TikrarSchedule() {
                     <div className="mt-6 pt-6 border-t border-dashed space-y-6 animate-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center gap-2">
                         <Layers className="w-4 h-4 text-[#800000]" />
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Detail Tikrar Maqta (TM)</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Tahapan Tikrar Maqta</h4>
                       </div>
                       
-                      <div className="flex flex-col gap-3">
-                        {[1, 2, 3, 4].map((stepNum) => (
-                          <div key={stepNum} className="flex flex-col gap-2 p-3 rounded-xl border bg-muted/10">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold">Tikrar Maqta {stepNum} (5x)</span>
-                              <div className="flex gap-1.5">
-                                {['a', 'b', 'combined'].map((sub) => (
-                                  <div key={sub} className={cn(
-                                    "px-1.5 py-0.5 rounded border text-[7px] font-black uppercase",
-                                    item.maqtaProgress[stepNum][sub] ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-muted-foreground opacity-40"
-                                  )}>
-                                    {sub === 'combined' ? 'G' : sub}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-
-                        {['1_2', '1_2_3', '1_2_3_4'].map((metaKey) => {
-                          const label = metaKey === '1_2' ? "Gabung TM1 & 2" : metaKey === '1_2_3' ? "Gabung TM1-3" : "Gabung Halaman";
-                          const isDone = item.metaProgress[metaKey];
-                          return (
-                            <div key={metaKey} className={cn(
-                              "flex items-center justify-between p-3 rounded-xl border transition-all",
-                              isDone ? "bg-emerald-50 border-emerald-200" : "bg-white opacity-60"
-                            )}>
-                              <span className="text-xs font-bold">{label} (10x)</span>
-                              {isDone && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                            </div>
-                          );
-                        })}
+                      <div className="flex flex-col gap-2">
+                        {/* Rendering the exact steps from TikrarSystem */}
+                        <StepRow label="TM1 (a, b, Gabung)" isDone={item.maqtaProgress[1]} date={item.steps[0].end} />
+                        <StepRow label="TM2 (a, b, Gabung)" isDone={item.maqtaProgress[2]} date={item.steps[1].end} />
+                        <StepRow label="Gabung TM1 & TM2" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta />
+                        
+                        <StepRow label="TM3 (a, b, Gabung)" isDone={item.maqtaProgress[3]} date={item.steps[3].end} />
+                        <StepRow label="Gabung TM2 & TM3" isDone={item.metaProgress['2_3']} date={item.steps[4].end} isMeta />
+                        <StepRow label="Gabung TM1 s/d TM3" isDone={item.metaProgress['1_2_3']} date={item.steps[5].end} isMeta />
+                        
+                        <StepRow label="TM4 (a, b, Gabung)" isDone={item.maqtaProgress[4]} date={item.steps[6].end} />
+                        <StepRow label="Gabung TM3 & TM4" isDone={item.metaProgress['3_4']} date={item.steps[7].end} isMeta />
+                        <StepRow label="Gabung TM2 s/d TM4" isDone={item.metaProgress['2_3_4']} date={item.steps[8].end} isMeta />
+                        <StepRow label="GABUNG SELURUH HALAMAN" isDone={item.metaProgress['1_2_3_4']} date={item.steps[9].end} isMeta highlight />
                       </div>
 
-                      <div className="bg-[#800000] p-4 rounded-2xl flex items-center justify-between">
+                      <div className="bg-[#800000] p-4 rounded-2xl flex items-center justify-between mt-4">
                         <div className="flex items-center gap-3">
                           <GraduationCap className="w-5 h-5 text-white" />
                           <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-white/70 uppercase">Ujian Lisan Maqta</span>
+                            <span className="text-[9px] font-black text-white/70 uppercase">Target Ujian Lisan</span>
                             <span className="text-xs font-black text-white">{item.end.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })}</span>
                           </div>
                         </div>
@@ -295,6 +283,32 @@ export function TikrarSchedule() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function StepRow({ label, isDone, date, isMeta, highlight }: { label: string, isDone: boolean, date: Date, isMeta?: boolean, highlight?: boolean }) {
+  return (
+    <div className={cn(
+      "flex items-center justify-between p-3 rounded-xl border transition-all",
+      isDone ? "bg-emerald-50 border-emerald-200" : "bg-white",
+      highlight && !isDone && "border-amber-500 bg-amber-50/20"
+    )}>
+      <div className="flex items-center gap-3">
+        <div className={cn(
+          "w-6 h-6 rounded-lg flex items-center justify-center",
+          isDone ? "bg-emerald-500 text-white" : isMeta ? "bg-muted text-muted-foreground" : "bg-[#800000]/10 text-[#800000]"
+        )}>
+          {isDone ? <Check className="w-3 h-3" /> : isMeta ? <Zap className="w-3 h-3" /> : <Check className="w-3 h-3 opacity-20" />}
+        </div>
+        <div className="flex flex-col">
+          <span className={cn("text-[11px] font-bold", highlight ? "text-[#800000]" : "text-foreground")}>{label}</span>
+          <span className="text-[9px] text-muted-foreground font-medium">
+            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+          </span>
+        </div>
+      </div>
+      {isDone && <Badge className="bg-emerald-500 h-4 px-1.5 text-[8px] font-black uppercase">OK</Badge>}
     </div>
   );
 }
