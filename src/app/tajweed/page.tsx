@@ -16,12 +16,14 @@ import {
   RotateCcw, 
   Layers,
   BarChart3,
-  Trophy
+  Trophy,
+  CalendarDays
 } from "lucide-react";
 import Link from "next/link";
 import { TikrarSystem } from "@/components/tikrar-system";
 import { ProgressClient } from "@/components/progress-client";
 import { HifzProgressChart } from "@/components/hifz-progress-chart";
+import { TikrarSchedule } from "@/components/tikrar-schedule";
 
 const tajweedRules = [
   {
@@ -56,23 +58,31 @@ export default function HafalanPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Hafalan & Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Gunakan Tikrar Daily untuk memperkuat hafalan satu halaman Mushaf melalui 40x repetisi per maqta.
+          Gunakan Tikrar Daily untuk memperkuat hafalan melalui repetisi dan pantau jadwal personal Anda.
         </p>
       </div>
 
       <Tabs defaultValue="tikrar-daily" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
+        <TabsList className="grid w-full grid-cols-3 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="tikrar-daily" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
             <Layers className="w-4 h-4" /> Tikrar Daily
           </TabsTrigger>
+          <TabsTrigger value="schedule" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
+            <CalendarDays className="w-4 h-4" /> Jadwal Saya
+          </TabsTrigger>
           <TabsTrigger value="progress" className="font-bold gap-2 data-[state=active]:text-[#800000] rounded-lg">
-            <BarChart3 className="w-4 h-4" /> Progres Hafalan
+            <BarChart3 className="w-4 h-4" /> Progres
           </TabsTrigger>
         </TabsList>
 
         {/* SYSTEM TIKRAR DAILY TAB */}
         <TabsContent value="tikrar-daily" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <TikrarSystem />
+        </TabsContent>
+
+        {/* SCHEDULE TAB */}
+        <TabsContent value="schedule" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TikrarSchedule />
         </TabsContent>
 
         {/* PROGRESS TAB */}
