@@ -22,12 +22,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const adminDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "roles_admin", user.uid);
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const superAdminDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "roles_superadmin", user.uid);
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: isAdmin } = useDoc(adminDocRef);
   const { data: isSuperAdmin } = useDoc(superAdminDocRef);

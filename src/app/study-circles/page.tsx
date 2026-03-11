@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -61,7 +60,7 @@ export default function StudyCirclesPage() {
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "users", user.uid);
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: userData } = useDoc(userDocRef);
 
@@ -146,7 +145,7 @@ export default function StudyCirclesPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <User className="w-3 h-3" />
+                  <User className="w-3 p-3" />
                   <span>{circle.instructor}</span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground font-medium">

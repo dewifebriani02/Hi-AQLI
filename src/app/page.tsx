@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -49,7 +48,7 @@ export default function DashboardPage() {
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "users", user.uid);
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: userData } = useDoc(userDocRef);
   const isPaid = userData?.isTikrarPaid;
