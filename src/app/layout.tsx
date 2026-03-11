@@ -31,7 +31,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { data: isAdminDoc } = useDoc(adminDocRef);
   const { data: isSuperAdminDoc } = useDoc(superAdminDocRef);
 
-  // Deteksi admin gabungan (Email + Database)
   const isSpecialAdmin = user?.email === "dewifebriani@gmail.com";
   const hasAdminAccess = isSpecialAdmin || !!isAdminDoc || !!isSuperAdminDoc;
 
@@ -44,7 +43,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4">
                {hasAdminAccess && <SidebarTrigger className="md:hidden" />}
                <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight uppercase text-[#800000]">
-                 HI AQLI
+                 Hi AQLI
                </div>
                <div className="flex items-center gap-2">
                  {!isUserLoading && (
@@ -85,7 +84,7 @@ export default function RootLayout({
   return (
     <html lang="id">
       <head>
-        <title>HI AQLI</title>
+        <title>Hi AQLI</title>
         <meta name="description" content="Pendamping Anda menuju keunggulan Al-Qur'an." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

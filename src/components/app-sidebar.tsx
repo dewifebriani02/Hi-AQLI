@@ -25,6 +25,7 @@ import {
   Lock,
   Trophy,
   UserCog,
+  Globe,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
@@ -39,11 +40,12 @@ const adminItems = [
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
+  { href: "/tilawah", label: "Hi Ngaji", icon: BookOpen },
+  { href: "/tajweed", label: "Hi Hafal", icon: GraduationCap },
+  { href: "/ai-scholar", label: "Hi Mufradat", icon: Globe },
+  { href: "/donate", label: "Hi Berbagi", icon: HeartHandshake },
   { href: "/study-circles", label: "Halaqah", icon: Users },
-  { href: "/tilawah", label: "Al-Qur'an", icon: BookOpen },
-  { href: "/tajweed", label: "Hafalan", icon: GraduationCap },
   { href: "/leaderboard", label: "Juara", icon: Trophy },
-  { href: "/donate", label: "Donasi", icon: HeartHandshake },
 ];
 
 export function AppSidebar() {
@@ -65,7 +67,6 @@ export function AppSidebar() {
   const { data: isAdmin } = useDoc(adminDocRef);
   const { data: isSuperAdmin } = useDoc(superAdminDocRef);
 
-  // Email-based admin detection for the bootstrap user
   const isEmailAdmin = user?.email === "dewifebriani@gmail.com";
   const hasAdminAccess = isEmailAdmin || !!isAdmin || !!isSuperAdmin;
 

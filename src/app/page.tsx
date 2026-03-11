@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -25,23 +26,14 @@ import {
   Trophy,
   Zap,
   ArrowRight,
-  Clock
+  Clock,
+  BookOpen
 } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-
-const days = [
-  { label: 'Jum', active: false },
-  { label: 'Sab', active: false },
-  { label: 'Ahad', active: false },
-  { label: 'Sen', active: true },
-  { label: 'Sel', active: false },
-  { label: 'Rab', active: false },
-  { label: 'Kam', active: false },
-];
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -82,7 +74,7 @@ export default function DashboardPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
             <Sparkles className="w-4 h-4 fill-current animate-pulse text-[#D4AF37]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">HI AQLI DIGITAL</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Hi AQLI DIGITAL</span>
           </div>
           <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight">
             Assalamu'alaikum,<br />
@@ -108,7 +100,7 @@ export default function DashboardPage() {
           <CardContent className="p-5 flex items-center justify-between gap-4 relative z-10">
             <div className="space-y-1 flex-1">
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">Program Aktif</p>
-              <h3 className="font-bold text-lg text-white">Tikrar Daily: Juz {paidJuz}</h3>
+              <h3 className="font-bold text-lg text-white">Hi Hafal: Juz {paidJuz}</h3>
               {tikrarStats ? (
                 <div className="bg-white/10 px-2 py-0.5 rounded text-[10px] font-bold inline-flex items-center gap-1 text-[#D4AF37]">
                   <Clock className="w-3 h-3" /> Hari ke-{tikrarStats.day} dari {tikrarStats.total}
@@ -126,15 +118,15 @@ export default function DashboardPage() {
 
       {/* Feature Ads Section */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold font-headline">Layanan HI AQLI</h2>
+        <h2 className="text-lg font-bold font-headline">Layanan Hi AQLI</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link href="/tilawah" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-40 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><BookMarked className="w-24 h-24" /></div>
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><BookOpen className="w-24 h-24" /></div>
                 <div className="space-y-1 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Mushaf</Badge>
-                  <h4 className="font-bold text-lg text-white leading-tight">Al-Qur'an Digital</h4>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Tahsin & Iqra</Badge>
+                  <h4 className="font-bold text-lg text-white leading-tight">Hi Ngaji</h4>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-wider text-[#D4AF37]">Mulai Membaca <ChevronRight className="w-3 h-3" /></div>
               </CardContent>
@@ -146,8 +138,8 @@ export default function DashboardPage() {
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Globe className="w-24 h-24" /></div>
                 <div className="space-y-1 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">AI Scholar</Badge>
-                  <h4 className="font-bold text-lg text-white leading-tight">Tanya Ilmu</h4>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Kosakata</Badge>
+                  <h4 className="font-bold text-lg text-white leading-tight">Hi Mufradat</h4>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-wider text-[#D4AF37]">Ajukan Pertanyaan <ChevronRight className="w-3 h-3" /></div>
               </CardContent>
@@ -159,8 +151,8 @@ export default function DashboardPage() {
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Award className="w-32 h-32" /></div>
                 <div className="space-y-1 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Hafalan</Badge>
-                  <h4 className="font-black text-xl text-white">Tikrar Daily & Simulation</h4>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Tikrar</Badge>
+                  <h4 className="font-black text-xl text-white">Hi Hafal</h4>
                   <p className="text-[10px] text-white/70 max-w-[200px]">Perkuat kualitas hafalan dengan metode repetisi terstruktur.</p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Buka Modul <ChevronRight className="w-4 h-4" /></div>
@@ -179,8 +171,8 @@ export default function DashboardPage() {
                 <HeartHandshake className="w-8 h-8" />
               </div>
               <div className="space-y-0.5">
-                <h4 className="font-black text-lg uppercase leading-tight">Infaq & Wakaf</h4>
-                <p className="text-[10px] text-muted-foreground font-bold">Dukung operasional server AI HI AQLI.</p>
+                <h4 className="font-black text-lg uppercase leading-tight">Hi Berbagi</h4>
+                <p className="text-[10px] text-muted-foreground font-bold">Dukung operasional Baksos & Infrastruktur AI.</p>
               </div>
             </div>
             <ArrowRight className="w-5 h-5 opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
