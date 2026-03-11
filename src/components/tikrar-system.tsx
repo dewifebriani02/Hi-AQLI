@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,9 @@ import {
   ShieldCheck,
   Clock,
   Minus,
-  Plus
+  Plus,
+  Layers,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -28,6 +30,16 @@ const JUZ_PAGES = [
   1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
 ];
+
+const LEVELS = [
+  { id: 1, name: "Intensif", days: 7 },
+  { id: 2, name: "Reguler", days: 14 },
+  { id: 3, name: "Santai", days: 21 },
+  { id: 4, name: "Pemula", days: 28 },
+];
+
+const TARGET_TM = 40;
+const TARGET_META = 3; // Target repetisi untuk langkah Meta (gabungan)
 
 interface Word {
   text_uthmani: string;
@@ -42,25 +54,6 @@ interface Verse {
   text_uthmani: string;
   words: Word[];
 }
-
-interface MaqtaState {
-  count: number;
-}
-
-interface BlockState {
-  a: MaqtaState;
-  b: MaqtaState;
-  combined: MaqtaState;
-}
-
-const TARGET_TM = 40;
-
-const LEVELS = [
-  { id: 1, name: "Intensif", days: 7 },
-  { id: 2, name: "Reguler", days: 14 },
-  { id: 3, name: "Santai", days: 21 },
-  { id: 4, name: "Pemula", days: 28 },
-];
 
 export function TikrarSystem() {
   const { user } = useUser();
@@ -82,17 +75,24 @@ export function TikrarSystem() {
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(24);
   
-  const [blocks, setBlocks] = useState<Record<number, BlockState>>({
+  // State untuk 4 Blok Individu (Langkah 1-4)
+  const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
     2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
     3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
     4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
   });
 
+  // State untuk 3 Langkah Meta (Langkah 5-7)
+  const [metaCombined, setMetaCombined] = useState<Record<number, number>>({
+    2: 0, // Meta 2 (Block 1+2) -> Step 5
+    3: 0, // Meta 3 (Block 1+2+3) -> Step 6
+    4: 0, // Meta 4 (Block 1+2+3+4) -> Step 7
+  });
+
   useEffect(() => {
     if (!isUserDataLoading && userData) {
       setJuz(paidJuz);
-      // Only set initial page once
       if (loading) {
         setPage(JUZ_PAGES[paidJuz - 1] || 1);
       }
@@ -129,6 +129,7 @@ export function TikrarSystem() {
           3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
           4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
         });
+        setMetaCombined(saved.metaCombined || { 2: 0, 3: 0, 4: 0 });
       } catch (e) {}
     } else {
       setBlocks({
@@ -137,6 +138,7 @@ export function TikrarSystem() {
         3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
         4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
       });
+      setMetaCombined({ 2: 0, 3: 0, 4: 0 });
     }
 
     fetchVerses();
@@ -149,9 +151,26 @@ export function TikrarSystem() {
       localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({ 
         ...parsed,
         blocks,
+        metaCombined
       }));
     }
-  }, [blocks, page, loading]);
+  }, [blocks, metaCombined, page, loading]);
+
+  const totalProgress = useMemo(() => {
+    let totalDone = 0;
+    // Langkah 1-4 (Blocks)
+    Object.values(blocks).forEach((b: any) => {
+      totalDone += Math.min(b.a.count, TARGET_TM);
+      totalDone += Math.min(b.b.count, TARGET_TM);
+      totalDone += Math.min(b.combined.count, TARGET_TM);
+    });
+    // Langkah 5-7 (Meta)
+    Object.values(metaCombined).forEach((val) => {
+      totalDone += (val / TARGET_META) * TARGET_TM; // Weighted so progress looks even
+    });
+    const totalTarget = (4 * 3 * TARGET_TM) + (3 * TARGET_TM);
+    return Math.min(100, (totalDone / totalTarget) * 100);
+  }, [blocks, metaCombined]);
 
   const scheduleInfo = useMemo(() => {
     if (!userData?.tikrarStartDate) return null;
@@ -161,17 +180,6 @@ export function TikrarSystem() {
     const level = LEVELS.find(l => l.id === userData.tikrarLevel) || LEVELS[2];
     return { currentDay: diff, totalDays: level.days };
   }, [userData]);
-
-  const totalProgress = useMemo(() => {
-    let totalDone = 0;
-    const totalTarget = 4 * 3 * TARGET_TM; // 4 blocks, each has a, b, and combined
-    Object.values(blocks).forEach(b => {
-      totalDone += Math.min(b.a.count, TARGET_TM);
-      totalDone += Math.min(b.b.count, TARGET_TM);
-      totalDone += Math.min(b.combined.count, TARGET_TM);
-    });
-    return (totalDone / totalTarget) * 100;
-  }, [blocks]);
 
   if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
@@ -219,7 +227,7 @@ export function TikrarSystem() {
 
             <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold uppercase opacity-60">Progres Repetisi Halaman Ini</span>
+                <span className="text-[10px] font-bold uppercase opacity-60">Progres 7 Langkah Tikrar</span>
                 <span className="text-[10px] font-bold">{Math.round(totalProgress)}%</span>
               </div>
               <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-white" />
@@ -261,28 +269,89 @@ export function TikrarSystem() {
         <div className="flex justify-center py-20"><Loader2 className="animate-spin h-10 w-10 text-[#800000]" /></div>
       ) : (
         <div className="grid grid-cols-1 gap-8 pb-20">
-          {[1, 2, 3, 4].map(id => (
-            <BlockCard 
-              key={id} 
-              id={id} 
-              state={blocks[id]} 
-              verses={verses.slice((id-1) * Math.ceil(verses.length/4), id * Math.ceil(verses.length/4))}
-              onIncrement={(bid: number, type: 'a' | 'b' | 'combined') => {
-                const current = blocks[bid][type].count;
-                if (current < TARGET_TM) {
-                  setBlocks(prev => ({
-                    ...prev, 
-                    [bid]: {
-                      ...prev[bid], 
-                      [type]: { count: current + 1 }
-                    }
-                  }));
-                }
-              }} 
-              target={TARGET_TM} 
-              fontSize={fontSize}
-            />
-          ))}
+          <div className="px-1 flex items-center gap-2">
+            <Layers className="w-5 h-5 text-[#800000]" />
+            <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 1: Penguasaan Blok Individu (Langkah 1-4)</h4>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map(id => (
+              <BlockCard 
+                key={id} 
+                id={id} 
+                state={blocks[id]} 
+                verses={verses.slice((id-1) * Math.ceil(verses.length/4), id * Math.ceil(verses.length/4))}
+                onIncrement={(bid: number, type: 'a' | 'b' | 'combined') => {
+                  const current = blocks[bid][type].count;
+                  if (current < TARGET_TM) {
+                    setBlocks((prev: any) => ({
+                      ...prev, 
+                      [bid]: {
+                        ...prev[bid], 
+                        [type]: { count: current + 1 }
+                      }
+                    }));
+                  }
+                }} 
+                target={TARGET_TM} 
+                fontSize={fontSize}
+              />
+            ))}
+          </div>
+
+          <div className="px-1 flex items-center gap-2 mt-8">
+            <Zap className="w-5 h-5 text-amber-500 fill-current" />
+            <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 2: Repetisi Gabungan (Langkah 5-7)</h4>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            {[5, 6, 7].map((stepNum) => {
+              // Map steps to metaCombined indices (Step 5 -> Meta 2, Step 6 -> Meta 3, Step 7 -> Meta 4)
+              const metaIdx = stepNum - 3;
+              const metaLabel = stepNum === 5 ? "Blok 1+2" : stepNum === 6 ? "Blok 1+2+3" : "Halaman Penuh (1-4)";
+              const count = metaCombined[metaIdx] || 0;
+              const isDone = count >= TARGET_META;
+
+              return (
+                <Card key={stepNum} className={cn("border-2 transition-all shadow-md", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                      <div className="flex items-center gap-4">
+                        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl", isDone ? "bg-emerald-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
+                          {stepNum}
+                        </div>
+                        <div className="flex flex-col">
+                          <h5 className="font-black uppercase tracking-widest text-[#800000]">Langkah {stepNum}</h5>
+                          <p className="text-xs font-bold text-muted-foreground">Gabungan {metaLabel}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
+                        <div className="flex-1 flex flex-col gap-1">
+                          <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
+                            <span>Repetisi</span>
+                            <span>{count} / {TARGET_META}</span>
+                          </div>
+                          <Progress value={(count / TARGET_META) * 100} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
+                        </div>
+                        <Button 
+                          onClick={() => {
+                            if (count < TARGET_META) {
+                              setMetaCombined(prev => ({ ...prev, [metaIdx]: count + 1 }));
+                            }
+                          }}
+                          disabled={isDone}
+                          className={cn("h-12 w-12 rounded-xl shrink-0 font-black border-2", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-[#800000] hover:bg-[#800000] hover:text-white")}
+                        >
+                          {isDone ? <CheckCircle2 /> : `+1`}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -295,7 +364,7 @@ function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
   return (
     <Card className={cn("border-2 transition-all shadow-lg overflow-hidden", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
       <div className="bg-[#800000]/5 py-3 px-6 border-b flex flex-row items-center justify-between">
-        <h4 className="text-sm font-black uppercase tracking-widest text-[#800000]">Blok TM {id}</h4>
+        <h4 className="text-sm font-black uppercase tracking-widest text-[#800000]">Langkah {id}: Blok {id}</h4>
         {isDone && <Badge className="bg-emerald-500 text-white font-black text-[10px] tracking-widest">DONE</Badge>}
       </div>
       <CardContent className="p-6 space-y-6">
@@ -313,8 +382,8 @@ function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
         </div>
         
         <div className="grid grid-cols-2 gap-4">
-          <CounterBox label={`TM${id}a`} count={state.a.count} target={target} onClick={() => onIncrement(id, 'a')} />
-          <CounterBox label={`TM${id}b`} count={state.b.count} target={target} onClick={() => onIncrement(id, 'b')} />
+          <CounterBox label={`${id}a`} count={state.a.count} target={target} onClick={() => onIncrement(id, 'a')} />
+          <CounterBox label={`${id}b`} count={state.b.count} target={target} onClick={() => onIncrement(id, 'b')} />
         </div>
         
         <Button 
@@ -342,7 +411,7 @@ function CounterBox({ label, count, target, onClick }: any) {
         isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-muted/20 border-muted hover:border-[#800000]/30 hover:bg-white"
       )}
     >
-      <span className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">{label}</span>
+      <span className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">Bag. {label}</span>
       <div className="flex items-baseline gap-1">
         <span className="text-3xl font-black">{count}</span>
         <span className="text-[10px] font-bold opacity-40">/ {target}</span>
