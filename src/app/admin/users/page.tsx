@@ -34,12 +34,19 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus } from "lucide-react";
+import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
-const LEVELS = [
+const ROLES = [
+  { id: "learner", name: "Santri (Thalibah)" },
+  { id: "muallimah", name: "Mu'allimah (Guru)" },
+  { id: "musyrifah", name: "Musyrifah (Pembimbing)" },
+  { id: "admin", name: "Administrator" },
+];
+
+const TIKRAR_LEVELS = [
   { id: "1", name: "Intensif" },
   { id: "2", name: "Reguler" },
   { id: "3", name: "Santai" },
@@ -49,9 +56,7 @@ const LEVELS = [
 const INITIAL_ADD_FORM = {
   username: "",
   email: "",
-  paidJuz: "30",
-  tikrarLevel: "3",
-  isTikrarPaid: false
+  roleId: "learner",
 };
 
 export default function AdminUsersPage() {
@@ -85,9 +90,10 @@ export default function AdminUsersPage() {
     
     const updateData: any = {
       username: editingUser.username,
-      paidJuz: parseInt(editingUser.paidJuz || "1"),
-      tikrarLevel: parseInt(editingUser.tikrarLevel || "3"),
-      isTikrarPaid: editingUser.isTikrarPaid,
+      roleId: editingUser.roleId,
+      paidJuz: editingUser.paidJuz ? parseInt(editingUser.paidJuz) : null,
+      tikrarLevel: editingUser.tikrarLevel ? parseInt(editingUser.tikrarLevel) : null,
+      isTikrarPaid: editingUser.isTikrarPaid || false,
       updatedAt: serverTimestamp(),
     };
 
@@ -96,6 +102,11 @@ export default function AdminUsersPage() {
     }
 
     updateDocumentNonBlocking(userRef, updateData);
+
+    // If role is admin, ensure they are in roles_admin
+    if (editingUser.roleId === 'admin') {
+      setDocumentNonBlocking(doc(db, "roles_admin", editingUser.id), { roleId: editingUser.id }, { merge: true });
+    }
 
     toast({
       title: "Data Diperbarui",
@@ -110,7 +121,6 @@ export default function AdminUsersPage() {
       return;
     }
 
-    // Simple ID generation for placeholder users (ideally email-based or random)
     const tempId = `user_${Date.now()}`;
     const userRef = doc(db, "users", tempId);
 
@@ -119,17 +129,18 @@ export default function AdminUsersPage() {
         id: tempId,
         username: addForm.username,
         email: addForm.email,
-        paidJuz: parseInt(addForm.paidJuz),
-        tikrarLevel: parseInt(addForm.tikrarLevel),
-        isTikrarPaid: addForm.isTikrarPaid,
-        roleId: "learner",
+        roleId: addForm.roleId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }, { merge: true });
 
+      if (addForm.roleId === 'admin') {
+        setDocumentNonBlocking(doc(db, "roles_admin", tempId), { roleId: tempId }, { merge: true });
+      }
+
       toast({
         title: "User Ditambahkan",
-        description: `Profil ${addForm.username} berhasil dibuat di database.`,
+        description: `Profil ${addForm.username} sebagai ${ROLES.find(r => r.id === addForm.roleId)?.name} berhasil dibuat.`,
       });
       setIsAddDialogOpen(false);
       setAddForm(INITIAL_ADD_FORM);
@@ -138,7 +149,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (isLoading) return <div className="flex flex-col items-center justify-center py-32 gap-4"><Loader2 className="animate-spin h-10 w-10 text-[#800000]" /><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Daftar Peserta...</p></div>;
+  if (isLoading) return <div className="flex flex-col items-center justify-center py-32 gap-4"><Loader2 className="animate-spin h-10 w-10 text-[#800000]" /><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Daftar...</p></div>;
 
   return (
     <div className="flex flex-col gap-8 max-w-6xl mx-auto pb-32">
@@ -148,15 +159,15 @@ export default function AdminUsersPage() {
             <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold font-headline tracking-tight">Manajemen Peserta</h1>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-[#800000]">Kelola Seluruh Santri Aktif</p>
+            <h1 className="text-2xl font-bold font-headline tracking-tight">Database Profil</h1>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-[#800000]">Manajemen User HI AQLI</p>
           </div>
         </div>
         
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
-              <UserPlus className="w-4 h-4" /> TAMBAH USER
+              <UserPlus className="w-4 h-4" /> TAMBAH USER UMUM
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
@@ -166,7 +177,7 @@ export default function AdminUsersPage() {
                 Tambah User Baru
               </DialogTitle>
               <DialogDescription>
-                Masukkan data santri atau mu'allimah secara manual ke database.
+                Daftarkan profil umum ke database (Admin, Mu'allimah, atau Santri).
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
@@ -187,50 +198,24 @@ export default function AdminUsersPage() {
                   onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase">Target Juz</Label>
-                  <Select 
-                    value={addForm.paidJuz}
-                    onValueChange={(val) => setAddForm({ ...addForm, paidJuz: val })}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 30 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase">Level Tikrar</Label>
-                  <Select 
-                    value={addForm.tikrarLevel}
-                    onValueChange={(val) => setAddForm({ ...addForm, tikrarLevel: val })}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {LEVELS.map(l => (
-                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
-                <Label className="text-sm font-bold">Status Aktif Tikrar</Label>
-                <Button 
-                  variant={addForm.isTikrarPaid ? "default" : "outline"}
-                  className={cn("font-black text-[10px]", addForm.isTikrarPaid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
-                  onClick={() => setAddForm({ ...addForm, isTikrarPaid: !addForm.isTikrarPaid })}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase">Peran / Hak Akses</Label>
+                <Select 
+                  value={addForm.roleId}
+                  onValueChange={(val) => setAddForm({ ...addForm, roleId: val })}
                 >
-                  {addForm.isTikrarPaid ? 'AKTIF' : 'NON-AKTIF'}
-                </Button>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ROLES.map(r => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
               <Button onClick={handleAddUser} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black gap-2 h-12">
-                <CheckCircle2 className="w-5 h-5" /> SIMPAN USER
+                <CheckCircle2 className="w-5 h-5" /> SIMPAN KE DATABASE
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -240,7 +225,7 @@ export default function AdminUsersPage() {
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="Cari nama atau email santri..." 
+          placeholder="Cari nama atau email..." 
           className="pl-11 h-12 bg-white border-none shadow-sm text-sm" 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -248,28 +233,26 @@ export default function AdminUsersPage() {
       </div>
 
       <Card className="border-none shadow-xl overflow-hidden">
-        <div className="bg-muted/30 px-6 py-4 border-b flex items-center justify-between">
+        <div className="bg-muted/30 px-6 py-4 border-b">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Users className="w-4 h-4 text-[#800000]" />
-            Daftar Santri ({filteredUsers?.length || 0})
+            Daftar User ({filteredUsers?.length || 0})
           </h3>
         </div>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/10">
-                <TableHead className="text-[10px] font-black uppercase">Santri</TableHead>
-                <TableHead className="text-[10px] font-black uppercase">Program Tikrar</TableHead>
-                <TableHead className="text-[10px] font-black uppercase">Level</TableHead>
-                <TableHead className="text-[10px] font-black uppercase">Tanggal Mulai</TableHead>
+                <TableHead className="text-[10px] font-black uppercase">Nama & Email</TableHead>
+                <TableHead className="text-[10px] font-black uppercase">Peran</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!filteredUsers || filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic text-sm">
-                    Tidak ada data peserta yang ditemukan.
+                  <TableCell colSpan={3} className="text-center py-20 text-muted-foreground italic text-sm">
+                    Tidak ada data yang ditemukan.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -282,25 +265,14 @@ export default function AdminUsersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {u.isTikrarPaid ? (
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-500 text-[9px] font-black px-2 py-0.5">AKTIF</Badge>
-                          <span className="text-xs font-bold text-[#800000]">Juz {u.paidJuz || '-'}</span>
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-[9px] font-bold text-muted-foreground">NON-AKTIF</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {LEVELS.find(l => parseInt(l.id) === u.tikrarLevel)?.name || 'Santai'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
-                        <Calendar className="w-3 h-3 text-[#800000]" />
-                        {u.tikrarStartDate?.toDate ? u.tikrarStartDate.toDate().toLocaleDateString('id-ID') : '-'}
-                      </div>
+                      <Badge variant="outline" className={cn(
+                        "text-[9px] font-black uppercase",
+                        u.roleId === 'admin' ? "bg-amber-500 text-white border-none" : 
+                        u.roleId === 'muallimah' ? "bg-blue-600 text-white border-none" :
+                        u.roleId === 'musyrifah' ? "bg-emerald-600 text-white border-none" : ""
+                      )}>
+                        {ROLES.find(r => r.id === u.roleId)?.name || 'Santri'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Dialog open={isEditDialogOpen && editingUser?.id === u.id} onOpenChange={(open) => {
@@ -324,9 +296,9 @@ export default function AdminUsersPage() {
                           <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                               <ShieldCheck className="w-5 h-5 text-[#800000]" />
-                              Edit Data Peserta
+                              Edit Profil User
                             </DialogTitle>
-                            <DialogDescription>Perbarui hak akses dan profil santri ini.</DialogDescription>
+                            <DialogDescription>Perbarui data dan hak akses user ini.</DialogDescription>
                           </DialogHeader>
                           <div className="grid gap-6 py-4">
                             <div className="space-y-2">
@@ -336,68 +308,72 @@ export default function AdminUsersPage() {
                                 onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
                               />
                             </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-muted-foreground">Target Juz</Label>
-                                <Select 
-                                  value={editingUser?.paidJuz?.toString() || "30"}
-                                  onValueChange={(val) => setEditingUser({ ...editingUser, paidJuz: val })}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Array.from({ length: 30 }, (_, i) => (
-                                      <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-muted-foreground">Level Tikrar</Label>
-                                <Select 
-                                  value={editingUser?.tikrarLevel?.toString() || "3"}
-                                  onValueChange={(val) => setEditingUser({ ...editingUser, tikrarLevel: val })}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {LEVELS.map(l => (
-                                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
 
                             <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Tanggal Mulai Program</Label>
-                              <div className="relative">
-                                <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                  type="date"
-                                  className="pl-10"
-                                  value={editingUser?.tempDate || ""} 
-                                  onChange={(e) => setEditingUser({ ...editingUser, tempDate: e.target.value })}
-                                />
-                              </div>
-                              <p className="text-[10px] text-muted-foreground italic">Menentukan awal kalkulasi jadwal di tab 'Jadwal Saya'.</p>
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
-                              <div className="space-y-0.5">
-                                <Label className="text-sm font-bold">Status Berbayar (Tikrar)</Label>
-                                <p className="text-[10px] text-muted-foreground">Aktifkan untuk membuka counter repetisi.</p>
-                              </div>
-                              <Button 
-                                variant={editingUser?.isTikrarPaid ? "default" : "outline"}
-                                className={cn("font-black text-[10px]", editingUser?.isTikrarPaid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
-                                onClick={() => setEditingUser({ ...editingUser, isTikrarPaid: !editingUser.isTikrarPaid })}
+                              <Label className="text-xs font-bold uppercase text-muted-foreground">Peran User</Label>
+                              <Select 
+                                value={editingUser?.roleId || "learner"}
+                                onValueChange={(val) => setEditingUser({ ...editingUser, roleId: val })}
                               >
-                                {editingUser?.isTikrarPaid ? 'AKTIF' : 'NON-AKTIF'}
-                              </Button>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {ROLES.map(r => (
+                                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            {/* Tikrar Section - Only show if relevant or explicitly needed */}
+                            <div className="border-t pt-4 space-y-4">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Detail Khusus Tikrar (Jika Ada)</p>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label className="text-xs font-bold uppercase text-muted-foreground">Target Juz</Label>
+                                  <Select 
+                                    value={editingUser?.paidJuz?.toString() || ""}
+                                    onValueChange={(val) => setEditingUser({ ...editingUser, paidJuz: val })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="-" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Array.from({ length: 30 }, (_, i) => (
+                                        <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs font-bold uppercase text-muted-foreground">Level Tikrar</Label>
+                                  <Select 
+                                    value={editingUser?.tikrarLevel?.toString() || ""}
+                                    onValueChange={(val) => setEditingUser({ ...editingUser, tikrarLevel: val })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="-" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {TIKRAR_LEVELS.map(l => (
+                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
+                                <div className="space-y-0.5">
+                                  <Label className="text-sm font-bold">Status Premium Tikrar</Label>
+                                  <p className="text-[10px] text-muted-foreground">Aktifkan akses counter repetisi.</p>
+                                </div>
+                                <Button 
+                                  variant={editingUser?.isTikrarPaid ? "default" : "outline"}
+                                  className={cn("font-black text-[10px]", editingUser?.isTikrarPaid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
+                                  onClick={() => setEditingUser({ ...editingUser, isTikrarPaid: !editingUser.isTikrarPaid })}
+                                >
+                                  {editingUser?.isTikrarPaid ? 'AKTIF' : 'NON-AKTIF'}
+                                </Button>
+                              </div>
                             </div>
                           </div>
                           <DialogFooter>

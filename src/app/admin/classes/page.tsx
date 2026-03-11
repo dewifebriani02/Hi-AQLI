@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from "react";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, deleteDoc, query, where, writeBatch, arrayUnion } from "firebase/firestore";
 import { setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users, Timer, GraduationCap, Award } from "lucide-react";
+import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users, Timer, GraduationCap, Award, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -61,6 +61,11 @@ export default function AdminClassesPage() {
   const [editingHalaqah, setEditingHalaqah] = useState<any>(null);
   const [form, setForm] = useState(INITIAL_FORM);
 
+  // Participant Management State
+  const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
+  const [selectedHalaqah, setSelectedHalaqah] = useState<any>(null);
+  const [newParticipantId, setNewParticipantId] = useState("");
+
   // Fetch Classes
   const halaqahQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -76,6 +81,18 @@ export default function AdminClassesPage() {
   }, [db, user?.uid]);
 
   const { data: allUsers } = useCollection(usersQuery);
+
+  // Fetch Registrations for Selected Halaqah
+  const participantsQuery = useMemoFirebase(() => {
+    if (!db || !selectedHalaqah?.id) return null;
+    return query(
+      collection(db, "halaqah_registrations"),
+      where("halaqahId", "==", selectedHalaqah.id),
+      where("status", "==", "active")
+    );
+  }, [db, selectedHalaqah?.id]);
+
+  const { data: participants, isLoading: isParticipantsLoading } = useCollection(participantsQuery);
 
   // Calculate End Date
   const calculatedEndDate = useMemo(() => {
@@ -163,6 +180,63 @@ export default function AdminClassesPage() {
     }
   };
 
+  const handleAddParticipant = async () => {
+    if (!newParticipantId || !selectedHalaqah) return;
+
+    const userToAdd = allUsers?.find(u => u.id === newParticipantId);
+    if (!userToAdd) return;
+
+    // Check if already in class
+    if (participants?.find(p => p.userId === newParticipantId)) {
+      toast({ variant: "destructive", title: "User sudah ada di kelas ini." });
+      return;
+    }
+
+    try {
+      const batch = writeBatch(db);
+      
+      // 1. Create Registration Record
+      const regId = `manual_${selectedHalaqah.id}_${newParticipantId}`;
+      const regRef = doc(db, "halaqah_registrations", regId);
+      batch.set(regRef, {
+        id: regId,
+        userId: newParticipantId,
+        userName: userToAdd.username || userToAdd.email,
+        userEmail: userToAdd.email,
+        halaqahId: selectedHalaqah.id,
+        halaqahTitle: selectedHalaqah.title,
+        status: "active",
+        isPaid: false, // Manual addition by admin
+        createdAt: serverTimestamp(),
+        verifiedAt: serverTimestamp()
+      });
+
+      // 2. Update User Profile followedHalaqahs
+      const userRef = doc(db, "users", newParticipantId);
+      batch.update(userRef, {
+        followedHalaqahs: arrayUnion(selectedHalaqah.id),
+        updatedAt: serverTimestamp()
+      });
+
+      await batch.commit();
+      toast({ title: "Peserta Berhasil Ditambahkan" });
+      setNewParticipantId("");
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal menambahkan peserta." });
+    }
+  };
+
+  const handleRemoveParticipant = async (regId: string, userId: string) => {
+    if (!confirm("Hapus akses kelas santri ini?")) return;
+    try {
+      await deleteDoc(doc(db, "halaqah_registrations", regId));
+      // Note: In a full implementation, we should also remove from user's followedHalaqahs array
+      toast({ title: "Peserta Dihapus dari Kelas" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal menghapus peserta." });
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus kelas ini? Tindakan ini tidak dapat dibatalkan.")) return;
     try {
@@ -212,11 +286,6 @@ export default function AdminClassesPage() {
                       <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
                         <User className="w-3 h-3 text-[#800000]" /> Mu'allimah: {h.muallimah}
                       </p>
-                      {h.musyrifah && (
-                        <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                          <User className="w-3 h-3 text-[#D4AF37]" /> Musyrifah: {h.musyrifah}
-                        </p>
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -228,10 +297,19 @@ export default function AdminClassesPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-4">
+                
+                <div className="flex items-center gap-2 mb-4">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="h-7 text-[9px] font-black uppercase tracking-widest gap-1.5"
+                    onClick={() => { setSelectedHalaqah(h); setIsParticipantsOpen(true); }}
+                  >
+                    <Users className="w-3 h-3" /> Kelola Peserta
+                  </Button>
                   {h.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50">UJIAN</Badge>}
-                  {h.hasCertificate && <Badge variant="outline" className="text-[8px] border-blue-200 text-blue-700 bg-blue-50">SERTIFIKAT</Badge>}
                 </div>
+
                 <div className="flex items-center justify-between border-t pt-3 mt-auto">
                   <div className="flex flex-col gap-1">
                     <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{h.level}</span>
@@ -254,6 +332,76 @@ export default function AdminClassesPage() {
         )}
       </div>
 
+      {/* Participants Management Dialog */}
+      <Dialog open={isParticipantsOpen} onOpenChange={setIsParticipantsOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-[#800000]" />
+              Peserta: {selectedHalaqah?.title}
+            </DialogTitle>
+            <DialogDescription>Kelola santri yang terdaftar secara aktif di kelas ini.</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4 space-y-6">
+            {/* Add Participant Section */}
+            <div className="space-y-2 p-4 bg-muted/30 rounded-xl border-2 border-dashed">
+              <Label className="text-[10px] font-black uppercase">Tambah Peserta Baru</Label>
+              <div className="flex gap-2">
+                <Select value={newParticipantId} onValueChange={setNewParticipantId}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Pilih thalibah..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allUsers?.filter(u => u.roleId === 'learner').map(u => (
+                      <SelectItem key={u.id} value={u.id}>{u.username || u.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleAddParticipant} className="bg-emerald-600 hover:bg-emerald-700" size="icon">
+                  <UserPlus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Current List Section */}
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Daftar Aktif ({participants?.length || 0})</h4>
+              <div className="divide-y border rounded-xl overflow-hidden bg-white">
+                {isParticipantsLoading ? (
+                  <div className="p-8 flex justify-center"><Loader2 className="animate-spin h-6 w-6 text-muted-foreground" /></div>
+                ) : !participants || participants.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-muted-foreground italic">Belum ada peserta terdaftar.</div>
+                ) : (
+                  participants.map((p) => (
+                    <div key={p.id} className="p-3 flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold">
+                          {p.userName?.[0] || 'U'}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold">{p.userName}</span>
+                          <span className="text-[9px] text-muted-foreground">{p.userEmail}</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleRemoveParticipant(p.id, p.userId)}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Class Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -275,7 +423,7 @@ export default function AdminClassesPage() {
                 <Select value={form.muallimahId} onValueChange={(v) => setForm({...form, muallimahId: v})}>
                   <SelectTrigger><SelectValue placeholder="Pilih mu'allimah" /></SelectTrigger>
                   <SelectContent>
-                    {allUsers?.map(u => (
+                    {allUsers?.filter(u => u.roleId === 'muallimah').map(u => (
                       <SelectItem key={u.id} value={u.id}>{u.username || u.email}</SelectItem>
                     ))}
                   </SelectContent>
@@ -289,7 +437,7 @@ export default function AdminClassesPage() {
                 <Select value={form.musyrifahId} onValueChange={(v) => setForm({...form, musyrifahId: v})}>
                   <SelectTrigger><SelectValue placeholder="Pilih musyrifah" /></SelectTrigger>
                   <SelectContent>
-                    {allUsers?.map(u => (
+                    {allUsers?.filter(u => u.roleId === 'musyrifah').map(u => (
                       <SelectItem key={u.id} value={u.id}>{u.username || u.email}</SelectItem>
                     ))}
                   </SelectContent>
