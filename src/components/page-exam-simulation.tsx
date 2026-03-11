@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   ChevronLeft, 
   Loader2, 
@@ -20,7 +21,10 @@ import {
   Zap,
   Target,
   Languages,
-  BookOpen
+  BookOpen,
+  Heart,
+  Star,
+  Timer
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +48,12 @@ interface Question {
   verseData: Verse;
 }
 
+const mockSimulationLeaderboard = [
+  { name: "Abdullah Mansur", time: "1:45", accuracy: 100, rank: 1, avatar: "https://picsum.photos/seed/user1/100/100" },
+  { name: "Siti Aminah", time: "2:10", accuracy: 100, rank: 2, avatar: "https://picsum.photos/seed/user2/100/100" },
+  { name: "Yusuf Ibrahim", time: "2:05", accuracy: 90, rank: 3, avatar: "https://picsum.photos/seed/user3/100/100" },
+];
+
 export function PageExamSimulation({ page }: { page: number }) {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,13 +64,14 @@ export function PageExamSimulation({ page }: { page: number }) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [startTime] = useState(Date.now());
+  const [sentCongrats, setSentCongrats] = useState<string[]>([]);
   const { toast } = useToast();
 
   const generateQuestions = (allVerses: Verse[]) => {
     const qs: Question[] = [];
     const shuffled = [...allVerses].sort(() => Math.random() - 0.5);
 
-    // 1. Word Translation (2-3 Questions)
+    // 1. Word Translation (2 Questions)
     shuffled.slice(0, 2).forEach(v => {
       const validWords = v.words.filter(w => w.text_uthmani && w.translation?.text);
       if (validWords.length === 0) return;
@@ -127,7 +138,7 @@ export function PageExamSimulation({ page }: { page: number }) {
       });
     });
 
-    // 4. Fill in the blank (1-2 Questions)
+    // 4. Fill in the blank (2 Questions)
     shuffled.slice(6, 8).forEach(v => {
       const wordsCount = v.words.length;
       if (wordsCount < 4) return;
@@ -153,30 +164,6 @@ export function PageExamSimulation({ page }: { page: number }) {
         verseData: v
       });
     });
-
-    // 5. Connect Verse (1 Question)
-    if (allVerses.length > 1) {
-      const firstIdx = Math.floor(Math.random() * (allVerses.length - 1));
-      const currentV = allVerses[firstIdx];
-      const nextV = allVerses[firstIdx + 1];
-      const nextStart = nextV.words.slice(0, 3).map(w => w.text_uthmani).join(" ");
-
-      const options = [nextStart];
-      while (options.length < 4) {
-        const randV = allVerses[Math.floor(Math.random() * allVerses.length)];
-        const randS = randV.words.slice(0, 3).map(w => w.text_uthmani).join(" ");
-        if (randS && !options.includes(randS)) options.push(randS);
-      }
-
-      qs.push({
-        type: 'connect_verse',
-        questionText: currentV.text_uthmani,
-        subText: "Bagaimana awal bunyi ayat selanjutnya?",
-        correctAnswer: nextStart,
-        options: options.sort(() => Math.random() - 0.5),
-        verseData: currentV
-      });
-    }
 
     setQuestions(qs.sort(() => Math.random() - 0.5));
   };
@@ -224,7 +211,16 @@ export function PageExamSimulation({ page }: { page: number }) {
     }, 1500);
   };
 
-  if (loading) return <div className="flex flex-col items-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-sm font-bold">Membangun Soal Simulasi...</p></div>;
+  const handleSendCongrats = (userName: string) => {
+    if (sentCongrats.includes(userName)) return;
+    setSentCongrats(prev => [...prev, userName]);
+    toast({
+      title: "Ucapan Terkirim!",
+      description: `Masyallah, ucapan selamat terkirim ke ${userName}.`,
+    });
+  };
+
+  if (loading) return <div className="flex flex-col items-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Membangun Soal Simulasi...</p></div>;
 
   if (isFinished) {
     const finalScore = Math.round((score / questions.length) * 100);
@@ -232,10 +228,10 @@ export function PageExamSimulation({ page }: { page: number }) {
     const isPassed = finalScore >= 80;
 
     return (
-      <div className="max-w-md mx-auto py-10 flex flex-col gap-8 pb-32 px-4">
+      <div className="max-w-md mx-auto py-10 flex flex-col gap-10 pb-32 px-4">
         <Card className="text-center border-none shadow-2xl overflow-hidden animate-in zoom-in duration-500">
           <div className={cn(
-            "p-10 flex flex-col items-center gap-4 text-white",
+            "p-10 flex flex-col items-center gap-4 text-white transition-colors duration-500",
             isPassed ? "bg-emerald-600" : "bg-amber-500"
           )}>
             <Trophy className={cn("w-20 h-20", isPassed && "animate-bounce")} />
@@ -243,43 +239,109 @@ export function PageExamSimulation({ page }: { page: number }) {
               <h2 className="text-2xl font-black font-headline uppercase tracking-widest">
                 {isPassed ? "Masyallah! Lulus" : "Belum Maksimal"}
               </h2>
-              <p className="text-xs opacity-80">Skor Simulasi Halaman {page}</p>
+              <p className="text-xs opacity-80 font-bold uppercase tracking-wider">Skor Simulasi Halaman {page}</p>
             </div>
           </div>
           <CardContent className="pt-10 space-y-8">
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-muted/30 p-4 rounded-2xl">
-                <div className="text-4xl font-black">{finalScore}%</div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Akurasi</p>
+              <div className="bg-muted/30 p-5 rounded-3xl border-2 border-dashed">
+                <div className="text-4xl font-black text-foreground">{finalScore}%</div>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1">Akurasi</p>
               </div>
-              <div className="bg-muted/30 p-4 rounded-2xl">
-                <div className="text-4xl font-black">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')}</div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Durasi</p>
+              <div className="bg-muted/30 p-5 rounded-3xl border-2 border-dashed">
+                <div className="text-4xl font-black text-foreground">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')}</div>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1">Durasi</p>
               </div>
             </div>
             
-            <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl text-left space-y-2">
-              <div className="flex items-center gap-2 text-[#800000] font-black text-xs uppercase">
+            <div className="bg-amber-50 border-2 border-amber-100 p-5 rounded-3xl text-left space-y-2">
+              <div className="flex items-center gap-2 text-[#800000] font-black text-xs uppercase tracking-widest">
                 <BrainCircuit className="w-4 h-4" /> Evaluasi Pemahaman
               </div>
               <p className="text-xs text-amber-900 leading-relaxed font-medium">
                 {isPassed 
-                  ? "Pemahaman makna dan hafalan Anda untuk halaman ini sudah sangat kuat. Anda siap untuk mengajukan Ujian Lisan resmi."
-                  : "Coba ulangi repetisi Blok yang masih sulit dan pahami kembali terjemahan per kata sebelum mencoba simulasi lagi."}
+                  ? "Pemahaman makna dan hafalan Anda untuk halaman ini sudah sangat kuat. Anda siap untuk mengajukan Ujian Lisan resmi kepada Admin HI AQLI."
+                  : "Coba ulangi repetisi Blok yang masih sulit dan pahami kembali terjemahan per kata sebelum mencoba simulasi lagi agar hasil lebih maksimal."}
               </p>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6 pt-0">
-            <Button asChild className="w-full bg-black text-white font-black h-14 rounded-2xl shadow-xl">
+            <Button asChild className="w-full bg-black text-white font-black h-14 rounded-2xl shadow-xl uppercase tracking-widest">
               <Link href="/tajweed">KEMBALI KE DASBOR</Link>
             </Button>
             {!isPassed && (
-              <Button variant="ghost" onClick={() => window.location.reload()} className="w-full text-[#800000] font-bold gap-2">
+              <Button variant="ghost" onClick={() => window.location.reload()} className="w-full text-[#800000] font-black gap-2 uppercase tracking-widest text-xs">
                 <RotateCcw className="w-4 h-4" /> Ulangi Simulasi
               </Button>
             )}
           </CardFooter>
         </Card>
+
+        {/* LEADERBOARD SECTION */}
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-amber-500 fill-current" />
+              <h3 className="text-sm font-black font-headline uppercase tracking-widest text-[#800000]">Papan Juara Halaman {page}</h3>
+            </div>
+            <Badge variant="outline" className="text-[8px] font-black border-amber-200 text-amber-600 bg-amber-50">GLOBAL</Badge>
+          </div>
+          
+          <Card className="border-none shadow-lg bg-muted/20 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="divide-y divide-border/50">
+                {mockSimulationLeaderboard.map((u) => (
+                  <div key={u.name} className="flex items-center justify-between p-4 hover:bg-white/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <span className={cn(
+                        "text-[10px] font-black w-4 text-center",
+                        u.rank === 1 ? "text-amber-500" : "text-muted-foreground"
+                      )}>{u.rank}</span>
+                      <div className="relative">
+                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                          <AvatarImage src={u.avatar} />
+                          <AvatarFallback className="bg-[#800000]/10 text-[#800000] text-xs font-bold">{u.name[0]}</AvatarFallback>
+                        </Avatar>
+                        {u.rank === 1 && (
+                          <div className="absolute -top-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 shadow-sm border border-white">
+                            <Star className="w-2 h-2 fill-current" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-foreground">{u.name}</span>
+                        <div className="flex items-center gap-2">
+                           <span className="text-[9px] text-muted-foreground font-bold flex items-center gap-1">
+                             <Timer className="w-2.5 h-2.5" /> {u.time}
+                           </span>
+                           <span className="text-[9px] text-muted-foreground">•</span>
+                           <span className="text-[9px] font-black text-emerald-600 uppercase">{u.accuracy}% Akurasi</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleSendCongrats(u.name)}
+                        className={cn(
+                          "h-8 px-3 text-[10px] font-black gap-1.5 transition-all rounded-full",
+                          sentCongrats.includes(u.name) ? "text-rose-500 bg-rose-50 border border-rose-100" : "text-muted-foreground hover:text-rose-500 hover:bg-rose-50"
+                        )}
+                      >
+                        <Heart className={cn("w-3.5 h-3.5", sentCongrats.includes(u.name) && "fill-current")} />
+                        {sentCongrats.includes(u.name) ? "Terkirim" : "Selamat"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <p className="text-[10px] text-center text-muted-foreground font-medium italic">
+            "Berlomba-lombalah kamu dalam kebaikan." (QS. Al-Baqarah: 148)
+          </p>
+        </div>
       </div>
     );
   }
@@ -289,36 +351,36 @@ export function PageExamSimulation({ page }: { page: number }) {
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6 px-4 pb-32">
       <div className="flex items-center justify-between">
-        <Button asChild variant="ghost" size="icon" className="rounded-full">
+        <Button asChild variant="ghost" size="icon" className="rounded-full hover:bg-muted">
           <Link href="/tajweed"><ChevronLeft className="h-6 w-6" /></Link>
         </Button>
         <div className="text-center">
           <h1 className="text-sm font-black font-headline uppercase tracking-[0.2em] text-[#800000]">Simulasi Ujian</h1>
           <p className="text-[10px] text-muted-foreground font-bold">Halaman {page} • Juz {Math.floor(page/20) + 1}</p>
         </div>
-        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 h-8 px-3 font-black">
+        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 h-8 px-3 font-black rounded-xl shadow-sm">
           {score} / {questions.length}
         </Badge>
       </div>
 
       <div className="space-y-2">
-        <div className="flex justify-between text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+        <div className="flex justify-between text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">
           <span>Progress Soal</span>
           <span>{currentIdx + 1} / {questions.length}</span>
         </div>
-        <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-2 bg-muted [&>div]:bg-[#800000]" />
+        <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-2 bg-muted [&>div]:bg-[#800000] rounded-full" />
       </div>
 
       <Card className="border-none shadow-2xl overflow-hidden rounded-[2.5rem]">
         <CardHeader className="text-center pb-10 pt-14 bg-muted/10 relative">
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-white shadow-sm border flex items-center justify-center mb-6">
-            {currentQ.type === 'word_translation' && <Languages className="w-6 h-6 text-rose-500" />}
-            {currentQ.type === 'sentence_translation' && <BookOpen className="w-6 h-6 text-blue-500" />}
-            {currentQ.type === 'verse_number' && <Target className="w-6 h-6 text-amber-500" />}
-            {currentQ.type === 'fill_blank' && <Zap className="w-6 h-6 text-indigo-500" />}
-            {currentQ.type === 'connect_verse' && <BrainCircuit className="w-6 h-6 text-emerald-500" />}
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-white shadow-md border-2 border-white flex items-center justify-center mb-6">
+            {currentQ.type === 'word_translation' && <Languages className="w-7 h-7 text-rose-500" />}
+            {currentQ.type === 'sentence_translation' && <BookOpen className="w-7 h-7 text-blue-500" />}
+            {currentQ.type === 'verse_number' && <Target className="w-7 h-7 text-amber-500" />}
+            {currentQ.type === 'fill_blank' && <Zap className="w-7 h-7 text-indigo-500" />}
+            {currentQ.type === 'connect_verse' && <BrainCircuit className="w-7 h-7 text-emerald-500" />}
           </div>
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground mb-4 opacity-70">
             {currentQ.subText}
           </div>
           <div className={cn(
@@ -359,7 +421,7 @@ export function PageExamSimulation({ page }: { page: number }) {
       
       <div className="flex items-center justify-center gap-2 text-muted-foreground/40">
         <HelpCircle className="w-4 h-4" />
-        <span className="text-[10px] font-bold uppercase tracking-widest">Simulasi Ujian Itqan Sahabat AQLI</span>
+        <span className="text-[10px] font-black uppercase tracking-widest">Simulasi Ujian Itqan HI AQLI</span>
       </div>
     </div>
   );
