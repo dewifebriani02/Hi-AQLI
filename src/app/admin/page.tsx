@@ -2,25 +2,34 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy, limit } from "firebase/firestore";
-import { Users, CreditCard, CheckCircle2, Clock, ArrowUpRight, ShieldCheck } from "lucide-react";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard() {
   const db = useFirestore();
+  const { user } = useUser();
 
-  // Fetch Stats
-  const pendingQuery = useMemoFirebase(() => query(
-    collection(db, "tikrar_registrations"),
-    where("status", "==", "pending_verification")
-  ), [db]);
+  // Fetch Stats - Only if user is logged in
+  const pendingQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "tikrar_registrations"),
+      where("status", "==", "pending_verification")
+    );
+  }, [db, user?.uid]);
 
-  const activeQuery = useMemoFirebase(() => query(
-    collection(db, "tikrar_registrations"),
-    where("status", "==", "active")
-  ), [db]);
+  const activeQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "tikrar_registrations"),
+      where("status", "==", "active")
+    );
+  }, [db, user?.uid]);
 
   const { data: pending } = useCollection(pendingQuery);
   const { data: active } = useCollection(activeQuery);
@@ -97,6 +106,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
