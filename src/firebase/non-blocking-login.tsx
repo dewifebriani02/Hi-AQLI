@@ -1,9 +1,12 @@
+
 'use client';
 import {
   Auth,
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 
 /** Initiate anonymous sign-in (non-blocking). */
@@ -23,4 +26,13 @@ export function initiateEmailSignUp(authInstance: Auth, email: string, password:
 export function initiateEmailSignIn(authInstance: Auth, email: string, password: string): void {
   // CRITICAL: Call directly. Do NOT use 'await'.
   signInWithEmailAndPassword(authInstance, email, password).catch(() => {});
+}
+
+/** Initiate Google sign-in (non-blocking). */
+export function initiateGoogleSignIn(authInstance: Auth): void {
+  const provider = new GoogleAuthProvider();
+  // Using signInWithPopup for better desktop experience
+  signInWithPopup(authInstance, provider).catch((e) => {
+    console.error("Google Sign-In Error:", e);
+  });
 }
