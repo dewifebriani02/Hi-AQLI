@@ -21,6 +21,13 @@ import {
   Layers,
   Zap
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipPortal,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -39,7 +46,7 @@ const LEVELS = [
 ];
 
 const TARGET_TM = 40;
-const TARGET_META = 3; // Target repetisi untuk langkah Meta (gabungan)
+const TARGET_META = 3; 
 
 interface Word {
   text_uthmani: string;
@@ -73,9 +80,9 @@ export function TikrarSystem() {
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fontSize, setFontSize] = useState(24);
+  const [fontSize, setFontSize] = useState(32);
   
-  // State untuk 4 Blok Individu (Langkah 1-4)
+  // State for Blocks 1-4 (Steps 1-4)
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
     2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -83,11 +90,11 @@ export function TikrarSystem() {
     4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
   });
 
-  // State untuk 3 Langkah Meta (Langkah 5-7)
+  // State for Meta Steps (Steps 5-7)
   const [metaCombined, setMetaCombined] = useState<Record<number, number>>({
-    2: 0, // Meta 2 (Block 1+2) -> Step 5
-    3: 0, // Meta 3 (Block 1+2+3) -> Step 6
-    4: 0, // Meta 4 (Block 1+2+3+4) -> Step 7
+    2: 0, // Meta 2 (Step 5)
+    3: 0, // Meta 3 (Step 6)
+    4: 0, // Meta 4 (Step 7)
   });
 
   useEffect(() => {
@@ -107,7 +114,7 @@ export function TikrarSystem() {
       setLoading(true);
       try {
         const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id`
         );
         if (!res.ok) throw new Error("Gagal memuat ayat");
         const data = await res.json();
@@ -158,15 +165,15 @@ export function TikrarSystem() {
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
-    // Langkah 1-4 (Blocks)
+    // TM 1-4
     Object.values(blocks).forEach((b: any) => {
       totalDone += Math.min(b.a.count, TARGET_TM);
       totalDone += Math.min(b.b.count, TARGET_TM);
       totalDone += Math.min(b.combined.count, TARGET_TM);
     });
-    // Langkah 5-7 (Meta)
+    // TM 5-7
     Object.values(metaCombined).forEach((val) => {
-      totalDone += (val / TARGET_META) * TARGET_TM; // Weighted so progress looks even
+      totalDone += (val / TARGET_META) * TARGET_TM;
     });
     const totalTarget = (4 * 3 * TARGET_TM) + (3 * TARGET_TM);
     return Math.min(100, (totalDone / totalTarget) * 100);
@@ -253,9 +260,9 @@ export function TikrarSystem() {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.max(16, f - 2))}><Minus className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.max(16, f - 4))}><Minus className="h-4 w-4" /></Button>
             <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.min(48, f + 2))}><Plus className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.min(64, f + 4))}><Plus className="h-4 w-4" /></Button>
           </div>
           {totalProgress >= 100 && (
             <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl">
@@ -265,95 +272,96 @@ export function TikrarSystem() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin h-10 w-10 text-[#800000]" /></div>
-      ) : (
-        <div className="grid grid-cols-1 gap-8 pb-20">
-          <div className="px-1 flex items-center gap-2">
-            <Layers className="w-5 h-5 text-[#800000]" />
-            <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 1: Penguasaan Blok Individu (Langkah 1-4)</h4>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2, 3, 4].map(id => (
-              <BlockCard 
-                key={id} 
-                id={id} 
-                state={blocks[id]} 
-                verses={verses.slice((id-1) * Math.ceil(verses.length/4), id * Math.ceil(verses.length/4))}
-                onIncrement={(bid: number, type: 'a' | 'b' | 'combined') => {
-                  const current = blocks[bid][type].count;
-                  if (current < TARGET_TM) {
-                    setBlocks((prev: any) => ({
-                      ...prev, 
-                      [bid]: {
-                        ...prev[bid], 
-                        [type]: { count: current + 1 }
-                      }
-                    }));
-                  }
-                }} 
-                target={TARGET_TM} 
-                fontSize={fontSize}
-              />
-            ))}
-          </div>
+      <TooltipProvider delayDuration={0}>
+        {loading ? (
+          <div className="flex justify-center py-20"><Loader2 className="animate-spin h-10 w-10 text-[#800000]" /></div>
+        ) : (
+          <div className="grid grid-cols-1 gap-8 pb-32">
+            <div className="px-1 flex items-center gap-2">
+              <Layers className="w-5 h-5 text-[#800000]" />
+              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 1: Penguasaan Blok (TM 1-4)</h4>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map(id => (
+                <BlockCard 
+                  key={id} 
+                  id={id} 
+                  state={blocks[id]} 
+                  verses={verses.slice((id-1) * Math.ceil(verses.length/4), id * Math.ceil(verses.length/4))}
+                  onIncrement={(bid: number, type: 'a' | 'b' | 'combined') => {
+                    const current = blocks[bid][type].count;
+                    if (current < TARGET_TM) {
+                      setBlocks((prev: any) => ({
+                        ...prev, 
+                        [bid]: {
+                          ...prev[bid], 
+                          [type]: { count: current + 1 }
+                        }
+                      }));
+                    }
+                  }} 
+                  target={TARGET_TM} 
+                  fontSize={fontSize}
+                />
+              ))}
+            </div>
 
-          <div className="px-1 flex items-center gap-2 mt-8">
-            <Zap className="w-5 h-5 text-amber-500 fill-current" />
-            <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 2: Repetisi Gabungan (Langkah 5-7)</h4>
-          </div>
+            <div className="px-1 flex items-center gap-2 mt-8">
+              <Zap className="w-5 h-5 text-amber-500 fill-current" />
+              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 2: Repetisi Gabungan (TM 5-7)</h4>
+            </div>
 
-          <div className="grid grid-cols-1 gap-6">
-            {[5, 6, 7].map((stepNum) => {
-              // Map steps to metaCombined indices (Step 5 -> Meta 2, Step 6 -> Meta 3, Step 7 -> Meta 4)
-              const metaIdx = stepNum - 3;
-              const metaLabel = stepNum === 5 ? "Blok 1+2" : stepNum === 6 ? "Blok 1+2+3" : "Halaman Penuh (1-4)";
-              const count = metaCombined[metaIdx] || 0;
-              const isDone = count >= TARGET_META;
+            <div className="grid grid-cols-1 gap-6">
+              {[5, 6, 7].map((stepNum) => {
+                const metaIdx = stepNum - 3; // Mapping Step 5 -> Meta 2, Step 6 -> Meta 3, Step 7 -> Meta 4
+                const metaLabel = stepNum === 5 ? "Blok 1+2" : stepNum === 6 ? "Blok 1+2+3" : "Halaman Penuh (1-4)";
+                const count = metaCombined[metaIdx] || 0;
+                const isDone = count >= TARGET_META;
 
-              return (
-                <Card key={stepNum} className={cn("border-2 transition-all shadow-md", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                      <div className="flex items-center gap-4">
-                        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl", isDone ? "bg-emerald-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
-                          {stepNum}
-                        </div>
-                        <div className="flex flex-col">
-                          <h5 className="font-black uppercase tracking-widest text-[#800000]">Langkah {stepNum}</h5>
-                          <p className="text-xs font-bold text-muted-foreground">Gabungan {metaLabel}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
-                        <div className="flex-1 flex flex-col gap-1">
-                          <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
-                            <span>Repetisi</span>
-                            <span>{count} / {TARGET_META}</span>
+                return (
+                  <Card key={stepNum} className={cn("border-2 transition-all shadow-md", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                        <div className="flex items-center gap-4">
+                          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl", isDone ? "bg-emerald-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
+                            {stepNum}
                           </div>
-                          <Progress value={(count / TARGET_META) * 100} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
+                          <div className="flex flex-col">
+                            <h5 className="font-black uppercase tracking-widest text-[#800000]">Langkah {stepNum} (TM {stepNum})</h5>
+                            <p className="text-xs font-bold text-muted-foreground">Gabungan {metaLabel}</p>
+                          </div>
                         </div>
-                        <Button 
-                          onClick={() => {
-                            if (count < TARGET_META) {
-                              setMetaCombined(prev => ({ ...prev, [metaIdx]: count + 1 }));
-                            }
-                          }}
-                          disabled={isDone}
-                          className={cn("h-12 w-12 rounded-xl shrink-0 font-black border-2", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-[#800000] hover:bg-[#800000] hover:text-white")}
-                        >
-                          {isDone ? <CheckCircle2 /> : `+1`}
-                        </Button>
+
+                        <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
+                          <div className="flex-1 flex flex-col gap-1">
+                            <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
+                              <span>Repetisi</span>
+                              <span>{count} / {TARGET_META}</span>
+                            </div>
+                            <Progress value={(count / TARGET_META) * 100} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
+                          </div>
+                          <Button 
+                            onClick={() => {
+                              if (count < TARGET_META) {
+                                setMetaCombined(prev => ({ ...prev, [metaIdx]: count + 1 }));
+                              }
+                            }}
+                            disabled={isDone}
+                            className={cn("h-12 w-12 rounded-xl shrink-0 font-black border-2", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-[#800000] hover:bg-[#800000] hover:text-white")}
+                          >
+                            {isDone ? <CheckCircle2 /> : `+1`}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </TooltipProvider>
     </div>
   );
 }
@@ -368,47 +376,82 @@ function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
         {isDone && <Badge className="bg-emerald-500 text-white font-black text-[10px] tracking-widest">DONE</Badge>}
       </div>
       <CardContent className="p-6 space-y-6">
-        <div className="bg-[#fffcf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[200px] overflow-y-auto no-scrollbar" dir="rtl">
-          <div className="flex flex-wrap justify-center gap-x-1 gap-y-2">
+        <div className="bg-[#fffcf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[250px] overflow-y-auto no-scrollbar" dir="rtl">
+          <div className="flex flex-wrap justify-center gap-x-1 gap-y-3">
             {verses.map((v: any) => (
               <React.Fragment key={v.id}>
                 {v.words.map((w: any, idx: number) => (
-                  <span key={idx} style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} className="font-arabic text-[#800000]">{w.text_uthmani}</span>
+                  <Tooltip key={`${v.id}-${idx}`}>
+                    <TooltipTrigger asChild>
+                      <span 
+                        tabIndex={0} 
+                        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
+                        className="font-arabic text-[#800000] cursor-help hover:bg-[#800000]/5 rounded px-0.5 transition-colors"
+                      >
+                        {w.text_uthmani}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                        <p className="text-xs font-medium">{w.translation?.text || "..."}</p>
+                      </TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
                 ))}
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#800000]/20 text-[8px] font-bold mx-1 text-[#800000] bg-white/50">({v.verse_key.split(':')[1]})</span>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/20 text-[10px] font-bold mx-1 text-[#800000] bg-white/50 shadow-sm translate-y-[-2px]">({v.verse_key.split(':')[1]})</span>
               </React.Fragment>
             ))}
           </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4">
-          <CounterBox label={`${id}a`} count={state.a.count} target={target} onClick={() => onIncrement(id, 'a')} />
-          <CounterBox label={`${id}b`} count={state.b.count} target={target} onClick={() => onIncrement(id, 'b')} />
+          <CounterBox 
+            label={`${id}a`} 
+            count={state.a.count} 
+            target={target} 
+            onClick={() => onIncrement(id, 'a')} 
+            colorClass="rose"
+          />
+          <CounterBox 
+            label={`${id}b`} 
+            count={state.b.count} 
+            target={target} 
+            onClick={() => onIncrement(id, 'b')} 
+            colorClass="emerald"
+          />
         </div>
         
         <Button 
           onClick={() => onIncrement(id, 'combined')}
-          disabled={state.a.count < target || state.b.count < target}
+          disabled={state.a.count < target || state.b.count < target || isDone}
           className={cn(
             "w-full h-14 rounded-xl font-black text-lg transition-all shadow-md", 
             isDone ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90 shadow-[#800000]/20"
           )}
         >
-          {isDone ? <><CheckCircle2 className="mr-2" /> TUNTAS</> : `GABUNGAN ${id}: ${state.combined.count} / ${target}`}
+          {isDone ? <><CheckCircle2 className="mr-2" /> TUNTAS</> : `GABUNGAN BLOK ${id}: ${state.combined.count} / ${target}`}
         </Button>
       </CardContent>
     </Card>
   );
 }
 
-function CounterBox({ label, count, target, onClick }: any) {
+function CounterBox({ label, count, target, onClick, colorClass }: any) {
   const isDone = count >= target;
+  
+  const themes = {
+    rose: isDone ? "bg-rose-50 border-rose-500 text-rose-700" : "bg-rose-50/30 border-rose-100 hover:border-rose-300 hover:bg-rose-50/50",
+    emerald: isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-emerald-50/30 border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50/50",
+  };
+
+  const theme = colorClass === "rose" ? themes.rose : themes.emerald;
+
   return (
     <div 
       onClick={isDone ? undefined : onClick}
       className={cn(
         "h-24 rounded-2xl border-2 flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 select-none", 
-        isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-muted/20 border-muted hover:border-[#800000]/30 hover:bg-white"
+        theme
       )}
     >
       <span className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">Bag. {label}</span>
