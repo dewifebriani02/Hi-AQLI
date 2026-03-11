@@ -8,10 +8,10 @@ import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/study-circles", label: "Hi Halaqah", icon: LayoutGrid },
-  { href: "/tilawah", label: "Hi Ngaji", icon: BookOpen, isProminent: true },
-  { href: "/tajweed", label: "Hi Hafal", icon: GraduationCap },
-  { href: "/ai-scholar", label: "Hi Mufradat", icon: Globe },
+  { href: "/ngaji", label: "Hi Ngaji", icon: LayoutGrid },
+  { href: "/mufradat", label: "Hi Mufradat", icon: BookOpen, isProminent: true },
+  { href: "/hafal", label: "Hi Hafal", icon: GraduationCap },
+  { href: "/berbagi", label: "Hi Berbagi", icon: Globe },
 ];
 
 export function BottomNav() {

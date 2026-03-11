@@ -1,0 +1,172 @@
+"use client";
+
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { collection, doc, query, where } from "firebase/firestore";
+
+const studyCircles = [
+  {
+    id: "tikrar-j30-b1",
+    title: "TIKRAR DAILY JUZ 30 - BATCH 1",
+    instructor: "Tim Asatizah AQLI",
+    description: "Program hafalan terstruktur dengan metode Tikrar 40x. Infaq pendaftaran sudah termasuk bimbingan & ujian.",
+    schedule: "Setiap Hari (Mandiri)",
+    level: "All Levels",
+    isPremium: true,
+    tag: "PENDAFTARAN DIBUKA"
+  },
+  {
+    id: "tafsir-j30",
+    title: "Tafsir Juz' Amma",
+    instructor: "Dr. Fatima Ahmed",
+    description: "Studi mendalam tentang makna dan konteks bagian terakhir Al-Qur'an, cocok untuk pemula.",
+    schedule: "Sabtu, 10:00 WIB",
+    level: "Pemula",
+    isPremium: false
+  },
+  {
+    id: "sirah-nabi",
+    title: "Sirah Nabi (SAW)",
+    instructor: "Ustadha Aisha Khan",
+    description: "Perjalanan melalui kehidupan Nabi Muhammad (SAW) dan dapatkan pelajaran abadi untuk hari ini.",
+    schedule: "Minggu, 14:00 WIB",
+    level: "Semua Level",
+    isPremium: false
+  },
+];
+
+export default function NgajiPage() {
+  const [search, setSearch] = useState("");
+  const { user } = useUser();
+  const db = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: userData } = useDoc(userDocRef);
+
+  const regQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, "halaqah_registrations"),
+      where("userId", "==", user.uid)
+    );
+  }, [db, user?.uid]);
+
+  const { data: allRegs } = useCollection(regQuery);
+
+  const filteredCircles = studyCircles.filter((c) =>
+    c.title.toLowerCase().includes(search.toLowerCase()) ||
+    c.instructor.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const getHalaqahStatus = (id: string) => {
+    const reg = allRegs?.find(r => r.halaqahId === id);
+    if (!reg) {
+      if (id === 'tikrar-j30-b1' && userData?.isTikrarPaid) return 'active';
+      if (userData?.followedHalaqahs?.includes(id)) return 'active';
+      return 'none';
+    }
+    return reg.status;
+  };
+
+  const isHalaqahActive = (id: string) => getHalaqahStatus(id) === 'active';
+  const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
+
+  const renderCircleCard = (circle: typeof studyCircles[0]) => {
+    const status = getHalaqahStatus(circle.id);
+    const isActive = status === 'active';
+    const isPending = status === 'pending_verification';
+    
+    let href = `/ngaji/registration?id=${circle.id}`;
+    if (isActive) {
+      href = circle.id === 'tikrar-j30-b1' ? '/hafal' : `/ngaji/${circle.id}`;
+    }
+
+    return (
+      <Link key={circle.id} href={isPending ? "#" : href}>
+        <Card 
+          className={cn(
+            "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
+            isActive ? "bg-white border-l-4 border-[#D4AF37]" :
+            isPending ? "bg-white border-l-4 border-amber-500" :
+            circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
+          )}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1">
+              <div className={cn(
+                "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-black transition-colors",
+                isActive ? "bg-[#D4AF37] text-black" : 
+                isPending ? "bg-amber-500 text-white" :
+                circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+              )}>
+                {isActive ? <PlayCircle className="w-6 h-6" /> : 
+                 isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
+                 circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+              </div>
+              <div className="flex flex-col gap-0.5 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className={cn("font-bold text-base leading-tight", isActive && "text-black", isPending && "text-amber-900")}>{circle.title}</h4>
+                  {isActive ? (
+                    <Badge className="bg-[#D4AF37] text-black border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">AKTIF</Badge>
+                  ) : isPending ? (
+                    <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">VERIFIKASI</Badge>
+                  ) : (
+                    circle.isPremium && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">PREMIUM</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                  <User className="w-3 h-3" />
+                  <span>{circle.instructor}</span>
+                </div>
+              </div>
+            </div>
+            {!isPending && <ChevronRight className={cn(
+              "w-5 h-5 transition-colors", 
+              isActive ? "text-[#D4AF37]" : "text-muted-foreground/30 group-hover:text-[#800000]"
+            )} />}
+          </div>
+        </Card>
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-8 max-w-3xl mx-auto pb-24">
+      <div className="flex flex-col gap-2 mt-4 px-1">
+        <div className="flex items-center gap-2 text-[#800000] mb-1">
+          <BookOpen className="w-5 h-5" />
+          <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Ngaji • Pendaftaran Kelas</span>
+        </div>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
+        <p className="text-muted-foreground text-sm">
+          Semua program pembelajaran memerlukan verifikasi oleh Admin HI AQLI.
+        </p>
+      </div>
+
+      <div className="relative px-1">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input 
+          placeholder="Cari program atau instruktur..." 
+          className="pl-11 h-12 bg-muted/50 border-none ring-offset-background text-sm" 
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="mt-6 flex flex-col gap-3 px-1">
+        {filteredCircles.map(renderCircleCard)}
+      </div>
+    </div>
+  );
+}

@@ -100,7 +100,7 @@ export default function DashboardPage() {
               )}
             </div>
             <Button asChild size="sm" className="bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 font-black gap-2 shadow-lg border-none">
-              <Link href="/tajweed">MASUK KELAS <ArrowRight className="w-4 h-4" /></Link>
+              <Link href="/hafal">MASUK KELAS <ArrowRight className="w-4 h-4" /></Link>
             </Button>
           </CardContent>
         </Card>
@@ -111,8 +111,8 @@ export default function DashboardPage() {
         <h2 className="text-lg font-bold font-headline">Layanan HI AQLI</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           
-          {/* 1. HI HALAQAH (Daftar Kelas) */}
-          <Link href="/study-circles" className="block group sm:col-span-2">
+          {/* 1. HI NGAJI (Daftar Kelas) */}
+          <Link href="/ngaji" className="block group sm:col-span-2">
             <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-32 transition-transform group-hover:scale-[1.01] relative border-b-4 border-[#D4AF37]">
               <CardContent className="p-5 flex items-center justify-between h-full relative overflow-hidden gap-4">
                 <div className="flex items-center gap-4">
@@ -121,8 +121,8 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-0.5">
                     <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Pendaftaran</Badge>
-                    <h4 className="font-black text-xl text-white">Hi Halaqah</h4>
-                    <p className="text-[10px] text-white/70">Daftar kelas Tahsin, Tafsir, & Tikrar.</p>
+                    <h4 className="font-black text-xl text-white">Hi Ngaji</h4>
+                    <p className="text-[10px] text-white/70">Daftar kelas Tahsin, Tafsir, & Tahfidz.</p>
                   </div>
                 </div>
                 <ArrowRight className="w-5 h-5 text-[#D4AF37]" />
@@ -130,23 +130,23 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {/* 2. HI NGAJI */}
-          <Link href="/tilawah" className="block group">
+          {/* 2. HI MUFRADAT (Mushaf) */}
+          <Link href="/mufradat" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Mic2 className="w-24 h-24" /></div>
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><BookOpen className="w-24 h-24" /></div>
                 <div className="space-y-1 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Tahsin & Iqra</Badge>
-                  <h4 className="font-black text-xl text-white leading-tight">Hi Ngaji</h4>
-                  <p className="text-[10px] text-white/70 max-w-[140px]">Belajar membaca Al-Qur'an dengan benar.</p>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Mushaf & Arti</Badge>
+                  <h4 className="font-black text-xl text-white leading-tight">Hi Mufradat</h4>
+                  <p className="text-[10px] text-white/70 max-w-[140px]">Pelajari kosakata & terjemahan ayat.</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Mulai Membaca <ChevronRight className="w-3 h-3" /></div>
+                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Buka Mushaf <ChevronRight className="w-3 h-3" /></div>
               </CardContent>
             </Card>
           </Link>
 
-          {/* 3. HI HAFAL */}
-          <Link href="/tajweed" className="block group">
+          {/* 3. HI HAFAL (Tikrar) */}
+          <Link href="/hafal" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Award className="w-24 h-24" /></div>
@@ -160,15 +160,15 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {/* 4. HI MUFRADAT */}
-          <Link href="/ai-scholar" className="block group sm:col-span-2">
+          {/* 4. HI BERBAGI (Tanya AI) */}
+          <Link href="/berbagi" className="block group sm:col-span-2">
             <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-40 transition-transform group-hover:scale-[1.01] relative">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Globe className="w-32 h-32" /></div>
                 <div className="space-y-1 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Kosakata AI</Badge>
-                  <h4 className="font-black text-xl text-white">Hi Mufradat</h4>
-                  <p className="text-[10px] text-white/70 max-w-[220px]">Tanyakan arti, tafsir, dan kosakata sulit kepada asisten AI HI AQLI.</p>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Tanya Jawab AI</Badge>
+                  <h4 className="font-black text-xl text-white">Hi Berbagi</h4>
+                  <p className="text-[10px] text-white/70 max-w-[220px]">Diskusikan tafsir dan sejarah Islam bersama asisten AI.</p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Ajukan Pertanyaan <ChevronRight className="w-4 h-4" /></div>
               </CardContent>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 5. HI BERBAGI (Donation Ad) */}
+      {/* 5. HI INFAQ */}
       <Link href="/donate" className="block group">
         <Card className="overflow-hidden border-2 border-[#800000]/10 bg-white text-[#800000] h-32 transition-all group-hover:border-[#D4AF37] shadow-sm">
           <CardContent className="p-5 flex items-center justify-between h-full gap-4">
@@ -186,8 +186,8 @@ export default function DashboardPage() {
                 <HeartHandshake className="w-8 h-8" />
               </div>
               <div className="space-y-0.5">
-                <h4 className="font-black text-lg uppercase leading-tight">Hi Berbagi</h4>
-                <p className="text-[10px] text-muted-foreground font-bold">Infaq Bakti Sosial & Operasional Dakwah.</p>
+                <h4 className="font-black text-lg uppercase leading-tight">Hi Infaq</h4>
+                <p className="text-[10px] text-muted-foreground font-bold">Dukung Dakwah & Baksos Digital.</p>
               </div>
             </div>
             <ArrowRight className="w-5 h-5 opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
