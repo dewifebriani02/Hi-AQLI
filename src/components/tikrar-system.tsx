@@ -86,7 +86,7 @@ export function TikrarSystem() {
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "users", user.uid);
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   
