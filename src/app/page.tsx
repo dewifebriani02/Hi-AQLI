@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -24,12 +25,14 @@ import {
   HeartHandshake,
   Trophy,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Clock
 } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 const days = [
   { label: 'Jum', active: false },
@@ -44,6 +47,7 @@ const days = [
 export default function DashboardPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const [tikrarStats, setTikrarStats] = useState<{ day: number, total: number } | null>(null);
 
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -53,6 +57,27 @@ export default function DashboardPage() {
   const { data: userData } = useDoc(userDocRef);
   const isPaid = userData?.isTikrarPaid;
   const paidJuz = userData?.paidJuz;
+
+  // Retrieve schedule from localStorage for the dashboard card
+  useEffect(() => {
+    if (isPaid) {
+      // Find the first non-empty progress or default to page 1 of their Juz
+      const startPage = paidJuz ? (paidJuz === 1 ? 1 : (paidJuz - 1) * 20 + 2) : 1;
+      const saved = localStorage.getItem(`tikrar_progress_p${startPage}`);
+      const savedLevel = localStorage.getItem('tikrar_level');
+      
+      if (saved && savedLevel) {
+        const data = JSON.parse(saved);
+        if (data.startDate) {
+          const start = new Date(data.startDate);
+          const today = new Date();
+          const diff = Math.ceil(Math.abs(today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          const levels = [0, 7, 14, 21, 28];
+          setTikrarStats({ day: diff, total: levels[parseInt(savedLevel)] || 7 });
+        }
+      }
+    }
+  }, [isPaid, paidJuz]);
 
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
@@ -85,10 +110,18 @@ export default function DashboardPage() {
             <Zap className="w-32 h-32" />
           </div>
           <CardContent className="p-5 flex items-center justify-between gap-4 relative z-10">
-            <div className="space-y-1">
+            <div className="space-y-1 flex-1">
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-80">Program Aktif</p>
               <h3 className="font-bold text-lg">Tikrar Daily: Juz {paidJuz}</h3>
-              <p className="text-[10px] opacity-90 max-w-[180px]">Ketuk untuk lanjut menghafal di halaman terakhir.</p>
+              {tikrarStats ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> Hari ke-{tikrarStats.day} dari {tikrarStats.total}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] opacity-90">Lanjutkan repetisi hari ini.</p>
+              )}
             </div>
             <Button asChild size="sm" className="bg-white text-blue-600 hover:bg-blue-50 font-bold gap-2 shadow-lg">
               <Link href="/tajweed">MASUK KELAS <ArrowRight className="w-4 h-4" /></Link>
@@ -292,7 +325,7 @@ export default function DashboardPage() {
         <div className="space-y-3">
           {[
             { title: 'Hafalan Juz 30', subtitle: 'An-Naba 1 - 40', progress: 85, icon: Calendar, color: 'emerald' },
-            { title: 'Murottal Juz 28', subtitle: 'Al-Mujadilah 1 - 22', progress: 0, icon: CheckCircle2, color: 'slate' }
+            { title: 'Murottal Juz 28', subtitle: 'Al-Mujadilah 1 - 22', progress: tikrarStats ? Math.round((tikrarStats.day / tikrarStats.total) * 100) : 0, icon: Clock, color: 'blue' }
           ].map((goal) => (
             <Card key={goal.title} className="border shadow-none hover:bg-muted/30 transition-colors cursor-pointer group">
               <CardContent className="p-4 flex items-center justify-between gap-4">
@@ -318,24 +351,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
-
-function CheckCircle2(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  )
 }

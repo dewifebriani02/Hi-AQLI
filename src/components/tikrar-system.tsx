@@ -20,6 +20,9 @@ import {
   ArrowRight,
   ShieldCheck,
   MessageCircle,
+  Clock,
+  Flag,
+  Info
 } from "lucide-react";
 import { 
   Tooltip,
@@ -99,6 +102,7 @@ export function TikrarSystem() {
   const [loading, setLoading] = useState(true);
   const [isPrevPageDone, setIsPrevPageDone] = useState(true);
   const [level, setLevel] = useState<number | null>(null);
+  const [pageStartDate, setPageStartDate] = useState<string | null>(null);
   
   const [blocks, setBlocks] = useState<Record<number, BlockState>>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -118,18 +122,16 @@ export function TikrarSystem() {
     if (!isUserDataLoading && userData) {
       if (isPaid && paidJuz) {
         setJuz(paidJuz);
-        setPage(JUZ_PAGES[paidJuz - 1]);
-      } else {
-        setJuz(1);
-        setPage(1);
+        // Only override page if it hasn't been set by navigation
+        if (page === 1) setPage(JUZ_PAGES[paidJuz - 1]);
       }
     }
-  }, [userData, isPaid, paidJuz, isUserDataLoading]);
+  }, [userData, isPaid, paidJuz, isUserDataLoading, page]);
 
   const isTrial = page === 1 && juz === 1;
   const accessDenied = !isTrial && (!isPaid || (paidJuz !== null && juz !== paidJuz));
 
-  const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1], [juz]);
+  const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1] || 1, [juz]);
   const nextJuzStartPage = juz < 30 ? JUZ_PAGES[juz] : 605;
 
   const playSfx = useCallback((type: 'click' | 'finish') => {
@@ -196,6 +198,7 @@ export function TikrarSystem() {
           4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
         });
         setMetaCombined(saved.metaCombined || { 2: 0, 3: 0, 4: 0 });
+        setPageStartDate(saved.startDate || null);
       } catch (e) {
         console.error("Parse Error", e);
       }
@@ -207,6 +210,8 @@ export function TikrarSystem() {
         4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
       });
       setMetaCombined({ 2: 0, 3: 0, 4: 0 });
+      const now = new Date().toISOString();
+      setPageStartDate(now);
     }
 
     setIsPrevPageDone(page === currentJuzStartPage || checkPageCompletion(page - 1));
@@ -215,9 +220,13 @@ export function TikrarSystem() {
 
   useEffect(() => {
     if (!loading && typeof window !== 'undefined') {
-      localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({ blocks, metaCombined }));
+      localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({ 
+        blocks, 
+        metaCombined, 
+        startDate: pageStartDate 
+      }));
     }
-  }, [blocks, metaCombined, page, loading]);
+  }, [blocks, metaCombined, page, loading, pageStartDate]);
 
   const handleLevelSelect = (levelId: number) => {
     setLevel(levelId);
@@ -263,6 +272,55 @@ export function TikrarSystem() {
 
   const totalProgress = calculateTotalProgress();
 
+  // Schedule Calculations
+  const scheduleInfo = useMemo(() => {
+    if (!level || !pageStartDate) return null;
+    const start = new Date(pageStartDate);
+    const selectedLevel = LEVELS.find(l => l.id === level);
+    if (!selectedLevel) return null;
+    
+    const targetDate = new Date(start);
+    targetDate.setDate(start.getDate() + selectedLevel.days);
+    
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return {
+      currentDay: diffDays,
+      totalDays: selectedLevel.days,
+      deadline: targetDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+      isOverdue: today > targetDate && totalProgress < 100
+    };
+  }, [level, pageStartDate, totalProgress]);
+
+  // Current Target Identification
+  const currentTarget = useMemo(() => {
+    if (blocks[1].a.count < TARGET_TM) return "Blok 1a";
+    if (blocks[1].b.count < TARGET_TM) return "Blok 1b";
+    if (blocks[1].combined.count < TARGET_TM) return "Gabungan 1a+b";
+    
+    if (blocks[2].a.count < TARGET_TM) return "Blok 2a";
+    if (blocks[2].b.count < TARGET_TM) return "Blok 2b";
+    if (blocks[2].combined.count < TARGET_TM) return "Gabungan 2a+b";
+    
+    if (metaCombined[2] < MIN_META[2]) return "Gabungan TM1 + TM2";
+    
+    if (blocks[3].a.count < TARGET_TM) return "Blok 3a";
+    if (blocks[3].b.count < TARGET_TM) return "Blok 3b";
+    if (blocks[3].combined.count < TARGET_TM) return "Gabungan 3a+b";
+    
+    if (metaCombined[3] < MIN_META[3]) return "Gabungan TM1 + TM2 + TM3";
+    
+    if (blocks[4].a.count < TARGET_TM) return "Blok 4a";
+    if (blocks[4].b.count < TARGET_TM) return "Blok 4b";
+    if (blocks[4].combined.count < TARGET_TM) return "Gabungan 4a+b";
+    
+    if (metaCombined[4] < MIN_META[4]) return "Gabungan Akhir TM1-4";
+    
+    return "Selesai! Siap Ujian";
+  }, [blocks, metaCombined]);
+
   if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
   if (!level) {
@@ -273,7 +331,7 @@ export function TikrarSystem() {
             <Trophy className="w-8 h-8 text-[#800000]" />
           </div>
           <h2 className="text-2xl font-bold font-headline">Pilih Level Tikrar Daily</h2>
-          <p className="text-sm text-muted-foreground">Tentukan intensitas hafalan Anda. Akses Juz spesifik terbuka bagi yang sudah mendaftar.</p>
+          <p className="text-sm text-muted-foreground">Tentukan intensitas hafalan Anda. Setiap level memiliki target durasi yang berbeda untuk menuntaskan satu halaman.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4">
           {LEVELS.map((l) => (
@@ -304,58 +362,94 @@ export function TikrarSystem() {
 
   return (
     <div className="space-y-8">
+      {/* HEADER: INFO JUZ & JADWAL */}
       <Card className="border-none bg-gradient-to-br from-[#800000] to-[#b30000] text-white shadow-xl overflow-hidden relative">
         <div className="absolute right-[-20px] top-[-20px] opacity-10"><CalendarDays className="w-40 h-40" /></div>
         <CardContent className="p-6 relative z-10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
-                  Level {LEVELS.find(l => l.id === level)?.name} ACTIVE
-                </Badge>
-                {isPaid ? (
-                  <Badge className="bg-emerald-500/20 text-white border-none text-[10px] font-bold flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> JUZ {paidJuz} ACTIVE
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
+                    Level {LEVELS.find(l => l.id === level)?.name}
                   </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-white border-white/30 text-[9px] font-bold">MODE TRIAL (JUZ 1)</Badge>
-                )}
+                  {isPaid ? (
+                    <Badge className="bg-emerald-500/20 text-white border-none text-[10px] font-bold flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> JUZ {paidJuz} ACTIVE
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-white border-white/30 text-[9px] font-bold">MODE TRIAL (JUZ 1)</Badge>
+                  )}
+                </div>
+                <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
               </div>
-              <h3 className="text-xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
-              <p className="text-xs opacity-80 max-w-sm">Anda sedang fokus menghafal <strong>Juz {juz}</strong>. Selesaikan setiap halaman untuk mengajukan ujian.</p>
+              
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 flex flex-col items-end">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter opacity-80 mb-1">
+                  <Clock className="w-3 h-3" /> Jadwal Hafalan
+                </div>
+                <div className="text-lg font-black">Hari ke-{scheduleInfo?.currentDay} <span className="text-xs font-medium opacity-60">/ {scheduleInfo?.totalDays}</span></div>
+                <p className={cn("text-[10px] font-bold mt-1 px-2 py-0.5 rounded", scheduleInfo?.isOverdue ? "bg-rose-500 text-white" : "bg-white/20")}>
+                  Target Selesai: {scheduleInfo?.deadline}
+                </p>
+              </div>
             </div>
-            {totalProgress >= 100 && (
-              <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-2">
-                <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20Juz%20${juz}%20dan%20ingin%20mengajukan%20ujian.`} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="w-4 h-4" /> AJUKAN UJIAN
-                </a>
-              </Button>
-            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-black/20 p-4 rounded-xl flex items-center gap-4 border border-white/5">
+                <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg">
+                  <Flag className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Target Sekarang</p>
+                  <p className="text-sm font-black text-amber-300 animate-pulse">{currentTarget}</p>
+                </div>
+              </div>
+              
+              {totalProgress >= 100 ? (
+                <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white font-black h-full py-4 rounded-xl gap-2 shadow-lg shadow-emerald-900/20">
+                  <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20Juz%20${juz}%20dan%20ingin%20mengajukan%20ujian.`} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="w-5 h-5" /> AJUKAN UJIAN SEKARANG
+                  </a>
+                </Button>
+              ) : (
+                <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-bold uppercase opacity-60">Progres Halaman</span>
+                    <span className="text-[10px] font-bold">{Math.round(totalProgress)}%</span>
+                  </div>
+                  <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-white" />
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-center min-w-[100px]">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Halaman</p>
-              <p className="text-2xl font-black text-[#800000]">{page}</p>
+      {/* NAVIGATION & INFO UJIAN */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-12 w-12 border-2">
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <div className="text-center min-w-[120px]">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Halaman</p>
+                <p className="text-3xl font-black text-[#800000]">{page}</p>
+              </div>
+              <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1} className="rounded-xl h-12 w-12 border-2">
+                <ChevronRight className="h-5 w-5" />
+              </Button>
             </div>
-            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
-        <div className="flex-1 w-full max-w-md space-y-2">
-          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-[#800000]">
-            <span>Halaman {page} Progress</span>
-            <span>{Math.round(totalProgress)}%</span>
+          
+          <div className="flex items-center gap-2 bg-amber-50 p-3 rounded-xl border border-amber-100 max-w-sm">
+            <Info className="w-5 h-5 text-amber-600 shrink-0" />
+            <p className="text-[10px] text-amber-800 leading-tight font-medium">
+              <strong>Info Ujian:</strong> Ujian hafalan dilakukan setiap kali Anda menyelesaikan <strong>1 halaman</strong> penuh. Silakan hubungi tutor via WA setelah progres 100%.
+            </p>
           </div>
-          <Progress value={totalProgress} className="h-2 bg-muted [&>div]:bg-[#800000]" />
         </div>
       </div>
 
@@ -392,40 +486,53 @@ export function TikrarSystem() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 gap-8 pb-20">
+          {/* BLOK PANDUAN LANGKAH DEMI LANGKAH */}
+          <div className="flex items-center gap-2 px-1">
+            <Flag className="w-4 h-4 text-[#800000]" />
+            <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Urutan Menghafal (Langkah 1 - 7)</h4>
+          </div>
+
           <BlockCard 
             id={1} state={blocks[1]} verses={getVersesForRange(1, 1)}
             onIncrement={incrementTM} target={TARGET_TM} isLocked={false} 
+            activeTarget={currentTarget.includes("1")}
           />
           
           <BlockCard 
             id={2} state={blocks[2]} verses={getVersesForRange(2, 2)}
             onIncrement={incrementTM} target={TARGET_TM} isLocked={blocks[1].combined.count < TARGET_TM} 
+            activeTarget={currentTarget.includes("2") && !currentTarget.includes("TM1")}
           />
 
           <MetaCombinedCard 
-            id={2} title="Gabungan TM1 + TM2" count={metaCombined[2]} min={MIN_META[2]} target={RECOMMENDED_META}
+            id={2} title="Langkah 3: Gabungan TM1 + TM2" count={metaCombined[2]} min={MIN_META[2]} target={RECOMMENDED_META}
             verses={getVersesForRange(1, 2)} isLocked={blocks[2].combined.count < TARGET_TM} onIncrement={() => incrementMeta(2)}
+            activeTarget={currentTarget === "Gabungan TM1 + TM2"}
           />
 
           <BlockCard 
             id={3} state={blocks[3]} verses={getVersesForRange(3, 3)}
             onIncrement={incrementTM} target={TARGET_TM} isLocked={metaCombined[2] < MIN_META[2]} 
+            activeTarget={currentTarget.includes("3")}
           />
 
           <MetaCombinedCard 
-            id={3} title="Gabungan TM1 + TM2 + TM3" count={metaCombined[3]} min={MIN_META[3]} target={RECOMMENDED_META}
+            id={3} title="Langkah 5: Gabungan TM1 + TM2 + TM3" count={metaCombined[3]} min={MIN_META[3]} target={RECOMMENDED_META}
             verses={getVersesForRange(1, 3)} isLocked={blocks[3].combined.count < TARGET_TM} onIncrement={() => incrementMeta(3)}
+            activeTarget={currentTarget === "Gabungan TM1 + TM2 + TM3"}
           />
 
           <BlockCard 
             id={4} state={blocks[4]} verses={getVersesForRange(4, 4)}
             onIncrement={incrementTM} target={TARGET_TM} isLocked={metaCombined[3] < MIN_META[3]} 
+            activeTarget={currentTarget.includes("4")}
           />
 
           <MetaCombinedCard 
-            id={4} title="Gabungan Akhir TM1-4" count={metaCombined[4]} min={MIN_META[4]} target={RECOMMENDED_META}
+            id={4} title="Langkah 7: Gabungan Akhir TM1-4" count={metaCombined[4]} min={MIN_META[4]} target={RECOMMENDED_META}
             verses={getVersesForRange(1, 4)} isLocked={blocks[4].combined.count < TARGET_TM} onIncrement={() => incrementMeta(4)}
+            activeTarget={currentTarget === "Gabungan Akhir TM1-4"}
           />
         </div>
       )}
@@ -433,7 +540,7 @@ export function TikrarSystem() {
   );
 }
 
-function BlockCard({ id, state, verses, onIncrement, target, isLocked }: any) {
+function BlockCard({ id, state, verses, onIncrement, target, isLocked, activeTarget }: any) {
   const isBlockDone = state.combined.count >= target;
   
   const { partA, partB } = useMemo(() => {
@@ -463,11 +570,19 @@ function BlockCard({ id, state, verses, onIncrement, target, isLocked }: any) {
   }, [verses]);
 
   return (
-    <Card className={cn("border-2 transition-all duration-500 overflow-hidden shadow-lg", isLocked ? "opacity-50 pointer-events-none grayscale" : isBlockDone ? "border-emerald-500 bg-emerald-50/20" : "border-muted")}>
-      <CardHeader className="bg-[#800000]/5 py-3 px-6 border-b flex flex-row items-center justify-between">
-        <CardTitle className="text-xl font-bold font-headline text-[#800000]">BLOK TM {id}</CardTitle>
+    <Card className={cn(
+      "border-2 transition-all duration-500 overflow-hidden shadow-lg", 
+      isLocked ? "opacity-50 pointer-events-none grayscale" : 
+      activeTarget ? "border-[#800000] ring-2 ring-[#800000]/20 scale-[1.01]" :
+      isBlockDone ? "border-emerald-500 bg-emerald-50/20" : "border-muted"
+    )}>
+      <CardHeader className={cn(
+        "py-3 px-6 border-b flex flex-row items-center justify-between",
+        activeTarget ? "bg-[#800000] text-white" : "bg-[#800000]/5 text-[#800000]"
+      )}>
+        <CardTitle className="text-xl font-bold font-headline uppercase">Blok TM {id}</CardTitle>
         <div className="flex gap-2">
-          {isBlockDone ? <Badge className="bg-emerald-500">SELESAI</Badge> : isLocked ? <Lock className="w-4 h-4" /> : <Badge variant="outline">PROGRESS</Badge>}
+          {isBlockDone ? <Badge className="bg-emerald-500">SELESAI</Badge> : isLocked ? <Lock className="w-4 h-4" /> : <Badge variant="outline" className={activeTarget ? "border-white text-white" : ""}>PROGRESS</Badge>}
         </div>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
@@ -484,26 +599,40 @@ function BlockCard({ id, state, verses, onIncrement, target, isLocked }: any) {
            </TooltipProvider>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <MaqtaCounter label={`TM${id}a`} count={state.a.count} target={target} onClick={() => onIncrement(id, 'a')} disabled={isLocked} active={state.a.count < target} />
-          <MaqtaCounter label={`TM${id}b`} count={state.b.count} target={target} onClick={() => onIncrement(id, 'b')} disabled={isLocked || state.a.count < target} active={state.a.count >= target && state.b.count < target} />
+          <MaqtaCounter label={`TM${id}a`} count={state.a.count} target={target} onClick={() => onIncrement(id, 'a')} disabled={isLocked} active={state.a.count < target && activeTarget} />
+          <MaqtaCounter label={`TM${id}b`} count={state.b.count} target={target} onClick={() => onIncrement(id, 'b')} disabled={isLocked || state.a.count < target} active={state.a.count >= target && state.b.count < target && activeTarget} />
         </div>
         <Button 
           onClick={() => onIncrement(id, 'combined')} 
           disabled={isLocked || state.a.count < target || state.b.count < target}
-          className={cn("w-full h-16 rounded-xl font-bold transition-all", state.combined.count >= target ? "bg-emerald-500" : "bg-[#800000] scale-105 shadow-xl")}
+          className={cn(
+            "w-full h-16 rounded-xl font-black transition-all text-lg", 
+            state.combined.count >= target ? "bg-emerald-500" : 
+            activeTarget && state.a.count >= target && state.b.count >= target ? "bg-[#800000] scale-105 shadow-xl animate-bounce" : "bg-muted text-muted-foreground"
+          )}
         >
-          Gabungan {id}a+b: {state.combined.count} / {target}
+          GABUNGAN {id}a+b: {state.combined.count} / {target}
         </Button>
       </CardContent>
     </Card>
   );
 }
 
-function MetaCombinedCard({ title, count, min, target, verses, isLocked, onIncrement }: any) {
+function MetaCombinedCard({ title, count, min, target, verses, isLocked, onIncrement, activeTarget }: any) {
   const isMinTapped = count >= min;
   return (
-    <Card className={cn("border-2 shadow-xl transition-all", isLocked ? "opacity-50 grayscale pointer-events-none" : "border-amber-200 bg-amber-50/30")}>
-      <CardHeader className="py-3 px-6 bg-amber-100/50 border-b"><CardTitle className="text-amber-900 font-headline flex items-center gap-2"><Zap className="w-4 h-4" /> {title}</CardTitle></CardHeader>
+    <Card className={cn(
+      "border-2 shadow-xl transition-all", 
+      isLocked ? "opacity-50 grayscale pointer-events-none" : 
+      activeTarget ? "border-amber-500 ring-2 ring-amber-500/20 scale-[1.01]" :
+      "border-amber-200 bg-amber-50/30"
+    )}>
+      <CardHeader className={cn(
+        "py-3 px-6 border-b",
+        activeTarget ? "bg-amber-500 text-white" : "bg-amber-100/50 text-amber-900"
+      )}>
+        <CardTitle className="font-headline flex items-center gap-2 uppercase tracking-wider"><Zap className="w-4 h-4" /> {title}</CardTitle>
+      </CardHeader>
       <CardContent className="p-6 space-y-4">
         <div className="max-h-[220px] overflow-y-auto no-scrollbar bg-white/80 p-5 rounded-xl border-2 border-dashed border-amber-200" dir="rtl">
           <div className="flex flex-wrap justify-center gap-x-1 gap-y-3 text-center">
@@ -517,11 +646,15 @@ function MetaCombinedCard({ title, count, min, target, verses, isLocked, onIncre
             ))}
           </div>
         </div>
-        <Button onClick={onIncrement} className={cn("w-full h-20 rounded-2xl text-2xl font-black transition-all", isMinTapped ? "bg-emerald-500 hover:bg-emerald-600 scale-105 shadow-xl" : "bg-amber-600 hover:bg-amber-700")}>
+        <Button onClick={onIncrement} className={cn(
+          "w-full h-20 rounded-2xl text-2xl font-black transition-all", 
+          isMinTapped ? "bg-emerald-500 hover:bg-emerald-600 scale-105 shadow-xl" : 
+          activeTarget ? "bg-amber-600 hover:bg-amber-700 animate-pulse" : "bg-muted text-muted-foreground"
+        )}>
           {count} / {target}
         </Button>
         <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase text-amber-800 bg-amber-100/50 py-2 rounded-lg">
-          {isMinTapped ? <CheckCircle2 className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+          {isMinTapped ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Lock className="w-3 h-3" />}
           Minimal {min}x untuk lanjut ke tahap berikutnya
         </div>
       </CardContent>
@@ -562,14 +695,14 @@ function MaqtaCounter({ label, count, target, onClick, disabled, active }: any) 
         "relative h-24 rounded-xl border-2 flex flex-col items-center justify-center cursor-pointer transition-all", 
         disabled ? "bg-muted opacity-50 cursor-not-allowed" : 
         isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" :
-        active ? "border-[#800000] bg-white shadow-md scale-105 z-10" : "bg-muted/20 border-muted"
+        active ? "border-[#800000] bg-white shadow-md scale-105 z-10 ring-4 ring-[#800000]/10" : "bg-muted/20 border-muted"
       )}
     >
       <span className="text-[10px] font-bold uppercase opacity-60">{label}</span>
       <span className="text-3xl font-black">{count}</span>
       <span className="text-[8px] font-bold opacity-40">/ {target}</span>
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-emerald-500" />}
-      {!isDone && disabled && <Lock className="absolute top-2 right-2 w-3 h-3 text-muted-foreground" />}
+      {!isDone && active && <div className="absolute -top-2 -right-2 bg-[#800000] text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-lg">AKTIF</div>}
     </div>
   );
 }
