@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -54,6 +55,7 @@ export default function NgajiPage() {
 
   const { data: userData } = useDoc(userDocRef);
 
+  // Check all user registrations to manage UI states
   const regQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return query(
@@ -76,36 +78,41 @@ export default function NgajiPage() {
       if (userData?.followedHalaqahs?.includes(id)) return 'active';
       return 'none';
     }
-    return reg.status;
+    return reg.status; // 'active', 'pending_verification', 'rejected'
   };
 
   const isHalaqahActive = (id: string) => getHalaqahStatus(id) === 'active';
   const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
+
+  const getFollowingCount = () => {
+    return studyCircles.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id)).length;
+  };
 
   const renderCircleCard = (circle: typeof studyCircles[0]) => {
     const status = getHalaqahStatus(circle.id);
     const isActive = status === 'active';
     const isPending = status === 'pending_verification';
     
-    let href = `/ngaji/registration?id=${circle.id}`;
+    // Updated paths to use /ngaji URL structure
+    let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
-      href = circle.id === 'tikrar-j30-b1' ? '/hafal' : `/ngaji/${circle.id}`;
+      href = circle.id === 'tikrar-j30-b1' ? '/hafal' : `/study-circles/${circle.id}`;
     }
 
     return (
       <Link key={circle.id} href={isPending ? "#" : href}>
         <Card 
           className={cn(
-            "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
+            "p-4 hover:bg-accent/5 transition-all cursor-pointer group border-none shadow-sm",
             isActive ? "bg-white border-l-4 border-[#D4AF37]" :
             isPending ? "bg-white border-l-4 border-amber-500" :
-            circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
+            circle.isPremium ? "bg-white border-l-4 border-[#800000]" : "bg-card/50"
           )}
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1">
               <div className={cn(
-                "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-black transition-colors",
+                "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:scale-105 transition-transform",
                 isActive ? "bg-[#D4AF37] text-black" : 
                 isPending ? "bg-amber-500 text-white" :
                 circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
@@ -116,7 +123,7 @@ export default function NgajiPage() {
               </div>
               <div className="flex flex-col gap-0.5 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className={cn("font-bold text-base leading-tight", isActive && "text-black", isPending && "text-amber-900")}>{circle.title}</h4>
+                  <h4 className={cn("font-black text-sm uppercase leading-tight", isActive ? "text-black" : "text-[#800000]")}>{circle.title}</h4>
                   {isActive ? (
                     <Badge className="bg-[#D4AF37] text-black border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">AKTIF</Badge>
                   ) : isPending ? (
@@ -125,10 +132,24 @@ export default function NgajiPage() {
                     circle.isPremium && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">PREMIUM</Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                  <User className="w-3 h-3" />
+                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground mt-1">
+                  <User className="w-3 h-3 text-[#800000]" />
                   <span>{circle.instructor}</span>
                 </div>
+                {isActive ? (
+                  <div className="flex items-center gap-1 mt-1 text-[9px] font-black text-[#D4AF37] uppercase tracking-widest">
+                    <CheckCircle2 className="w-3 h-3" /> Siap Belajar
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 mt-1.5 text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-2.5 h-2.5 text-[#800000]" />
+                      <span>{circle.schedule}</span>
+                    </div>
+                    <span className="text-[#800000]/40">•</span>
+                    <span>{circle.level}</span>
+                  </div>
+                )}
               </div>
             </div>
             {!isPending && <ChevronRight className={cn(
@@ -142,15 +163,15 @@ export default function NgajiPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 max-w-3xl mx-auto pb-24">
+    <div className="flex flex-col gap-8 max-w-3xl mx-auto pb-32">
       <div className="flex flex-col gap-2 mt-4 px-1">
         <div className="flex items-center gap-2 text-[#800000] mb-1">
           <BookOpen className="w-5 h-5" />
-          <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Ngaji • Pendaftaran Kelas</span>
+          <span className="text-xs font-bold uppercase tracking-widest">Hi Ngaji • Pendaftaran Kelas</span>
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
-          Semua program pembelajaran memerlukan verifikasi oleh Admin HI AQLI.
+          Pilih program Tahsin, Tafsir, atau Tahfidz sesuai level Anda. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
         </p>
       </div>
 
@@ -158,15 +179,50 @@ export default function NgajiPage() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
           placeholder="Cari program atau instruktur..." 
-          className="pl-11 h-12 bg-muted/50 border-none ring-offset-background text-sm" 
+          className="pl-11 h-12 bg-white border-2 border-[#800000]/5 focus-visible:ring-[#800000] text-sm font-medium" 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 px-1">
-        {filteredCircles.map(renderCircleCard)}
-      </div>
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl mx-1">
+          <TabsTrigger value="all" className="font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-[#800000] data-[state=active]:text-white">
+            Semua
+          </TabsTrigger>
+          <TabsTrigger value="following" className="font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-[#800000] data-[state=active]:text-white">
+            Diikuti ({getFollowingCount()})
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-[#800000] data-[state=active]:text-white">
+            Selesai
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="mt-6 flex flex-col gap-3 px-1">
+          <TabsContent value="all" className="space-y-3 m-0">
+            {filteredCircles.map(renderCircleCard)}
+          </TabsContent>
+
+          <TabsContent value="following" className="space-y-3 m-0">
+            {studyCircles
+              .filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id))
+              .map(renderCircleCard)}
+            {getFollowingCount() === 0 && (
+              <div className="py-20 text-center space-y-4">
+                <Users className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Belum ada kelas yang diikuti</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="completed" className="space-y-3 m-0">
+            <div className="py-20 text-center space-y-4">
+              <CheckCircle2 className="w-12 h-12 mx-auto text-muted-foreground/20" />
+              <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Belum ada materi yang selesai</p>
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }
