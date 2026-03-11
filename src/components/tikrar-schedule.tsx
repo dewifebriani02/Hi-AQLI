@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+// Mapping Standard Madani Mushaf (15 lines) Juz to Start Page
 const JUZ_PAGES = [
   1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
@@ -67,8 +68,8 @@ export function TikrarSchedule() {
   const level = LEVELS.find(l => l.id === levelId) || LEVELS[2];
 
   const scheduleData = useMemo(() => {
-    const startPage = JUZ_PAGES[juz - 1];
-    const endPage = juz < 30 ? JUZ_PAGES[juz] - 1 : 604;
+    const startPage = JUZ_PAGES[juz - 1] || 1;
+    const endPage = juz < 30 ? (JUZ_PAGES[juz] || 604) - 1 : 604;
     const items = [];
     
     const adminStartDate = userData?.tikrarStartDate?.toDate?.() || 
@@ -105,6 +106,7 @@ export function TikrarSchedule() {
             const b = data.blocks || {};
             const m = data.metaCounts || {};
             
+            // Sync logic with 10 Stages of Tikrar System
             const letters = ["", "A", "B", "C", "D"];
             for (let i = 1; i <= 4; i++) {
               const l = letters[i];
@@ -242,6 +244,7 @@ export function TikrarSchedule() {
                       </div>
                       
                       <div className="flex flex-col gap-2">
+                        {/* Stages aligned with Tikrar Daily Logic */}
                         <StepRow label={`BLOK A (${item.page}A-1, ${item.page}A-2, G)`} isDone={item.tmProgress['A1'] && item.tmProgress['A2'] && item.tmProgress['AG']} date={item.steps[0].end} threshold={40} />
                         <StepRow label={`BLOK B (${item.page}B-1, ${item.page}B-2, G)`} isDone={item.tmProgress['B1'] && item.tmProgress['B2'] && item.tmProgress['BG']} date={item.steps[1].end} threshold={40} />
                         <StepRow label="GABUNG BLOK A & B" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta threshold={10} />
@@ -294,7 +297,7 @@ function StepRow({ label, isDone, date, isMeta, highlight, threshold }: { label:
         <div className="flex flex-col min-w-0">
           <span className={cn("text-[10px] font-bold truncate", highlight ? "text-[#800000]" : "text-foreground")}>{label}</span>
           <span className="text-[8px] text-muted-foreground font-medium truncate">
-            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Min. {threshold}x
+            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Target {threshold}x
           </span>
         </div>
       </div>

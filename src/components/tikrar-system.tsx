@@ -32,6 +32,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import Link from "next/link";
 
+// Mapping Standard Madani Mushaf (15 lines) Juz to Start Page
 const JUZ_PAGES = [
   1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
@@ -74,6 +75,7 @@ export function TikrarSystem() {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(18); 
+  const [hasInitializedPage, setHasInitializedPage] = useState(false);
   
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -91,14 +93,15 @@ export function TikrarSystem() {
     '1_2_3_4': 0,
   });
 
+  // Sync Initial Page with User's Selected Juz
   useEffect(() => {
-    if (!isUserDataLoading && userData) {
+    if (!isUserDataLoading && userData && !hasInitializedPage) {
+      const startPage = JUZ_PAGES[paidJuz - 1] || 1;
       setJuz(paidJuz);
-      if (loading) {
-        setPage(JUZ_PAGES[paidJuz - 1] || 1);
-      }
+      setPage(startPage);
+      setHasInitializedPage(true);
     }
-  }, [userData, paidJuz, isUserDataLoading, loading]);
+  }, [userData, paidJuz, isUserDataLoading, hasInitializedPage]);
 
   const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1] || 1, [juz]);
   const nextJuzStartPage = juz < 30 ? JUZ_PAGES[juz] : 605;
@@ -201,6 +204,7 @@ export function TikrarSystem() {
 
   return (
     <div className="space-y-8 pb-32">
+      {/* HEADER STATS */}
       <Card className="border-none bg-gradient-to-br from-[#800000] to-[#b30000] text-white shadow-xl overflow-hidden relative">
         <div className="absolute right-[-20px] top-[-20px] opacity-10"><CalendarDays className="w-40 h-40" /></div>
         <CardContent className="p-6 relative z-10">
@@ -224,6 +228,7 @@ export function TikrarSystem() {
         </CardContent>
       </Card>
 
+      {/* CONTROLS */}
       <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-10 w-10">
@@ -244,12 +249,13 @@ export function TikrarSystem() {
       <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1">
         <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
-          <strong>Info Itqan:</strong> Maqta (contoh: {page}A-1) wajib diulang <strong>40 kali</strong>. Repetisi Gabungan Blok minimal <strong>10 kali</strong>. Kunci akan terbuka otomatis setelah target terpenuhi.
+          <strong>Info Itqan:</strong> Setiap Maqta (contoh: {page}A-1) wajib diulang <strong>40 kali</strong>. Repetisi Gabungan Blok minimal <strong>10 kali</strong>. Kunci akan terbuka otomatis setelah target terpenuhi.
         </div>
       </div>
 
       <TooltipProvider delayDuration={0}>
         <div className="flex flex-col gap-10">
+          {/* STEP 1 & 2 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MaqtaCard id={1} page={page} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} letter="A" />
             <MaqtaCard id={2} page={page} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasTM(1)} onIncrement={setBlocks} fontSize={fontSize} letter="B" />
@@ -262,6 +268,7 @@ export function TikrarSystem() {
             onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} 
           />
 
+          {/* STEP 3 */}
           <MaqtaCard id={3} page={page} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} letter="C" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -269,8 +276,10 @@ export function TikrarSystem() {
             <MetaStep label="GABUNG BLOK A s/d C" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3': p['1_2_3'] + 1}))} />
           </div>
 
+          {/* STEP 4 */}
           <MaqtaCard id={4} page={page} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} letter="D" />
 
+          {/* FINAL STEPS */}
           <div className="space-y-4">
             <MetaStep label="GABUNG BLOK C & D" count={metaCounts['3_4']} isLocked={!isTuntasTM(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
             <MetaStep label="GABUNG BLOK B s/d D" count={metaCounts['2_3_4']} isLocked={!isMetaTuntas('3_4')} onIncrement={() => setMetaCounts(p => ({...p, '2_3_4': p['2_3_4'] + 1}))} />
@@ -313,12 +322,15 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
   const tokensA = tokens.slice(0, mid);
   const tokensB = tokens.slice(mid);
 
-  const renderToken = (token: any, color: string) => {
+  const renderToken = (token: any, colorClass: string) => {
     if (token.type === 'word') {
       return (
         <Tooltip key={`${token.verse_key}-${token.word_idx}`}>
           <TooltipTrigger asChild>
-            <span style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} className={cn("font-arabic cursor-help hover:bg-muted/50 rounded px-0.5 outline-none transition-colors", color)}>
+            <span 
+              style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
+              className={cn("font-arabic cursor-help hover:bg-muted/50 rounded px-0.5 outline-none transition-colors", colorClass)}
+            >
               {token.data.text_uthmani}
             </span>
           </TooltipTrigger>
@@ -330,14 +342,22 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
         </Tooltip>
       );
     }
-    return <span key={`${token.verse_key}-m`} className="inline-flex items-center justify-center px-2 rounded-full border text-[10px] font-bold mx-1 bg-white/50 translate-y-[-2px]">{token.text}</span>;
+    return <span key={`${token.verse_key}-m`} className="inline-flex items-center justify-center px-2 rounded-full border text-[10px] font-bold mx-1 bg-white/50 translate-y-[-2px]">
+      {token.text}
+    </span>;
   };
 
   return (
-    <Card className={cn("border-2 transition-all shadow-md overflow-hidden flex flex-col h-full", isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50 grayscale select-none")}>
+    <Card className={cn(
+      "border-2 transition-all shadow-md overflow-hidden flex flex-col h-full", 
+      isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", 
+      isLocked && "opacity-50 grayscale select-none"
+    )}>
       <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000] truncate">BLOK {letter} (HAL. {page}{letter}) {isLocked && "• LOCK"}</span>
-        {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4 shrink-0">OK</Badge>}
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000] truncate">
+          BLOK {letter} (HAL. {page}{letter}) {isLocked && "• TERKUNCI"}
+        </span>
+        {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
       </div>
       <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">
         <div className="bg-[#fffcf5] p-4 rounded-xl border-2 border-[#800000]/10 flex-1 overflow-y-auto no-scrollbar" dir="rtl">
@@ -346,20 +366,40 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             {tokensB.map(t => renderToken(t, "text-emerald-600"))}
           </div>
         </div>
+        
         <div className="grid grid-cols-2 gap-2 shrink-0">
-          <CounterBox label={`${page}${letter}-1`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} color="rose" threshold={PASS_THRESHOLD} />
-          <CounterBox label={`${page}${letter}-2`} count={state.b.count} isLocked={isLocked || state.a.count < PASS_THRESHOLD} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="emerald" threshold={PASS_THRESHOLD} />
+          <CounterBox 
+            label={`${page}${letter}-1`} 
+            count={state.a.count} 
+            isLocked={isLocked} 
+            onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} 
+            color="rose" 
+            threshold={PASS_THRESHOLD} 
+          />
+          <CounterBox 
+            label={`${page}${letter}-2`} 
+            count={state.b.count} 
+            isLocked={isLocked || state.a.count < PASS_THRESHOLD} 
+            onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} 
+            color="emerald" 
+            threshold={PASS_THRESHOLD} 
+          />
         </div>
+        
         <Button 
           onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} 
           disabled={isLocked || state.b.count < PASS_THRESHOLD} 
-          className={cn("w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}
+          className={cn(
+            "w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1 transition-all relative", 
+            isDoneG ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20" : "bg-[#800000] hover:bg-[#800000]/90"
+          )}
         >
-          <span className="text-[8px] flex items-center gap-1 leading-none opacity-80">
+          <span className="text-[8px] flex items-center gap-1 leading-none opacity-80 mb-0.5">
             {isLocked || state.b.count < PASS_THRESHOLD ? <Lock className="w-2 h-2" /> : null}
             {page}{letter} GABUNGAN
           </span>
-          <span className="text-sm leading-none mt-0.5">{state.combined.count} / 40</span>
+          <span className="text-sm leading-none">{state.combined.count} / 40</span>
+          {isDoneG && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
         </Button>
       </CardContent>
     </Card>
@@ -369,23 +409,40 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
 function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
   const isDone = count >= META_PASS_THRESHOLD;
   return (
-    <div className={cn("relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", isDone ? "bg-emerald-50 border-emerald-500" : "bg-muted/10 border-muted", highlight && "border-amber-500 bg-amber-50/30", isLocked && "opacity-40 grayscale select-none")}>
+    <div className={cn(
+      "relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", 
+      isDone ? "bg-emerald-50 border-emerald-500" : "bg-muted/10 border-muted", 
+      highlight && "border-amber-500 bg-amber-50/30", 
+      isLocked && "opacity-40 grayscale select-none"
+    )}>
       <div className="flex items-center gap-3 overflow-hidden">
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0", isDone ? "bg-emerald-500 text-white" : highlight ? "bg-amber-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
+        <div className={cn(
+          "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0", 
+          isDone ? "bg-emerald-500 text-white" : highlight ? "bg-amber-500 text-white" : "bg-[#800000]/10 text-[#800000]"
+        )}>
           {isLocked ? <Lock className="w-4 h-4" /> : <Zap className="w-4 h-4 fill-current" />}
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate">Repetisi Gabungan</span>
+          <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate">Sub-Repetisi Gabungan</span>
           <span className={cn("text-[11px] font-black uppercase tracking-tight truncate", highlight ? "text-amber-900" : "text-[#800000]")}>{label}</span>
-          <span className="text-[8px] font-bold text-muted-foreground">Minimal {META_PASS_THRESHOLD} kali</span>
+          <span className="text-[8px] font-bold text-muted-foreground">Target Min. {META_PASS_THRESHOLD}x</span>
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <div className="text-right flex flex-col items-end">
           <span className="text-[10px] font-bold text-muted-foreground uppercase">{count} / {TARGET_MAX}</span>
-          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} /></div>
+          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden">
+            <div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} />
+          </div>
         </div>
-        <Button onClick={onIncrement} disabled={isLocked || isDone} className={cn("h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-2 border-[#800000] hover:bg-[#800000] hover:text-white")}>
+        <Button 
+          onClick={onIncrement} 
+          disabled={isLocked || isDone} 
+          className={cn(
+            "h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all", 
+            isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-2 border-[#800000] hover:bg-[#800000] hover:text-white"
+          )}
+        >
           {isDone ? <CheckCircle2 className="w-4 h-4" /> : `+1`}
         </Button>
       </div>
@@ -400,9 +457,17 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
     emerald: isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-muted hover:border-emerald-300"
   };
   return (
-    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
-      <span className="text-[10px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none">{label}</span>
-      <div className="flex items-baseline gap-0.5 leading-none mt-1">
+    <div 
+      onClick={isLocked || isDone ? undefined : onInc} 
+      className={cn(
+        "h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1", 
+        isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color]
+      )}
+    >
+      <span className="text-[10px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none mb-1">
+        {label}
+      </span>
+      <div className="flex items-baseline gap-0.5 leading-none">
         <span className="text-base font-black">{count}</span>
         <span className="text-[8px] font-bold opacity-40">/ 40</span>
       </div>
