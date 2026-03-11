@@ -23,8 +23,8 @@ import {
   Lock,
   Trophy,
   UserCog,
-  Globe,
   LayoutGrid,
+  Bot,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
@@ -42,8 +42,7 @@ const navItems = [
   { href: "/ngaji", label: "Hi Ngaji", icon: LayoutGrid },
   { href: "/mufradat", label: "Hi Mufradat", icon: BookOpen },
   { href: "/hafal", label: "Hi Hafal", icon: GraduationCap },
-  { href: "/berbagi", label: "Hi Berbagi", icon: Globe },
-  { href: "/donate", label: "Hi Infaq", icon: HeartHandshake },
+  { href: "/berbagi", label: "Hi Berbagi", icon: HeartHandshake },
   { href: "/leaderboard", label: "Papan Juara", icon: Trophy },
 ];
 
@@ -58,16 +57,10 @@ export function AppSidebar() {
     return doc(db, "roles_admin", user.uid);
   }, [db, user?.uid]);
 
-  const superAdminDocRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, "roles_superadmin", user.uid);
-  }, [db, user?.uid]);
-
   const { data: isAdmin } = useDoc(adminDocRef);
-  const { data: isSuperAdmin } = useDoc(superAdminDocRef);
 
   const isEmailAdmin = user?.email === "dewifebriani@gmail.com";
-  const hasAdminAccess = isEmailAdmin || !!isAdmin || !!isSuperAdmin;
+  const hasAdminAccess = isEmailAdmin || !!isAdmin;
 
   const handleLinkClick = () => {
     if (isMobile) {

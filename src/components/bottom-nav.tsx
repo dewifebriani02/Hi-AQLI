@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, GraduationCap, HeartHandshake, Globe, LayoutGrid } from "lucide-react";
+import { LayoutDashboard, BookOpen, GraduationCap, HeartHandshake, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
@@ -11,7 +11,7 @@ const navItems = [
   { href: "/ngaji", label: "Hi Ngaji", icon: LayoutGrid },
   { href: "/mufradat", label: "Hi Mufradat", icon: BookOpen, isProminent: true },
   { href: "/hafal", label: "Hi Hafal", icon: GraduationCap },
-  { href: "/berbagi", label: "Hi Berbagi", icon: Globe },
+  { href: "/berbagi", label: "Hi Berbagi", icon: HeartHandshake },
 ];
 
 export function BottomNav() {
