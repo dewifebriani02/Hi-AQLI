@@ -19,7 +19,8 @@ import {
   Minus,
   Plus,
   Layers,
-  Zap
+  Zap,
+  ArrowDown
 } from "lucide-react";
 import {
   Tooltip,
@@ -46,8 +47,8 @@ const LEVELS = [
 ];
 
 const TARGET_MAX = 40;
-const PASS_THRESHOLD = 5; // Minimal 5x to unlock next
-const TARGET_META = 3; 
+const PASS_THRESHOLD = 5; 
+const TARGET_META = 5; 
 
 interface Word {
   text_uthmani: string;
@@ -90,8 +91,13 @@ export function TikrarSystem() {
     4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
   });
 
-  const [metaCombined, setMetaCombined] = useState<Record<number, number>>({
-    2: 0, 3: 0, 4: 0,
+  const [metaCounts, setMetaCounts] = useState<Record<string, number>>({
+    '1_2': 0,
+    '2_3': 0,
+    '1_2_3': 0,
+    '3_4': 0,
+    '2_3_4': 0,
+    '1_2_3_4': 0,
   });
 
   useEffect(() => {
@@ -133,7 +139,9 @@ export function TikrarSystem() {
           3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
           4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
         });
-        setMetaCombined(saved.metaCombined || { 2: 0, 3: 0, 4: 0 });
+        setMetaCounts(saved.metaCounts || {
+          '1_2': 0, '2_3': 0, '1_2_3': 0, '3_4': 0, '2_3_4': 0, '1_2_3_4': 0,
+        });
       } catch (e) {}
     } else {
       setBlocks({
@@ -142,7 +150,7 @@ export function TikrarSystem() {
         3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
         4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
       });
-      setMetaCombined({ 2: 0, 3: 0, 4: 0 });
+      setMetaCounts({ '1_2': 0, '2_3': 0, '1_2_3': 0, '3_4': 0, '2_3_4': 0, '1_2_3_4': 0 });
     }
 
     fetchVerses();
@@ -155,33 +163,40 @@ export function TikrarSystem() {
       localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({ 
         ...parsed,
         blocks,
-        metaCombined
+        metaCounts
       }));
     }
-  }, [blocks, metaCombined, page, loading]);
+  }, [blocks, metaCounts, page, loading]);
+
+  const blockVerses = useMemo(() => {
+    if (verses.length === 0) return { 1: [], 2: [], 3: [], 4: [] };
+    const perBlock = Math.ceil(verses.length / 4);
+    return {
+      1: verses.slice(0, perBlock),
+      2: verses.slice(perBlock, perBlock * 2),
+      3: verses.slice(perBlock * 2, perBlock * 3),
+      4: verses.slice(perBlock * 3),
+    };
+  }, [verses]);
+
+  const isTuntas = (bid: number) => blocks[bid].combined.count >= PASS_THRESHOLD;
+  const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= TARGET_META;
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
-    Object.values(blocks).forEach((b: any) => {
-      totalDone += Math.min(b.a.count, PASS_THRESHOLD);
-      totalDone += Math.min(b.b.count, PASS_THRESHOLD);
-      totalDone += Math.min(b.combined.count, PASS_THRESHOLD);
+    // 4 Blocks x 3 parts each = 12 parts
+    [1, 2, 3, 4].forEach(id => {
+      totalDone += Math.min(blocks[id].a.count, PASS_THRESHOLD);
+      totalDone += Math.min(blocks[id].b.count, PASS_THRESHOLD);
+      totalDone += Math.min(blocks[id].combined.count, PASS_THRESHOLD);
     });
-    Object.values(metaCombined).forEach((val) => {
-      totalDone += (val / TARGET_META) * PASS_THRESHOLD;
+    // 6 Meta steps
+    Object.keys(metaCounts).forEach(k => {
+      totalDone += (Math.min(metaCounts[k], TARGET_META) / TARGET_META) * PASS_THRESHOLD;
     });
-    const totalTarget = (4 * 3 * PASS_THRESHOLD) + (3 * PASS_THRESHOLD);
+    const totalTarget = (12 * PASS_THRESHOLD) + (6 * PASS_THRESHOLD);
     return Math.min(100, (totalDone / totalTarget) * 100);
-  }, [blocks, metaCombined]);
-
-  const scheduleInfo = useMemo(() => {
-    if (!userData?.tikrarStartDate) return null;
-    const start = userData.tikrarStartDate.toDate();
-    const today = new Date();
-    const diff = Math.ceil(Math.abs(today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const level = LEVELS.find(l => l.id === userData.tikrarLevel) || LEVELS[2];
-    return { currentDay: diff, totalDays: level.days };
-  }, [userData]);
+  }, [blocks, metaCounts]);
 
   if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
@@ -196,187 +211,105 @@ export function TikrarSystem() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-32">
       <Card className="border-none bg-gradient-to-br from-[#800000] to-[#b30000] text-white shadow-xl overflow-hidden relative">
         <div className="absolute right-[-20px] top-[-20px] opacity-10"><CalendarDays className="w-40 h-40" /></div>
         <CardContent className="p-6 relative z-10">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
-                    Level {LEVELS.find(l => l.id === userData?.tikrarLevel)?.name || "Santai"}
-                  </Badge>
-                  {isPaid && (
-                    <Badge className="bg-emerald-500/20 text-white border-none text-[10px] font-bold flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> PERSONAL SCHEDULE ACTIVE
-                    </Badge>
-                  )}
-                </div>
+                <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
+                  Level {LEVELS.find(l => l.id === userData?.tikrarLevel)?.name || "Santai"}
+                </Badge>
                 <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
               </div>
-              
-              {scheduleInfo && (
-                <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 flex flex-col items-end">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter opacity-80 mb-1">
-                    <Clock className="w-3 h-3" /> Masa Belajar
-                  </div>
-                  <div className="text-lg font-black">Hari ke-{scheduleInfo.currentDay} <span className="text-xs font-medium opacity-60">/ {scheduleInfo.totalDays}</span></div>
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 flex flex-col items-end">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter opacity-80 mb-1">
+                  <Clock className="w-3 h-3" /> Status Progres
                 </div>
-              )}
-            </div>
-
-            <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold uppercase opacity-60">Progres Penguasaan Halaman</span>
-                <span className="text-[10px] font-bold">{Math.round(totalProgress)}%</span>
+                <div className="text-lg font-black">{Math.round(totalProgress)}% <span className="text-xs font-medium opacity-60">Tuntas</span></div>
               </div>
-              <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-white" />
             </div>
+            <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-white" />
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
+      <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-12 w-12 border-2">
+          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-10 w-10">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <div className="text-center min-w-[120px]">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Halaman</p>
-            <p className="text-3xl font-black text-[#800000]">{page}</p>
-          </div>
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1} className="rounded-xl h-12 w-12 border-2">
+          <span className="text-xl font-black text-[#800000] w-12 text-center">{page}</span>
+          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1} className="rounded-xl h-10 w-10">
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.max(16, f - 4))}><Minus className="h-4 w-4" /></Button>
-            <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.min(64, f + 4))}><Plus className="h-4 w-4" /></Button>
-          </div>
-          {totalProgress >= 100 && (
-            <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl">
-              <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20Juz%20${juz}.%20Mohon%20jadwal%20ujian.`} target="_blank">AJUKAN UJIAN</a>
-            </Button>
-          )}
+        <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.max(16, f - 4))}><Minus className="h-4 w-4" /></Button>
+          <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.min(64, f + 4))}><Plus className="h-4 w-4" /></Button>
         </div>
       </div>
 
       <TooltipProvider delayDuration={0}>
-        {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="animate-spin h-10 w-10 text-[#800000]" /></div>
-        ) : (
-          <div className="grid grid-cols-1 gap-8 pb-32">
-            <div className="px-1 flex items-center gap-2">
-              <Layers className="w-5 h-5 text-[#800000]" />
-              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 1: Penguasaan Blok (TM 1-4)</h4>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2, 3, 4].map(id => {
-                // Check if previous block's combined is done
-                const prevBlockDone = id === 1 || blocks[id-1].combined.count >= PASS_THRESHOLD;
-                
-                return (
-                  <BlockCard 
-                    key={id} 
-                    id={id} 
-                    isLocked={!prevBlockDone}
-                    state={blocks[id]} 
-                    verses={verses.slice((id-1) * Math.ceil(verses.length/4), id * Math.ceil(verses.length/4))}
-                    onIncrement={(bid: number, type: 'a' | 'b' | 'combined') => {
-                      const current = blocks[bid][type].count;
-                      if (current < TARGET_MAX) {
-                        setBlocks((prev: any) => ({
-                          ...prev, 
-                          [bid]: {
-                            ...prev[bid], 
-                            [type]: { count: current + 1 }
-                          }
-                        }));
-                      }
-                    }} 
-                    target={TARGET_MAX} 
-                    passThreshold={PASS_THRESHOLD}
-                    fontSize={fontSize}
-                  />
-                );
-              })}
-            </div>
-
-            <div className="px-1 flex items-center gap-2 mt-8">
-              <Zap className="w-5 h-5 text-amber-500 fill-current" />
-              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 2: Repetisi Gabungan</h4>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-              {[5, 6, 7].map((stepNum) => {
-                const metaIdx = stepNum - 3;
-                const metaLabel = stepNum === 5 ? "Blok 1+2" : stepNum === 6 ? "Blok 1+2+3" : "Halaman Penuh (1-4)";
-                const count = metaCombined[metaIdx] || 0;
-                const isPassed = count >= TARGET_META;
-
-                // Step 5 depends on TM2 Combined >= 5
-                // Step 6 depends on Step 5 >= 3
-                // Step 7 depends on Step 6 >= 3
-                let stepLocked = false;
-                if (stepNum === 5) stepLocked = blocks[2].combined.count < PASS_THRESHOLD;
-                if (stepNum === 6) stepLocked = (metaCombined[2] || 0) < TARGET_META;
-                if (stepNum === 7) stepLocked = (metaCombined[3] || 0) < TARGET_META;
-
-                return (
-                  <Card key={stepNum} className={cn("border-2 transition-all shadow-md", isPassed ? "border-emerald-500 bg-emerald-50/10" : "border-muted", stepLocked && "opacity-50")}>
-                    <CardContent className="p-6">
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl", isPassed ? "bg-emerald-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
-                            {stepLocked ? <Lock className="w-5 h-5" /> : stepNum}
-                          </div>
-                          <div className="flex flex-col">
-                            <h5 className="font-black uppercase tracking-widest text-[#800000]">Langkah {stepNum}</h5>
-                            <p className="text-xs font-bold text-muted-foreground">Gabungan {metaLabel}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
-                          <div className="flex-1 flex flex-col gap-1">
-                            <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
-                              <span>Repetisi</span>
-                              <span>{count} / {TARGET_META}</span>
-                            </div>
-                            <Progress value={(count / TARGET_META) * 100} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
-                          </div>
-                          <Button 
-                            onClick={() => {
-                              if (!stepLocked && count < TARGET_META) {
-                                setMetaCombined(prev => ({ ...prev, [metaIdx]: count + 1 }));
-                              }
-                            }}
-                            disabled={isPassed || stepLocked}
-                            className={cn("h-12 w-12 rounded-xl shrink-0 font-black border-2", isPassed ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-[#800000] hover:bg-[#800000] hover:text-white")}
-                          >
-                            {isPassed ? <CheckCircle2 /> : `+1`}
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+        <div className="flex flex-col gap-10">
+          {/* STEP 1 & 2: TM1 AND TM2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <BlockCard id={1} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} />
+            <BlockCard id={2} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntas(1)} onIncrement={setBlocks} fontSize={fontSize} />
           </div>
-        )}
+
+          {/* META 1+2 */}
+          <MetaStep 
+            label="GABUNG BLOK 1 & 2" 
+            count={metaCounts['1_2']} 
+            isLocked={!isTuntas(2)} 
+            onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} 
+          />
+
+          {/* STEP 3: TM3 */}
+          <BlockCard id={3} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} />
+
+          {/* META 2+3 & 1-3 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MetaStep label="GABUNG BLOK 2 & 3" count={metaCounts['2_3']} isLocked={!isTuntas(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
+            <MetaStep label="GABUNG BLOK 1 - 3" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3': p['1_2_3'] + 1}))} />
+          </div>
+
+          {/* STEP 4: TM4 */}
+          <BlockCard id={4} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} />
+
+          {/* FINAL META CHAIN */}
+          <div className="space-y-4">
+            <MetaStep label="GABUNG BLOK 3 & 4" count={metaCounts['3_4']} isLocked={!isTuntas(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
+            <MetaStep label="GABUNG BLOK 2 - 4" count={metaCounts['2_3_4']} isLocked={!isMetaTuntas('3_4')} onIncrement={() => setMetaCounts(p => ({...p, '2_3_4': p['2_3_4'] + 1}))} />
+            <MetaStep label="GABUNG SELURUH HALAMAN (1 - 4)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
+          </div>
+
+          {isMetaTuntas('1_2_3_4') && (
+            <Card className="bg-emerald-600 text-white border-none shadow-xl animate-in zoom-in duration-500">
+              <CardContent className="p-8 text-center flex flex-col items-center gap-4">
+                <CheckCircle2 className="w-16 h-16" />
+                <h4 className="text-2xl font-black font-headline">Masyallah, Halaman Tuntas!</h4>
+                <p className="text-sm opacity-90 max-w-sm">Anda telah menyelesaikan seluruh urutan repetisi untuk halaman ini. Silakan ajukan jadwal ujian lisan kepada Admin.</p>
+                <Button asChild className="bg-white text-emerald-700 font-black px-10 h-14 rounded-2xl shadow-lg mt-2">
+                  <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20Juz%20${juz}.%20Mohon%20jadwal%20ujian.`} target="_blank">AJUKAN UJIAN SEKARANG</a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </TooltipProvider>
     </div>
   );
 }
 
-function BlockCard({ id, state, verses, onIncrement, target, passThreshold, fontSize, isLocked }: any) {
-  const isBlockTuntas = state.combined.count >= passThreshold;
-  
+function BlockCard({ id, state, verses, onIncrement, fontSize, isLocked }: any) {
+  const isDoneA = state.a.count >= PASS_THRESHOLD;
+  const isDoneB = state.b.count >= PASS_THRESHOLD;
+  const isDoneG = state.combined.count >= PASS_THRESHOLD;
+
   const tokens = useMemo(() => {
     const items: any[] = [];
     verses.forEach((v: any) => {
@@ -388,22 +321,16 @@ function BlockCard({ id, state, verses, onIncrement, target, passThreshold, font
     return items;
   }, [verses]);
 
-  const midPoint = Math.ceil(tokens.length / 2);
-  const tokensA = tokens.slice(0, midPoint);
-  const tokensB = tokens.slice(midPoint);
+  const mid = Math.ceil(tokens.length / 2);
+  const tokensA = tokens.slice(0, mid);
+  const tokensB = tokens.slice(mid);
 
   const renderToken = (token: any, color: string) => {
     if (token.type === 'word') {
-      const wordKey = `${token.verse_key}-${token.word_idx}`;
       return (
-        <Tooltip key={wordKey}>
+        <Tooltip key={`${token.verse_key}-${token.word_idx}`}>
           <TooltipTrigger asChild>
-            <span 
-              tabIndex={0} 
-              role="button"
-              style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
-              className={cn("font-arabic cursor-help hover:bg-muted/50 rounded px-0.5 transition-colors outline-none", color)}
-            >
+            <span style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} className={cn("font-arabic cursor-help hover:bg-muted/50 rounded px-0.5 outline-none transition-colors", color)}>
               {token.data.text_uthmani}
             </span>
           </TooltipTrigger>
@@ -414,109 +341,77 @@ function BlockCard({ id, state, verses, onIncrement, target, passThreshold, font
           </TooltipPortal>
         </Tooltip>
       );
-    } else {
-      return (
-        <span 
-          key={`${token.verse_key}-marker`}
-          className={cn("inline-flex items-center justify-center px-2 rounded-full border text-[10px] font-bold mx-1 bg-white/50 shadow-sm translate-y-[-2px]", 
-            color === "text-rose-600" ? "border-rose-200 text-rose-600" : "border-emerald-200 text-emerald-600"
-          )}
-        >
-          {token.text}
-        </span>
-      );
     }
+    return <span key={`${token.verse_key}-m`} className="inline-flex items-center justify-center px-2 rounded-full border text-[10px] font-bold mx-1 bg-white/50 translate-y-[-2px]">{token.text}</span>;
   };
 
-  // Internal sequential locking
-  const isBLocked = state.a.count < passThreshold;
-  const isCombinedLocked = state.b.count < passThreshold;
-
   return (
-    <Card className={cn("border-2 transition-all shadow-lg overflow-hidden", isBlockTuntas ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50")}>
-      <div className="bg-[#800000]/5 py-3 px-6 border-b flex flex-row items-center justify-between">
-        <h4 className="text-sm font-black uppercase tracking-widest text-[#800000]">Blok {id} {isLocked && <Lock className="inline w-3 h-3 ml-1" />}</h4>
-        {isBlockTuntas && <Badge className="bg-emerald-500 text-white font-black text-[10px] tracking-widest">TUNTAS</Badge>}
+    <Card className={cn("border-2 transition-all shadow-md overflow-hidden", isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50 grayscale select-none")}>
+      <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">BLOK {id} {isLocked && "• TERKUNCI"}</span>
+        {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">TUNTAS</Badge>}
       </div>
-      <CardContent className="p-6 space-y-6">
-        <div className="bg-[#fffcf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[300px] overflow-y-auto no-scrollbar" dir="rtl">
-          <div className="flex flex-wrap justify-center gap-x-1 gap-y-3">
-            {tokensA.map((t, idx) => renderToken(t, "text-rose-600"))}
-            {tokensB.map((t, idx) => renderToken(t, "text-emerald-600"))}
+      <CardContent className="p-4 space-y-4">
+        <div className="bg-[#fffcf5] p-4 rounded-xl border-2 border-[#800000]/10 max-h-[200px] overflow-y-auto no-scrollbar" dir="rtl">
+          <div className="flex flex-wrap justify-center gap-x-1 gap-y-2">
+            {tokensA.map(t => renderToken(t, "text-rose-600"))}
+            {tokensB.map(t => renderToken(t, "text-emerald-600"))}
           </div>
         </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <CounterBox 
-            label={`TM${id}a`} 
-            count={state.a.count} 
-            target={target} 
-            isLocked={isLocked}
-            passThreshold={passThreshold}
-            onClick={() => onIncrement(id, 'a')} 
-            colorClass="rose"
-          />
-          <CounterBox 
-            label={`TM${id}b`} 
-            count={state.b.count} 
-            target={target} 
-            isLocked={isLocked || isBLocked}
-            passThreshold={passThreshold}
-            onClick={() => onIncrement(id, 'b')} 
-            colorClass="emerald"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <CounterBox label={`TM${id}a`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} color="rose" />
+          <CounterBox label={`TM${id}b`} count={state.b.count} isLocked={isLocked || !isDoneA} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="emerald" />
         </div>
-        
-        <div className="space-y-2">
-          <Button 
-            onClick={() => onIncrement(id, 'combined')}
-            disabled={isLocked || isCombinedLocked}
-            className={cn(
-              "w-full h-14 rounded-xl font-black text-lg transition-all shadow-md", 
-              state.combined.count >= target ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90 shadow-[#800000]/20",
-              (isLocked || isCombinedLocked) && "opacity-50"
-            )}
-          >
-            {isLocked || isCombinedLocked ? <Lock className="mr-2" /> : null}
-            {state.combined.count >= target ? <><CheckCircle2 className="mr-2" /> TUNTAS</> : `TM${id} GABUNGAN: ${state.combined.count} / ${target}`}
-          </Button>
-          {isCombinedLocked && !isLocked && (
-            <p className="text-[9px] text-center text-amber-700 font-bold uppercase tracking-wider animate-pulse">
-              Selesaikan TM{id}a & TM{id}b (min. {passThreshold}x) untuk buka Gabungan
-            </p>
-          )}
-        </div>
+        <Button onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} disabled={isLocked || !isDoneB} className={cn("w-full h-12 rounded-xl font-black text-xs uppercase tracking-widest", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}>
+          {isLocked || !isDoneB ? <Lock className="w-3 h-3 mr-2" /> : null}
+          TM{id} GABUNGAN: {state.combined.count} / {TARGET_MAX}
+        </Button>
       </CardContent>
     </Card>
   );
 }
 
-function CounterBox({ label, count, target, onClick, colorClass, isLocked, passThreshold }: any) {
-  const isTuntas = count >= passThreshold;
-  
-  const themes = {
-    rose: isTuntas ? "bg-rose-50 border-rose-500 text-rose-700" : "bg-rose-50/30 border-rose-100 hover:border-rose-300 hover:bg-rose-50/50",
-    emerald: isTuntas ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-emerald-50/30 border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50/50",
-  };
-
-  const theme = colorClass === "rose" ? themes.rose : themes.emerald;
-
+function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
+  const isDone = count >= TARGET_META;
   return (
-    <div 
-      onClick={isLocked ? undefined : onClick}
-      className={cn(
-        "h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all select-none relative", 
-        isLocked ? "bg-muted/20 border-muted opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95",
-        !isLocked && theme
-      )}
-    >
-      <span className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">{label}</span>
-      <div className="flex items-baseline gap-1">
-        <span className="text-3xl font-black">{count}</span>
-        <span className="text-[10px] font-bold opacity-40">/ {target}</span>
+    <div className={cn("relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", isDone ? "bg-emerald-50 border-emerald-500" : "bg-muted/10 border-muted", highlight && "border-amber-500 bg-amber-50/30", isLocked && "opacity-40 grayscale select-none")}>
+      <div className="flex items-center gap-4">
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs", isDone ? "bg-emerald-500 text-white" : highlight ? "bg-amber-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
+          {isLocked ? <Lock className="w-4 h-4" /> : <Zap className="w-4 h-4 fill-current" />}
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Repetisi Gabungan</span>
+          <span className={cn("text-sm font-black uppercase tracking-tight", highlight ? "text-amber-900" : "text-[#800000]")}>{label}</span>
+        </div>
       </div>
-      {isTuntas && <CheckCircle2 className="w-4 h-4 mt-1 text-current" />}
-      {isLocked && <Lock className="absolute top-2 right-2 w-3 h-3 text-muted-foreground" />}
+      <div className="flex items-center gap-4">
+        <div className="text-right flex flex-col items-end">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase">{count} / {TARGET_META}</span>
+          <div className="w-20 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_META)*100}%` }} /></div>
+        </div>
+        <Button onClick={onIncrement} disabled={isLocked || isDone} className={cn("h-10 w-10 rounded-lg p-0 font-black text-xs", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-2 border-[#800000] hover:bg-[#800000] hover:text-white")}>
+          {isDone ? <CheckCircle2 className="w-5 h-5" /> : `+1`}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CounterBox({ label, count, isLocked, onInc, color }: any) {
+  const isDone = count >= PASS_THRESHOLD;
+  const themes: any = {
+    rose: isDone ? "bg-rose-50 border-rose-500 text-rose-700" : "bg-white border-muted hover:border-rose-300",
+    emerald: isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-muted hover:border-emerald-300"
+  };
+  return (
+    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
+      <span className="text-[8px] font-black uppercase opacity-60 tracking-[0.2em]">{label}</span>
+      <div className="flex items-baseline gap-1">
+        <span className="text-xl font-black">{count}</span>
+        <span className="text-[8px] font-bold opacity-40">/ {TARGET_MAX}</span>
+      </div>
+      {isLocked && <Lock className="absolute top-1 right-1 w-2.5 h-2.5 text-muted-foreground" />}
+      {isDone && <CheckCircle2 className="w-3 h-3 text-current mt-0.5" />}
     </div>
   );
 }
