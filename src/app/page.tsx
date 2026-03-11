@@ -110,22 +110,7 @@ export default function DashboardPage() {
         <h2 className="text-lg font-bold font-headline">Layanan Utama HI AQLI</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           
-          {/* 1. HI NGAJI (Daftar Kelas) */}
-          <Link href="/ngaji" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative border-b-4 border-[#D4AF37]">
-              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><LayoutGrid className="w-24 h-24" /></div>
-                <div className="space-y-1 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Pendaftaran</Badge>
-                  <h4 className="font-black text-xl text-white leading-tight">Hi Ngaji</h4>
-                  <p className="text-[10px] text-white/70 max-w-[140px]">Daftar kelas Tahsin, Tafsir, & Tahfidz.</p>
-                </div>
-                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Buka Kelas <ChevronRight className="w-3 h-3" /></div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* 2. HI MUFRADAT (Mushaf) */}
+          {/* 1. HI MUFRADAT (Mushaf) */}
           <Link href="/mufradat" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative border-b-4 border-[#D4AF37]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
@@ -136,6 +121,21 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-white/70 max-w-[140px]">Pelajari kosakata & terjemahan ayat.</p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Buka Mushaf <ChevronRight className="w-3 h-3" /></div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* 2. HI NGAJI (Daftar Kelas) */}
+          <Link href="/ngaji" className="block group">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative border-b-4 border-[#D4AF37]">
+              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><LayoutGrid className="w-24 h-24" /></div>
+                <div className="space-y-1 relative z-10">
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Pendaftaran</Badge>
+                  <h4 className="font-black text-xl text-white leading-tight">Hi Ngaji</h4>
+                  <p className="text-[10px] text-white/70 max-w-[140px]">Daftar kelas Tahsin, Tafsir, & Tahfidz.</p>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Buka Kelas <ChevronRight className="w-3 h-3" /></div>
               </CardContent>
             </Card>
           </Link>

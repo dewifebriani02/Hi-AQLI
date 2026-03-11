@@ -8,8 +8,8 @@ import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/ngaji", label: "Hi Ngaji", icon: LayoutGrid },
-  { href: "/mufradat", label: "Hi Mufradat", icon: BookOpen, isProminent: true },
+  { href: "/mufradat", label: "Hi Mufradat", icon: BookOpen },
+  { href: "/ngaji", label: "Hi Ngaji", icon: LayoutGrid, isProminent: true },
   { href: "/hafal", label: "Hi Hafal", icon: GraduationCap },
   { href: "/berbagi", label: "Hi Berbagi", icon: HeartHandshake },
 ];

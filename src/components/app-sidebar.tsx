@@ -39,8 +39,8 @@ const adminItems = [
 
 const navItems = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/ngaji", label: "Hi Ngaji", icon: LayoutGrid },
   { href: "/mufradat", label: "Hi Mufradat", icon: BookOpen },
+  { href: "/ngaji", label: "Hi Ngaji", icon: LayoutGrid },
   { href: "/hafal", label: "Hi Hafal", icon: GraduationCap },
   { href: "/berbagi", label: "Hi Berbagi", icon: HeartHandshake },
   { href: "/leaderboard", label: "Papan Juara", icon: Trophy },
