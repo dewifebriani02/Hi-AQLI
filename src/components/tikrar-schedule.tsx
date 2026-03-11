@@ -33,8 +33,8 @@ const LEVELS = [
   { id: 4, name: "Pemula", days: 28 },
 ];
 
-const PASS_THRESHOLD = 5;
-const META_PASS_THRESHOLD = 10;
+const PASS_THRESHOLD = 40; // SEMUA 40 KALI WAJIB
+const META_PASS_THRESHOLD = 10; // KECUALI REPETISI GABUNGAN BLOK
 
 // Helper to skip weekends
 function addWorkDays(startDate: Date, days: number): Date {
@@ -78,7 +78,6 @@ export function TikrarSchedule() {
     
     let currentDate = new Date(adminStartDate);
     
-    // Time distribution across 10 steps (approx matching the daily system)
     const dayAllocation = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]; 
 
     for (let p = startPage; p <= endPage; p++) {

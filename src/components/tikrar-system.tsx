@@ -44,8 +44,8 @@ const LEVELS = [
 ];
 
 const TARGET_MAX = 40;
-const PASS_THRESHOLD = 5; // Minimal 5x untuk Maqta internal (A-1, A-2, A Gabungan)
-const META_PASS_THRESHOLD = 10; // Minimal 10x untuk Gabungan antar Blok
+const PASS_THRESHOLD = 40; // SEMUA 40 KALI WAJIB
+const META_PASS_THRESHOLD = 10; // KECUALI REPETISI GABUNGAN BLOK
 
 interface Word {
   text_uthmani: string;
