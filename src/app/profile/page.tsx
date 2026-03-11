@@ -54,19 +54,18 @@ export default function ProfilePage() {
 
   // Check Admin Role
   const adminDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return doc(db, "roles_admin", user.uid);
   }, [db, user?.uid]);
 
   const { data: adminRole, isLoading: isAdminLoading } = useDoc(adminDocRef);
 
-  // Fetch real donation history
+  // Fetch real donation history - Simplified query to avoid index requirements for now
   const donationsQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return query(
       collection(db, "donations"),
       where("userId", "==", user.uid),
-      orderBy("donationDate", "desc"),
       limit(20)
     );
   }, [db, user?.uid]);
@@ -75,7 +74,7 @@ export default function ProfilePage() {
 
   // Fetch user data for payment status
   const userDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return doc(db, "users", user.uid);
   }, [db, user?.uid]);
 
@@ -85,6 +84,7 @@ export default function ProfilePage() {
 
   // AUTO-BOOTSTRAP ADMIN for dewifebriani@gmail.com
   useEffect(() => {
+    let mounted = true;
     async function bootstrapAdmin() {
       if (user?.email === "dewifebriani@gmail.com" && !adminRole && !isAdminLoading && !isBootstrapping) {
         setIsBootstrapping(true);
@@ -94,18 +94,21 @@ export default function ProfilePage() {
             role: "admin",
             createdAt: serverTimestamp()
           });
-          toast({
-            title: "Akses Admin Aktif",
-            description: "Masyallah, akun Anda telah otomatis ditingkatkan menjadi Admin.",
-          });
+          if (mounted) {
+            toast({
+              title: "Akses Admin Aktif",
+              description: "Masyallah, akun Anda telah otomatis ditingkatkan menjadi Admin.",
+            });
+          }
         } catch (e) {
           console.error("Bootstrap Error:", e);
         } finally {
-          setIsBootstrapping(false);
+          if (mounted) setIsBootstrapping(false);
         }
       }
     }
     bootstrapAdmin();
+    return () => { mounted = false; };
   }, [user, adminRole, isAdminLoading, db, toast, isBootstrapping]);
 
   useEffect(() => {
@@ -140,7 +143,6 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-8 pb-32">
-      {/* Header Profile Section */}
       <div className="flex flex-col gap-2 px-1">
         <h1 className="text-3xl font-bold font-headline tracking-tight">Profil & Aktivitas</h1>
         <p className="text-muted-foreground text-sm">Pusat kendali pembelajaran dan kontribusi Anda.</p>
@@ -186,7 +188,6 @@ export default function ProfilePage() {
         </CardHeader>
 
         <CardContent className="px-6 sm:px-8 pt-4">
-          {/* Status Admin Banner */}
           {user?.email === "dewifebriani@gmail.com" && (
             <Card className="mb-8 border-2 border-amber-200 bg-amber-50 p-4 animate-in fade-in zoom-in duration-500">
               <div className="flex items-center justify-between gap-4">
@@ -195,18 +196,21 @@ export default function ProfilePage() {
                     <ShieldCheck className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-amber-900 uppercase">Status Admin: AKTIF</h4>
-                    <p className="text-[10px] text-amber-700 font-medium">Anda memiliki akses penuh ke Dashboard Verifikasi.</p>
+                    <h4 className="text-sm font-black text-amber-900 uppercase">Status Admin: {adminRole ? 'AKTIF' : 'SEDANG PROSES'}</h4>
+                    <p className="text-[10px] text-amber-700 font-medium">
+                      {adminRole ? 'Anda memiliki akses penuh ke Dashboard Verifikasi.' : 'Sedang menyiapkan hak akses Anda...'}
+                    </p>
                   </div>
                 </div>
-                <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold h-8">
-                  <Link href="/admin">BUKA DASHBOARD <ArrowRight className="ml-1 w-3 h-3" /></Link>
-                </Button>
+                {adminRole && (
+                  <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold h-8">
+                    <Link href="/admin">BUKA DASHBOARD <ArrowRight className="ml-1 w-3 h-3" /></Link>
+                  </Button>
+                )}
               </div>
             </Card>
           )}
 
-          {/* Admin UID Card (Quick Setup Helper) */}
           <Card className="mb-8 border-dashed border-2 bg-muted/20">
             <CardContent className="p-4 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -224,7 +228,6 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Active Subscription Banner */}
           {isPaid && (
             <Card className="mb-8 border-2 border-blue-100 bg-blue-50/50 p-4">
               <div className="flex items-center justify-between gap-4">
@@ -257,7 +260,6 @@ export default function ProfilePage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* HALAQAH TAB */}
             <TabsContent value="halaqah" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Materi Diikuti</h3>
@@ -311,7 +313,6 @@ export default function ProfilePage() {
               </div>
             </TabsContent>
 
-            {/* DONASI TAB */}
             <TabsContent value="donasi" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Riwayat Infaq & Sedekah</h3>
@@ -361,7 +362,6 @@ export default function ProfilePage() {
               </div>
             </TabsContent>
 
-            {/* JUARA TAB */}
             <TabsContent value="juara" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-2 gap-4">
                 <Card className="border-none bg-[#800000]/5 text-center p-6">

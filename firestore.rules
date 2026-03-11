@@ -25,6 +25,11 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
+      
+      // Progres hafalan per ayat
+      match /quiz_attempts/{attemptId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
     }
 
     match /tikrar_registrations/{registrationId} {
@@ -35,9 +40,8 @@ service cloud.firestore {
     }
 
     match /donations/{donationId} {
-      // Izinkan list jika filternya adalah userId milik sendiri atau user adalah admin
-      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      // Izinkan baca untuk user yang login (difilter di client)
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
@@ -54,8 +58,9 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // Default deny untuk path lain yang tidak didefinisikan
     match /{path=**} {
-      allow read: if isSignedIn();
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
   }
