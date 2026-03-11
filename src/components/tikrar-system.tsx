@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -22,7 +21,10 @@ import {
   MessageCircle,
   Clock,
   Flag,
-  Info
+  Info,
+  Type,
+  Minus,
+  Plus
 } from "lucide-react";
 import { 
   Tooltip,
@@ -103,6 +105,7 @@ export function TikrarSystem() {
   const [isPrevPageDone, setIsPrevPageDone] = useState(true);
   const [level, setLevel] = useState<number | null>(null);
   const [pageStartDate, setPageStartDate] = useState<string | null>(null);
+  const [fontSize, setFontSize] = useState(24);
   
   const [blocks, setBlocks] = useState<Record<number, BlockState>>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -122,7 +125,6 @@ export function TikrarSystem() {
     if (!isUserDataLoading && userData) {
       if (isPaid && paidJuz) {
         setJuz(paidJuz);
-        // Only override page if it hasn't been set by navigation
         if (page === 1) setPage(JUZ_PAGES[paidJuz - 1]);
       }
     }
@@ -149,6 +151,12 @@ export function TikrarSystem() {
     }
   }, []);
 
+  const adjustFontSize = (delta: number) => {
+    const newSize = Math.max(16, Math.min(fontSize + delta, 48));
+    setFontSize(newSize);
+    localStorage.setItem('aqli_mushaf_font_size', newSize.toString());
+  };
+
   const checkPageCompletion = (pageNum: number) => {
     if (pageNum < 1) return true;
     const saved = typeof window !== 'undefined' ? localStorage.getItem(`tikrar_progress_p${pageNum}`) : null;
@@ -169,6 +177,9 @@ export function TikrarSystem() {
     if (typeof window !== 'undefined') {
       const savedLevel = localStorage.getItem('tikrar_level');
       if (savedLevel) setLevel(parseInt(savedLevel));
+      
+      const savedSize = localStorage.getItem('aqli_mushaf_font_size');
+      if (savedSize) setFontSize(Math.min(parseInt(savedSize), 32)); // Cap for tikrar system
     }
 
     async function fetchVerses() {
@@ -272,7 +283,6 @@ export function TikrarSystem() {
 
   const totalProgress = calculateTotalProgress();
 
-  // Schedule Calculations
   const scheduleInfo = useMemo(() => {
     if (!level || !pageStartDate) return null;
     const start = new Date(pageStartDate);
@@ -294,30 +304,22 @@ export function TikrarSystem() {
     };
   }, [level, pageStartDate, totalProgress]);
 
-  // Current Target Identification
   const currentTarget = useMemo(() => {
     if (blocks[1].a.count < TARGET_TM) return "Blok 1a";
     if (blocks[1].b.count < TARGET_TM) return "Blok 1b";
     if (blocks[1].combined.count < TARGET_TM) return "Gabungan 1a+b";
-    
     if (blocks[2].a.count < TARGET_TM) return "Blok 2a";
     if (blocks[2].b.count < TARGET_TM) return "Blok 2b";
     if (blocks[2].combined.count < TARGET_TM) return "Gabungan 2a+b";
-    
     if (metaCombined[2] < MIN_META[2]) return "Gabungan TM1 + TM2";
-    
     if (blocks[3].a.count < TARGET_TM) return "Blok 3a";
     if (blocks[3].b.count < TARGET_TM) return "Blok 3b";
     if (blocks[3].combined.count < TARGET_TM) return "Gabungan 3a+b";
-    
     if (metaCombined[3] < MIN_META[3]) return "Gabungan TM1 + TM2 + TM3";
-    
     if (blocks[4].a.count < TARGET_TM) return "Blok 4a";
     if (blocks[4].b.count < TARGET_TM) return "Blok 4b";
     if (blocks[4].combined.count < TARGET_TM) return "Gabungan 4a+b";
-    
     if (metaCombined[4] < MIN_META[4]) return "Gabungan Akhir TM1-4";
-    
     return "Selesai! Siap Ujian";
   }, [blocks, metaCombined]);
 
@@ -331,7 +333,7 @@ export function TikrarSystem() {
             <Trophy className="w-8 h-8 text-[#800000]" />
           </div>
           <h2 className="text-2xl font-bold font-headline">Pilih Level Tikrar Daily</h2>
-          <p className="text-sm text-muted-foreground">Tentukan intensitas hafalan Anda. Setiap level memiliki target durasi yang berbeda untuk menuntaskan satu halaman.</p>
+          <p className="text-sm text-muted-foreground">Tentukan intensitas hafalan Anda.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4">
           {LEVELS.map((l) => (
@@ -443,12 +445,21 @@ export function TikrarSystem() {
               </Button>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2 bg-amber-50 p-3 rounded-xl border border-amber-100 max-w-sm">
-            <Info className="w-5 h-5 text-amber-600 shrink-0" />
-            <p className="text-[10px] text-amber-800 leading-tight font-medium">
-              <strong>Info Ujian:</strong> Ujian hafalan dilakukan setiap kali Anda menyelesaikan <strong>1 halaman</strong> penuh. Silakan hubungi tutor via WA setelah progres 100%.
-            </p>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => adjustFontSize(-4)}><Minus className="h-4 w-4" /></Button>
+              <div className="px-2 flex items-center gap-1.5">
+                <Type className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs font-bold w-4 text-center">{fontSize}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => adjustFontSize(4)}><Plus className="h-4 w-4" /></Button>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-amber-50 p-3 rounded-xl border border-amber-100 max-w-[200px]">
+              <Info className="w-4 h-4 text-amber-600 shrink-0" />
+              <p className="text-[9px] text-amber-800 leading-tight font-medium">Ujian dilakukan setiap tuntas <strong>1 halaman</strong>.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -464,10 +475,7 @@ export function TikrarSystem() {
             <div className="w-20 h-20 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shadow-lg"><Lock className="w-10 h-10" /></div>
             <div className="space-y-2">
               <h3 className="text-2xl font-bold font-headline text-rose-900">Akses Juz Terkunci</h3>
-              <p className="text-sm text-rose-800 max-w-sm mx-auto">
-                Maaf, Anda hanya memiliki akses penuh untuk <strong>Juz {paidJuz || "yang telah didaftarkan"}</strong>. 
-                User umum hanya dapat mencoba trial di Juz 1 Halaman 1.
-              </p>
+              <p className="text-sm text-rose-800 max-w-sm mx-auto">Anda hanya memiliki akses penuh untuk <strong>Juz {paidJuz || "yang telah didaftarkan"}</strong>.</p>
             </div>
             <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 font-bold px-8 h-12 shadow-xl">
               <Link href="/study-circles">Daftar Pilihan Juz di Menu Halaqah</Link>
@@ -480,14 +488,13 @@ export function TikrarSystem() {
             <div className="w-20 h-20 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center"><Lock className="w-10 h-10" /></div>
             <div className="space-y-2">
               <h3 className="text-xl font-bold font-headline">Halaman Terkunci</h3>
-              <p className="text-sm text-muted-foreground max-w-xs mx-auto">Anda harus menuntaskan seluruh Tikrar di <strong>Halaman {page - 1}</strong> untuk membuka halaman ini.</p>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">Anda harus menuntaskan seluruh Tikrar di <strong>Halaman {page - 1}</strong>.</p>
             </div>
             <Button onClick={() => setPage(page - 1)} variant="outline" className="font-bold gap-2"><ChevronLeft className="w-4 h-4" /> Kembali ke Hal {page - 1}</Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-8 pb-20">
-          {/* BLOK PANDUAN LANGKAH DEMI LANGKAH */}
           <div className="flex items-center gap-2 px-1">
             <Flag className="w-4 h-4 text-[#800000]" />
             <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Urutan Menghafal (Langkah 1 - 7)</h4>
@@ -497,42 +504,49 @@ export function TikrarSystem() {
             id={1} state={blocks[1]} verses={getVersesForRange(1, 1)}
             onIncrement={incrementTM} target={TARGET_TM} isLocked={false} 
             activeTarget={currentTarget.includes("1")}
+            fontSize={fontSize}
           />
           
           <BlockCard 
             id={2} state={blocks[2]} verses={getVersesForRange(2, 2)}
             onIncrement={incrementTM} target={TARGET_TM} isLocked={blocks[1].combined.count < TARGET_TM} 
             activeTarget={currentTarget.includes("2") && !currentTarget.includes("TM1")}
+            fontSize={fontSize}
           />
 
           <MetaCombinedCard 
             id={2} title="Langkah 3: Gabungan TM1 + TM2" count={metaCombined[2]} min={MIN_META[2]} target={RECOMMENDED_META}
             verses={getVersesForRange(1, 2)} isLocked={blocks[2].combined.count < TARGET_TM} onIncrement={() => incrementMeta(2)}
             activeTarget={currentTarget === "Gabungan TM1 + TM2"}
+            fontSize={fontSize}
           />
 
           <BlockCard 
             id={3} state={blocks[3]} verses={getVersesForRange(3, 3)}
             onIncrement={incrementTM} target={TARGET_TM} isLocked={metaCombined[2] < MIN_META[2]} 
             activeTarget={currentTarget.includes("3")}
+            fontSize={fontSize}
           />
 
           <MetaCombinedCard 
             id={3} title="Langkah 5: Gabungan TM1 + TM2 + TM3" count={metaCombined[3]} min={MIN_META[3]} target={RECOMMENDED_META}
             verses={getVersesForRange(1, 3)} isLocked={blocks[3].combined.count < TARGET_TM} onIncrement={() => incrementMeta(3)}
             activeTarget={currentTarget === "Gabungan TM1 + TM2 + TM3"}
+            fontSize={fontSize}
           />
 
           <BlockCard 
             id={4} state={blocks[4]} verses={getVersesForRange(4, 4)}
             onIncrement={incrementTM} target={TARGET_TM} isLocked={metaCombined[3] < MIN_META[3]} 
             activeTarget={currentTarget.includes("4")}
+            fontSize={fontSize}
           />
 
           <MetaCombinedCard 
             id={4} title="Langkah 7: Gabungan Akhir TM1-4" count={metaCombined[4]} min={MIN_META[4]} target={RECOMMENDED_META}
             verses={getVersesForRange(1, 4)} isLocked={blocks[4].combined.count < TARGET_TM} onIncrement={() => incrementMeta(4)}
             activeTarget={currentTarget === "Gabungan Akhir TM1-4"}
+            fontSize={fontSize}
           />
         </div>
       )}
@@ -540,7 +554,7 @@ export function TikrarSystem() {
   );
 }
 
-function BlockCard({ id, state, verses, onIncrement, target, isLocked, activeTarget }: any) {
+function BlockCard({ id, state, verses, onIncrement, target, isLocked, activeTarget, fontSize }: any) {
   const isBlockDone = state.combined.count >= target;
   
   const { partA, partB } = useMemo(() => {
@@ -590,10 +604,10 @@ function BlockCard({ id, state, verses, onIncrement, target, isLocked, activeTar
            <TooltipProvider delayDuration={0}>
              <div className="flex flex-wrap justify-center items-center gap-x-0 gap-y-3 text-center">
                {partA.map((w, i) => (
-                 <WordItem key={`a-${i}`} word={w} color="text-[#800000]" />
+                 <WordItem key={`a-${i}`} word={w} color="text-[#800000]" fontSize={fontSize} />
                ))}
                {partB.map((w, i) => (
-                 <WordItem key={`b-${i}`} word={w} color="text-emerald-700" />
+                 <WordItem key={`b-${i}`} word={w} color="text-emerald-700" fontSize={fontSize} />
                ))}
              </div>
            </TooltipProvider>
@@ -618,7 +632,7 @@ function BlockCard({ id, state, verses, onIncrement, target, isLocked, activeTar
   );
 }
 
-function MetaCombinedCard({ title, count, min, target, verses, isLocked, onIncrement, activeTarget }: any) {
+function MetaCombinedCard({ title, count, min, target, verses, isLocked, onIncrement, activeTarget, fontSize }: any) {
   const isMinTapped = count >= min;
   return (
     <Card className={cn(
@@ -639,7 +653,7 @@ function MetaCombinedCard({ title, count, min, target, verses, isLocked, onIncre
             {verses.map((v: Verse) => (
               <React.Fragment key={v.id}>
                 {v.words.map((w, idx) => (
-                  <span key={idx} className="text-xl md:text-2xl font-arabic text-amber-950 leading-[2.4]">{w.text_uthmani}</span>
+                  <span key={idx} style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} className="font-arabic text-amber-950 leading-[2.4]">{w.text_uthmani}</span>
                 ))}
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-amber-300 text-[9px] font-bold mx-1 text-amber-800 bg-amber-50">({v.verse_key.split(':')[1]})</span>
               </React.Fragment>
@@ -662,12 +676,15 @@ function MetaCombinedCard({ title, count, min, target, verses, isLocked, onIncre
   );
 }
 
-function WordItem({ word, color }: any) {
+function WordItem({ word, color, fontSize }: any) {
   return (
     <React.Fragment>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={cn("text-xl md:text-2xl font-arabic leading-[2.6] outline-none cursor-help px-0.5 inline-block transition-colors hover:bg-black/5 rounded", color)}>
+          <span 
+            style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+            className={cn("font-arabic outline-none cursor-help px-0.5 inline-block transition-colors hover:bg-black/5 rounded", color)}
+          >
             {word.text_uthmani}
           </span>
         </TooltipTrigger>

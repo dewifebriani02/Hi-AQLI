@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import {
   Tooltip,
@@ -69,6 +68,7 @@ export default function SurahDetailPage() {
   const [surah, setSurah] = useState<SurahInfo | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fontSize, setFontSize] = useState(32);
 
   const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
   const [playingKey, setPlayingKey] = useState<string | null>(null);
@@ -96,9 +96,10 @@ export default function SurahDetailPage() {
 
   useEffect(() => {
     const savedReciter = localStorage.getItem('aqli_reciter_id');
-    if (savedReciter) {
-      setSelectedReciterId(parseInt(savedReciter));
-    }
+    if (savedReciter) setSelectedReciterId(parseInt(savedReciter));
+
+    const savedSize = localStorage.getItem('aqli_mushaf_font_size');
+    if (savedSize) setFontSize(parseInt(savedSize));
 
     async function fetchData() {
       if (!id) return;
@@ -133,6 +134,12 @@ export default function SurahDetailPage() {
       }
     };
   }, [id]);
+
+  const adjustFontSize = (delta: number) => {
+    const newSize = Math.max(20, Math.min(fontSize + delta, 64));
+    setFontSize(newSize);
+    localStorage.setItem('aqli_mushaf_font_size', newSize.toString());
+  };
 
   const selectReciter = (reciterId: number) => {
     setSelectedReciterId(reciterId);
@@ -192,27 +199,50 @@ export default function SurahDetailPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
-      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
-        <Button asChild variant="ghost" size="icon"><Link href="/tilawah"><ChevronLeft className="h-6 w-6" /></Link></Button>
-        <div className="flex-1">
-          <h1 className="text-lg font-bold font-headline">{surah?.id}. {surah?.name_simple}</h1>
-          <p className="text-[10px] uppercase font-semibold text-muted-foreground">{surah?.translated_name.name}</p>
-        </div>
-        <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span>Pilih Qari</span></Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
-            <div className="grid gap-2 py-4">
-              {RECITERS.map((r) => (
-                <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className="justify-between font-bold">
-                  {r.name} {selectedReciterId === r.id && <Check className="h-4 w-4" />}
-                </Button>
-              ))}
+      <div className="flex flex-col gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
+        <div className="flex items-center gap-4">
+          <Button asChild variant="ghost" size="icon"><Link href="/tilawah"><ChevronLeft className="h-6 w-6" /></Link></Button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold font-headline">{surah?.id}. {surah?.name_simple}</h1>
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground">{surah?.translated_name.name}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1 bg-muted/30 p-1 rounded-lg border mr-2">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(-4)}>
+                <Minus className="h-3 w-3" />
+              </Button>
+              <Type className="h-3 w-3 text-muted-foreground mx-1" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(4)}>
+                <Plus className="h-3 w-3" />
+              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
+            <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span>Qari</span></Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
+                <div className="grid gap-2 py-4">
+                  {RECITERS.map((r) => (
+                    <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className="justify-between font-bold">
+                      {r.name} {selectedReciterId === r.id && <Check className="h-4 w-4" />}
+                    </Button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+        <div className="sm:hidden flex justify-center">
+          <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border w-full justify-between px-4">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ukuran Teks</span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => adjustFontSize(-4)}><Minus className="h-4 w-4" /></Button>
+              <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => adjustFontSize(4)}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col divide-y">
@@ -274,8 +304,9 @@ export default function SurahDetailPage() {
                             tabIndex={isLocked ? -1 : 0} 
                             role="button" 
                             onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                            style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
                             className={cn(
-                              "text-2xl md:text-3xl font-arabic leading-[1.8] text-foreground/90 outline-none transition-colors px-0.5 inline-block",
+                              "font-arabic text-foreground/90 outline-none transition-colors px-0.5 inline-block",
                               !isLocked && "hover:text-[#800000] focus:text-[#800000] cursor-help"
                             )}
                           >

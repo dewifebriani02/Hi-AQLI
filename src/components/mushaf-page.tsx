@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, BookOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, BookOpen, Type, Minus, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -28,11 +28,15 @@ export function MushafPage() {
   const [loading, setLoading] = useState(true);
   const [inputPage, setInputPage] = useState("1");
   const [showTranslation, setShowTranslation] = useState(false);
+  const [fontSize, setFontSize] = useState(32); // Default font size
 
   // Tooltip persistence state
   const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
 
   useEffect(() => {
+    const savedSize = localStorage.getItem('aqli_mushaf_font_size');
+    if (savedSize) setFontSize(parseInt(savedSize));
+
     async function fetchPageVerses() {
       setLoading(true);
       try {
@@ -63,55 +67,78 @@ export function MushafPage() {
     }
   };
 
+  const adjustFontSize = (delta: number) => {
+    const newSize = Math.max(20, Math.min(fontSize + delta, 64));
+    setFontSize(newSize);
+    localStorage.setItem('aqli_mushaf_font_size', newSize.toString());
+  };
+
   return (
     <div className="flex flex-col gap-6 px-1">
       {/* Navigation Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/80 p-3 rounded-2xl border border-[#800000]/10 shadow-sm sticky top-20 z-20 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            disabled={page <= 1 || loading} 
-            onClick={() => setPage(p => p - 1)}
-            className="text-[#800000]"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          
-          <form onSubmit={handlePageChange} className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-muted/30 px-3 py-1 rounded-lg border">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Hal.</span>
-              <Input 
-                type="number" 
-                value={inputPage} 
-                onChange={(e) => setInputPage(e.target.value)}
-                className="text-center font-bold h-7 w-10 p-0 border-none bg-transparent shadow-none focus-visible:ring-0 text-[#800000]"
-              />
+      <div className="flex flex-col gap-4 bg-white/80 p-4 rounded-2xl border border-[#800000]/10 shadow-sm sticky top-20 z-20 backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              disabled={page <= 1 || loading} 
+              onClick={() => setPage(p => p - 1)}
+              className="text-[#800000]"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            
+            <form onSubmit={handlePageChange} className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-muted/30 px-3 py-1 rounded-lg border">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Hal.</span>
+                <Input 
+                  type="number" 
+                  value={inputPage} 
+                  onChange={(e) => setInputPage(e.target.value)}
+                  className="text-center font-bold h-7 w-10 p-0 border-none bg-transparent shadow-none focus-visible:ring-0 text-[#800000]"
+                />
+              </div>
+              <Button type="submit" size="sm" variant="ghost" className="h-8 text-[10px] font-bold text-[#800000]">GO</Button>
+            </form>
+
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              disabled={page >= 604 || loading} 
+              onClick={() => setPage(p => p + 1)}
+              className="text-[#800000]"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-lg border">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(-4)} title="Perkecil Font">
+                <Minus className="h-3 w-3" />
+              </Button>
+              <div className="flex items-center gap-1.5 px-2">
+                <Type className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-bold w-4 text-center">{fontSize}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(4)} title="Perbesar Font">
+                <Plus className="h-3 w-3" />
+              </Button>
             </div>
-            <Button type="submit" size="sm" variant="ghost" className="h-8 text-[10px] font-bold text-[#800000]">GO</Button>
-          </form>
 
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            disabled={page >= 604 || loading} 
-            onClick={() => setPage(p => p + 1)}
-            className="text-[#800000]"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <div className="flex items-center space-x-2 bg-muted/20 px-3 py-1.5 rounded-full border">
-          <Switch 
-            id="translation-toggle" 
-            checked={showTranslation} 
-            onCheckedChange={setShowTranslation}
-            className="data-[state=checked]:bg-[#800000]"
-          />
-          <Label htmlFor="translation-toggle" className="text-[9px] font-bold uppercase tracking-widest cursor-pointer text-muted-foreground">
-            Terjemahan
-          </Label>
+            <div className="flex items-center space-x-2 bg-muted/20 px-3 py-1.5 rounded-full border">
+              <Switch 
+                id="translation-toggle" 
+                checked={showTranslation} 
+                onCheckedChange={setShowTranslation}
+                className="data-[state=checked]:bg-[#800000]"
+              />
+              <Label htmlFor="translation-toggle" className="text-[9px] font-bold uppercase tracking-widest cursor-pointer text-muted-foreground">
+                Terjemahan
+              </Label>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -122,9 +149,9 @@ export function MushafPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-8 pb-24">
-          {/* Mushaf Page Container - Re-engineered for 15-line compactness */}
+          {/* Mushaf Page Container */}
           <Card className="relative p-6 md:p-10 lg:p-14 border-none shadow-2xl bg-[#fffcf5] min-h-[750px] flex flex-col items-center overflow-hidden">
-            {/* Decorative Borders to mimic a physical Quran page */}
+            {/* Decorative Borders */}
             <div className="absolute inset-2 border-[4px] border-[#800000]/5 rounded-xl pointer-events-none" />
             <div className="absolute inset-4 border border-[#800000]/10 rounded-lg pointer-events-none" />
             
@@ -133,9 +160,9 @@ export function MushafPage() {
                <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#800000]">Halaman {page}</span>
             </div>
 
-            {/* Compact Arabic Text Flow - Optimized for 15 lines visual density */}
+            {/* Compact Arabic Text Flow */}
             <div 
-              className="flex flex-wrap justify-center items-center gap-x-1 gap-y-3 w-full max-w-[500px] text-center px-2 md:px-4" 
+              className="flex flex-wrap justify-center items-center gap-x-1 gap-y-3 w-full max-w-[600px] text-center px-2 md:px-4" 
               dir="rtl"
             >
               <TooltipProvider delayDuration={0} skipDelayDuration={0}>
@@ -156,7 +183,8 @@ export function MushafPage() {
                               tabIndex={0}
                               role="button"
                               onPointerEnter={() => setActiveWordKey(wordKey)}
-                              className="text-3xl md:text-4xl lg:text-5xl font-arabic leading-[2.4] md:leading-[2.6] text-foreground/90 hover:text-[#800000] focus:text-[#800000] outline-none transition-colors cursor-help select-none px-0.5 inline-block"
+                              style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+                              className="font-arabic text-foreground/90 hover:text-[#800000] focus:text-[#800000] outline-none transition-colors cursor-help select-none px-0.5 inline-block"
                             >
                               {word.text_uthmani}
                             </span>
@@ -174,7 +202,10 @@ export function MushafPage() {
                       );
                     })}
                     {/* Compact Verse Marker */}
-                    <span className="inline-flex items-center justify-center w-auto px-2 h-8 rounded-full border border-[#800000]/20 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white/50 shadow-xs shrink-0 translate-y-[-2px]">
+                    <span 
+                      style={{ height: `${fontSize * 0.8}px`, width: 'auto' }}
+                      className="inline-flex items-center justify-center px-2 rounded-full border border-[#800000]/20 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white/50 shadow-xs shrink-0 translate-y-[-2px]"
+                    >
                       ({verse.verse_key.split(':')[1]})
                     </span>
                   </React.Fragment>
@@ -188,7 +219,7 @@ export function MushafPage() {
             </div>
           </Card>
 
-          {/* Separate Translation List (if toggled ON) */}
+          {/* Separate Translation List */}
           {showTranslation && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 px-1">
                <div className="flex items-center gap-2">
