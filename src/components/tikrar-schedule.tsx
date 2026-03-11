@@ -15,7 +15,8 @@ import {
   ChevronUp,
   Layers,
   Zap,
-  Check
+  Check,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -36,6 +37,7 @@ const LEVELS = [
 
 const PASS_THRESHOLD = 40; 
 const META_PASS_THRESHOLD = 10; 
+const PREP_LISTEN_THRESHOLD = 5;
 
 function addWorkDays(startDate: Date, days: number): Date {
   const result = new Date(startDate);
@@ -77,14 +79,14 @@ export function TikrarSchedule() {
                           new Date();
     
     let currentDate = new Date(adminStartDate);
-    const dayAllocation = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]; 
+    const dayAllocation = [0.05, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.15]; 
 
     for (let p = startPage; p <= endPage; p++) {
       const pageStart = new Date(currentDate);
       const stepsDates: any[] = [];
       let stepCurrentDate = new Date(pageStart);
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 11; i++) {
         const sStart = new Date(stepCurrentDate);
         const sDays = Math.max(1, Math.round(level.days * dayAllocation[i]));
         const sEnd = addWorkDays(sStart, sDays);
@@ -94,6 +96,7 @@ export function TikrarSchedule() {
 
       const pageEnd = new Date(stepCurrentDate);
       
+      let isPrepDone = false;
       let tmProgress: Record<string, boolean> = {};
       let metaProgress: Record<string, boolean> = {};
       let isAllDone = false;
@@ -106,13 +109,14 @@ export function TikrarSchedule() {
             const b = data.blocks || {};
             const m = data.metaCounts || {};
             
-            // Sync logic with 10 Stages of Tikrar System
-            const letters = ["", "A", "B", "C", "D"];
-            for (let i = 1; i <= 4; i++) {
+            isPrepDone = (data.prepListenCount || 0) >= PREP_LISTEN_THRESHOLD && (data.prepTranslationDone || false);
+
+            const letters = ["A", "B", "C", "D"];
+            for (let i = 0; i < 4; i++) {
               const l = letters[i];
-              tmProgress[`${l}1`] = (b[i]?.a?.count || 0) >= PASS_THRESHOLD;
-              tmProgress[`${l}2`] = (b[i]?.b?.count || 0) >= PASS_THRESHOLD;
-              tmProgress[`${l}G`] = (b[i]?.combined?.count || 0) >= PASS_THRESHOLD;
+              tmProgress[l] = (b[i+1]?.a?.count || 0) >= PASS_THRESHOLD && 
+                              (b[i+1]?.b?.count || 0) >= PASS_THRESHOLD && 
+                              (b[i+1]?.combined?.count || 0) >= PASS_THRESHOLD;
             }
             
             metaProgress['1_2'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
@@ -132,6 +136,7 @@ export function TikrarSchedule() {
         start: pageStart,
         end: pageEnd,
         steps: stepsDates,
+        isPrepDone,
         tmProgress,
         metaProgress,
         isDone: isAllDone,
@@ -240,23 +245,26 @@ export function TikrarSchedule() {
                     <div className="mt-6 pt-6 border-t border-dashed space-y-6 animate-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center gap-2">
                         <Layers className="w-4 h-4 text-[#800000]" />
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Tahapan Manhaj Tikrar</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Urutan Manhaj Tikrar</h4>
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        {/* Stages aligned with Tikrar Daily Logic */}
-                        <StepRow label={`BLOK A (${item.page}A-1, ${item.page}A-2, G)`} isDone={item.tmProgress['A1'] && item.tmProgress['A2'] && item.tmProgress['AG']} date={item.steps[0].end} threshold={40} />
-                        <StepRow label={`BLOK B (${item.page}B-1, ${item.page}B-2, G)`} isDone={item.tmProgress['B1'] && item.tmProgress['B2'] && item.tmProgress['BG']} date={item.steps[1].end} threshold={40} />
-                        <StepRow label="GABUNG BLOK A & B" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta threshold={10} />
+                        {/* Preparation Step */}
+                        <StepRow icon={BookOpen} label="TAHAP PERSIAPAN (Simak 5x & Paham Arti)" isDone={item.isPrepDone} date={item.steps[0].end} threshold={5} />
                         
-                        <StepRow label={`BLOK C (${item.page}C-1, ${item.page}C-2, G)`} isDone={item.tmProgress['C1'] && item.tmProgress['C2'] && item.tmProgress['CG']} date={item.steps[3].end} threshold={40} />
-                        <StepRow label="GABUNG BLOK B & C" isDone={item.metaProgress['2_3']} date={item.steps[4].end} isMeta threshold={10} />
-                        <StepRow label="GABUNG BLOK A s/d C" isDone={item.metaProgress['1_2_3']} date={item.steps[5].end} isMeta threshold={10} />
+                        {/* 10 Memorization Steps */}
+                        <StepRow label={`BLOK A (${item.page}A-1, A-2, G)`} isDone={item.tmProgress['A']} date={item.steps[1].end} threshold={40} />
+                        <StepRow label={`BLOK B (${item.page}B-1, B-2, G)`} isDone={item.tmProgress['B']} date={item.steps[2].end} threshold={40} />
+                        <StepRow label="GABUNG BLOK A & B" isDone={item.metaProgress['1_2']} date={item.steps[3].end} isMeta threshold={10} />
                         
-                        <StepRow label={`BLOK D (${item.page}D-1, ${item.page}D-2, G)`} isDone={item.tmProgress['D1'] && item.tmProgress['D2'] && item.tmProgress['DG']} date={item.steps[6].end} threshold={40} />
-                        <StepRow label="GABUNG BLOK C & D" isDone={item.metaProgress['3_4']} date={item.steps[7].end} isMeta threshold={10} />
-                        <StepRow label="GABUNG BLOK B s/d D" isDone={item.metaProgress['2_3_4']} date={item.steps[8].end} isMeta threshold={10} />
-                        <StepRow label="GABUNG SELURUH HALAMAN (A-D)" isDone={item.metaProgress['1_2_3_4']} date={item.steps[9].end} isMeta highlight threshold={10} />
+                        <StepRow label={`BLOK C (${item.page}C-1, C-2, G)`} isDone={item.tmProgress['C']} date={item.steps[4].end} threshold={40} />
+                        <StepRow label="GABUNG BLOK B & C" isDone={item.metaProgress['2_3']} date={item.steps[5].end} isMeta threshold={10} />
+                        <StepRow label="GABUNG BLOK A s/d C" isDone={item.metaProgress['1_2_3']} date={item.steps[6].end} isMeta threshold={10} />
+                        
+                        <StepRow label={`BLOK D (${item.page}D-1, D-2, G)`} isDone={item.tmProgress['D']} date={item.steps[7].end} threshold={40} />
+                        <StepRow label="GABUNG BLOK C & D" isDone={item.metaProgress['3_4']} date={item.steps[8].end} isMeta threshold={10} />
+                        <StepRow label="GABUNG BLOK B s/d D" isDone={item.metaProgress['2_3_4']} date={item.steps[9].end} isMeta threshold={10} />
+                        <StepRow label="GABUNG SELURUH HALAMAN (A-D)" isDone={item.metaProgress['1_2_3_4']} date={item.steps[10].end} isMeta highlight threshold={10} />
                       </div>
 
                       <div className="bg-[#800000] p-4 rounded-2xl flex items-center justify-between mt-4">
@@ -280,7 +288,7 @@ export function TikrarSchedule() {
   );
 }
 
-function StepRow({ label, isDone, date, isMeta, highlight, threshold }: { label: string, isDone: boolean, date: Date, isMeta?: boolean, highlight?: boolean, threshold: number }) {
+function StepRow({ icon: Icon, label, isDone, date, isMeta, highlight, threshold }: { icon?: any, label: string, isDone: boolean, date: Date, isMeta?: boolean, highlight?: boolean, threshold: number }) {
   return (
     <div className={cn(
       "flex items-center justify-between p-3 rounded-xl border transition-all",
@@ -292,7 +300,7 @@ function StepRow({ label, isDone, date, isMeta, highlight, threshold }: { label:
           "w-6 h-6 rounded-lg flex items-center justify-center shrink-0",
           isDone ? "bg-emerald-500 text-white" : isMeta ? "bg-muted text-muted-foreground" : "bg-[#800000]/10 text-[#800000]"
         )}>
-          {isDone ? <Check className="w-3 h-3" /> : isMeta ? <Zap className="w-3 h-3" /> : <Check className="w-3 h-3 opacity-20" />}
+          {isDone ? <Check className="w-3 h-3" /> : Icon ? <Icon className="w-3 h-3" /> : isMeta ? <Zap className="w-3 h-3" /> : <Check className="w-3 h-3 opacity-20" />}
         </div>
         <div className="flex flex-col min-w-0">
           <span className={cn("text-[10px] font-bold truncate", highlight ? "text-[#800000]" : "text-foreground")}>{label}</span>

@@ -18,7 +18,10 @@ import {
   Minus,
   Plus,
   Zap,
-  Info
+  Info,
+  Mic2,
+  BookOpen,
+  Check
 } from "lucide-react";
 import {
   Tooltip,
@@ -41,6 +44,7 @@ const JUZ_PAGES = [
 const TARGET_MAX = 40;
 const PASS_THRESHOLD = 40; 
 const META_PASS_THRESHOLD = 10; 
+const PREP_LISTEN_THRESHOLD = 5;
 
 interface Word {
   text_uthmani: string;
@@ -77,6 +81,10 @@ export function TikrarSystem() {
   const [fontSize, setFontSize] = useState(18); 
   const [hasInitializedPage, setHasInitializedPage] = useState(false);
   
+  // Preparation States
+  const [prepListenCount, setPrepListenCount] = useState(0);
+  const [prepTranslationDone, setPrepTranslationDone] = useState(false);
+
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
     2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -127,6 +135,8 @@ export function TikrarSystem() {
     if (savedProgressStr) {
       try {
         const saved = JSON.parse(savedProgressStr);
+        setPrepListenCount(saved.prepListenCount || 0);
+        setPrepTranslationDone(saved.prepTranslationDone || false);
         setBlocks(saved.blocks || {
           1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
           2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -138,6 +148,8 @@ export function TikrarSystem() {
         });
       } catch (e) {}
     } else {
+      setPrepListenCount(0);
+      setPrepTranslationDone(false);
       setBlocks({
         1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
         2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -156,11 +168,13 @@ export function TikrarSystem() {
       const parsed = existing ? JSON.parse(existing) : {};
       localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({ 
         ...parsed,
+        prepListenCount,
+        prepTranslationDone,
         blocks,
         metaCounts
       }));
     }
-  }, [blocks, metaCounts, page, loading]);
+  }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, loading]);
 
   const blockVerses = useMemo(() => {
     if (verses.length === 0) return { 1: [], 2: [], 3: [], 4: [] };
@@ -173,22 +187,30 @@ export function TikrarSystem() {
     };
   }, [verses]);
 
+  const isPrepTuntas = prepListenCount >= PREP_LISTEN_THRESHOLD && prepTranslationDone;
   const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
   const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= META_PASS_THRESHOLD;
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
+    // Prep contribution (weighted)
+    if (prepListenCount >= PREP_LISTEN_THRESHOLD) totalDone += 5;
+    if (prepTranslationDone) totalDone += 5;
+
     [1, 2, 3, 4].forEach(id => {
-      totalDone += Math.min(blocks[id].a.count, PASS_THRESHOLD);
-      totalDone += Math.min(blocks[id].b.count, PASS_THRESHOLD);
-      totalDone += Math.min(blocks[id].combined.count, PASS_THRESHOLD);
+      totalDone += (Math.min(blocks[id].a.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+      totalDone += (Math.min(blocks[id].b.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+      totalDone += (Math.min(blocks[id].combined.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
     });
+    
+    const metaWeight = 5;
     Object.keys(metaCounts).forEach(k => {
-      totalDone += (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * PASS_THRESHOLD;
+      totalDone += (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * metaWeight;
     });
-    const totalTarget = (12 * PASS_THRESHOLD) + (6 * PASS_THRESHOLD);
-    return Math.min(100, (totalDone / totalTarget) * 100);
-  }, [blocks, metaCounts]);
+
+    const totalWeight = 10 + (4 * 30) + (6 * metaWeight);
+    return Math.min(100, (totalDone / totalWeight) * 100);
+  }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
 
   if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
@@ -246,18 +268,91 @@ export function TikrarSystem() {
         </div>
       </div>
 
+      {/* INFO BOX */}
       <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1">
         <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
-          <strong>Info Itqan:</strong> Setiap Maqta (contoh: {page}A-1) wajib diulang <strong>40 kali</strong>. Repetisi Gabungan Blok minimal <strong>10 kali</strong>. Kunci akan terbuka otomatis setelah target terpenuhi.
+          <strong>Manhaj Tikrar:</strong> Selesaikan **Tahap Persiapan** sebelum menghafal. Setiap Maqta individu wajib diulang **40 kali**. Repetisi Gabungan Blok minimal **10 kali**.
         </div>
       </div>
 
       <TooltipProvider delayDuration={0}>
         <div className="flex flex-col gap-10">
+          
+          {/* TAHAP PERSIAPAN */}
+          <Card className={cn(
+            "border-2 transition-all shadow-md overflow-hidden",
+            isPrepTuntas ? "border-emerald-500 bg-emerald-50/10" : "border-[#800000]/30 bg-[#800000]/5"
+          )}>
+            <div className="bg-[#800000]/10 py-2 px-4 border-b flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">
+                Tahap 0: Persiapan (Prasyarat)
+              </span>
+              {isPrepTuntas && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
+            </div>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                    prepListenCount >= 5 ? "bg-emerald-500 text-white" : "bg-white text-[#800000] border-2 border-[#800000]/20"
+                  )}>
+                    <Mic2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold">Simak Murattal & Mushaf</h4>
+                    <p className="text-[10px] text-muted-foreground">Minimal 5 kali penyimakan</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(Math.min(prepListenCount, 5) / 5) * 100}%` }} />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setPrepListenCount(p => p + 1)}
+                    disabled={prepListenCount >= 5}
+                    className={cn(
+                      "h-10 w-20 font-black rounded-xl border-2",
+                      prepListenCount >= 5 ? "border-emerald-500 text-emerald-600" : "border-[#800000] text-[#800000]"
+                    )}
+                  >
+                    {prepListenCount >= 5 ? <Check className="w-5 h-5" /> : `${prepListenCount} / 5`}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                    prepTranslationDone ? "bg-emerald-500 text-white" : "bg-white text-[#800000] border-2 border-[#800000]/20"
+                  )}>
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold">Pahami Terjemahan</h4>
+                    <p className="text-[10px] text-muted-foreground">Baca rincian per kata & kalimat</p>
+                  </div>
+                </div>
+                <Button 
+                  variant={prepTranslationDone ? "default" : "outline"}
+                  onClick={() => setPrepTranslationDone(!prepTranslationDone)}
+                  className={cn(
+                    "w-full h-10 font-black rounded-xl border-2 uppercase tracking-widest text-[10px]",
+                    prepTranslationDone ? "bg-emerald-500 hover:bg-emerald-600 border-emerald-600" : "border-[#800000] text-[#800000]"
+                  )}
+                >
+                  {prepTranslationDone ? "SUDAH DIPAHAMI" : "KONFIRMASI PEMAHAMAN"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* STEP 1 & 2 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <MaqtaCard id={1} page={page} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} letter="A" />
+            <MaqtaCard id={1} page={page} state={blocks[1]} verses={blockVerses[1]} isLocked={!isPrepTuntas} onIncrement={setBlocks} fontSize={fontSize} letter="A" />
             <MaqtaCard id={2} page={page} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasTM(1)} onIncrement={setBlocks} fontSize={fontSize} letter="B" />
           </div>
 
@@ -355,7 +450,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
     )}>
       <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center shrink-0">
         <span className="text-[10px] font-black uppercase tracking-widest text-[#800000] truncate">
-          BLOK {letter} (HAL. {page}{letter}) {isLocked && "• TERKUNCI"}
+          BLOK {letter} ({page}{letter}-1, {page}{letter}-2) {isLocked && "• TERKUNCI"}
         </span>
         {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
       </div>
