@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck } from "lucide-react";
+import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -16,17 +16,17 @@ export default function AdminDashboard() {
 
   // Fetch Stats - Only if user is logged in
   const pendingQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return query(
-      collection(db, "tikrar_registrations"),
+      collection(db, "halaqah_registrations"),
       where("status", "==", "pending_verification")
     );
   }, [db, user?.uid]);
 
   const activeQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return query(
-      collection(db, "tikrar_registrations"),
+      collection(db, "halaqah_registrations"),
       where("status", "==", "active")
     );
   }, [db, user?.uid]);
@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   const stats = [
     { label: "Menunggu Verifikasi", value: pending?.length || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Pendaftaran Aktif", value: active?.length || 0, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Total Pengguna", value: "...", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Total Halaqah", value: "4", icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50" },
   ];
 
   return (
@@ -71,14 +71,14 @@ export default function AdminDashboard() {
         <Card className="border-none shadow-md overflow-hidden">
           <CardHeader className="bg-muted/30">
             <CardTitle className="text-lg font-headline flex items-center justify-between">
-              Manajemen Tikrar
+              Manajemen Pendaftaran
               <Badge className="bg-amber-500">{pending?.length || 0} BARU</Badge>
             </CardTitle>
-            <CardDescription>Verifikasi pembayaran pendaftaran program Tikrar Daily.</CardDescription>
+            <CardDescription>Verifikasi pendaftaran berbayar & gratis untuk semua Halaqah.</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Tinjau bukti transfer dan aktifkan akses Juz pengguna secara manual.</p>
+              <p className="text-sm text-muted-foreground">Tinjau profil santri dan aktifkan akses kelas secara manual.</p>
               <Link href="/admin/registrations">
                 <Button className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
                   Buka Antrean Verifikasi <ArrowUpRight className="w-4 h-4" />

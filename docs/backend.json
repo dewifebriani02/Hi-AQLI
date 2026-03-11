@@ -5,131 +5,49 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user account within the AQLI Digital application, storing core profile information.",
+      "description": "Represents a user account within the AQLI Digital application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "roleId": { "type": "string" },
+        "isTikrarPaid": { "type": "boolean" },
+        "paidJuz": { "type": "number" },
+        "tikrarLevel": { "type": "number" },
+        "followedHalaqahs": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of Study Circle IDs the user has verified access to."
         },
-        "username": {
-          "type": "string",
-          "description": "The user's chosen username, used for login and display."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address, used for communication and account recovery.",
-          "format": "email"
-        },
-        "profilePictureUrl": {
-          "type": "string",
-          "description": "URL to the user's profile picture, if available.",
-          "format": "uri"
-        },
-        "roleId": {
-          "type": "string",
-          "description": "Reference to the user's assigned role, defining permissions and access levels."
-        },
-        "isTikrarPaid": {
-          "type": "boolean",
-          "description": "Flag indicating if the user has paid for the premium Tikrar Daily program."
-        },
-        "paidJuz": {
-          "type": "number",
-          "description": "The specific Juz number the user has paid for and has access to."
-        },
-        "tikrarLevel": {
-          "type": "number",
-          "description": "The memorization level chosen by the user (1-4)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the user account was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the user account was last updated.",
-          "format": "date-time"
-        }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "username",
-        "email",
-        "roleId",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "username", "email", "roleId", "createdAt", "updatedAt"]
     },
-    "TikrarRegistration": {
+    "HalaqahRegistration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "TikrarRegistration",
+      "title": "HalaqahRegistration",
       "type": "object",
-      "description": "Records a user's registration for the Tikrar Daily premium program.",
+      "description": "Records a user's registration for any study circle program.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the registration."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the registered user."
-        },
-        "userName": {
-          "type": "string"
-        },
-        "userEmail": {
-          "type": "string"
-        },
-        "batchName": {
-          "type": "string",
-          "description": "The name of the batch joined."
-        },
-        "whatsapp": {
-          "type": "string",
-          "description": "User's WhatsApp number."
-        },
-        "amount": {
-          "type": "number",
-          "description": "Total amount paid including unique code."
-        },
-        "paymentMethod": {
-          "type": "string"
-        },
-        "level": {
-          "type": "number",
-          "description": "Selected memorization level."
-        },
-        "targetJuz": {
-          "type": "number",
-          "description": "The Juz the user wants to memorize."
-        },
-        "senderName": {
-          "type": "string"
-        },
-        "proofFileName": {
-          "type": "string",
-          "description": "Name of the uploaded proof file."
-        },
-        "status": {
-          "type": "string",
-          "description": "Registration status (pending_verification, active, rejected)."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "halaqahId": { "type": "string" },
+        "halaqahTitle": { "type": "string" },
+        "isPaid": { "type": "boolean" },
+        "whatsapp": { "type": "string" },
+        "amount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "level": { "type": "number" },
+        "targetJuz": { "type": "number" },
+        "senderName": { "type": "string" },
+        "proofFileName": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending_verification", "active", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "userId",
-        "whatsapp",
-        "amount",
-        "level",
-        "targetJuz",
-        "status",
-        "createdAt"
-      ]
+      "required": ["id", "userId", "halaqahId", "status", "createdAt"]
     },
     "Role": {
       "type": "object",
@@ -139,10 +57,7 @@
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -150,53 +65,31 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
+          "schema": { "$ref": "#/backend/entities/User" },
           "description": "User profiles."
         }
       },
       {
-        "path": "/tikrar_registrations/{registrationId}",
+        "path": "/halaqah_registrations/{registrationId}",
         "definition": {
-          "entityName": "TikrarRegistration",
-          "schema": {
-            "$ref": "#/backend/entities/TikrarRegistration"
-          },
-          "description": "Tikrar Daily program registrations."
+          "entityName": "HalaqahRegistration",
+          "schema": { "$ref": "#/backend/entities/HalaqahRegistration" },
+          "description": "Halaqah program registrations."
         }
       },
       {
         "path": "/roles_admin/{userId}",
         "definition": {
           "entityName": "Role",
-          "schema": {
-            "$ref": "#/backend/entities/Role"
-          },
-          "description": "Admin access control collection. Use UID as Document ID."
-        }
-      },
-      {
-        "path": "/roles_superadmin/{userId}",
-        "definition": {
-          "entityName": "Role",
-          "schema": {
-            "$ref": "#/backend/entities/Role"
-          },
-          "description": "Super Admin access control collection. Use UID as Document ID."
+          "schema": { "$ref": "#/backend/entities/Role" },
+          "description": "Admin access control."
         }
       },
       {
         "path": "/donations/{donationId}",
         "definition": {
           "entityName": "Donation",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "amount": { "type": "number" },
-              "status": { "type": "string" }
-            }
-          },
+          "schema": { "type": "object" },
           "description": "General donations."
         }
       }
