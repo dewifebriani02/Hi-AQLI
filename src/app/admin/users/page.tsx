@@ -4,8 +4,8 @@
 import { useState } from "react";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, doc, serverTimestamp, Timestamp } from "firebase/firestore";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Search, UserCog, ShieldCheck, Mail, BookOpen, Zap, Loader2, ArrowLeft, CheckCircle2, Users, Calendar } from "lucide-react";
+import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -46,13 +46,25 @@ const LEVELS = [
   { id: "4", name: "Pemula" },
 ];
 
+const INITIAL_ADD_FORM = {
+  username: "",
+  email: "",
+  paidJuz: "30",
+  tikrarLevel: "3",
+  isTikrarPaid: false
+};
+
 export default function AdminUsersPage() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Add User States
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [addForm, setAddForm] = useState(INITIAL_ADD_FORM);
 
   const usersQuery = useMemoFirebase(() => {
     if (!db || !currentUser?.uid) return null;
@@ -71,7 +83,6 @@ export default function AdminUsersPage() {
 
     const userRef = doc(db, "users", editingUser.id);
     
-    // Prepare update data
     const updateData: any = {
       username: editingUser.username,
       paidJuz: parseInt(editingUser.paidJuz || "1"),
@@ -80,7 +91,6 @@ export default function AdminUsersPage() {
       updatedAt: serverTimestamp(),
     };
 
-    // Handle date conversion if it was edited
     if (editingUser.tempDate) {
       updateData.tikrarStartDate = Timestamp.fromDate(new Date(editingUser.tempDate));
     }
@@ -91,21 +101,140 @@ export default function AdminUsersPage() {
       title: "Data Diperbarui",
       description: `Profil ${editingUser.username} telah berhasil diupdate.`,
     });
-    setIsDialogOpen(false);
+    setIsEditDialogOpen(false);
+  };
+
+  const handleAddUser = async () => {
+    if (!addForm.username || !addForm.email) {
+      toast({ variant: "destructive", title: "Nama dan Email wajib diisi." });
+      return;
+    }
+
+    // Simple ID generation for placeholder users (ideally email-based or random)
+    const tempId = `user_${Date.now()}`;
+    const userRef = doc(db, "users", tempId);
+
+    try {
+      setDocumentNonBlocking(userRef, {
+        id: tempId,
+        username: addForm.username,
+        email: addForm.email,
+        paidJuz: parseInt(addForm.paidJuz),
+        tikrarLevel: parseInt(addForm.tikrarLevel),
+        isTikrarPaid: addForm.isTikrarPaid,
+        roleId: "learner",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      toast({
+        title: "User Ditambahkan",
+        description: `Profil ${addForm.username} berhasil dibuat di database.`,
+      });
+      setIsAddDialogOpen(false);
+      setAddForm(INITIAL_ADD_FORM);
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal menambah user." });
+    }
   };
 
   if (isLoading) return <div className="flex flex-col items-center justify-center py-32 gap-4"><Loader2 className="animate-spin h-10 w-10 text-[#800000]" /><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Daftar Peserta...</p></div>;
 
   return (
     <div className="flex flex-col gap-8 max-w-6xl mx-auto pb-32">
-      <div className="flex items-center gap-4 px-1 mt-4">
-        <Button asChild variant="ghost" size="icon" className="rounded-full hover:bg-muted">
-          <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold font-headline tracking-tight">Manajemen Peserta</h1>
-          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-[#800000]">Kelola Seluruh Santri Aktif</p>
+      <div className="flex items-center justify-between gap-4 px-1 mt-4">
+        <div className="flex items-center gap-4">
+          <Button asChild variant="ghost" size="icon" className="rounded-full hover:bg-muted">
+            <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold font-headline tracking-tight">Manajemen Peserta</h1>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-[#800000]">Kelola Seluruh Santri Aktif</p>
+          </div>
         </div>
+        
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
+              <UserPlus className="w-4 h-4" /> TAMBAH USER
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-[#800000]" />
+                Tambah User Baru
+              </DialogTitle>
+              <DialogDescription>
+                Masukkan data santri atau mu'allimah secara manual ke database.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase">Nama Pengguna</Label>
+                <Input 
+                  placeholder="Contoh: Mu'allimah Fatimah"
+                  value={addForm.username} 
+                  onChange={(e) => setAddForm({ ...addForm, username: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase">Email</Label>
+                <Input 
+                  type="email"
+                  placeholder="email@contoh.com"
+                  value={addForm.email} 
+                  onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase">Target Juz</Label>
+                  <Select 
+                    value={addForm.paidJuz}
+                    onValueChange={(val) => setAddForm({ ...addForm, paidJuz: val })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 30 }, (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase">Level Tikrar</Label>
+                  <Select 
+                    value={addForm.tikrarLevel}
+                    onValueChange={(val) => setAddForm({ ...addForm, tikrarLevel: val })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {LEVELS.map(l => (
+                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
+                <Label className="text-sm font-bold">Status Aktif Tikrar</Label>
+                <Button 
+                  variant={addForm.isTikrarPaid ? "default" : "outline"}
+                  className={cn("font-black text-[10px]", addForm.isTikrarPaid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
+                  onClick={() => setAddForm({ ...addForm, isTikrarPaid: !addForm.isTikrarPaid })}
+                >
+                  {addForm.isTikrarPaid ? 'AKTIF' : 'NON-AKTIF'}
+                </Button>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleAddUser} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black gap-2 h-12">
+                <CheckCircle2 className="w-5 h-5" /> SIMPAN USER
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="relative px-1">
@@ -174,9 +303,9 @@ export default function AdminUsersPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Dialog open={isDialogOpen && editingUser?.id === u.id} onOpenChange={(open) => {
+                      <Dialog open={isEditDialogOpen && editingUser?.id === u.id} onOpenChange={(open) => {
                         if (!open) setEditingUser(null);
-                        setIsDialogOpen(open);
+                        setIsEditDialogOpen(open);
                       }}>
                         <DialogTrigger asChild>
                           <Button 
