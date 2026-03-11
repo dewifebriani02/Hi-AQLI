@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog } from "lucide-react";
+import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog, Library } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -23,12 +23,9 @@ export default function AdminDashboard() {
     );
   }, [db, user?.uid]);
 
-  const activeQuery = useMemoFirebase(() => {
+  const halaqahQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("status", "==", "active")
-    );
+    return collection(db, "halaqahs");
   }, [db, user?.uid]);
 
   const usersQuery = useMemoFirebase(() => {
@@ -37,13 +34,13 @@ export default function AdminDashboard() {
   }, [db, user?.uid]);
 
   const { data: pending } = useCollection(pendingQuery);
-  const { data: active } = useCollection(activeQuery);
+  const { data: halaqahs } = useCollection(halaqahQuery);
   const { data: users } = useCollection(usersQuery);
 
   const stats = [
     { label: "Menunggu Verifikasi", value: pending?.length || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Santri Terdaftar", value: users?.length || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Total Halaqah", value: "4", icon: BookOpen, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: "Total Halaqah", value: halaqahs?.length || 0, icon: BookOpen, color: "text-emerald-600", bg: "bg-emerald-50" },
   ];
 
   return (
@@ -73,44 +70,58 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-none shadow-md overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-none shadow-md overflow-hidden flex flex-col">
           <CardHeader className="bg-muted/30">
             <CardTitle className="text-lg font-headline flex items-center justify-between">
               Verifikasi Pendaftaran
               <Badge className="bg-amber-500">{pending?.length || 0} BARU</Badge>
             </CardTitle>
-            <CardDescription>Tinjau bukti pembayaran dan aktifkan akses kelas manual.</CardDescription>
+            <CardDescription>Tinjau bukti pembayaran dan aktifkan akses kelas.</CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Aktifkan akun santri setelah validasi infaq atau pendaftaran gratis.</p>
-              <Link href="/admin/registrations">
-                <Button className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
-                  Buka Antrean Verifikasi <ArrowUpRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
+          <CardContent className="p-6 flex-1 flex flex-col justify-between">
+            <p className="text-sm text-muted-foreground mb-4">Aktifkan akun santri setelah validasi infaq atau pendaftaran gratis.</p>
+            <Link href="/admin/registrations" className="w-full">
+              <Button className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
+                Buka Antrean <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md overflow-hidden">
+        <Card className="border-none shadow-md overflow-hidden flex flex-col">
           <CardHeader className="bg-muted/30">
             <CardTitle className="text-lg font-headline flex items-center gap-2">
               Manajemen Peserta
               <UserCog className="w-5 h-5 text-[#800000]" />
             </CardTitle>
-            <CardDescription>Edit data santri, ganti target Juz, atau update level.</CardDescription>
+            <CardDescription>Edit data santri, target Juz, atau level.</CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Kelola hak akses dan profil santri yang sudah aktif dalam program.</p>
-              <Link href="/admin/users">
-                <Button variant="outline" className="w-full font-bold gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/5">
-                  Kelola Seluruh Peserta <Users className="w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
+          <CardContent className="p-6 flex-1 flex flex-col justify-between">
+            <p className="text-sm text-muted-foreground mb-4">Kelola hak akses dan profil santri yang sudah aktif dalam program.</p>
+            <Link href="/admin/users" className="w-full">
+              <Button variant="outline" className="w-full font-bold gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/5">
+                Kelola Santri <Users className="w-4 h-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-md overflow-hidden flex flex-col">
+          <CardHeader className="bg-muted/30">
+            <CardTitle className="text-lg font-headline flex items-center gap-2">
+              Manajemen Kelas
+              <Library className="w-5 h-5 text-[#800000]" />
+            </CardTitle>
+            <CardDescription>Tambah program baru atau edit materi.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 flex-1 flex flex-col justify-between">
+            <p className="text-sm text-muted-foreground mb-4">Update katalog kelas Tahsin, Tafsir, dan Tahfidz di HI AQLI.</p>
+            <Link href="/admin/classes" className="w-full">
+              <Button variant="secondary" className="w-full font-bold gap-2 bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90">
+                Atur Katalog <Library className="w-4 h-4" />
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

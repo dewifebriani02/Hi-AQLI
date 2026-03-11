@@ -6,42 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2 } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 
-const studyCircles = [
-  {
-    id: "tikrar-j30-b1",
-    title: "TIKRAR DAILY JUZ 30 - BATCH 1",
-    instructor: "Tim Asatizah AQLI",
-    description: "Program hafalan terstruktur dengan metode Tikrar 40x. Infaq pendaftaran sudah termasuk bimbingan & ujian.",
-    schedule: "Setiap Hari (Mandiri)",
-    level: "All Levels",
-    isPremium: true,
-    tag: "PENDAFTARAN DIBUKA"
-  },
-  {
-    id: "tafsir-j30",
-    title: "Tafsir Juz' Amma",
-    instructor: "Dr. Fatima Ahmed",
-    description: "Studi mendalam tentang makna dan konteks bagian terakhir Al-Qur'an, cocok untuk pemula.",
-    schedule: "Sabtu, 10:00 WIB",
-    level: "Pemula",
-    isPremium: false
-  },
-  {
-    id: "sirah-nabi",
-    title: "Sirah Nabi (SAW)",
-    instructor: "Ustadha Aisha Khan",
-    description: "Perjalanan melalui kehidupan Nabi Muhammad (SAW) dan dapatkan pelajaran abadi untuk hari ini.",
-    schedule: "Minggu, 14:00 WIB",
-    level: "Semua Level",
-    isPremium: false
-  },
-];
+// Special ID for Tikrar Premium logic
+const TIKRAR_ID = 'tikrar-j30-b1';
 
 export default function NgajiPage() {
   const [search, setSearch] = useState("");
@@ -55,7 +27,15 @@ export default function NgajiPage() {
 
   const { data: userData } = useDoc(userDocRef);
 
-  // Check all user registrations to manage UI states
+  // Fetch all classes from Firestore
+  const halaqahQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "halaqahs");
+  }, [db]);
+
+  const { data: dbHalaqahs, isLoading: isHalaqahsLoading } = useCollection(halaqahQuery);
+
+  // Check all user registrations
   const regQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return query(
@@ -66,7 +46,7 @@ export default function NgajiPage() {
 
   const { data: allRegs } = useCollection(regQuery);
 
-  const filteredCircles = studyCircles.filter((c) =>
+  const filteredCircles = dbHalaqahs?.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
     c.instructor.toLowerCase().includes(search.toLowerCase())
   );
@@ -74,7 +54,7 @@ export default function NgajiPage() {
   const getHalaqahStatus = (id: string) => {
     const reg = allRegs?.find(r => r.halaqahId === id);
     if (!reg) {
-      if (id === 'tikrar-j30-b1' && userData?.isTikrarPaid) return 'active';
+      if (id === TIKRAR_ID && userData?.isTikrarPaid) return 'active';
       if (userData?.followedHalaqahs?.includes(id)) return 'active';
       return 'none';
     }
@@ -85,18 +65,17 @@ export default function NgajiPage() {
   const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
 
   const getFollowingCount = () => {
-    return studyCircles.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id)).length;
+    return dbHalaqahs?.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id)).length || 0;
   };
 
-  const renderCircleCard = (circle: typeof studyCircles[0]) => {
+  const renderCircleCard = (circle: any) => {
     const status = getHalaqahStatus(circle.id);
     const isActive = status === 'active';
     const isPending = status === 'pending_verification';
     
-    // Updated paths to use /ngaji URL structure
     let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
-      href = circle.id === 'tikrar-j30-b1' ? '/hafal' : `/study-circles/${circle.id}`;
+      href = circle.id === TIKRAR_ID ? '/hafal' : `/study-circles/${circle.id}`;
     }
 
     return (
@@ -167,7 +146,7 @@ export default function NgajiPage() {
       <div className="flex flex-col gap-2 mt-4 px-1">
         <div className="flex items-center gap-2 text-[#800000] mb-1">
           <BookOpen className="w-5 h-5" />
-          <span className="text-xs font-bold uppercase tracking-widest">Hi Ngaji • Pendaftaran Kelas</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Ngaji • Pendaftaran Kelas</span>
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
@@ -199,28 +178,43 @@ export default function NgajiPage() {
         </TabsList>
 
         <div className="mt-6 flex flex-col gap-3 px-1">
-          <TabsContent value="all" className="space-y-3 m-0">
-            {filteredCircles.map(renderCircleCard)}
-          </TabsContent>
-
-          <TabsContent value="following" className="space-y-3 m-0">
-            {studyCircles
-              .filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id))
-              .map(renderCircleCard)}
-            {getFollowingCount() === 0 && (
-              <div className="py-20 text-center space-y-4">
-                <Users className="w-12 h-12 mx-auto text-muted-foreground/20" />
-                <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Belum ada kelas yang diikuti</p>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="completed" className="space-y-3 m-0">
-            <div className="py-20 text-center space-y-4">
-              <CheckCircle2 className="w-12 h-12 mx-auto text-muted-foreground/20" />
-              <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Belum ada materi yang selesai</p>
+          {isHalaqahsLoading ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="animate-spin text-[#800000] h-10 w-10" />
+              <p className="text-[10px] font-black uppercase text-muted-foreground">Memuat Program...</p>
             </div>
-          </TabsContent>
+          ) : (
+            <>
+              <TabsContent value="all" className="space-y-3 m-0">
+                {filteredCircles?.map(renderCircleCard)}
+                {(!filteredCircles || filteredCircles.length === 0) && (
+                  <div className="py-20 text-center space-y-4">
+                    <Library className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Belum ada kelas yang tersedia</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="following" className="space-y-3 m-0">
+                {dbHalaqahs
+                  ?.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id))
+                  .map(renderCircleCard)}
+                {getFollowingCount() === 0 && (
+                  <div className="py-20 text-center space-y-4">
+                    <Users className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Belum ada kelas yang diikuti</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="completed" className="space-y-3 m-0">
+                <div className="py-20 text-center space-y-4">
+                  <CheckCircle2 className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                  <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Belum ada materi yang selesai</p>
+                </div>
+              </TabsContent>
+            </>
+          )}
         </div>
       </Tabs>
     </div>

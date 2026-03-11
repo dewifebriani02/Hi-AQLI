@@ -24,6 +24,23 @@
       },
       "required": ["id", "username", "email", "roleId", "createdAt", "updatedAt"]
     },
+    "Halaqah": {
+      "title": "Halaqah",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "instructor": { "type": "string" },
+        "description": { "type": "string" },
+        "schedule": { "type": "string" },
+        "level": { "type": "string" },
+        "isPremium": { "type": "boolean" },
+        "tag": { "type": "string" },
+        "basePrice": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "instructor", "level"]
+    },
     "PageExamRequest": {
       "title": "PageExamRequest",
       "type": "object",
@@ -80,6 +97,14 @@
           "entityName": "User",
           "schema": { "$ref": "#/backend/entities/User" },
           "description": "User profiles."
+        }
+      },
+      {
+        "path": "/halaqahs/{halaqahId}",
+        "definition": {
+          "entityName": "Halaqah",
+          "schema": { "$ref": "#/backend/entities/Halaqah" },
+          "description": "Program and classes list."
         }
       },
       {

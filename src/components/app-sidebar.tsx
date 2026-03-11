@@ -25,6 +25,7 @@ import {
   Trophy,
   UserCog,
   LayoutGrid,
+  Library,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ const adminItems = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
   { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
   { href: "/admin/users", label: "Manajemen Peserta", icon: UserCog },
+  { href: "/admin/classes", label: "Manajemen Kelas", icon: Library },
 ];
 
 const navItems = [
