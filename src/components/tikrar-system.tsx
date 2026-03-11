@@ -101,17 +101,16 @@ export function TikrarSystem() {
   const [fontSize, setFontSize] = useState(18); 
   const [hasInitializedPage, setHasInitializedPage] = useState(false);
   
-  // Preparation States
   const [prepListenCount, setPrepListenCount] = useState(0);
   const [prepTranslationDone, setPrepTranslationDone] = useState(false);
 
-  // Audio States
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [playingVerseIndex, setPlayingVerseIndex] = useState<number | null>(null);
   const [currentLoop, setCurrentLoop] = useState(0);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -121,12 +120,7 @@ export function TikrarSystem() {
   });
 
   const [metaCounts, setMetaCounts] = useState<Record<string, number>>({
-    '1_2': 0,
-    '2_3': 0,
-    '1_2_3': 0,
-    '3_4': 0,
-    '2_3_4': 0,
-    '1_2_3_4': 0,
+    '1_2': 0, '2_3': 0, '1_2_3': 0, '3_4': 0, '2_3_4': 0, '1_2_3_4': 0,
   });
 
   useEffect(() => {
@@ -136,13 +130,9 @@ export function TikrarSystem() {
       setPage(startPage);
       setHasInitializedPage(true);
     }
-    
     const savedReciter = localStorage.getItem('aqli_reciter_id');
     if (savedReciter) setSelectedReciterId(parseInt(savedReciter));
   }, [userData, paidJuz, isUserDataLoading, hasInitializedPage]);
-
-  const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1] || 1, [juz]);
-  const nextJuzStartPage = juz < 30 ? JUZ_PAGES[juz] : 605;
 
   useEffect(() => {
     async function fetchVerses() {
@@ -189,9 +179,17 @@ export function TikrarSystem() {
       });
       setMetaCounts({ '1_2': 0, '2_3': 0, '1_2_3': 0, '3_4': 0, '2_3_4': 0, '1_2_3_4': 0 });
     }
-
     fetchVerses();
   }, [page]);
+
+  useEffect(() => {
+    if (playingVerseIndex !== null && scrollContainerRef.current) {
+      const activeVerseEl = document.getElementById(`prep-verse-${playingVerseIndex}`);
+      if (activeVerseEl) {
+        activeVerseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [playingVerseIndex]);
 
   useEffect(() => {
     if (!loading && typeof window !== 'undefined') {
@@ -218,7 +216,6 @@ export function TikrarSystem() {
     };
   }, [verses]);
 
-  // Audio Logic
   const stopAutoPlay = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -229,8 +226,8 @@ export function TikrarSystem() {
   };
 
   const playVerse = async (vIndex: number, loopNum: number) => {
-    if (!selectedReciterId || vIndex >= verses.length) {
-      if (loopNum < 4) { // Finish 1 loop (0-indexed, so 4 means 5 cycles)
+    if (vIndex >= verses.length) {
+      if (loopNum < 4) { 
         setPrepListenCount(p => Math.min(5, p + 1));
         setCurrentLoop(loopNum + 1);
         playVerse(0, loopNum + 1);
@@ -276,6 +273,9 @@ export function TikrarSystem() {
     localStorage.setItem('aqli_reciter_id', id.toString());
     setShowReciterDialog(false);
   };
+
+  const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1] || 1, [juz]);
+  const nextJuzStartPage = juz < 30 ? JUZ_PAGES[juz] : 605;
 
   const isPrepTuntas = prepListenCount >= PREP_LISTEN_THRESHOLD && prepTranslationDone;
   const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
@@ -357,29 +357,20 @@ export function TikrarSystem() {
         </div>
       </div>
 
-      <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1">
-        <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
-          <strong>Aturan Itqan:</strong> Unit Maqta wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
-          Selesaikan Tahap Persiapan sebelum lanjut ke Blok A-D.
-        </div>
-      </div>
-
+      {/* TAHAP PERSIAPAN */}
       <TooltipProvider delayDuration={0}>
-        <div className="flex flex-col gap-10">
-          
-          {/* TAHAP PERSIAPAN */}
-          <Card className={cn(
-            "border-2 transition-all shadow-md overflow-hidden",
-            isPrepTuntas ? "border-emerald-500 bg-emerald-50/10" : "border-[#800000]/30 bg-[#800000]/5"
-          )}>
-            <div className="bg-[#800000]/10 py-2 px-4 border-b flex justify-between items-center">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">
-                Tahap 0: Persiapan (Prasyarat)
-              </span>
-              {isPrepTuntas && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
-            </div>
-            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card className={cn(
+          "border-2 transition-all shadow-md overflow-hidden",
+          isPrepTuntas ? "border-emerald-500 bg-emerald-50/10" : "border-[#800000]/30 bg-[#800000]/5"
+        )}>
+          <div className="bg-[#800000]/10 py-2 px-4 border-b flex justify-between items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">
+              Tahap 0: Persiapan (Prasyarat)
+            </span>
+            {isPrepTuntas && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
+          </div>
+          <CardContent className="p-6 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -391,21 +382,29 @@ export function TikrarSystem() {
                     </div>
                     <div>
                       <h4 className="text-sm font-bold">Simak Murattal 5x</h4>
-                      <p className="text-[10px] text-muted-foreground">Otomatis putar se-halaman</p>
+                      <p className="text-[10px] text-muted-foreground">Putar otomatis & teks berjalan</p>
                     </div>
                   </div>
                   <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold text-[#800000] gap-1 bg-white border">
-                        <Mic2 className="w-3 h-3" /> Qari
+                      <Button variant="outline" size="icon" className="rounded-xl w-10 h-10">
+                        <Mic2 className="w-5 h-5" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader><DialogTitle>Pilih Qari Simak</DialogTitle></DialogHeader>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Pilih Qori'</DialogTitle>
+                      </DialogHeader>
                       <div className="grid gap-2 py-4">
-                        {RECITERS.map((r) => (
-                          <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className="justify-between font-bold">
-                            {r.name} {selectedReciterId === r.id && <Check className="h-4 w-4" />}
+                        {RECITERS.map((reciter) => (
+                          <Button
+                            key={reciter.id}
+                            variant={selectedReciterId === reciter.id ? "default" : "outline"}
+                            onClick={() => selectReciter(reciter.id)}
+                            className="justify-start gap-3"
+                          >
+                            {selectedReciterId === reciter.id && <Check className="w-4 h-4" />}
+                            {reciter.name}
                           </Button>
                         ))}
                       </div>
@@ -440,7 +439,7 @@ export function TikrarSystem() {
                     {isAutoPlaying && (
                       <div className="flex items-center justify-center gap-2 animate-pulse">
                         <span className="text-[10px] font-black text-rose-600 uppercase">
-                          Siklus {currentLoop + 1} • Memutar Ayat {playingVerseIndex !== null ? verses[playingVerseIndex]?.verse_key.split(':')[1] : '-'}
+                          Siklus {currentLoop + 1} • Memutar Ayat {playingVerseIndex !== null && verses[playingVerseIndex] ? verses[playingVerseIndex].verse_key.split(':')[1] : '-'}
                         </span>
                       </div>
                     )}
@@ -472,10 +471,77 @@ export function TikrarSystem() {
                   {prepTranslationDone ? "SUDAH DIPAHAMI" : "KONFIRMASI PEMAHAMAN"}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* BLOK A - D */}
+            {/* MUSHAF VISUAL FOR PREPARATION */}
+            <div className="pt-4 border-t border-[#800000]/10">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-[#800000]/60 flex items-center gap-2">
+                  <BookOpen className="w-3 h-3" /> Tampilan Mushaf Persiapan
+                </h4>
+                {isAutoPlaying && <Badge className="bg-amber-500 text-white text-[8px] font-black animate-pulse">TEKS BERJALAN AKTIF</Badge>}
+              </div>
+              <div 
+                ref={scrollContainerRef}
+                className="bg-[#fffcf5] p-6 rounded-3xl border-2 border-[#800000]/10 max-h-[400px] overflow-y-auto no-scrollbar relative shadow-inner" 
+                dir="rtl"
+              >
+                <div className="flex flex-wrap justify-center gap-x-2 gap-y-6">
+                  {verses.map((v, vIdx) => {
+                    const isVerseActive = isAutoPlaying && playingVerseIndex === vIdx;
+                    return (
+                      <div 
+                        key={v.id} 
+                        id={`prep-verse-${vIdx}`}
+                        className={cn(
+                          "flex flex-wrap justify-center items-center gap-x-1 gap-y-2 transition-all duration-500 rounded-2xl p-2",
+                          isVerseActive ? "bg-amber-100/80 shadow-md ring-2 ring-amber-400 scale-[1.02]" : "opacity-80"
+                        )}
+                      >
+                        {v.words.map((word, wIdx) => (
+                          <Tooltip key={`${v.id}-${wIdx}`}>
+                            <TooltipTrigger asChild>
+                              <span 
+                                style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
+                                className={cn(
+                                  "font-arabic transition-all duration-300 rounded px-0.5 outline-none cursor-help select-none",
+                                  isVerseActive ? "text-[#800000] font-bold" : "text-foreground/80 hover:bg-muted/50"
+                                )}
+                              >
+                                {word.text_uthmani}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipPortal>
+                              <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                                <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
+                              </TooltipContent>
+                            </TooltipPortal>
+                          </Tooltip>
+                        ))}
+                        <span className={cn(
+                          "inline-flex items-center justify-center px-2 py-0.5 rounded-full border text-[10px] font-bold mx-1 translate-y-[-2px] transition-all",
+                          isVerseActive ? "bg-[#800000] text-white border-[#800000] scale-110 shadow-lg" : "bg-white/50 text-muted-foreground"
+                        )}>
+                          ({v.verse_key.split(':')[1]})
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-col gap-10 mt-10">
+          <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1">
+            <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
+              <strong>Aturan Itqan:</strong> Unit Maqta wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
+              Selesaikan Tahap Persiapan sebelum lanjut ke Blok A-D.
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MaqtaCard id={1} page={page} state={blocks[1]} verses={blockVerses[1]} isLocked={!isPrepTuntas} onIncrement={setBlocks} fontSize={fontSize} letter="A" />
             <MaqtaCard id={2} page={page} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasTM(1)} onIncrement={setBlocks} fontSize={fontSize} letter="B" />
@@ -615,7 +681,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             {isLocked || state.b.count < PASS_THRESHOLD ? <Lock className="w-2 h-2" /> : null}
             {page}{letter} GABUNGAN
           </span>
-          <span className="text-sm leading-none">{state.combined.count} / 40</span>
+          <span className="text-sm leading-none">{state.combined.count} / {PASS_THRESHOLD}</span>
           {isDoneG && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
         </Button>
       </CardContent>
@@ -686,7 +752,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
       </span>
       <div className="flex items-baseline gap-0.5 leading-none">
         <span className="text-base font-black">{count}</span>
-        <span className="text-[8px] font-bold opacity-40">/ 40</span>
+        <span className="text-[8px] font-bold opacity-40">/ {threshold}</span>
       </div>
       {isLocked && <Lock className="absolute top-1 right-1 w-2 h-2 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="absolute top-1 right-1 w-3 h-3 text-current" />}
