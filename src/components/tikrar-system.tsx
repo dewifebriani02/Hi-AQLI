@@ -25,7 +25,11 @@ import {
   Play,
   Pause,
   Headphones,
-  Languages
+  Languages,
+  GraduationCap,
+  MessageSquare,
+  ClipboardCheck,
+  Sparkles
 } from "lucide-react";
 import {
   Tooltip,
@@ -42,8 +46,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
@@ -104,6 +109,7 @@ export function TikrarSystem() {
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(18); 
   const [hasInitializedPage, setHasInitializedPage] = useState(false);
+  const [isRequestingExam, setIsRequestingExam] = useState(false);
   
   const [prepListenCount, setPrepListenCount] = useState(0);
   const [prepTranslationDone, setPrepTranslationDone] = useState(false);
@@ -117,6 +123,19 @@ export function TikrarSystem() {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioUrlRef = useRef<string | null>(null);
+
+  // Check for existing exam requests
+  const examQuery = useMemoFirebase(() => {
+    if (!db || !user || !page) return null;
+    return query(
+      collection(db, "page_exams"),
+      where("userId", "==", user.uid),
+      where("page", "==", page)
+    );
+  }, [db, user?.uid, page]);
+
+  const { data: examRequests } = useCollection(examQuery);
+  const activeExam = examRequests?.find(r => r.status !== 'failed');
 
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -305,6 +324,34 @@ export function TikrarSystem() {
     nextAudioUrlRef.current = null;
     
     playVerse(0, 0);
+  };
+
+  const handleRequestExam = async () => {
+    if (!user || isRequestingExam) return;
+    
+    setIsRequestingExam(true);
+    try {
+      await addDocumentNonBlocking(collection(db, "page_exams"), {
+        userId: user.uid,
+        userName: userData?.username || user.displayName || "Thalibah",
+        page: page,
+        juz: juz,
+        status: "requested",
+        requestedAt: serverTimestamp()
+      });
+      
+      const text = `Assalamu'alaikum Admin, saya ${userData?.username || user.displayName} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
+      window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(text)}`, '_blank');
+      
+      toast({
+        title: "Permohonan Dikirim",
+        description: "Admin akan segera menjadwalkan ujian lisan Anda.",
+      });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal mengajukan ujian" });
+    } finally {
+      setIsRequestingExam(false);
+    }
   };
 
   useEffect(() => {
@@ -588,17 +635,71 @@ export function TikrarSystem() {
             <MetaStep label="GABUNG SELURUH HALAMAN (A - D)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
           </div>
 
+          {/* TAHAP UJIAN HALAMAN */}
           {isMetaTuntas('1_2_3_4') && (
-            <Card className="bg-emerald-600 text-white border-none shadow-xl animate-in zoom-in duration-500">
-              <CardContent className="p-8 text-center flex flex-col items-center gap-4">
-                <CheckCircle2 className="w-16 h-16" />
-                <h4 className="text-2xl font-black font-headline">Masyallah, Halaman Tuntas!</h4>
-                <p className="text-sm opacity-90 max-w-sm">Anda telah menyelesaikan seluruh urutan repetisi untuk halaman ini. Silakan ajukan jadwal ujian lisan kepada Admin.</p>
-                <Button asChild className="bg-white text-emerald-700 font-black px-10 h-14 rounded-2xl shadow-lg mt-2">
-                  <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20Juz%20${juz}.%20Mohon%20jadwal%20ujian.`} target="_blank">AJUKAN UJIAN SEKARANG</a>
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-6 mt-4 animate-in zoom-in duration-500">
+              <div className="flex items-center gap-2 px-1">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <h4 className="text-xl font-black font-headline text-[#800000] uppercase tracking-widest">Tahap Ujian Halaman</h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Simulasi Ujian Mandiri */}
+                <Card className="border-none bg-blue-600 text-white shadow-xl overflow-hidden group hover:scale-[1.02] transition-transform">
+                  <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
+                    <div className="space-y-2">
+                      <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
+                        <ClipboardCheck className="w-6 h-6" />
+                      </div>
+                      <h5 className="text-lg font-black leading-tight">Simulasi Ujian Mandiri</h5>
+                      <p className="text-[11px] opacity-80 leading-relaxed">
+                        Uji pemahaman terjemahan per kata, per kalimat, tebak nomor ayat, dan sambung ayat untuk satu halaman ini.
+                      </p>
+                    </div>
+                    <Button asChild className="bg-white text-blue-700 font-black w-full rounded-xl hover:bg-blue-50 h-12 shadow-lg">
+                      <Link href={`/tajweed/simulation?page=${page}`}>MULAI SIMULASI <ArrowRight className="ml-2 w-4 h-4" /></Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Ajukan Ujian Lisan */}
+                <Card className={cn(
+                  "border-none shadow-xl overflow-hidden transition-all",
+                  activeExam ? "bg-emerald-600 text-white" : "bg-amber-500 text-white hover:scale-[1.02]"
+                )}>
+                  <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
+                    <div className="space-y-2">
+                      <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
+                        {activeExam ? <CheckCircle2 className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
+                      </div>
+                      <h5 className="text-lg font-black leading-tight">
+                        {activeExam ? "Ujian Telah Diajukan" : "Ajukan Ujian Lisan"}
+                      </h5>
+                      <p className="text-[11px] opacity-80 leading-relaxed">
+                        {activeExam 
+                          ? `Permohonan Anda sedang diproses. Status saat ini: ${activeExam.status.toUpperCase()}. Mohon tunggu instruksi Admin.`
+                          : "Ajukan jadwal ujian lisan resmi melalui Admin Sahabat AQLI untuk mendapatkan sertifikasi Itqan halaman ini."}
+                      </p>
+                    </div>
+                    {!activeExam && (
+                      <Button 
+                        onClick={handleRequestExam} 
+                        disabled={isRequestingExam}
+                        className="bg-white text-amber-700 font-black w-full rounded-xl hover:bg-amber-50 h-12 shadow-lg"
+                      >
+                        {isRequestingExam ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 w-4 h-4 fill-current" /> AJUKAN SEKARANG</>}
+                      </Button>
+                    )}
+                    {activeExam?.status === 'scheduled' && (
+                      <div className="bg-white/20 p-3 rounded-xl flex items-center gap-3">
+                        <Clock className="w-4 h-4" />
+                        <span className="text-[10px] font-bold">Terjadwal: Cek WhatsApp Anda untuk detail.</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           )}
         </div>
       </TooltipProvider>
@@ -778,4 +879,10 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
       {isDone && <CheckCircle2 className="absolute top-1 right-1 w-3 h-3 text-current" />}
     </div>
   );
+}
+
+function ArrowRight(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+  )
 }

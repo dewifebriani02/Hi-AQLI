@@ -24,6 +24,19 @@
       },
       "required": ["id", "username", "email", "roleId", "createdAt", "updatedAt"]
     },
+    "PageExamRequest": {
+      "title": "PageExamRequest",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "page": { "type": "number" },
+        "juz": { "type": "number" },
+        "status": { "type": "string", "enum": ["requested", "scheduled", "passed", "failed"] },
+        "requestedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "page", "status", "requestedAt"]
+    },
     "HalaqahRegistration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "HalaqahRegistration",
@@ -67,6 +80,14 @@
           "entityName": "User",
           "schema": { "$ref": "#/backend/entities/User" },
           "description": "User profiles."
+        }
+      },
+      {
+        "path": "/page_exams/{examId}",
+        "definition": {
+          "entityName": "PageExamRequest",
+          "schema": { "$ref": "#/backend/entities/PageExamRequest" },
+          "description": "Requests for page-wide oral exams."
         }
       },
       {
