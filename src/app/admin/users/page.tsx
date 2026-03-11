@@ -34,7 +34,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Search, UserCog, ShieldCheck, Mail, BookOpen, Zap, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Search, UserCog, ShieldCheck, Mail, BookOpen, Zap, Loader2, ArrowLeft, CheckCircle2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
