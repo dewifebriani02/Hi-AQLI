@@ -20,8 +20,8 @@ export const Logo = ({ className }: { className?: string }) => (
         <path d="M35 30C30 40 30 60 35 70" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round" />
       </svg>
     </div>
-    <span className="font-arabic text-2xl font-bold tracking-tight text-[#800000]">
-      AQLI
+    <span className="font-headline text-2xl font-black tracking-tight text-[#800000]">
+      HI AQLI
     </span>
   </div>
 );

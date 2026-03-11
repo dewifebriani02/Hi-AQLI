@@ -90,7 +90,7 @@ export default function DashboardPage() {
           </div>
           <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight">
             Assalamu'alaikum,<br />
-            {user?.displayName?.split(' ')[0] || 'Sahabat AQLI'}!
+            {user?.displayName?.split(' ')[0] || 'User HI AQLI'}!
           </h1>
         </div>
         <Link href="/leaderboard" className="flex flex-col items-end gap-1 group">
@@ -149,7 +149,7 @@ export default function DashboardPage() {
                   </span>
                   <div className={cn(
                     "w-6 h-6 rotate-45 border-2 rounded-sm flex items-center justify-center transition-all",
-                    day.active ? "bg-emerald-500 border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-muted-foreground/20"
+                    day.active ? "bg-emerald-50 border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-muted-foreground/20"
                   )}>
                     {day.active && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                   </div>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Gunakan Sahabat AQLI untuk melacak khatam 90% atau lebih Al-Qur'an selama Ramadhan dan kami akan mewakafkan satu mushaf atas nama Anda!
+                Gunakan HI AQLI untuk melacak khatam 90% atau lebih Al-Qur'an selama Ramadhan dan kami akan mewakafkan satu mushaf atas nama Anda!
               </p>
             </div>
 
@@ -283,7 +283,7 @@ export default function DashboardPage() {
                 <div className="space-y-2 relative z-10">
                   <Badge className="bg-white/20 text-white border-none text-[10px] font-bold">KOMPETISI</Badge>
                   <h4 className="font-bold text-lg">Papan Peringkat</h4>
-                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Lihat peringkat Anda dan bersainglah dalam kebaikan bersama Sahabat AQLI lainnya.</p>
+                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Lihat peringkat Anda dan bersainglah dalam kebaikan bersama pengguna HI AQLI lainnya.</p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider">
                   Lihat Juara <ChevronRight className="w-3 h-3" />
@@ -303,7 +303,7 @@ export default function DashboardPage() {
                   <Badge className="bg-white/20 text-white border-none text-[10px] font-bold tracking-widest">WAKAF DIGITAL</Badge>
                   <h4 className="font-bold text-xl">Infaq &amp; Sedekah</h4>
                   <p className="text-sm text-white/70 max-w-sm leading-relaxed">
-                    Dukung pemeliharaan infrastruktur AI Sahabat AQLI untuk manfaat umat yang lebih luas dan berkelanjutan.
+                    Dukung pemeliharaan infrastruktur AI HI AQLI untuk manfaat umat yang lebih luas dan berkelanjutan.
                   </p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-widest">

@@ -3,8 +3,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Sahabat AQLI',
-    short_name: 'AQLI',
+    name: 'HI AQLI',
+    short_name: 'HI AQLI',
     description: 'Pendamping Anda menuju keunggulan Al-Qur\'an.',
     start_url: '/',
     display: 'standalone',

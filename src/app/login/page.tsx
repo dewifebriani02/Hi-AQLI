@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -54,7 +55,7 @@ export default function LoginPage() {
             <LogIn className="w-6 h-6 text-[#800000]" />
           </div>
           <CardTitle className="text-2xl font-bold font-headline">Selamat Datang Kembali</CardTitle>
-          <CardDescription>Masuk ke akun Sahabat AQLI Anda</CardDescription>
+          <CardDescription>Masuk ke akun HI AQLI Anda</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">

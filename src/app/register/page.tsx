@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -71,7 +72,7 @@ export default function RegisterPage() {
             <UserPlus className="w-6 h-6 text-[#800000]" />
           </div>
           <CardTitle className="text-2xl font-bold font-headline">Daftar Akun Baru</CardTitle>
-          <CardDescription>Bergabunglah dengan komunitas Sahabat AQLI</CardDescription>
+          <CardDescription>Bergabunglah dengan komunitas HI AQLI</CardDescription>
         </CardHeader>
         <form onSubmit={handleRegister}>
           <CardContent className="space-y-4">

@@ -341,12 +341,12 @@ export function TikrarSystem() {
         requestedAt: serverTimestamp()
       });
       
-      const text = `Assalamu'alaikum Admin, saya ${userData?.username || user.displayName} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
+      const text = `Assalamu'alaikum Admin HI AQLI, saya ${userData?.username || user.displayName} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
       window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(text)}`, '_blank');
       
       toast({
         title: "Permohonan Dikirim",
-        description: "Admin akan segera menjadwalkan ujian lisan Anda.",
+        description: "Admin HI AQLI akan segera menjadwalkan ujian lisan Anda.",
       });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal mengajukan ujian" });
@@ -414,7 +414,7 @@ export function TikrarSystem() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2">
                 <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
-                  Tikrar Daily System
+                  HI AQLI Tikrar System
                 </Badge>
                 <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
               </div>
@@ -604,8 +604,8 @@ export function TikrarSystem() {
           <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1 shadow-sm">
             <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
-              <strong>Aturan Itqan:</strong> Unit Maqta wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
-              Selesaikan Tahap Persiapan (Simak 5x & Paham Arti) sebelum lanjut ke Blok A-D.
+              <strong>Aturan Itqan HI AQLI:</strong> Unit Maqta wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
+              Selesaikan Tahap Persiapan sebelum lanjut ke Blok A-D.
             </div>
           </div>
 
@@ -690,7 +690,7 @@ export function TikrarSystem() {
                       <p className="text-[11px] opacity-80 leading-relaxed">
                         {activeExam 
                           ? `Permohonan Anda sedang diproses. Status saat ini: ${activeExam.status.toUpperCase()}. Mohon tunggu instruksi Admin.`
-                          : "Ajukan jadwal ujian lisan resmi melalui Admin Sahabat AQLI untuk mendapatkan sertifikasi Itqan halaman ini."}
+                          : "Ajukan jadwal ujian lisan resmi melalui Admin HI AQLI untuk mendapatkan sertifikasi Itqan halaman ini."}
                       </p>
                     </div>
                     {!activeExam && (
@@ -785,7 +785,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
         
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox 
-            label={`${page}{letter}-1`} 
+            label={`${page}${letter}-1`} 
             count={state.a.count} 
             isLocked={isLocked} 
             onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} 
@@ -793,7 +793,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             threshold={PASS_THRESHOLD} 
           />
           <CounterBox 
-            label={`${page}{letter}-2`} 
+            label={`${page}${letter}-2`} 
             count={state.b.count} 
             isLocked={isLocked || state.a.count < PASS_THRESHOLD} 
             onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} 

@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 const paymentMethods = [
-  { id: 'transfer', label: 'Transfer Bank', icon: Landmark, detail: 'Bank Syariah Indonesia (BSI) - 7123456789 a.n. Sahabat AQLI' },
+  { id: 'transfer', label: 'Transfer Bank', icon: Landmark, detail: 'Bank Syariah Indonesia (BSI) - 7123456789 a.n. HI AQLI' },
   { id: 'qris', label: 'QRIS / E-Wallet', icon: QrCode, detail: 'Gopay, OVO, ShopeePay, Dana' },
   { id: 'debit', label: 'Kartu Debit', icon: CreditCard, detail: 'Mandiri, BNI, BRI, BCA (GPN/Visa/Mastercard)' },
 ];
@@ -133,7 +133,7 @@ export default function DonatePage() {
             <div className="space-y-2">
               <h2 className="text-2xl font-bold font-headline text-[#800000]">Jazakallahu Khairan!</h2>
               <p className="text-muted-foreground">
-                Terima kasih, <strong>{senderName}</strong>. Konfirmasi donasi Anda telah kami terima dan sedang dalam proses verifikasi manual oleh tim AQLI Digital.
+                Terima kasih, <strong>{senderName}</strong>. Konfirmasi donasi Anda telah kami terima dan sedang dalam proses verifikasi manual oleh tim HI AQLI.
               </p>
             </div>
             <Button onClick={() => window.location.href = '/'} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold">
@@ -160,7 +160,7 @@ export default function DonatePage() {
             <HeartHandshake className="h-8 w-8" />
           </div>
           <CardTitle className="font-headline text-2xl text-[#800000]">
-            {step === 1 ? "Dukung Sahabat AQLI" : "Instruksi Pembayaran"}
+            {step === 1 ? "Dukung HI AQLI" : "Instruksi Pembayaran"}
           </CardTitle>
           <CardDescription>
             {step === 1 
@@ -263,7 +263,7 @@ export default function DonatePage() {
                         Salin
                       </Button>
                     </div>
-                    <p className="text-xs text-center font-medium">a.n. Yayasan Sahabat AQLI Digital</p>
+                    <p className="text-xs text-center font-medium">a.n. Yayasan HI AQLI</p>
                   </div>
                 )}
 
