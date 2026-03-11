@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { HeartHandshake, CheckCircle2, Loader2, CreditCard, Landmark, Wallet, QrCode, Copy, Calendar, User, ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { HeartHandshake, CheckCircle2, Loader2, Landmark, QrCode, Copy, Calendar, User, ArrowLeft, Image as ImageIcon, CreditCard } from "lucide-react";
 import { useFirestore, useUser } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, serverTimestamp } from "firebase/firestore";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -25,7 +26,7 @@ export default function DonatePage() {
   const { toast } = useToast();
   
   // States
-  const [step, setStep] = useState(1); // 1: Amount/Method, 2: Instruction/Confirm
+  const [step, setStep] = useState(1); 
   const [amount, setAmount] = useState<number>(0);
   const [customAmount, setCustomAmount] = useState<string>("");
   const [method, setMethod] = useState<string>("transfer");
@@ -41,7 +42,6 @@ export default function DonatePage() {
   const donationAmounts = [10000, 25000, 50000, 100000];
 
   useEffect(() => {
-    // Generate unique code once when entering step 2
     if (step === 2) {
       setUniqueCode(Math.floor(100 + Math.random() * 899));
     }
@@ -80,22 +80,13 @@ export default function DonatePage() {
       return;
     }
 
-    if (method === 'debit' && !debitNumber) {
-      toast({
-        variant: "destructive",
-        title: "Nomor kartu kosong",
-        description: "Mohon masukkan 4 digit terakhir nomor kartu debit Anda.",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       const baseAmount = amount || parseInt(customAmount);
       const finalAmount = baseAmount + uniqueCode;
       const transactionId = `AQLI-${Date.now()}-${uniqueCode}`;
 
-      await addDoc(collection(db, "donations"), {
+      addDocumentNonBlocking(collection(db, "donations"), {
         userId: user?.uid || null,
         amount: finalAmount,
         baseAmount: baseAmount,
@@ -118,12 +109,7 @@ export default function DonatePage() {
         description: "Donasi Anda sedang kami verifikasi. Jazakallahu Khairan!",
       });
     } catch (error) {
-      console.error("Donation Error:", error);
-      toast({
-        variant: "destructive",
-        title: "Gagal Mengirim Konfirmasi",
-        description: "Terjadi kesalahan teknis. Silakan coba lagi.",
-      });
+      // Errors are handled by non-blocking utility and listener
     } finally {
       setLoading(false);
     }
@@ -186,7 +172,6 @@ export default function DonatePage() {
         <CardContent className="space-y-8">
           {step === 1 ? (
             <>
-              {/* Amount Selection */}
               <div className="space-y-4">
                 <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Pilih Nominal</Label>
                 <div className="grid grid-cols-2 gap-3">
@@ -228,7 +213,6 @@ export default function DonatePage() {
                 </div>
               </div>
 
-              {/* Payment Method */}
               <div className="space-y-4">
                 <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Metode Pembayaran</Label>
                 <div className="flex flex-col gap-2">
@@ -256,7 +240,6 @@ export default function DonatePage() {
             </>
           ) : (
             <>
-              {/* Payment Instructions Step 2 */}
               <div className="bg-muted/30 p-6 rounded-2xl border-2 border-dashed border-[#800000]/20 space-y-6">
                 <div className="text-center space-y-2">
                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Total Pembayaran</p>
@@ -269,7 +252,7 @@ export default function DonatePage() {
                   <p className="text-[10px] text-[#800000] font-bold italic">*Termasuk kode unik {uniqueCode} untuk verifikasi otomatis</p>
                 </div>
 
-                <Separator />
+                <div className="h-px bg-border w-full" />
 
                 {method === 'transfer' && (
                   <div className="space-y-3">
@@ -317,7 +300,6 @@ export default function DonatePage() {
                 )}
               </div>
 
-              {/* Confirmation Form */}
               <div className="space-y-4">
                 <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Konfirmasi Pengiriman</Label>
                 <div className="grid gap-4">
@@ -345,15 +327,6 @@ export default function DonatePage() {
                         value={transferDate}
                         onChange={(e) => setTransferDate(e.target.value)}
                       />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Unggah Bukti Transfer (Opsional)</Label>
-                    <div className="flex items-center justify-center w-full border-2 border-dashed rounded-lg p-4 bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
-                      <div className="flex flex-col items-center gap-2">
-                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                        <span className="text-[10px] font-medium text-muted-foreground">Ketuk untuk pilih gambar</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -392,8 +365,4 @@ export default function DonatePage() {
       </Card>
     </div>
   );
-}
-
-function Separator() {
-  return <div className="h-px bg-border w-full" />;
 }

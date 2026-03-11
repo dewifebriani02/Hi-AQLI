@@ -2,12 +2,15 @@
 'use client';
 
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy, doc, updateDoc, writeBatch, serverTimestamp } from "firebase/firestore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { collection, query, where, orderBy, doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, XCircle, Phone, Mail, User, CreditCard, ImageIcon, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle2, Phone, Mail, User, ImageIcon, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -31,14 +34,12 @@ export default function AdminRegistrationsPage() {
     try {
       const batch = writeBatch(db);
 
-      // 1. Update Registration Status
       const regRef = doc(db, "tikrar_registrations", reg.id);
       batch.update(regRef, { 
         status: "active",
         verifiedAt: serverTimestamp()
       });
 
-      // 2. Update User Profile
       const userRef = doc(db, "users", reg.userId);
       batch.update(userRef, {
         isTikrarPaid: true,
@@ -47,19 +48,20 @@ export default function AdminRegistrationsPage() {
         updatedAt: serverTimestamp()
       });
 
-      await batch.commit();
+      batch.commit().catch(async (error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `tikrar_registrations/${reg.id}`,
+          operation: 'update',
+          requestResourceData: { status: 'active' }
+        }));
+      });
       
       toast({
         title: "Pendaftaran Berhasil Diverifikasi",
         description: `Akses Juz ${reg.targetJuz} telah dibuka untuk ${reg.userName}.`,
       });
     } catch (error) {
-      console.error("Approve Error:", error);
-      toast({
-        variant: "destructive",
-        title: "Gagal memproses",
-        description: "Terjadi kesalahan saat memperbarui database.",
-      });
+      // Handled centrally
     } finally {
       setProcessingId(null);
     }
@@ -67,12 +69,8 @@ export default function AdminRegistrationsPage() {
 
   const handleReject = async (regId: string) => {
     if (!confirm("Tolak pendaftaran ini?")) return;
-    try {
-      await updateDoc(doc(db, "tikrar_registrations", regId), { status: "rejected" });
-      toast({ title: "Pendaftaran Ditolak" });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Gagal menolak" });
-    }
+    updateDocumentNonBlocking(doc(db, "tikrar_registrations", regId), { status: "rejected" });
+    toast({ title: "Pendaftaran Ditolak" });
   };
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-[#800000]" /></div>;
@@ -109,7 +107,6 @@ export default function AdminRegistrationsPage() {
               </div>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {/* User Info */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-[#800000]" />
@@ -125,7 +122,6 @@ export default function AdminRegistrationsPage() {
                     </div>
                   </div>
 
-                  {/* Payment Info */}
                   <div className="space-y-3 bg-[#800000]/5 p-4 rounded-xl border border-[#800000]/10">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase">Target Juz</span>
@@ -141,7 +137,6 @@ export default function AdminRegistrationsPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex flex-col gap-2 justify-center">
                     <div className="bg-muted p-2 rounded flex items-center gap-2 text-[10px] mb-2 font-medium overflow-hidden">
                       <ImageIcon className="w-3 h-3 shrink-0" />
