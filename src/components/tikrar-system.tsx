@@ -48,7 +48,7 @@ const LEVELS = [
 
 const TARGET_MAX = 40;
 const PASS_THRESHOLD = 5; 
-const TARGET_META = 5; 
+const META_PASS_THRESHOLD = 10; 
 
 interface Word {
   text_uthmani: string;
@@ -82,7 +82,7 @@ export function TikrarSystem() {
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fontSize, setFontSize] = useState(32);
+  const [fontSize, setFontSize] = useState(18); // Default font 18px
   
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -180,7 +180,7 @@ export function TikrarSystem() {
   }, [verses]);
 
   const isTuntas = (bid: number) => blocks[bid].combined.count >= PASS_THRESHOLD;
-  const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= TARGET_META;
+  const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= META_PASS_THRESHOLD;
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
@@ -192,7 +192,7 @@ export function TikrarSystem() {
     });
     // 6 Meta steps
     Object.keys(metaCounts).forEach(k => {
-      totalDone += (Math.min(metaCounts[k], TARGET_META) / TARGET_META) * PASS_THRESHOLD;
+      totalDone += (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * PASS_THRESHOLD;
     });
     const totalTarget = (12 * PASS_THRESHOLD) + (6 * PASS_THRESHOLD);
     return Math.min(100, (totalDone / totalTarget) * 100);
@@ -246,7 +246,7 @@ export function TikrarSystem() {
           </Button>
         </div>
         <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.max(16, f - 4))}><Minus className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.max(12, f - 4))}><Minus className="h-4 w-4" /></Button>
           <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.min(64, f + 4))}><Plus className="h-4 w-4" /></Button>
         </div>
@@ -254,37 +254,37 @@ export function TikrarSystem() {
 
       <TooltipProvider delayDuration={0}>
         <div className="flex flex-col gap-10">
-          {/* STEP 1 & 2: TM1 AND TM2 */}
+          {/* STEP 1 & 2 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <BlockCard id={1} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} />
             <BlockCard id={2} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntas(1)} onIncrement={setBlocks} fontSize={fontSize} />
           </div>
 
-          {/* META 1+2 */}
+          {/* GABUNG 1 & 2 (10x to unlock TM3) */}
           <MetaStep 
-            label="GABUNG BLOK 1 & 2" 
+            label="GABUNG TM1 & TM2" 
             count={metaCounts['1_2']} 
-            isLocked={!isTuntas(2)} 
+            isLocked={!isTuntas(1) || !isTuntas(2)} 
             onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} 
           />
 
-          {/* STEP 3: TM3 */}
+          {/* STEP 3 (needs Gabung 1-2) */}
           <BlockCard id={3} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} />
 
-          {/* META 2+3 & 1-3 */}
+          {/* GABUNG 2-3 & 1-3 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MetaStep label="GABUNG BLOK 2 & 3" count={metaCounts['2_3']} isLocked={!isTuntas(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
-            <MetaStep label="GABUNG BLOK 1 - 3" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3': p['1_2_3'] + 1}))} />
+            <MetaStep label="GABUNG TM2 & TM3" count={metaCounts['2_3']} isLocked={!isTuntas(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
+            <MetaStep label="GABUNG TM1 s/d TM3" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3': p['1_2_3'] + 1}))} />
           </div>
 
-          {/* STEP 4: TM4 */}
+          {/* STEP 4 (needs Gabung 1-3) */}
           <BlockCard id={4} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} />
 
-          {/* FINAL META CHAIN */}
+          {/* FINAL GABUNGAN CHAIN */}
           <div className="space-y-4">
-            <MetaStep label="GABUNG BLOK 3 & 4" count={metaCounts['3_4']} isLocked={!isTuntas(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
-            <MetaStep label="GABUNG BLOK 2 - 4" count={metaCounts['2_3_4']} isLocked={!isMetaTuntas('3_4')} onIncrement={() => setMetaCounts(p => ({...p, '2_3_4': p['2_3_4'] + 1}))} />
-            <MetaStep label="GABUNG SELURUH HALAMAN (1 - 4)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
+            <MetaStep label="GABUNG TM3 & TM4" count={metaCounts['3_4']} isLocked={!isTuntas(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
+            <MetaStep label="GABUNG TM2 s/d TM4" count={metaCounts['2_3_4']} isLocked={!isMetaTuntas('3_4')} onIncrement={() => setMetaCounts(p => ({...p, '2_3_4': p['2_3_4'] + 1}))} />
+            <MetaStep label="GABUNG SELURUH HALAMAN (TM1 - TM4)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
           </div>
 
           {isMetaTuntas('1_2_3_4') && (
@@ -359,12 +359,16 @@ function BlockCard({ id, state, verses, onIncrement, fontSize, isLocked }: any) 
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CounterBox label={`TM${id}a`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} color="rose" />
-          <CounterBox label={`TM${id}b`} count={state.b.count} isLocked={isLocked || !isDoneA} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="emerald" />
+          <CounterBox label={`TM${id}a`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} color="rose" threshold={PASS_THRESHOLD} />
+          <CounterBox label={`TM${id}b`} count={state.b.count} isLocked={isLocked || !isDoneA} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="emerald" threshold={PASS_THRESHOLD} />
         </div>
-        <Button onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} disabled={isLocked || !isDoneB} className={cn("w-full h-12 rounded-xl font-black text-xs uppercase tracking-widest", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}>
-          {isLocked || !isDoneB ? <Lock className="w-3 h-3 mr-2" /> : null}
-          TM{id} GABUNGAN: {state.combined.count} / {TARGET_MAX}
+        <Button onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} disabled={isLocked || !isDoneB} className={cn("w-full h-14 flex-col rounded-xl font-black uppercase tracking-widest", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}>
+          <span className="text-[10px] flex items-center gap-1">
+            {isLocked || !isDoneB ? <Lock className="w-3 h-3" /> : null}
+            TM{id} GABUNGAN
+          </span>
+          <span className="text-base">{state.combined.count} / {TARGET_MAX}</span>
+          <span className="text-[8px] opacity-70">Minimal {PASS_THRESHOLD}x</span>
         </Button>
       </CardContent>
     </Card>
@@ -372,7 +376,7 @@ function BlockCard({ id, state, verses, onIncrement, fontSize, isLocked }: any) 
 }
 
 function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
-  const isDone = count >= TARGET_META;
+  const isDone = count >= META_PASS_THRESHOLD;
   return (
     <div className={cn("relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", isDone ? "bg-emerald-50 border-emerald-500" : "bg-muted/10 border-muted", highlight && "border-amber-500 bg-amber-50/30", isLocked && "opacity-40 grayscale select-none")}>
       <div className="flex items-center gap-4">
@@ -382,12 +386,13 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
         <div className="flex flex-col">
           <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Repetisi Gabungan</span>
           <span className={cn("text-sm font-black uppercase tracking-tight", highlight ? "text-amber-900" : "text-[#800000]")}>{label}</span>
+          <span className="text-[9px] font-bold text-muted-foreground">Minimal {META_PASS_THRESHOLD}x</span>
         </div>
       </div>
       <div className="flex items-center gap-4">
         <div className="text-right flex flex-col items-end">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase">{count} / {TARGET_META}</span>
-          <div className="w-20 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_META)*100}%` }} /></div>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase">{count} / {TARGET_MAX}</span>
+          <div className="w-20 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} /></div>
         </div>
         <Button onClick={onIncrement} disabled={isLocked || isDone} className={cn("h-10 w-10 rounded-lg p-0 font-black text-xs", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-2 border-[#800000] hover:bg-[#800000] hover:text-white")}>
           {isDone ? <CheckCircle2 className="w-5 h-5" /> : `+1`}
@@ -397,19 +402,20 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
   );
 }
 
-function CounterBox({ label, count, isLocked, onInc, color }: any) {
-  const isDone = count >= PASS_THRESHOLD;
+function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
+  const isDone = count >= threshold;
   const themes: any = {
     rose: isDone ? "bg-rose-50 border-rose-500 text-rose-700" : "bg-white border-muted hover:border-rose-300",
     emerald: isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-muted hover:border-emerald-300"
   };
   return (
-    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
+    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-20 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
       <span className="text-[8px] font-black uppercase opacity-60 tracking-[0.2em]">{label}</span>
       <div className="flex items-baseline gap-1">
         <span className="text-xl font-black">{count}</span>
         <span className="text-[8px] font-bold opacity-40">/ {TARGET_MAX}</span>
       </div>
+      <span className="text-[8px] font-bold opacity-60 mt-0.5">Min. {threshold}x</span>
       {isLocked && <Lock className="absolute top-1 right-1 w-2.5 h-2.5 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="w-3 h-3 text-current mt-0.5" />}
     </div>
