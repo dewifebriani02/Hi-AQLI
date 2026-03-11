@@ -15,17 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Zap, 
   CheckCircle2, 
   Loader2, 
-  Landmark, 
-  QrCode, 
-  Copy, 
   ArrowLeft, 
   ArrowRight,
   User,
   Phone,
-  ShieldCheck,
   Image as ImageIcon,
   Check,
   Clock,
@@ -33,10 +28,9 @@ import {
   PlayCircle
 } from "lucide-react";
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc, query, where, limit } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, query, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 import Link from "next/link";
 
 const studyCircles = [
@@ -82,14 +76,23 @@ function RegistrationForm() {
   }, [db, user?.uid, halaqahId]);
 
   const { data: existingRegs, isLoading: isRegLoading } = useCollection(regQuery);
-  const existingReg = existingRegs?.[0];
-
+  
   // Logic to determine if user IS ALREADY ACTIVE based on profile OR registration doc
+  // IMPORTANT: We use a state to ensure the loading flicker doesn't allow re-registration
+  const [isProcessingAccess, setIsProcessingAccess] = useState(true);
+
+  useEffect(() => {
+    if (!isUserLoading && !isUserDocLoading && !isRegLoading) {
+      setIsProcessingAccess(false);
+    }
+  }, [isUserLoading, isUserDocLoading, isRegLoading]);
+
   const isProfileActive = (
     (halaqahId === 'tikrar-j30-b1' && userData?.isTikrarPaid) ||
     (userData?.followedHalaqahs?.includes(halaqahId || ''))
   );
 
+  const existingReg = existingRegs?.[0];
   const isActuallyActive = isProfileActive || existingReg?.status === 'active';
   const isActuallyPending = !isActuallyActive && existingReg?.status === 'pending_verification';
 
@@ -102,7 +105,6 @@ function RegistrationForm() {
   const [whatsapp, setWhatsapp] = useState("");
   const [level, setLevel] = useState("3");
   const [targetJuz, setTargetJuz] = useState("30");
-  const [method, setMethod] = useState("transfer");
   const [uniqueCode, setUniqueCode] = useState(0);
   const [senderName, setSenderName] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
@@ -129,7 +131,7 @@ function RegistrationForm() {
       return;
     }
     if (circle.isPaid) setStep(2);
-    else setStep(3); // Skip to step 3 for free courses
+    else setStep(3); 
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -160,7 +162,7 @@ function RegistrationForm() {
         level: circle.id === 'tikrar-j30-b1' ? parseInt(level) : null,
         targetJuz: circle.id === 'tikrar-j30-b1' ? parseInt(targetJuz) : null,
         amount: finalAmount,
-        paymentMethod: circle.isPaid ? method : "free",
+        paymentMethod: circle.isPaid ? "transfer" : "free",
         senderName: circle.isPaid ? senderName : null,
         proofFileName: proofFile?.name || null,
         status: "pending_verification",
@@ -176,28 +178,42 @@ function RegistrationForm() {
     }
   };
 
-  if (isRegLoading || isUserDocLoading) return <div className="flex flex-col items-center py-20 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-xs font-bold uppercase">Memeriksa Status...</p></div>;
+  if (isProcessingAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-4">
+        <Loader2 className="animate-spin text-[#800000] h-10 w-10" />
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memvalidasi Akses Anda...</p>
+      </div>
+    );
+  }
 
-  // If already registered or has profile access, handle based on status
+  // If already registered or has profile access, show status and block form
   if (isActuallyActive || isActuallyPending) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
-        <Card className="w-full max-w-md text-center border-none shadow-2xl overflow-hidden">
-          <div className={cn("py-8 flex flex-col items-center gap-2 text-white", isActuallyActive ? "bg-emerald-600" : "bg-amber-500")}>
-            {isActuallyActive ? <CheckCircle2 className="h-12 w-12" /> : <Clock className="h-12 w-12 animate-pulse" />}
-            <h2 className="text-xl font-bold font-headline uppercase tracking-wider">
-              {isActuallyActive ? "Pendaftaran Aktif" : "Menunggu Verifikasi"}
+        <Card className="w-full max-w-md text-center border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+          <div className={cn("py-10 flex flex-col items-center gap-3 text-white", isActuallyActive ? "bg-emerald-600" : "bg-amber-500")}>
+            {isActuallyActive ? <CheckCircle2 className="h-16 w-16" /> : <Clock className="h-16 w-16 animate-pulse" />}
+            <h2 className="text-2xl font-black font-headline uppercase tracking-widest">
+              {isActuallyActive ? "Akses Aktif" : "Menunggu Verifikasi"}
             </h2>
           </div>
           <CardContent className="pt-8 pb-10 space-y-6">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive 
-                ? `Pendaftaran Anda untuk ${circle.title} sudah aktif. Anda dapat langsung masuk ke kelas sekarang.`
-                : `Pendaftaran Anda untuk ${circle.title} sedang kami tinjau. Mohon tunggu maksimal 1x24 jam.`}
-            </p>
-            <Button asChild className={cn("w-full font-bold h-12", isActuallyActive ? "bg-emerald-600" : "bg-[#800000]")}>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive 
+                  ? `Pendaftaran Anda untuk ${circle.title} sudah tuntas. Silakan masuk ke dalam kelas.`
+                  : `Pendaftaran Anda untuk ${circle.title} sedang dalam antrean verifikasi manual.`}
+              </p>
+              {isActuallyPending && (
+                <div className="p-4 bg-muted/50 rounded-xl text-[10px] font-bold text-amber-700 italic border border-amber-200">
+                  Mohon tunggu maksimal 1x24 jam untuk aktivasi akses oleh Admin.
+                </div>
+              )}
+            </div>
+            <Button asChild className={cn("w-full font-black h-14 rounded-xl text-lg shadow-lg", isActuallyActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#800000]")}>
               <Link href={isActuallyActive ? (circle.id === 'tikrar-j30-b1' ? '/tajweed' : `/study-circles/${circle.id}`) : "/"}>
-                {isActuallyActive ? <><PlayCircle className="mr-2 w-5 h-5" /> MASUK KELAS SEKARANG</> : "Kembali ke Dasbor"}
+                {isActuallyActive ? <><PlayCircle className="mr-2 w-6 h-6" /> MASUK KELAS</> : "KEMBALI KE DASBOR"}
               </Link>
             </Button>
           </CardContent>
@@ -214,9 +230,9 @@ function RegistrationForm() {
             <div className="mx-auto bg-green-100 text-green-600 rounded-full p-4 w-fit animate-bounce">
               <CheckCircle2 className="h-12 w-12" />
             </div>
-            <h2 className="text-2xl font-bold font-headline text-[#800000]">Berhasil Dikirim!</h2>
-            <p className="text-muted-foreground text-sm">Terima kasih, pendaftaran Anda akan diverifikasi admin maksimal 1x24 jam.</p>
-            <Button onClick={() => router.push('/')} className="w-full bg-[#800000] font-bold">Kembali ke Beranda</Button>
+            <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">Jazakallahu Khairan, pendaftaran Anda sedang kami proses. Cek status di menu Halaqah secara berkala.</p>
+            <Button onClick={() => router.push('/')} className="w-full bg-[#800000] font-bold h-12">Kembali ke Beranda</Button>
           </CardContent>
         </Card>
       </div>
@@ -225,47 +241,47 @@ function RegistrationForm() {
 
   return (
     <div className="flex justify-center items-start pt-6 px-4 pb-20 max-w-2xl mx-auto">
-      <Card className="w-full border-none shadow-xl overflow-hidden">
-        <CardHeader className="text-center bg-[#800000] text-white py-8 relative">
-          {step > 1 && <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white" onClick={() => setStep(step - 1)}><ArrowLeft className="h-5 w-5" /></Button>}
-          <div className="mx-auto bg-white/20 rounded-full p-3 w-fit mb-4"><BookOpen className="h-8 w-8 text-amber-300" /></div>
-          <CardTitle className="font-headline text-2xl">Pendaftaran Halaqah</CardTitle>
-          <CardDescription className="text-white/80">{circle.title}</CardDescription>
+      <Card className="w-full border-none shadow-2xl overflow-hidden">
+        <CardHeader className="text-center bg-[#800000] text-white py-10 relative">
+          {step > 1 && <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white hover:bg-white/10" onClick={() => setStep(step - 1)}><ArrowLeft className="h-5 w-5" /></Button>}
+          <div className="mx-auto bg-white/20 rounded-full p-4 w-fit mb-4 border-2 border-white/10"><BookOpen className="h-8 w-8 text-amber-300" /></div>
+          <CardTitle className="font-headline text-3xl font-black">Pendaftaran Halaqah</CardTitle>
+          <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">{circle.title}</CardDescription>
         </CardHeader>
         
-        <CardContent className="space-y-8 pt-8">
+        <CardContent className="space-y-8 pt-10">
           {step === 1 ? (
-            <div className="grid gap-4">
+            <div className="grid gap-6">
               <div className="space-y-2">
-                <Label>Nama Lengkap</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nama Lengkap Sesuai Identitas</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input value={name} onChange={(e) => setName(e.target.value)} className="pl-10" />
+                  <User className="absolute left-3 top-3 h-4 w-4 text-[#800000]" />
+                  <Input value={name} onChange={(e) => setName(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Nomor WhatsApp</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nomor WhatsApp Aktif</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="0812..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="pl-10" />
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-[#800000]" />
+                  <Input placeholder="0812345..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
                 </div>
               </div>
               
               {circle.id === 'tikrar-j30-b1' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 bg-muted/30 rounded-2xl border-2 border-dashed">
                   <div className="space-y-2">
-                    <Label>Pilih Level</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest">Pilih Level</Label>
                     <Select value={level} onValueChange={setLevel}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name} - Rp {l.price.toLocaleString('id-ID')}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Target Juz</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest">Target Juz</Label>
                     <Select value={targetJuz} onValueChange={setTargetJuz}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {Array.from({length: 30}, (_, i) => <SelectItem key={i+1} value={(i+1).toString()}>Juz {i+1}</SelectItem>)}
                       </SelectContent>
@@ -273,53 +289,54 @@ function RegistrationForm() {
                   </div>
                 </div>
               )}
-              <Button onClick={handleNext} className="w-full h-14 text-lg font-bold bg-[#800000] mt-4">
-                {circle.isPaid ? "Lanjut Pembayaran" : "Konfirmasi Pendaftaran"} <ArrowRight className="ml-2 h-5 w-5" />
+              <Button onClick={handleNext} className="w-full h-16 text-lg font-black bg-[#800000] hover:bg-[#800000]/90 rounded-xl shadow-lg shadow-[#800000]/20 mt-4 uppercase tracking-widest">
+                {circle.isPaid ? "Lanjut Pembayaran" : "Konfirmasi Daftar"} <ArrowRight className="ml-2 h-6 w-6" />
               </Button>
             </div>
           ) : step === 2 ? (
-            <div className="space-y-6">
-              <div className="text-center space-y-2 bg-muted/30 p-6 rounded-2xl border-2 border-dashed border-[#800000]/20">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Infaq</p>
-                <div className="text-3xl font-black text-[#800000]">Rp {(PRICE + uniqueCode).toLocaleString('id-ID')}</div>
-                <p className="text-[10px] text-amber-700 font-bold italic">*Termasuk kode unik verifikasi {uniqueCode}</p>
+            <div className="space-y-8">
+              <div className="text-center space-y-2 bg-muted/30 p-8 rounded-3xl border-2 border-dashed border-[#800000]/20 animate-in fade-in slide-in-from-bottom-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Infaq Pendaftaran</p>
+                <div className="text-4xl font-black text-[#800000]">Rp {(PRICE + uniqueCode).toLocaleString('id-ID')}</div>
+                <p className="text-[10px] text-amber-700 font-bold italic bg-amber-50 py-1 px-3 rounded-full inline-block mt-2 border border-amber-100">*Termasuk kode unik verifikasi {uniqueCode}</p>
               </div>
-              <div className="bg-[#800000]/5 p-4 rounded-xl space-y-3">
-                <p className="text-xs font-bold text-[#800000] uppercase">Rekening BSI</p>
-                <div className="flex items-center justify-between bg-white p-3 rounded-lg border">
-                  <span className="font-mono font-bold text-lg">7123456789</span>
-                  <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText("7123456789"); toast({description: "Salin"}) }}>Salin</Button>
+              <div className="bg-[#800000]/5 p-6 rounded-2xl border-2 border-[#800000]/10 space-y-4">
+                <p className="text-xs font-black text-[#800000] uppercase tracking-widest">Rekening Tujuan (BSI)</p>
+                <div className="flex items-center justify-between bg-white p-4 rounded-xl border-2 shadow-sm">
+                  <span className="font-mono font-black text-xl tracking-wider">7123456789</span>
+                  <Button variant="ghost" size="sm" className="font-black text-[#800000] hover:bg-[#800000]/10" onClick={() => { navigator.clipboard.writeText("7123456789"); toast({description: "Nomor rekening disalin"}) }}>SALIN</Button>
                 </div>
+                <p className="text-[10px] font-bold text-center text-muted-foreground">a.n. Sahabat AQLI Digital</p>
               </div>
-              <Button onClick={() => setStep(3)} className="w-full h-14 bg-[#800000] font-bold">Saya Sudah Transfer</Button>
+              <Button onClick={() => setStep(3)} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-xl">Saya Sudah Transfer</Button>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-8 animate-in fade-in duration-500">
               {circle.isPaid ? (
-                <>
+                <div className="grid gap-6">
                   <div className="space-y-2">
-                    <Label>Nama Pengirim Sesuai Rekening</Label>
-                    <Input placeholder="Contoh: Abdullah" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nama Pengirim Sesuai Rekening</Label>
+                    <Input placeholder="Contoh: Abdullah" value={senderName} onChange={(e) => setSenderName(e.target.value)} className="h-12 border-2 font-bold focus-visible:ring-[#800000]" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Unggah Bukti Transfer</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Unggah Bukti Transfer</Label>
                     <div 
                       onClick={() => fileInputRef.current?.click()}
-                      className={cn("border-2 border-dashed rounded-2xl p-8 flex flex-col items-center gap-3 cursor-pointer", proofFile ? "bg-emerald-50 border-emerald-500" : "bg-muted/20 border-muted")}
+                      className={cn("border-2 border-dashed rounded-3xl p-12 flex flex-col items-center gap-4 cursor-pointer transition-all hover:bg-muted/30", proofFile ? "bg-emerald-50 border-emerald-500" : "bg-muted/10 border-muted-foreground/20")}
                     >
                       <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                      {proofFile ? <><Check className="h-8 w-8 text-emerald-600" /><span className="text-xs font-bold">{proofFile.name}</span></> : <><ImageIcon className="h-8 w-8 text-muted-foreground" /><span className="text-xs font-bold">Pilih Foto Bukti</span></>}
+                      {proofFile ? <><Check className="h-12 w-12 text-emerald-600" /><span className="text-xs font-black uppercase tracking-widest text-emerald-700">{proofFile.name}</span></> : <><ImageIcon className="h-12 w-12 text-muted-foreground opacity-30" /><span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Pilih Foto Bukti</span></>}
                     </div>
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-100 text-center space-y-4">
-                  <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto" />
-                  <p className="text-sm font-medium text-emerald-800">Kelas ini gratis. Tekan tombol di bawah untuk mendaftarkan diri Anda.</p>
+                <div className="p-8 bg-emerald-50 rounded-3xl border-2 border-emerald-100 text-center space-y-4">
+                  <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto" />
+                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk Anda. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
                 </div>
               )}
-              <Button onClick={handleConfirm} disabled={loading} className="w-full h-14 bg-[#800000] font-bold">
-                {loading ? <Loader2 className="animate-spin" /> : "Kirim Pendaftaran"}
+              <Button onClick={handleConfirm} disabled={loading} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-2xl">
+                {loading ? <Loader2 className="animate-spin h-6 w-6" /> : "Kirim Pendaftaran"}
               </Button>
             </div>
           )}
@@ -331,7 +348,7 @@ function RegistrationForm() {
 
 export default function HalaqahRegistrationPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>}>
+    <Suspense fallback={<div className="flex flex-col items-center justify-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000] h-10 w-10" /><p className="text-xs font-black uppercase">Menyiapkan Formulir...</p></div>}>
       <RegistrationForm />
     </Suspense>
   );
