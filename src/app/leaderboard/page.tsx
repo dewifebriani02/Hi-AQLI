@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -40,7 +39,7 @@ const activeChallenges = [
     progress: 65,
     icon: Gift,
     deadline: "15 Hari Lagi",
-    color: "from-rose-600 to-rose-400"
+    color: "from-black via-[#800000] to-black"
   },
   {
     id: 2,
@@ -50,7 +49,7 @@ const activeChallenges = [
     progress: 40,
     icon: Award,
     deadline: "3 Hari Lagi",
-    color: "from-indigo-600 to-indigo-400"
+    color: "from-[#800000] via-black to-[#800000]"
   }
 ];
 
@@ -60,7 +59,7 @@ export default function LeaderboardPage() {
       {/* Header Section */}
       <div className="flex flex-col gap-2 mt-4 px-1">
         <div className="flex items-center gap-2 text-[#800000] mb-1">
-          <Trophy className="w-5 h-5 fill-current" />
+          <Trophy className="w-5 h-5 fill-current text-[#D4AF37]" />
           <span className="text-xs font-bold uppercase tracking-widest">Pusat Juara Sahabat</span>
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Ksatria Al-Qur'an</h1>
@@ -72,46 +71,44 @@ export default function LeaderboardPage() {
       {/* Challenges Section */}
       <div className="space-y-4 px-1">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold font-headline flex items-center gap-2">
-            <Zap className="w-5 h-5 text-amber-500 fill-current" /> Tantangan Berhadiah
+          <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-black">
+            <Zap className="w-5 h-5 text-[#D4AF37] fill-current" /> Tantangan Berhadiah
           </h2>
-          <Badge variant="outline" className="text-[10px] font-bold text-amber-600 border-amber-200">AKTIF</Badge>
+          <Badge variant="outline" className="text-[10px] font-bold text-[#D4AF37] border-[#D4AF37]">AKTIF</Badge>
         </div>
         
         <div className="grid gap-4">
           {activeChallenges.map((challenge) => (
-            <Card key={challenge.id} className="overflow-hidden border-none shadow-md bg-white">
+            <Card key={challenge.id} className="overflow-hidden border-none shadow-md bg-white border-b-4 border-[#D4AF37]">
               <CardContent className="p-0">
                 <div className="flex flex-col sm:flex-row">
-                  <div className={cn("sm:w-32 flex flex-col items-center justify-center p-6 text-white bg-gradient-to-br", challenge.color)}>
+                  <div className={cn("sm:w-32 flex flex-col items-center justify-center p-6 text-[#D4AF37] bg-black")}>
                     <challenge.icon className="w-10 h-10 mb-2 drop-shadow-md" />
-                    <span className="text-[9px] font-bold uppercase text-center leading-tight">Hadiah Tersedia</span>
+                    <span className="text-[9px] font-black uppercase text-center leading-tight">Reward</span>
                   </div>
                   <div className="flex-1 p-5 space-y-4">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                        <h3 className="font-bold text-sm leading-tight">{challenge.title}</h3>
+                        <h3 className="font-bold text-sm leading-tight text-black">{challenge.title}</h3>
                         <p className="text-[10px] text-muted-foreground">{challenge.description}</p>
                       </div>
-                      <div className="flex items-center gap-1 text-[9px] font-bold text-rose-600 uppercase bg-rose-50 px-2 py-1 rounded-full">
+                      <div className="flex items-center gap-1 text-[9px] font-black text-[#800000] uppercase bg-[#800000]/5 px-2 py-1 rounded-full">
                         <Clock className="w-3 h-3" /> {challenge.deadline}
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
-                        <span className="text-[#800000]">Progres Anda</span>
-                        <span>{challenge.progress}%</span>
+                        <span className="text-[#800000]">Progres</span>
+                        <span className="text-black">{challenge.progress}%</span>
                       </div>
-                      <Progress value={challenge.progress} className="h-1.5 bg-muted [&>div]:bg-emerald-500" />
+                      <Progress value={challenge.progress} className="h-1.5 bg-muted [&>div]:bg-[#D4AF37]" />
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center gap-2">
-                        <div className="p-1 rounded bg-amber-50 border border-amber-100">
-                          <Sparkles className="w-3 h-3 text-amber-600" />
-                        </div>
-                        <span className="text-[10px] font-bold text-amber-700">{challenge.prize}</span>
+                        <Sparkles className="w-3 h-3 text-[#D4AF37]" />
+                        <span className="text-[10px] font-bold text-black uppercase">{challenge.prize}</span>
                       </div>
                       <Button size="sm" variant="ghost" className="h-7 text-[9px] font-bold text-[#800000] uppercase gap-1">
                         Detail <ChevronRight className="w-3 h-3" />
@@ -125,24 +122,24 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {/* Podium Section (Top 3) */}
+      {/* Podium Section */}
       <div className="space-y-4 px-1 mt-4">
-        <h2 className="text-lg font-bold font-headline flex items-center gap-2">
+        <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-black">
           <Crown className="w-5 h-5 text-[#D4AF37] fill-current" /> Papan Peringkat Global
         </h2>
         <div className="grid grid-cols-3 gap-2 items-end pt-8 pb-4">
           {/* Rank 2 */}
           <div className="flex flex-col items-center gap-2">
             <div className="relative">
-              <Avatar className="w-16 h-16 border-4 border-slate-300">
+              <Avatar className="w-16 h-16 border-4 border-black">
                 <AvatarImage src={topUsers[1].avatar} />
-                <AvatarFallback>S</AvatarFallback>
+                <AvatarFallback className="bg-[#800000] text-white">S</AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-2 -right-2 bg-slate-300 text-slate-800 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">2</div>
+              <div className="absolute -bottom-2 -right-2 bg-black text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">2</div>
             </div>
-            <span className="text-[10px] font-bold text-center truncate w-full">{topUsers[1].name.split(' ')[0]}</span>
-            <div className="bg-slate-300/20 w-full h-16 rounded-t-lg flex items-center justify-center">
-               <Medal className="w-6 h-6 text-slate-400" />
+            <span className="text-[10px] font-black text-center truncate w-full uppercase">{topUsers[1].name.split(' ')[0]}</span>
+            <div className="bg-black/5 w-full h-16 rounded-t-lg flex items-center justify-center">
+               <Medal className="w-6 h-6 text-black/20" />
             </div>
           </div>
 
@@ -154,57 +151,57 @@ export default function LeaderboardPage() {
               </div>
               <Avatar className="w-20 h-20 border-4 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20">
                 <AvatarImage src={topUsers[0].avatar} />
-                <AvatarFallback>A</AvatarFallback>
+                <AvatarFallback className="bg-black text-[#D4AF37]">A</AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">1</div>
+              <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">1</div>
             </div>
-            <span className="text-xs font-bold text-center truncate w-full">{topUsers[0].name.split(' ')[0]}</span>
+            <span className="text-xs font-black text-center truncate w-full uppercase text-[#800000]">{topUsers[0].name.split(' ')[0]}</span>
             <div className="bg-[#D4AF37]/20 w-full h-24 rounded-t-lg flex items-center justify-center">
-               <Trophy className="w-8 h-8 text-[#B8860B]" />
+               <Trophy className="w-8 h-8 text-[#800000]" />
             </div>
           </div>
 
           {/* Rank 3 */}
           <div className="flex flex-col items-center gap-2">
             <div className="relative">
-              <Avatar className="w-16 h-16 border-4 border-amber-600">
+              <Avatar className="w-16 h-16 border-4 border-[#800000]">
                 <AvatarImage src={topUsers[2].avatar} />
-                <AvatarFallback>Y</AvatarFallback>
+                <AvatarFallback className="bg-black text-white">Y</AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-2 -right-2 bg-amber-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">3</div>
+              <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">3</div>
             </div>
-            <span className="text-[10px] font-bold text-center truncate w-full">{topUsers[2].name.split(' ')[0]}</span>
-            <div className="bg-amber-600/20 w-full h-12 rounded-t-lg flex items-center justify-center">
-               <Medal className="w-6 h-6 text-amber-700" />
+            <span className="text-[10px] font-black text-center truncate w-full uppercase">{topUsers[2].name.split(' ')[0]}</span>
+            <div className="bg-[#800000]/5 w-full h-12 rounded-t-lg flex items-center justify-center">
+               <Medal className="w-6 h-6 text-[#800000]/20" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Full List */}
-      <Card className="border-none shadow-sm bg-muted/20">
+      <Card className="border-none shadow-sm bg-muted overflow-hidden">
         <CardContent className="p-0">
-          <div className="divide-y">
+          <div className="divide-y divide-black/5">
             {topUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-4 hover:bg-white/50 transition-colors">
+              <div key={user.id} className="flex items-center justify-between p-4 hover:bg-white transition-colors">
                 <div className="flex items-center gap-4">
-                  <span className="text-xs font-bold text-muted-foreground w-4">{user.rank}</span>
-                  <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                  <span className="text-xs font-black text-muted-foreground w-4">{user.rank}</span>
+                  <Avatar className="h-10 w-10 border-2 border-white">
                     <AvatarImage src={user.avatar} />
-                    <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    <AvatarFallback className="bg-black text-[#D4AF37]">{user.name[0]}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold">{user.name}</span>
+                    <span className="text-sm font-black text-black uppercase">{user.name}</span>
                     <div className="flex items-center gap-1.5">
-                      <Badge variant="outline" className="text-[8px] h-4 font-bold uppercase tracking-tighter px-1.5 py-0">
+                      <Badge className="bg-[#800000] text-white text-[8px] font-black uppercase px-1.5 py-0">
                         {user.level}
                       </Badge>
-                      <span className="text-[10px] text-muted-foreground font-medium">{user.points.toLocaleString()} Poin</span>
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase">{user.points.toLocaleString()} Poin</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  {user.trend === "up" && <TrendingUp className="w-3 h-3 text-emerald-500" />}
+                  {user.trend === "up" && <TrendingUp className="w-3 h-3 text-[#D4AF37]" />}
                   <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
                 </div>
               </div>
@@ -213,21 +210,21 @@ export default function LeaderboardPage() {
         </CardContent>
       </Card>
 
-      {/* Your Rank Sticky Footer-like Card */}
-      <Card className="border-2 border-[#800000]/10 bg-white shadow-lg sticky bottom-24 z-20 mx-1">
+      {/* Your Rank Sticky Footer */}
+      <Card className="border-2 border-black bg-black text-white shadow-lg sticky bottom-24 z-20 mx-1 border-b-4 border-[#D4AF37] rounded-2xl">
         <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#800000] text-white flex items-center justify-center font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-[#D4AF37] text-black flex items-center justify-center font-black text-sm">
               142
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold">Peringkat Anda</span>
-              <span className="text-[10px] text-muted-foreground">Butuh 150 poin lagi untuk naik ke peringkat 141</span>
+              <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat Anda</span>
+              <span className="text-[9px] text-white/60 font-bold uppercase">Butuh 150 poin lagi</span>
             </div>
           </div>
           <div className="text-right">
-             <span className="text-sm font-bold block">1,250</span>
-             <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Poin</span>
+             <span className="text-sm font-black block">1,250</span>
+             <span className="text-[10px] text-[#D4AF37] uppercase font-black tracking-widest">Poin</span>
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -125,7 +124,6 @@ export function TikrarSystem() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioUrlRef = useRef<string | null>(null);
 
-  // Check for existing exam requests
   const examQuery = useMemoFirebase(() => {
     if (!db || !user || !page) return null;
     return query(
@@ -394,57 +392,47 @@ export function TikrarSystem() {
 
   if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
-  if (!isPaid && page !== 1) {
-    return (
-      <div className="py-20 text-center space-y-4 bg-muted/20 rounded-3xl border-2 border-dashed">
-        <Lock className="w-12 h-12 mx-auto text-muted-foreground/30" />
-        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Hanya untuk Juz yang Didaftarkan</p>
-        <Button asChild variant="outline" className="font-bold"><Link href="/study-circles">Daftar Sekarang</Link></Button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 pb-32">
       {/* HEADER STATS */}
-      <Card className="border-none bg-gradient-to-br from-[#800000] to-[#b30000] text-white shadow-xl overflow-hidden relative">
-        <div className="absolute right-[-20px] top-[-20px] opacity-10"><CalendarDays className="w-40 h-40" /></div>
+      <Card className="border-none bg-black text-white shadow-xl overflow-hidden relative border-b-4 border-[#D4AF37]">
+        <div className="absolute right-[-20px] top-[-20px] opacity-10"><CalendarDays className="w-40 h-40 text-[#D4AF37]" /></div>
         <CardContent className="p-6 relative z-10">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2">
-                <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
+                <Badge className="bg-[#800000] text-white border-none text-[10px] font-bold uppercase tracking-widest">
                   HI AQLI Tikrar System
                 </Badge>
                 <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
               </div>
               <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 flex flex-col items-end">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter opacity-80 mb-1">
-                  <Clock className="w-3 h-3" /> Status Progres
+                  <Clock className="w-3 h-3 text-[#D4AF37]" /> Status Progres
                 </div>
                 <div className="text-lg font-black">{Math.round(totalProgress)}% <span className="text-xs font-medium opacity-60">Tuntas</span></div>
               </div>
             </div>
-            <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-white" />
+            <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-[#D4AF37]" />
           </div>
         </CardContent>
       </Card>
 
       {/* CONTROLS */}
-      <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
+      <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90 border-[#800000]/10">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-10 w-10">
-            <ChevronLeft className="h-5 w-5" />
+          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
+            <ChevronLeft className="h-5 w-5 text-[#800000]" />
           </Button>
           <span className="text-xl font-black text-[#800000] w-12 text-center">{page}</span>
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1} className="rounded-xl h-10 w-10">
-            <ChevronRight className="h-5 w-5" />
+          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
+            <ChevronRight className="h-5 w-5 text-[#800000]" />
           </Button>
         </div>
         <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.max(12, f - 4))}><Minus className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => setFontSize(f => Math.max(12, f - 4))}><Minus className="h-4 w-4" /></Button>
           <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.min(64, f + 4))}><Plus className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => setFontSize(f => Math.min(64, f + 4))}><Plus className="h-4 w-4" /></Button>
         </div>
       </div>
 
@@ -452,13 +440,13 @@ export function TikrarSystem() {
       <TooltipProvider delayDuration={0}>
         <Card className={cn(
           "border-2 transition-all shadow-md overflow-hidden",
-          isPrepTuntas ? "border-emerald-500 bg-emerald-50/10" : "border-[#800000]/30 bg-[#800000]/5"
+          isPrepTuntas ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-[#800000]/30 bg-white"
         )}>
-          <div className="bg-[#800000]/10 py-2 px-4 border-b flex justify-between items-center">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">
+          <div className="bg-black py-2 px-4 border-b flex justify-between items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-white">
               Tahap 0: Persiapan (Prasyarat)
             </span>
-            {isPrepTuntas && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
+            {isPrepTuntas && <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
           </div>
           <CardContent className="p-6 space-y-8">
             <div className="flex flex-col gap-8">
@@ -467,20 +455,20 @@ export function TikrarSystem() {
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                      prepListenCount >= 5 ? "bg-emerald-500 text-white" : "bg-white text-[#800000] border-2 border-[#800000]/20"
+                      prepListenCount >= 5 ? "bg-[#D4AF37] text-black" : "bg-white text-[#800000] border-2 border-[#800000]/20"
                     )}>
                       <Headphones className="w-5 h-5" />
                     </div>
                     <div>
                       <h4 className="text-sm font-bold">Simak Murattal & Tadabbur</h4>
-                      <p className="text-[10px] text-muted-foreground">Putar otomatis 5x siklus halaman</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">Auto 5x siklus</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-black text-[#800000] bg-white px-3 py-1 rounded-full border border-[#800000]/20 shadow-sm">{prepListenCount} / 5</span>
                     <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="rounded-xl h-9 gap-2 font-bold">
+                        <Button variant="outline" size="sm" className="rounded-xl h-9 gap-2 font-bold border-[#800000]/20 text-[#800000]">
                           <Mic2 className="w-4 h-4" /> Pilih Qari
                         </Button>
                       </DialogTrigger>
@@ -488,7 +476,7 @@ export function TikrarSystem() {
                         <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
                         <div className="grid gap-2 py-4">
                           {RECITERS.map((r) => (
-                            <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className="justify-start gap-3 font-bold">
+                            <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className={cn("justify-start gap-3 font-bold", selectedReciterId === r.id && "bg-[#800000] text-white")}>
                               {selectedReciterId === r.id && <Check className="w-4 h-4" />} {r.name}
                             </Button>
                           ))}
@@ -502,29 +490,26 @@ export function TikrarSystem() {
                   onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay}
                   className={cn(
                     "w-full h-14 font-black rounded-2xl border-2 transition-all gap-3 shadow-md uppercase tracking-widest",
-                    isAutoPlaying ? "bg-rose-50 border-rose-500 text-rose-600 hover:bg-rose-100" : 
-                    prepListenCount >= 5 ? "bg-emerald-50 border-emerald-500 text-emerald-600 hover:bg-emerald-100" :
+                    isAutoPlaying ? "bg-black text-white border-white hover:bg-black/90" : 
+                    prepListenCount >= 5 ? "bg-[#D4AF37] border-[#D4AF37] text-black hover:bg-[#D4AF37]/90" :
                     "bg-[#800000] text-white border-transparent hover:bg-[#800000]/90"
                   )}
                 >
                   {isAutoPlaying ? (
                     <><Pause className="w-6 h-6 fill-current" /> Berhenti Menyimak</>
                   ) : (
-                    <><Play className="w-6 h-6 fill-current" /> {prepListenCount >= 5 ? 'Ulangi Simak (Auto 5x)' : 'Mulai Simak (Auto 5x)'}</>
+                    <><Play className="w-6 h-6 fill-current" /> {prepListenCount >= 5 ? 'Ulangi Simak' : 'Mulai Simak'}</>
                   )}
                 </Button>
                 
-                {/* DISPLAY AYAT + TERJEMAHAN + PER KATA */}
                 {isAutoPlaying && playingVerseIndex !== null && verses[playingVerseIndex] && (
-                  <div className="mt-6 p-6 sm:p-8 bg-[#fffcf5] rounded-[2.5rem] border-2 border-amber-400 shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
+                  <div className="mt-6 p-6 sm:p-8 bg-white rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
                     <div className="flex flex-col gap-8">
-                      {/* Badge Info */}
                       <div className="flex items-center justify-center gap-2">
-                        <Badge className="bg-amber-500 text-white text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">Siklus {currentLoop + 1}</Badge>
+                        <Badge className="bg-black text-[#D4AF37] text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">Siklus {currentLoop + 1}</Badge>
                         <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">Ayat {verses[playingVerseIndex].id}</Badge>
                       </div>
 
-                      {/* Arabic Text */}
                       <div className="flex flex-wrap justify-center gap-x-2 gap-y-4" dir="rtl">
                         {verses[playingVerseIndex].words.map((word, wIdx) => (
                           <span 
@@ -535,34 +520,32 @@ export function TikrarSystem() {
                             {word.text_uthmani}
                           </span>
                         ))}
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-[#800000] text-white text-xs font-bold mx-1 translate-y-[-4px] shadow-sm">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-black text-[#D4AF37] text-xs font-bold mx-1 translate-y-[-4px] shadow-sm">
                           ({verses[playingVerseIndex].verse_key.split(':')[1]})
                         </span>
                       </div>
 
-                      <Separator className="bg-amber-200/50" />
+                      <Separator className="bg-[#D4AF37]/20" />
 
-                      {/* Word-by-Word Break-down */}
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-[#D4AF37] uppercase tracking-widest mb-2">
                           <Languages className="w-3 h-3" /> Arti Per Kata
                         </div>
                         <div className="flex flex-wrap justify-center gap-2">
                           {verses[playingVerseIndex].words.map((word, wIdx) => (
-                            <div key={wIdx} className="bg-white border-2 border-amber-100 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]">
-                              <span className="font-arabic text-[#800000] text-sm font-bold leading-none">{word.text_uthmani}</span>
-                              <span className="text-[9px] font-medium text-amber-800 leading-none">{word.translation?.text || "-"}</span>
+                            <div key={wIdx} className="bg-muted border-2 border-muted-foreground/10 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]">
+                              <span className="font-arabic text-black text-sm font-bold leading-none">{word.text_uthmani}</span>
+                              <span className="text-[9px] font-medium text-[#800000] leading-none">{word.translation?.text || "-"}</span>
                             </div>
                           ))}
                         </div>
                       </div>
 
-                      {/* Full Verse Translation */}
-                      <div className="bg-amber-100/30 p-5 rounded-3xl border-l-4 border-amber-500">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">
+                      <div className="bg-black/5 p-5 rounded-3xl border-l-4 border-[#800000]">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest mb-2">
                           <BookOpen className="w-3 h-3" /> Terjemahan Kalimat
                         </div>
-                        <p className="text-sm sm:text-base text-amber-900 leading-relaxed italic font-medium">
+                        <p className="text-sm sm:text-base text-black leading-relaxed italic font-medium">
                           "{verses[playingVerseIndex].translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || "Memuat terjemahan..."}"
                         </p>
                       </div>
@@ -571,17 +554,17 @@ export function TikrarSystem() {
                 )}
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border-2 border-dashed border-[#800000]/20 space-y-4">
+              <div className="bg-muted p-6 rounded-3xl border-2 border-dashed border-muted-foreground/20 space-y-4">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                    prepTranslationDone ? "bg-emerald-500 text-white" : "bg-white text-[#800000] border-2 border-[#800000]/20"
+                    prepTranslationDone ? "bg-[#D4AF37] text-black" : "bg-white text-[#800000] border-2 border-[#800000]/20"
                   )}>
                     <Languages className="w-5 h-5" />
                   </div>
                   <div>
                     <h4 className="text-sm font-bold">Konfirmasi Pemahaman</h4>
-                    <p className="text-[10px] text-muted-foreground">Sudah membaca & mengerti rincian ayat</p>
+                    <p className="text-[10px] text-muted-foreground uppercase">Sudah tadabbur</p>
                   </div>
                 </div>
                 <Button 
@@ -589,7 +572,7 @@ export function TikrarSystem() {
                   onClick={() => setPrepTranslationDone(!prepTranslationDone)}
                   className={cn(
                     "w-full h-12 font-black rounded-xl border-2 uppercase tracking-widest text-[10px]",
-                    prepTranslationDone ? "bg-emerald-500 hover:bg-emerald-600 border-emerald-600 text-white" : "border-[#800000] text-[#800000]"
+                    prepTranslationDone ? "bg-[#D4AF37] hover:bg-[#D4AF37]/90 border-transparent text-black" : "border-[#800000] text-[#800000] hover:bg-[#800000]/5"
                   )}
                 >
                   {prepTranslationDone ? "SUDAH DIPAHAMI" : "KONFIRMASI PEMAHAMAN"}
@@ -599,13 +582,12 @@ export function TikrarSystem() {
           </CardContent>
         </Card>
 
-        {/* LOGIKA ITQAN BLOK A-D */}
+        {/* ITQAN BLOKS */}
         <div className="flex flex-col gap-10 mt-10">
-          <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1 shadow-sm">
-            <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
-              <strong>Aturan Itqan HI AQLI:</strong> Unit Maqta wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
-              Selesaikan Tahap Persiapan sebelum lanjut ke Blok A-D.
+          <div className="bg-black text-[#D4AF37] p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 mx-1 shadow-lg">
+            <Info className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-[11px] leading-relaxed font-bold uppercase tracking-wide">
+              <strong>Aturan Itqan:</strong> Maqta wajib <strong>40x</strong>. Gabungan wajib <strong>10x</strong>. Selesaikan Persiapan sebelum lanjut.
             </div>
           </div>
 
@@ -636,77 +618,69 @@ export function TikrarSystem() {
             <MetaStep label="GABUNG SELURUH HALAMAN (A - D)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
           </div>
 
-          {/* TAHAP UJIAN HALAMAN - SELALU MUNCUL SEBAGAI GOAL */}
+          {/* TAHAP UJIAN */}
           <div className="flex flex-col gap-6 mt-4">
             <div className="flex items-center gap-2 px-1">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-              <h4 className="text-xl font-black font-headline text-[#800000] uppercase tracking-widest">Tahap Ujian Halaman</h4>
+              <Sparkles className="w-5 h-5 text-[#D4AF37]" />
+              <h4 className="text-xl font-black font-headline text-black uppercase tracking-widest">Tahap Ujian Halaman</h4>
             </div>
 
             {!isMetaTuntas('1_2_3_4') ? (
-              <Card className="border-2 border-dashed bg-muted/20 py-10">
+              <Card className="border-2 border-dashed bg-muted py-10">
                 <CardContent className="flex flex-col items-center justify-center text-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                    <Lock className="w-6 h-6 text-muted-foreground/40" />
+                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-dashed">
+                    <Lock className="w-6 h-6 text-muted-foreground" />
                   </div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest max-w-[200px]">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[200px]">
                     Selesaikan repetisi gabungan seluruh halaman untuk membuka ujian.
                   </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in duration-500">
-                {/* Simulasi Ujian Mandiri */}
-                <Card className="border-none bg-blue-600 text-white shadow-xl overflow-hidden group hover:scale-[1.02] transition-transform">
+                <Card className="border-none bg-black text-white shadow-xl overflow-hidden group hover:scale-[1.02] transition-transform border-b-4 border-[#D4AF37]">
                   <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                     <div className="space-y-2">
-                      <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
-                        <ClipboardCheck className="w-6 h-6" />
+                      <div className="w-12 h-12 rounded-2xl bg-[#D4AF37] flex items-center justify-center mb-4">
+                        <ClipboardCheck className="w-6 h-6 text-black" />
                       </div>
-                      <h5 className="text-lg font-black leading-tight">Simulasi Ujian Mandiri</h5>
+                      <h5 className="text-lg font-black leading-tight uppercase">Simulasi Ujian Mandiri</h5>
                       <p className="text-[11px] opacity-80 leading-relaxed">
-                        Uji pemahaman terjemahan per kata, per kalimat, tebak nomor ayat, dan sambung ayat untuk satu halaman ini.
+                        Uji pemahaman terjemahan dan sambung ayat halaman ini.
                       </p>
                     </div>
-                    <Button asChild className="bg-white text-blue-700 font-black w-full rounded-xl hover:bg-blue-50 h-12 shadow-lg">
+                    <Button asChild className="bg-[#D4AF37] text-black font-black w-full rounded-xl hover:bg-[#D4AF37]/90 h-12 shadow-lg">
                       <Link href={`/tajweed/simulation?page=${page}`}>MULAI SIMULASI <ArrowRight className="ml-2 w-4 h-4" /></Link>
                     </Button>
                   </CardContent>
                 </Card>
 
-                {/* Ajukan Ujian Lisan */}
                 <Card className={cn(
-                  "border-none shadow-xl overflow-hidden transition-all",
-                  activeExam ? "bg-emerald-600 text-white" : "bg-amber-500 text-white hover:scale-[1.02]"
+                  "border-none shadow-xl overflow-hidden transition-all border-b-4",
+                  activeExam ? "bg-[#800000] text-white border-white" : "bg-black text-white hover:scale-[1.02] border-[#D4AF37]"
                 )}>
                   <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                     <div className="space-y-2">
                       <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
-                        {activeExam ? <CheckCircle2 className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
+                        {activeExam ? <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" /> : <MessageSquare className="w-6 h-6 text-[#D4AF37]" />}
                       </div>
-                      <h5 className="text-lg font-black leading-tight">
-                        {activeExam ? "Ujian Telah Diajukan" : "Ajukan Ujian Lisan"}
+                      <h5 className="text-lg font-black leading-tight uppercase">
+                        {activeExam ? "Ujian Diajukan" : "Ajukan Ujian Lisan"}
                       </h5>
                       <p className="text-[11px] opacity-80 leading-relaxed">
                         {activeExam 
-                          ? `Permohonan Anda sedang diproses. Status saat ini: ${activeExam.status.toUpperCase()}. Mohon tunggu instruksi Admin.`
-                          : "Ajukan jadwal ujian lisan resmi melalui Admin HI AQLI untuk mendapatkan sertifikasi Itqan halaman ini."}
+                          ? `Status: ${activeExam.status.toUpperCase()}. Tunggu instruksi Admin.`
+                          : "Dapatkan sertifikasi Itqan melalui ujian lisan resmi."}
                       </p>
                     </div>
                     {!activeExam && (
                       <Button 
                         onClick={handleRequestExam} 
                         disabled={isRequestingExam}
-                        className="bg-white text-amber-700 font-black w-full rounded-xl hover:bg-amber-50 h-12 shadow-lg"
+                        className="bg-white text-black font-black w-full rounded-xl hover:bg-white/90 h-12 shadow-lg"
                       >
-                        {isRequestingExam ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 w-4 h-4 fill-current" /> AJUKAN SEKARANG</>}
+                        {isRequestingExam ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 w-4 h-4 fill-current text-[#800000]" /> AJUKAN SEKARANG</>}
                       </Button>
-                    )}
-                    {activeExam?.status === 'scheduled' && (
-                      <div className="bg-white/20 p-3 rounded-xl flex items-center gap-3">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-[10px] font-bold">Terjadwal: Cek WhatsApp Anda untuk detail.</span>
-                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -745,20 +719,20 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             <span 
               tabIndex={0}
               style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
-              className={cn("font-arabic cursor-help hover:bg-muted/50 rounded px-0.5 outline-none transition-colors", colorClass)}
+              className={cn("font-arabic cursor-help hover:bg-[#D4AF37]/20 rounded px-0.5 outline-none transition-colors", colorClass)}
             >
               {token.data.text_uthmani}
             </span>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-              <p className="text-xs font-medium">{token.data.translation?.text || "..."}</p>
+            <TooltipContent className="bg-black text-[#D4AF37] border-none shadow-lg py-1.5 px-3 z-[100]">
+              <p className="text-xs font-bold">{token.data.translation?.text || "..."}</p>
             </TooltipContent>
           </TooltipPortal>
         </Tooltip>
       );
     }
-    return <span key={`${token.verse_key}-m`} className="inline-flex items-center justify-center px-2 rounded-full border text-[10px] font-bold mx-1 bg-white/50 translate-y-[-2px]">
+    return <span key={`${token.verse_key}-m`} className="inline-flex items-center justify-center px-2 rounded-full border border-black text-[10px] font-bold mx-1 bg-white translate-y-[-2px]">
       {token.text}
     </span>;
   };
@@ -766,20 +740,20 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
   return (
     <Card className={cn(
       "border-2 transition-all shadow-md overflow-hidden flex flex-col h-full", 
-      isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", 
+      isDoneG ? "border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10" : "border-[#800000]/20", 
       isLocked && "opacity-50 grayscale select-none"
     )}>
-      <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000] truncate">
-          BLOK {letter} ({page}{letter}-1, {page}{letter}-2) {isLocked && "• TERKUNCI"}
+      <div className="bg-black py-2 px-4 border-b flex justify-between items-center shrink-0">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] truncate">
+          BLOK {letter} ({page}{letter}) {isLocked && "• LOCK"}
         </span>
-        {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
+        {isDoneG && <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
       </div>
       <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">
-        <div className="bg-[#fffcf5] p-4 rounded-xl border-2 border-[#800000]/10 flex-1 overflow-y-auto no-scrollbar" dir="rtl">
+        <div className="bg-white p-4 rounded-xl border-2 border-black/5 flex-1 overflow-y-auto no-scrollbar" dir="rtl">
           <div className="flex flex-wrap justify-center gap-x-1 gap-y-2">
-            {tokensA.map(t => renderToken(t, "text-rose-600"))}
-            {tokensB.map(t => renderToken(t, "text-emerald-600"))}
+            {tokensA.map(t => renderToken(t, "text-[#800000]"))}
+            {tokensB.map(t => renderToken(t, "text-black"))}
           </div>
         </div>
         
@@ -789,7 +763,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             count={state.a.count} 
             isLocked={isLocked} 
             onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} 
-            color="rose" 
+            color="maroon" 
             threshold={PASS_THRESHOLD} 
           />
           <CounterBox 
@@ -797,7 +771,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             count={state.b.count} 
             isLocked={isLocked || state.a.count < PASS_THRESHOLD} 
             onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} 
-            color="emerald" 
+            color="black" 
             threshold={PASS_THRESHOLD} 
           />
         </div>
@@ -807,15 +781,15 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
           disabled={isLocked || state.b.count < PASS_THRESHOLD} 
           className={cn(
             "w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1 transition-all relative", 
-            isDoneG ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20" : "bg-[#800000] hover:bg-[#800000]/90"
+            isDoneG ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg" : "bg-[#800000] text-white hover:bg-[#800000]/90"
           )}
         >
           <span className="text-[8px] flex items-center gap-1 leading-none opacity-80 mb-0.5">
             {isLocked || state.b.count < PASS_THRESHOLD ? <Lock className="w-2 h-2" /> : null}
-            {page}{letter} GABUNGAN
+            GABUNG {page}{letter}
           </span>
           <span className="text-sm leading-none">{state.combined.count} / {PASS_THRESHOLD}</span>
-          {isDoneG && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
+          {isDoneG && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-black" /></div>}
         </Button>
       </CardContent>
     </Card>
@@ -827,26 +801,26 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
   return (
     <div className={cn(
       "relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", 
-      isDone ? "bg-emerald-50 border-emerald-500" : "bg-muted/10 border-muted", 
-      highlight && "border-amber-500 bg-amber-50/30", 
+      isDone ? "bg-[#D4AF37]/10 border-[#D4AF37]" : "bg-white border-black/10", 
+      highlight && !isDone && "border-[#800000] bg-[#800000]/5", 
       isLocked && "opacity-40 grayscale select-none"
     )}>
       <div className="flex items-center gap-3 overflow-hidden">
         <div className={cn(
           "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0", 
-          isDone ? "bg-emerald-500 text-white" : highlight ? "bg-amber-500 text-white" : "bg-[#800000]/10 text-[#800000]"
+          isDone ? "bg-[#D4AF37] text-black" : highlight ? "bg-[#800000] text-white" : "bg-black text-[#D4AF37]"
         )}>
           {isLocked ? <Lock className="w-4 h-4" /> : <Zap className="w-4 h-4 fill-current" />}
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate">Sub-Repetisi Gabungan</span>
-          <span className={cn("text-[11px] font-black uppercase tracking-tight truncate", highlight ? "text-amber-900" : "text-[#800000]")}>{label}</span>
-          <span className="text-[8px] font-bold text-muted-foreground">Target Min. {META_PASS_THRESHOLD}x</span>
+          <span className={cn("text-[11px] font-black uppercase tracking-tight truncate", highlight ? "text-[#800000]" : "text-black")}>{label}</span>
+          <span className="text-[8px] font-bold text-muted-foreground">MIN. {META_PASS_THRESHOLD}x</span>
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <div className="text-right flex flex-col items-end">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase">{count} / {TARGET_MAX}</span>
+          <span className="text-[10px] font-bold text-black uppercase">{count} / {TARGET_MAX}</span>
           <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden">
             <div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} />
           </div>
@@ -856,7 +830,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
           disabled={isLocked || isDone} 
           className={cn(
             "h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all shadow-sm", 
-            isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-2 border-[#800000] hover:bg-[#800000] hover:text-white"
+            isDone ? "bg-[#D4AF37] text-black border-none" : "bg-black text-[#D4AF37] hover:bg-black/90"
           )}
         >
           {isDone ? <CheckCircle2 className="w-4 h-4" /> : `+1`}
@@ -869,15 +843,15 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
 function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
   const isDone = count >= threshold;
   const themes: any = {
-    rose: isDone ? "bg-rose-50 border-rose-500 text-rose-700" : "bg-white border-muted hover:border-rose-300",
-    emerald: isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-muted hover:border-emerald-300"
+    maroon: isDone ? "bg-[#800000] text-white border-[#800000]" : "bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5",
+    black: isDone ? "bg-black text-[#D4AF37] border-black" : "bg-white border-black/20 text-black hover:bg-black/5"
   };
   return (
     <div 
       onClick={isLocked || isDone ? undefined : onInc} 
       className={cn(
         "h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1 shadow-sm", 
-        isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20 shadow-none" : themes[color]
+        isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted shadow-none" : themes[color]
       )}
     >
       <span className="text-[10px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none mb-1">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from "react";
@@ -25,7 +24,6 @@ export default function DonatePage() {
   const db = useFirestore();
   const { toast } = useToast();
   
-  // States
   const [step, setStep] = useState(1); 
   const [amount, setAmount] = useState<number>(0);
   const [customAmount, setCustomAmount] = useState<string>("");
@@ -34,7 +32,6 @@ export default function DonatePage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Confirmation Form States
   const [senderName, setSenderName] = useState("");
   const [transferDate, setTransferDate] = useState("");
   const [debitNumber, setDebitNumber] = useState("");
@@ -60,11 +57,7 @@ export default function DonatePage() {
   const nextStep = () => {
     const baseAmount = amount || parseInt(customAmount);
     if (!baseAmount || baseAmount < 5000) {
-      toast({
-        variant: "destructive",
-        title: "Jumlah tidak valid",
-        description: "Minimal donasi adalah Rp 5.000.",
-      });
+      toast({ variant: "destructive", title: "Minimal donasi adalah Rp 5.000." });
       return;
     }
     setStep(2);
@@ -72,11 +65,7 @@ export default function DonatePage() {
 
   const handleConfirmDonation = async () => {
     if (!senderName || !transferDate) {
-      toast({
-        variant: "destructive",
-        title: "Data tidak lengkap",
-        description: "Mohon isi nama pengirim dan tanggal transfer.",
-      });
+      toast({ variant: "destructive", title: "Mohon isi nama pengirim dan tanggal." });
       return;
     }
 
@@ -104,39 +93,30 @@ export default function DonatePage() {
       });
 
       setSubmitted(true);
-      toast({
-        title: "Konfirmasi Terkirim",
-        description: "Donasi Anda sedang kami verifikasi. Jazakallahu Khairan!",
-      });
-    } catch (error) {
-      // Errors are handled by non-blocking utility and listener
-    } finally {
-      setLoading(false);
-    }
+      toast({ title: "Konfirmasi Terkirim", description: "Jazakallahu Khairan!" });
+    } catch (error) {} finally { setLoading(false); }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      description: "Berhasil disalin ke clipboard.",
-    });
+    toast({ description: "Salin berhasil." });
   };
 
   if (submitted) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
-        <Card className="w-full max-w-md text-center border-none shadow-2xl">
+        <Card className="w-full max-w-md text-center border-none shadow-2xl border-b-8 border-[#D4AF37]">
           <CardContent className="pt-10 pb-10 space-y-6">
-            <div className="mx-auto bg-green-100 text-green-600 rounded-full p-4 w-fit animate-bounce">
+            <div className="mx-auto bg-black text-[#D4AF37] rounded-full p-4 w-fit animate-bounce">
               <CheckCircle2 className="h-12 w-12" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold font-headline text-[#800000]">Jazakallahu Khairan!</h2>
-              <p className="text-muted-foreground">
-                Terima kasih, <strong>{senderName}</strong>. Konfirmasi donasi Anda telah kami terima dan sedang dalam proses verifikasi manual oleh tim HI AQLI.
+              <h2 className="text-2xl font-black font-headline text-[#800000]">Jazakallahu Khairan!</h2>
+              <p className="text-sm text-muted-foreground">
+                Terima kasih, <strong>{senderName}</strong>. Donasi Anda sangat berarti untuk operasional HI AQLI.
               </p>
             </div>
-            <Button onClick={() => window.location.href = '/'} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold">
+            <Button onClick={() => window.location.href = '/'} className="w-full bg-black text-white hover:bg-black/90 font-bold h-12 rounded-xl">
               Kembali ke Beranda
             </Button>
           </CardContent>
@@ -149,23 +129,17 @@ export default function DonatePage() {
 
   return (
     <div className="flex justify-center items-start pt-10 px-4 pb-20">
-      <Card className="w-full max-w-lg border-none shadow-xl">
+      <Card className="w-full max-w-lg border-none shadow-xl border-t-4 border-[#800000]">
         <CardHeader className="text-center relative">
-          {step === 2 && (
-            <Button variant="ghost" size="icon" className="absolute left-4 top-4" onClick={() => setStep(1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          )}
-          <div className="mx-auto bg-primary/10 text-[#800000] rounded-full p-3 w-fit mb-4">
+          {step === 2 && <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-black" onClick={() => setStep(1)}><ArrowLeft className="h-5 w-5" /></Button>}
+          <div className="mx-auto bg-black text-[#D4AF37] rounded-full p-3 w-fit mb-4">
             <HeartHandshake className="h-8 w-8" />
           </div>
-          <CardTitle className="font-headline text-2xl text-[#800000]">
-            {step === 1 ? "Dukung HI AQLI" : "Instruksi Pembayaran"}
+          <CardTitle className="font-headline text-2xl text-black uppercase font-black">
+            {step === 1 ? "Infaq Digital" : "Pembayaran"}
           </CardTitle>
-          <CardDescription>
-            {step === 1 
-              ? "Donasi Anda membantu kami memelihara infrastruktur AI untuk umat." 
-              : "Silakan selesaikan pembayaran sesuai instruksi di bawah ini."}
+          <CardDescription className="font-bold text-[#800000] uppercase text-[10px] tracking-widest">
+            Dukung HI AQLI Syiarkan Qur'an
           </CardDescription>
         </CardHeader>
         
@@ -173,15 +147,15 @@ export default function DonatePage() {
           {step === 1 ? (
             <>
               <div className="space-y-4">
-                <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Pilih Nominal</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pilih Nominal</Label>
                 <div className="grid grid-cols-2 gap-3">
                   {donationAmounts.map((val) => (
                     <Button 
                       key={val} 
-                      variant={amount === val ? "default" : "outline"} 
+                      variant="outline"
                       className={cn(
-                        "h-12 text-sm font-bold transition-all",
-                        amount === val && "bg-[#800000] border-[#800000] text-white"
+                        "h-14 text-sm font-black transition-all rounded-xl border-2",
+                        amount === val ? "bg-black border-black text-[#D4AF37] shadow-lg" : "border-black/5 text-black hover:border-black"
                       )}
                       onClick={() => handleAmountSelect(val)}
                     >
@@ -191,48 +165,38 @@ export default function DonatePage() {
                 </div>
               </div>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground font-bold">Atau Jumlah Khusus</span>
-                </div>
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-dashed" /></div>
+                <div className="relative flex justify-center text-[10px] uppercase font-black"><span className="bg-white px-4 text-muted-foreground">Custom</span></div>
               </div>
 
               <div className="space-y-2">
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">Rp</span>
-                  <Input 
-                    type="number" 
-                    placeholder="Contoh: 150000" 
-                    className="pl-9 h-12 text-lg font-bold border-2 focus-visible:ring-[#800000]" 
-                    value={customAmount}
-                    onChange={handleCustomAmountChange}
-                  />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black font-black">Rp</span>
+                  <Input type="number" placeholder="Contoh: 150000" className="pl-11 h-14 text-lg font-black border-2 border-black/5 focus-visible:ring-black rounded-xl" value={customAmount} onChange={handleCustomAmountChange} />
                 </div>
               </div>
 
               <div className="space-y-4">
-                <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Metode Pembayaran</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Metode Pembayaran</Label>
                 <div className="flex flex-col gap-2">
                   {paymentMethods.map((pm) => (
                     <div 
                       key={pm.id}
                       onClick={() => setMethod(pm.id)}
                       className={cn(
-                        "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-muted/50",
-                        method === pm.id ? "border-[#800000] bg-[#800000]/5" : "border-border"
+                        "flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all",
+                        method === pm.id ? "border-black bg-black text-white" : "border-black/5 bg-muted/30 hover:border-black/20"
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <pm.icon className={cn("h-5 w-5", method === pm.id ? "text-[#800000]" : "text-muted-foreground")} />
+                        <pm.icon className={cn("h-5 w-5", method === pm.id ? "text-[#D4AF37]" : "text-black")} />
                         <div className="flex flex-col">
-                          <span className={cn("font-bold text-sm", method === pm.id ? "text-[#800000]" : "text-foreground")}>{pm.label}</span>
-                          <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{pm.detail}</span>
+                          <span className="font-black text-xs uppercase">{pm.label}</span>
+                          <span className={cn("text-[9px] font-medium truncate max-w-[180px]", method === pm.id ? "text-white/60" : "text-muted-foreground")}>{pm.detail}</span>
                         </div>
                       </div>
-                      {method === pm.id && <div className="h-4 w-4 rounded-full bg-[#800000]" />}
+                      {method === pm.id && <CheckCircle2 className="h-4 w-4 text-[#D4AF37]" />}
                     </div>
                   ))}
                 </div>
@@ -240,93 +204,53 @@ export default function DonatePage() {
             </>
           ) : (
             <>
-              <div className="bg-muted/30 p-6 rounded-2xl border-2 border-dashed border-[#800000]/20 space-y-6">
-                <div className="text-center space-y-2">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Total Pembayaran</p>
-                  <div className="text-3xl font-bold text-[#800000] flex items-center justify-center gap-2">
+              <div className="bg-black text-white p-8 rounded-[2rem] border-b-8 border-[#D4AF37] space-y-6 relative overflow-hidden">
+                <div className="absolute right-[-20px] top-[-20px] opacity-10"><Landmark className="w-32 h-32" /></div>
+                <div className="text-center space-y-2 relative z-10">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">Total Infaq</p>
+                  <div className="text-4xl font-black flex items-center justify-center gap-2">
                     Rp {finalDisplayAmount.toLocaleString('id-ID')}
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(finalDisplayAmount.toString())}>
-                      <Copy className="h-3 w-3" />
-                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#D4AF37]" onClick={() => copyToClipboard(finalDisplayAmount.toString())}><Copy className="h-4 w-4" /></Button>
                   </div>
-                  <p className="text-[10px] text-[#800000] font-bold italic">*Termasuk kode unik {uniqueCode} untuk verifikasi otomatis</p>
+                  <p className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-widest">*Sudah termasuk kode unik {uniqueCode}</p>
                 </div>
 
-                <div className="h-px bg-border w-full" />
+                <Separator className="bg-white/10" />
 
                 {method === 'transfer' && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Rekening Tujuan (BSI)</p>
-                    <div className="flex items-center justify-between bg-background p-3 rounded-lg border">
-                      <span className="font-mono font-bold text-lg tracking-wider">7123456789</span>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard("7123456789")}>
-                        Salin
-                      </Button>
+                  <div className="space-y-3 relative z-10">
+                    <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">Rekening Tujuan (BSI)</p>
+                    <div className="flex items-center justify-between bg-white/10 p-4 rounded-xl border border-white/20">
+                      <span className="font-mono font-black text-xl tracking-widest">7123456789</span>
+                      <Button variant="ghost" size="sm" className="text-[#D4AF37] font-black" onClick={() => copyToClipboard("7123456789")}>SALIN</Button>
                     </div>
-                    <p className="text-xs text-center font-medium">a.n. Yayasan HI AQLI</p>
+                    <p className="text-[10px] text-center font-bold uppercase tracking-tighter">Yayasan HI AQLI</p>
                   </div>
                 )}
 
                 {method === 'qris' && (
-                  <div className="space-y-4 text-center">
-                    <div className="mx-auto w-48 h-48 bg-white p-2 border rounded-xl flex items-center justify-center relative">
-                      <Image 
-                        src="https://placehold.co/400x400/png?text=QRIS+AQLI" 
-                        alt="QRIS AQLI" 
-                        width={200} 
-                        height={200}
-                        className="rounded-lg"
-                        data-ai-hint="qr code"
-                      />
+                  <div className="space-y-4 text-center relative z-10">
+                    <div className="mx-auto w-44 h-44 bg-white p-2 border-4 border-[#D4AF37] rounded-3xl flex items-center justify-center">
+                      <Image src="https://placehold.co/400x400/000000/D4AF37?text=QRIS+AQLI" alt="QRIS" width={160} height={160} className="rounded-lg" />
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Pindai menggunakan aplikasi bank atau e-wallet (Gopay, OVO, Dana, dll)</p>
-                  </div>
-                )}
-
-                {method === 'debit' && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="debit-code">4 Digit Terakhir Kartu Debit</Label>
-                      <Input 
-                        id="debit-code" 
-                        placeholder="XXXX" 
-                        maxLength={4}
-                        className="h-12 font-mono text-center text-xl tracking-widest"
-                        value={debitNumber}
-                        onChange={(e) => setDebitNumber(e.target.value)}
-                      />
-                    </div>
+                    <p className="text-[9px] text-white/60 font-bold uppercase tracking-widest">Pindai menggunakan Aplikasi Bank/E-Wallet</p>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-4">
-                <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Konfirmasi Pengiriman</Label>
+              <div className="space-y-4 pt-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Konfirmasi</Label>
                 <div className="grid gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="sender-name" className="text-xs">Nama Pengirim Sesuai Rekening</Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="sender-name" 
-                        placeholder="Contoh: Abdullah Mansur" 
-                        className="pl-10"
-                        value={senderName}
-                        onChange={(e) => setSenderName(e.target.value)}
-                      />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black" />
+                      <Input placeholder="Nama Pengirim Sesuai Rekening" className="pl-11 h-12 font-bold border-2 rounded-xl" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="transfer-date" className="text-xs">Tanggal Transfer</Label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="transfer-date" 
-                        type="date"
-                        className="pl-10"
-                        value={transferDate}
-                        onChange={(e) => setTransferDate(e.target.value)}
-                      />
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black" />
+                      <Input type="date" className="pl-11 h-12 font-bold border-2 rounded-xl" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
                     </div>
                   </div>
                 </div>
@@ -336,31 +260,14 @@ export default function DonatePage() {
         </CardContent>
         
         <CardFooter>
-          {step === 1 ? (
-            <Button 
-              size="lg" 
-              className="w-full font-bold text-lg bg-[#800000] hover:bg-[#800000]/90 shadow-lg h-14"
-              disabled={(!amount && !customAmount)}
-              onClick={nextStep}
-            >
-              Lanjutkan Pembayaran
-            </Button>
-          ) : (
-            <Button 
-              size="lg" 
-              className="w-full font-bold text-lg bg-[#800000] hover:bg-[#800000]/90 shadow-lg h-14"
-              disabled={loading}
-              onClick={handleConfirmDonation}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Mengirim...
-                </>
-              ) : (
-                "Konfirmasi Sekarang"
-              )}
-            </Button>
-          )}
+          <Button 
+            size="lg" 
+            className="w-full font-black text-lg bg-black text-[#D4AF37] hover:bg-black/90 shadow-xl h-16 rounded-2xl uppercase tracking-widest"
+            disabled={(!amount && !customAmount) || loading}
+            onClick={step === 1 ? nextStep : handleConfirmDonation}
+          >
+            {loading ? <Loader2 className="animate-spin h-6 w-6" /> : step === 1 ? "Lanjutkan" : "Konfirmasi Sekarang"}
+          </Button>
         </CardFooter>
       </Card>
     </div>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -7,8 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mock data: In a real app, this would come from Firestore progress
-// For the prototype, we use fixed Juz 1, 2, 29, 30 as completed
 const juzStatus = Array.from({ length: 30 }, (_, i) => ({
   number: i + 1,
   completed: [1, 2, 29, 30].includes(i + 1),
@@ -27,7 +24,6 @@ export function HifzProgressChart() {
   return (
     <div className="flex flex-col gap-10">
       <div className="flex flex-col lg:flex-row items-center gap-10">
-        {/* Radial Chart Area */}
         <div className="relative w-64 h-64 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -44,8 +40,9 @@ export function HifzProgressChart() {
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.completed ? "#10b981" : "#f1f5f9"} 
+                    fill={entry.completed ? "#D4AF37" : "#000000"} 
                     className="transition-all duration-1000"
+                    opacity={entry.completed ? 1 : 0.05}
                   />
                 ))}
                 <Label
@@ -61,16 +58,16 @@ export function HifzProgressChart() {
                           <tspan
                             x={viewBox.cx}
                             y={viewBox.cy}
-                            className="fill-foreground text-5xl font-black font-headline"
+                            className="fill-black text-5xl font-black font-headline"
                           >
                             {percentage}%
                           </tspan>
                           <tspan
                             x={viewBox.cx}
                             y={(viewBox.cy || 0) + 28}
-                            className="fill-muted-foreground text-[10px] font-black uppercase tracking-[0.2em]"
+                            className="fill-[#800000] text-[10px] font-black uppercase tracking-[0.2em]"
                           >
-                            Hafalan Tuntas
+                            Itqan Tuntas
                           </tspan>
                         </text>
                       );
@@ -82,52 +79,50 @@ export function HifzProgressChart() {
           </ResponsiveContainer>
         </div>
 
-        {/* Legend & Stats */}
         <div className="flex-1 space-y-6 w-full">
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-5 rounded-3xl bg-emerald-50 border-2 border-emerald-100 space-y-1 shadow-sm">
-              <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Selesai</p>
-              <p className="text-3xl font-black text-emerald-800">{completedCount} <span className="text-sm font-medium opacity-60">Juz</span></p>
+            <div className="p-5 rounded-3xl bg-black border-b-4 border-[#D4AF37] space-y-1 shadow-sm">
+              <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">Itqan</p>
+              <p className="text-3xl font-black text-white text-center">{completedCount} <span className="text-xs opacity-60">Juz</span></p>
             </div>
-            <div className="p-5 rounded-3xl bg-slate-50 border-2 border-slate-100 space-y-1 shadow-sm">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tersisa</p>
-              <p className="text-3xl font-black text-slate-700">{30 - completedCount} <span className="text-sm font-medium opacity-60">Juz</span></p>
+            <div className="p-5 rounded-3xl bg-[#800000] border-b-4 border-black space-y-1 shadow-sm">
+              <p className="text-[10px] font-black text-white uppercase tracking-widest text-center">Target</p>
+              <p className="text-3xl font-black text-white text-center">{30 - completedCount} <span className="text-xs opacity-60">Juz</span></p>
             </div>
           </div>
           
-          <div className="space-y-2 bg-muted/20 p-5 rounded-3xl border border-muted">
-            <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Ringkasan Progres
+          <div className="space-y-2 bg-muted p-5 rounded-3xl border border-black/5">
+            <h4 className="text-xs font-black text-black uppercase tracking-widest flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[#D4AF37]" /> Ringkasan
             </h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Masyallah, Anda telah menyelesaikan {completedCount} dari 30 Juz. Fokus saat ini adalah mempertahankan kualitas (Itqan) Juz yang sudah dihafal sambil terus menambah hafalan baru.
+            <p className="text-sm text-black/70 leading-relaxed font-medium">
+              Masyallah, Anda telah mencapai kualitas Itqan pada {completedCount} Juz. Teruslah istiqomah menambah perbendaharaan hafalan baru.
             </p>
           </div>
         </div>
       </div>
 
-      {/* 30 Juz Grid Matrix */}
       <div className="space-y-5">
         <div className="flex items-center justify-between px-1">
-          <h4 className="text-sm font-black font-headline uppercase tracking-widest text-[#800000]">Matriks Status Juz</h4>
-          <Badge variant="outline" className="text-[9px] font-black tracking-widest border-[#800000]/20 text-[#800000]">30 SEGMEN</Badge>
+          <h4 className="text-sm font-black font-headline uppercase text-black">Matriks Hafalan</h4>
+          <Badge className="bg-black text-[#D4AF37] text-[9px] font-black tracking-widest">30 JUZ</Badge>
         </div>
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-3">
           {juzStatus.map((j) => (
             <div
               key={j.number}
               className={cn(
-                "h-14 flex flex-col items-center justify-center rounded-2xl border-2 transition-all cursor-default select-none relative group",
+                "h-14 flex flex-col items-center justify-center rounded-2xl border-2 transition-all cursor-default select-none relative",
                 j.completed 
-                  ? "bg-emerald-500 border-emerald-600 text-white shadow-lg shadow-emerald-500/20 scale-105" 
-                  : "bg-white border-muted text-muted-foreground hover:border-[#800000]/20 hover:bg-muted/5"
+                  ? "bg-[#D4AF37] border-black text-black shadow-lg scale-105" 
+                  : "bg-white border-black/5 text-muted-foreground hover:border-[#800000]/20"
               )}
             >
               <span className="text-[10px] font-black uppercase tracking-tighter">Juz</span>
               <span className="text-xl font-black leading-none">{j.number}</span>
               {j.completed && (
-                <div className="absolute -top-1 -right-1 bg-white rounded-full text-emerald-600 shadow-sm border border-emerald-100">
-                  <CheckCircle2 className="w-4 h-4" />
+                <div className="absolute -top-1 -right-1 bg-black rounded-full text-[#D4AF37] p-0.5 border border-white">
+                  <CheckCircle2 className="w-3 h-3" />
                 </div>
               )}
             </div>
