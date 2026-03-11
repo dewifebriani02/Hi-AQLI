@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog, Library } from "lucide-react";
+import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog, Library, HeartHandshake } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -33,14 +33,23 @@ export default function AdminDashboard() {
     return collection(db, "users");
   }, [db, user?.uid]);
 
+  const pendingDonationsQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, "donations"),
+      where("status", "==", "pending_verification")
+    );
+  }, [db, user?.uid]);
+
   const { data: pending } = useCollection(pendingQuery);
   const { data: halaqahs } = useCollection(halaqahQuery);
   const { data: users } = useCollection(usersQuery);
+  const { data: pendingDonations } = useCollection(pendingDonationsQuery);
 
   const stats = [
-    { label: "Menunggu Verifikasi", value: pending?.length || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Pendaftaran Baru", value: pending?.length || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Donasi Menunggu", value: pendingDonations?.length || 0, icon: HeartHandshake, color: "text-[#800000]", bg: "bg-red-50" },
     { label: "Santri Terdaftar", value: users?.length || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Total Halaqah", value: halaqahs?.length || 0, icon: BookOpen, color: "text-emerald-600", bg: "bg-emerald-50" },
   ];
 
   return (
@@ -70,7 +79,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-none shadow-md overflow-hidden flex flex-col">
           <CardHeader className="bg-muted/30">
             <CardTitle className="text-lg font-headline flex items-center justify-between">
@@ -84,6 +93,24 @@ export default function AdminDashboard() {
             <Link href="/admin/registrations" className="w-full">
               <Button className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
                 Buka Antrean <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-md overflow-hidden flex flex-col">
+          <CardHeader className="bg-red-50/50">
+            <CardTitle className="text-lg font-headline flex items-center justify-between">
+              Verifikasi Infaq & Wakaf
+              <Badge className="bg-[#800000]">{pendingDonations?.length || 0} BARU</Badge>
+            </CardTitle>
+            <CardDescription>Kelola kontribusi digital dari thalibah HI AQLI.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 flex-1 flex flex-col justify-between">
+            <p className="text-sm text-muted-foreground mb-4">Validasi transfer wakaf server AI dan infaq operasional dakwah digital.</p>
+            <Link href="/admin/donations" className="w-full">
+              <Button className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
+                Buka Riwayat Berbagi <HeartHandshake className="w-4 h-4" />
               </Button>
             </Link>
           </CardContent>

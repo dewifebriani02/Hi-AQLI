@@ -35,6 +35,7 @@ import { doc } from "firebase/firestore";
 const adminItems = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
   { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
+  { href: "/admin/donations", label: "Manajemen Donasi", icon: HeartHandshake },
   { href: "/admin/users", label: "Manajemen Peserta", icon: UserCog },
   { href: "/admin/classes", label: "Manajemen Kelas", icon: Library },
 ];
