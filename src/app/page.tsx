@@ -120,7 +120,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] opacity-90">Lanjutkan repetisi hari ini.</p>
               )}
             </div>
-            <Button asChild size="sm" className="bg-[#D4AF37] text-[#800000] hover:bg-[#D4AF37]/90 font-bold gap-2 shadow-lg border-none">
+            <Button asChild size="sm" className="bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 font-bold gap-2 shadow-lg border-none">
               <Link href="/tajweed">MASUK KELAS <ArrowRight className="w-4 h-4" /></Link>
             </Button>
           </CardContent>
@@ -210,13 +210,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Al-Qur'an Ad */}
           <Link href="/tilawah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#800000] to-[#4d0000] text-white h-44 transition-transform group-hover:scale-[1.02]">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
                   <BookMarked className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[10px] font-bold">UTAMA</Badge>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold">UTAMA</Badge>
                   <h4 className="font-bold text-lg">Mushaf Digital</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Baca Al-Qur'an dengan terjemahan per kata dan tafsir mendalam.</p>
                 </div>
@@ -229,13 +229,13 @@ export default function DashboardPage() {
 
           {/* AI Scholar Ad */}
           <Link href="/ai-scholar" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#4d0000] to-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
                   <Globe className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[10px] font-bold">CERDAS</Badge>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold">CERDAS</Badge>
                   <h4 className="font-bold text-lg">Cendekiawan AI</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Tanyakan apa pun tentang hukum Islam dan Tafsir kepada AI kami.</p>
                 </div>
@@ -248,13 +248,13 @@ export default function DashboardPage() {
 
           {/* Hafalan Ad */}
           <Link href="/tajweed" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#800000] via-[#b30000] to-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
                   <Award className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[10px] font-bold">LATIHAN</Badge>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold">LATIHAN</Badge>
                   <h4 className="font-bold text-lg">{isPaid ? `Tikrar Juz ${paidJuz}` : 'Modul Hafalan'}</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">
                     {isPaid ? 'Lanjutkan repetisi hafalan Anda hari ini.' : 'Perkuat hafalan dengan metode Tikrar harian.'}
@@ -294,7 +294,7 @@ export default function DashboardPage() {
                   <HeartHandshake className="w-48 h-48 text-[#D4AF37]" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[10px] font-bold tracking-widest">WAKAF DIGITAL</Badge>
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold tracking-widest">WAKAF DIGITAL</Badge>
                   <h4 className="font-bold text-xl">Infaq &amp; Sedekah</h4>
                   <p className="text-sm text-white/70 max-w-sm leading-relaxed">
                     Dukung pemeliharaan infrastruktur AI HI AQLI untuk manfaat umat yang berkelanjutan.

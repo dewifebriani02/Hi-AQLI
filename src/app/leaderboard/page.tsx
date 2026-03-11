@@ -82,8 +82,8 @@ export default function LeaderboardPage() {
             <Card key={challenge.id} className="overflow-hidden border-none shadow-md bg-white border-b-4 border-[#D4AF37]">
               <CardContent className="p-0">
                 <div className="flex flex-col sm:flex-row">
-                  <div className={cn("sm:w-32 flex flex-col items-center justify-center p-6 text-[#D4AF37] bg-[#800000]")}>
-                    <challenge.icon className="w-10 h-10 mb-2 drop-shadow-md" />
+                  <div className={cn("sm:w-32 flex flex-col items-center justify-center p-6 text-white bg-[#800000]")}>
+                    <challenge.icon className="w-10 h-10 mb-2 drop-shadow-md text-[#D4AF37]" />
                     <span className="text-[9px] font-black uppercase text-center leading-tight">Reward</span>
                   </div>
                   <div className="flex-1 p-5 space-y-4">
@@ -92,8 +92,8 @@ export default function LeaderboardPage() {
                         <h3 className="font-bold text-sm leading-tight text-[#800000]">{challenge.title}</h3>
                         <p className="text-[10px] text-muted-foreground">{challenge.description}</p>
                       </div>
-                      <div className="flex items-center gap-1 text-[9px] font-black text-[#800000] uppercase bg-[#800000]/5 px-2 py-1 rounded-full">
-                        <Clock className="w-3 h-3" /> {challenge.deadline}
+                      <div className="flex items-center gap-1 text-[9px] font-black text-white uppercase bg-[#800000] px-2 py-1 rounded-full">
+                        <Clock className="w-3 h-3 text-[#D4AF37]" /> {challenge.deadline}
                       </div>
                     </div>
 
@@ -137,7 +137,7 @@ export default function LeaderboardPage() {
               </Avatar>
               <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">2</div>
             </div>
-            <span className="text-[10px] font-black text-center truncate w-full uppercase">{topUsers[1].name.split(' ')[0]}</span>
+            <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topUsers[1].name.split(' ')[0]}</span>
             <div className="bg-[#800000]/5 w-full h-16 rounded-t-lg flex items-center justify-center">
                <Medal className="w-6 h-6 text-[#800000]/20" />
             </div>
@@ -151,12 +151,12 @@ export default function LeaderboardPage() {
               </div>
               <Avatar className="w-20 h-20 border-4 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20">
                 <AvatarImage src={topUsers[0].avatar} />
-                <AvatarFallback className="bg-[#800000] text-[#D4AF37]">A</AvatarFallback>
+                <AvatarFallback className="bg-[#800000] text-white">A</AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-[#800000] w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">1</div>
+              <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">1</div>
             </div>
             <span className="text-xs font-black text-center truncate w-full uppercase text-[#800000]">{topUsers[0].name.split(' ')[0]}</span>
-            <div className="bg-[#D4AF37]/20 w-full h-24 rounded-t-lg flex items-center justify-center">
+            <div className="bg-[#D4AF37]/20 w-full h-24 rounded-t-lg flex items-center justify-center text-black">
                <Trophy className="w-8 h-8 text-[#800000]" />
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function LeaderboardPage() {
               </Avatar>
               <div className="absolute -bottom-2 -right-2 bg-[#800000]/60 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">3</div>
             </div>
-            <span className="text-[10px] font-black text-center truncate w-full uppercase">{topUsers[2].name.split(' ')[0]}</span>
+            <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topUsers[2].name.split(' ')[0]}</span>
             <div className="bg-[#800000]/5 w-full h-12 rounded-t-lg flex items-center justify-center">
                <Medal className="w-6 h-6 text-[#800000]/20" />
             </div>
@@ -188,7 +188,7 @@ export default function LeaderboardPage() {
                   <span className="text-xs font-black text-muted-foreground w-4">{user.rank}</span>
                   <Avatar className="h-10 w-10 border-2 border-white">
                     <AvatarImage src={user.avatar} />
-                    <AvatarFallback className="bg-[#800000] text-[#D4AF37]">{user.name[0]}</AvatarFallback>
+                    <AvatarFallback className="bg-[#800000] text-white">{user.name[0]}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
                     <span className="text-sm font-black text-black uppercase">{user.name}</span>
@@ -214,7 +214,7 @@ export default function LeaderboardPage() {
       <Card className="border-2 border-[#D4AF37] bg-[#800000] text-white shadow-lg sticky bottom-24 z-20 mx-1 border-b-4 rounded-2xl">
         <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#D4AF37] text-[#800000] flex items-center justify-center font-black text-sm">
+            <div className="w-10 h-10 rounded-full bg-[#D4AF37] text-black flex items-center justify-center font-black text-sm">
               142
             </div>
             <div className="flex flex-col">
@@ -223,7 +223,7 @@ export default function LeaderboardPage() {
             </div>
           </div>
           <div className="text-right">
-             <span className="text-sm font-black block">1,250</span>
+             <span className="text-sm font-black block text-white">1,250</span>
              <span className="text-[10px] text-[#D4AF37] uppercase font-black tracking-widest">Poin</span>
           </div>
         </CardContent>

@@ -223,7 +223,7 @@ export function PageExamSimulation({ page }: { page: number }) {
             isPassed ? "bg-[#800000] border-b-4 border-[#D4AF37]" : "bg-[#4d0000]"
           )}>
             <Trophy className={cn("w-20 h-20", isPassed ? "text-[#D4AF37] animate-bounce" : "text-white")} />
-            <h2 className="text-2xl font-black font-headline uppercase tracking-widest">
+            <h2 className="text-2xl font-black font-headline uppercase tracking-widest text-white">
               {isPassed ? "Masyallah! Lulus" : "Belum Maksimal"}
             </h2>
           </div>
@@ -253,7 +253,7 @@ export function PageExamSimulation({ page }: { page: number }) {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6 pt-0">
-            <Button asChild className="w-full bg-[#800000] text-[#D4AF37] font-black h-14 rounded-2xl shadow-xl uppercase hover:bg-[#800000]/90">
+            <Button asChild className="w-full bg-[#800000] text-white font-black h-14 rounded-2xl shadow-xl uppercase hover:bg-[#800000]/90">
               <Link href="/tajweed">KEMBALI KE DASBOR</Link>
             </Button>
             <Button variant="ghost" onClick={handleReset} className="w-full text-[#800000] font-black gap-2 uppercase text-xs">
@@ -266,7 +266,7 @@ export function PageExamSimulation({ page }: { page: number }) {
         <Card className="border-2 border-[#800000]/10 bg-white shadow-lg mx-1">
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#800000] text-[#D4AF37] flex items-center justify-center font-black text-lg border-2 border-[#D4AF37]">
+              <div className="w-12 h-12 rounded-2xl bg-[#800000] text-white flex items-center justify-center font-black text-lg border-2 border-[#D4AF37]">
                 {myRank}
               </div>
               <div className="flex flex-col">
@@ -288,7 +288,7 @@ export function PageExamSimulation({ page }: { page: number }) {
               <Trophy className="w-5 h-5 text-[#D4AF37] fill-current" />
               <h3 className="text-sm font-black font-headline uppercase text-black">Papan Juara Halaman {page}</h3>
             </div>
-            <Badge className="bg-[#800000] text-[#D4AF37] text-[8px] font-black">GLOBAL</Badge>
+            <Badge className="bg-[#800000] text-white text-[8px] font-black">GLOBAL</Badge>
           </div>
           
           <Card className="border-none shadow-lg bg-muted overflow-hidden">
@@ -301,9 +301,9 @@ export function PageExamSimulation({ page }: { page: number }) {
                       <div className="relative">
                         <Avatar className="h-10 w-10 border-2 border-white">
                           <AvatarImage src={u.avatar} />
-                          <AvatarFallback className="bg-[#800000] text-[#D4AF37] text-xs font-bold">{u.name[0]}</AvatarFallback>
+                          <AvatarFallback className="bg-[#800000] text-white text-xs font-bold">{u.name[0]}</AvatarFallback>
                         </Avatar>
-                        {u.rank === 1 && <div className="absolute -top-1 -right-1 bg-[#D4AF37] text-[#800000] rounded-full p-0.5 border border-white"><Star className="w-2 h-2 fill-current" /></div>}
+                        {u.rank === 1 && <div className="absolute -top-1 -right-1 bg-[#D4AF37] text-black rounded-full p-0.5 border border-white"><Star className="w-2 h-2 fill-current" /></div>}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs font-black text-black uppercase">{u.name}</span>
@@ -339,7 +339,7 @@ export function PageExamSimulation({ page }: { page: number }) {
           <h1 className="text-sm font-black font-headline uppercase tracking-[0.2em] text-[#800000]">Simulasi Ujian</h1>
           <p className="text-[10px] text-muted-foreground font-bold">Halaman {page} • Juz {Math.floor(page/20) + 1}</p>
         </div>
-        <Badge className="bg-[#800000] text-[#D4AF37] h-8 px-3 font-black rounded-xl border-none">
+        <Badge className="bg-[#800000] text-white h-8 px-3 font-black rounded-xl border-none">
           {score} / {questions.length}
         </Badge>
       </div>
@@ -353,8 +353,8 @@ export function PageExamSimulation({ page }: { page: number }) {
           <div className="mx-auto w-14 h-14 rounded-2xl bg-white shadow-md flex items-center justify-center mb-6">
             {currentQ.type === 'word_translation' && <Languages className="w-7 h-7 text-[#800000]" />}
             {currentQ.type === 'sentence_translation' && <BookOpen className="w-7 h-7 text-[#800000]" />}
-            {currentQ.type === 'verse_number' && <Target className="w-7 h-7 text-[#D4AF37]" />}
-            {currentQ.type === 'fill_blank' && <Zap className="w-7 h-7 text-[#D4AF37]" />}
+            {currentQ.type === 'verse_number' && <Target className="w-7 h-7 text-[#800000]" />}
+            {currentQ.type === 'fill_blank' && <Zap className="w-7 h-7 text-[#800000]" />}
             {currentQ.type === 'connect_verse' && <BrainCircuit className="w-7 h-7 text-[#800000]" />}
           </div>
           <div className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37] mb-4 opacity-70">
@@ -362,7 +362,7 @@ export function PageExamSimulation({ page }: { page: number }) {
           </div>
           <div className={cn(
             "leading-relaxed font-black",
-            currentQ.type === 'sentence_translation' ? "text-xl font-headline" : "text-4xl md:text-5xl font-arabic text-white"
+            currentQ.type === 'sentence_translation' ? "text-xl font-headline text-white" : "text-4xl md:text-5xl font-arabic text-white"
           )} dir={currentQ.type === 'sentence_translation' ? "ltr" : "rtl"}>
             {currentQ.questionText}
           </div>
@@ -376,18 +376,18 @@ export function PageExamSimulation({ page }: { page: number }) {
               onClick={() => handleAnswer(option)}
               className={cn(
                 "h-auto py-6 text-lg font-bold transition-all border-2 bg-white rounded-2xl flex items-center justify-between px-6 gap-4 text-left whitespace-normal",
-                selectedAnswer === option && isCorrect === true && "bg-[#D4AF37]/10 border-[#D4AF37] text-black",
-                selectedAnswer === option && isCorrect === false && "bg-[#800000]/10 border-[#800000] text-[#800000]",
-                selectedAnswer && option === currentQ.correctAnswer && isCorrect === false && "bg-[#D4AF37]/10 border-[#D4AF37] text-black",
+                selectedAnswer === option && isCorrect === true && "bg-[#D4AF37] border-[#D4AF37] text-black",
+                selectedAnswer === option && isCorrect === false && "bg-[#800000] border-[#800000] text-white",
+                selectedAnswer && option === currentQ.correctAnswer && isCorrect === false && "bg-[#D4AF37] border-[#D4AF37] text-black",
                 !selectedAnswer && "hover:border-[#800000] hover:bg-muted"
               )}
             >
               <span className={cn("flex-1", (currentQ.type === 'fill_blank' || currentQ.type === 'connect_verse') ? "font-arabic text-2xl text-right" : "text-base")} dir={(currentQ.type === 'fill_blank' || currentQ.type === 'connect_verse') ? "rtl" : "ltr"}>
                 {option}
               </span>
-              {selectedAnswer === option && isCorrect === true && <CheckCircle2 className="w-6 h-6 text-[#800000] shrink-0" />}
-              {selectedAnswer === option && isCorrect === false && <XCircle className="w-6 h-6 text-[#800000] shrink-0" />}
-              {selectedAnswer && option === currentQ.correctAnswer && isCorrect === false && <CheckCircle2 className="w-6 h-6 text-[#800000] shrink-0" />}
+              {selectedAnswer === option && isCorrect === true && <CheckCircle2 className="w-6 h-6 text-black shrink-0" />}
+              {selectedAnswer === option && isCorrect === false && <XCircle className="w-6 h-6 text-white shrink-0" />}
+              {selectedAnswer && option === currentQ.correctAnswer && isCorrect === false && <CheckCircle2 className="w-6 h-6 text-black shrink-0" />}
             </Button>
           ))}
         </CardContent>

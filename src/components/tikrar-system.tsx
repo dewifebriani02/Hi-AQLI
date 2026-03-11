@@ -25,11 +25,10 @@ import {
   Pause,
   Headphones,
   Languages,
-  GraduationCap,
-  MessageSquare,
   ClipboardCheck,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  MessageSquare
 } from "lucide-react";
 import {
   Tooltip,
@@ -53,7 +52,6 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 
-// Mapping Standard Madani Mushaf
 const JUZ_PAGES = [
   1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
@@ -100,7 +98,6 @@ export function TikrarSystem() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   
-  const isPaid = userData?.isTikrarPaid || false;
   const paidJuz = userData?.paidJuz || 1;
 
   const [juz, setJuz] = useState(1);
@@ -353,10 +350,6 @@ export function TikrarSystem() {
     }
   };
 
-  useEffect(() => {
-    return () => stopAutoPlay();
-  }, []);
-
   const selectReciter = (id: number) => {
     setSelectedReciterId(id);
     localStorage.setItem('aqli_reciter_id', id.toString());
@@ -419,7 +412,7 @@ export function TikrarSystem() {
       </Card>
 
       {/* CONTROLS */}
-      <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90 border-[#800000]/10">
+      <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md border-[#800000]/10">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
             <ChevronLeft className="h-5 w-5 text-[#800000]" />
@@ -446,7 +439,7 @@ export function TikrarSystem() {
             <span className="text-[10px] font-black uppercase tracking-widest text-white">
               Tahap 0: Persiapan (Prasyarat)
             </span>
-            {isPrepTuntas && <Badge className="bg-[#D4AF37] text-[#800000] font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
+            {isPrepTuntas && <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
           </div>
           <CardContent className="p-6 space-y-8">
             <div className="flex flex-col gap-8">
@@ -455,7 +448,7 @@ export function TikrarSystem() {
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                      prepListenCount >= 5 ? "bg-[#D4AF37] text-[#800000]" : "bg-white text-[#800000] border-2 border-[#800000]/20"
+                      prepListenCount >= 5 ? "bg-[#D4AF37] text-black" : "bg-white text-[#800000] border-2 border-[#800000]/20"
                     )}>
                       <Headphones className="w-5 h-5" />
                     </div>
@@ -491,7 +484,7 @@ export function TikrarSystem() {
                   className={cn(
                     "w-full h-14 font-black rounded-2xl border-2 transition-all gap-3 shadow-md uppercase tracking-widest",
                     isAutoPlaying ? "bg-[#800000] text-white border-white hover:bg-[#800000]/90" : 
-                    prepListenCount >= 5 ? "bg-[#D4AF37] border-[#D4AF37] text-[#800000] hover:bg-[#D4AF37]/90" :
+                    prepListenCount >= 5 ? "bg-[#D4AF37] border-[#D4AF37] text-black hover:bg-[#D4AF37]/90" :
                     "bg-[#800000] text-white border-transparent hover:bg-[#800000]/90"
                   )}
                 >
@@ -502,12 +495,12 @@ export function TikrarSystem() {
                   )}
                 </Button>
                 
-                {isAutoPlaying && playingVerseIndex !== null && verses[playingVerseIndex] && (
+                {playingVerseIndex !== null && verses[playingVerseIndex] && (
                   <div className="mt-6 p-6 sm:p-8 bg-white rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
                     <div className="flex flex-col gap-8">
                       <div className="flex items-center justify-center gap-2">
-                        <Badge className="bg-[#800000] text-[#D4AF37] text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">Siklus {currentLoop + 1}</Badge>
-                        <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">Ayat {verses[playingVerseIndex].id}</Badge>
+                        <Badge className="bg-[#800000] text-white text-[9px] font-black uppercase tracking-[0.2em]">Siklus {currentLoop + 1}</Badge>
+                        <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">Ayat {verses[playingVerseIndex].verse_key.split(':')[1]}</Badge>
                       </div>
 
                       <div className="flex flex-wrap justify-center gap-x-2 gap-y-4" dir="rtl">
@@ -515,14 +508,11 @@ export function TikrarSystem() {
                           <span 
                             key={wIdx}
                             style={{ fontSize: `${fontSize * 1.4}px`, lineHeight: 1.6 }} 
-                            className="font-arabic text-[#800000] font-bold transition-all duration-300 rounded-lg px-1 select-none"
+                            className="font-arabic text-[#800000] font-bold"
                           >
                             {word.text_uthmani}
                           </span>
                         ))}
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-[#800000] text-[#D4AF37] text-xs font-bold mx-1 translate-y-[-4px] shadow-sm">
-                          ({verses[playingVerseIndex].verse_key.split(':')[1]})
-                        </span>
                       </div>
 
                       <Separator className="bg-[#D4AF37]/20" />
@@ -532,7 +522,7 @@ export function TikrarSystem() {
                           <Languages className="w-3 h-3" /> Arti Per Kata
                         </div>
                         <div className="flex flex-wrap justify-center gap-2">
-                          {verses[playingVerseIndex].words.map((word, wIdx) => (
+                          {verses[playingVerseIndex].words.filter(w => w.text_uthmani).map((word, wIdx) => (
                             <div key={wIdx} className="bg-muted border-2 border-muted-foreground/10 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]">
                               <span className="font-arabic text-black text-sm font-bold leading-none">{word.text_uthmani}</span>
                               <span className="text-[9px] font-medium text-[#800000] leading-none">{word.translation?.text || "-"}</span>
@@ -558,7 +548,7 @@ export function TikrarSystem() {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                    prepTranslationDone ? "bg-[#D4AF37] text-[#800000]" : "bg-white text-[#800000] border-2 border-[#800000]/20"
+                    prepTranslationDone ? "bg-[#D4AF37] text-black" : "bg-white text-[#800000] border-2 border-[#800000]/20"
                   )}>
                     <Languages className="w-5 h-5" />
                   </div>
@@ -572,7 +562,7 @@ export function TikrarSystem() {
                   onClick={() => setPrepTranslationDone(!prepTranslationDone)}
                   className={cn(
                     "w-full h-12 font-black rounded-xl border-2 uppercase tracking-widest text-[10px]",
-                    prepTranslationDone ? "bg-[#D4AF37] hover:bg-[#D4AF37]/90 border-transparent text-[#800000]" : "border-[#800000] text-[#800000] hover:bg-[#800000]/5"
+                    prepTranslationDone ? "bg-[#D4AF37] hover:bg-[#D4AF37]/90 border-transparent text-black" : "border-[#800000] text-[#800000] hover:bg-[#800000]/5"
                   )}
                 >
                   {prepTranslationDone ? "SUDAH DIPAHAMI" : "KONFIRMASI PEMAHAMAN"}
@@ -584,7 +574,7 @@ export function TikrarSystem() {
 
         {/* ITQAN BLOKS */}
         <div className="flex flex-col gap-10 mt-10">
-          <div className="bg-[#800000] text-[#D4AF37] p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 mx-1 shadow-lg">
+          <div className="bg-[#800000] text-white p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 mx-1 shadow-lg">
             <Info className="w-5 h-5 shrink-0 mt-0.5" />
             <div className="text-[11px] leading-relaxed font-bold uppercase tracking-wide">
               <strong>Aturan Itqan:</strong> Maqta wajib <strong>40x</strong>. Gabungan wajib <strong>10x</strong>. Selesaikan Persiapan sebelum lanjut.
@@ -649,7 +639,7 @@ export function TikrarSystem() {
                         Uji pemahaman terjemahan dan sambung ayat halaman ini.
                       </p>
                     </div>
-                    <Button asChild className="bg-[#D4AF37] text-[#800000] font-black w-full rounded-xl hover:bg-[#D4AF37]/90 h-12 shadow-lg">
+                    <Button asChild className="bg-[#D4AF37] text-black font-black w-full rounded-xl hover:bg-[#D4AF37]/90 h-12 shadow-lg">
                       <Link href={`/tajweed/simulation?page=${page}`}>MULAI SIMULASI <ArrowRight className="ml-2 w-4 h-4" /></Link>
                     </Button>
                   </CardContent>
@@ -725,7 +715,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             </span>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent className="bg-[#800000] text-[#D4AF37] border-none shadow-lg py-1.5 px-3 z-[100]">
+            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
               <p className="text-xs font-bold">{token.data.translation?.text || "..."}</p>
             </TooltipContent>
           </TooltipPortal>
@@ -744,10 +734,10 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
       isLocked && "opacity-50 grayscale select-none"
     )}>
       <div className="bg-[#800000] py-2 px-4 border-b flex justify-between items-center shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] truncate">
+        <span className="text-[10px] font-black uppercase tracking-widest text-white truncate">
           BLOK {letter} ({page}{letter}) {isLocked && "• LOCK"}
         </span>
-        {isDoneG && <Badge className="bg-[#D4AF37] text-[#800000] font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
+        {isDoneG && <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
       </div>
       <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">
         <div className="bg-white p-4 rounded-xl border-2 border-[#800000]/5 flex-1 overflow-y-auto no-scrollbar" dir="rtl">
@@ -771,7 +761,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             count={state.b.count} 
             isLocked={isLocked || state.a.count < PASS_THRESHOLD} 
             onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} 
-            color="black" 
+            color="darkMaroon" 
             threshold={PASS_THRESHOLD} 
           />
         </div>
@@ -781,7 +771,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
           disabled={isLocked || state.b.count < PASS_THRESHOLD} 
           className={cn(
             "w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1 transition-all relative", 
-            isDoneG ? "bg-[#D4AF37] text-[#800000] hover:bg-[#D4AF37]/90 shadow-lg" : "bg-[#800000] text-white hover:bg-[#800000]/90"
+            isDoneG ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg" : "bg-[#800000] text-white hover:bg-[#800000]/90"
           )}
         >
           <span className="text-[8px] flex items-center gap-1 leading-none opacity-80 mb-0.5">
@@ -789,7 +779,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             GABUNG {page}{letter}
           </span>
           <span className="text-sm leading-none">{state.combined.count} / {PASS_THRESHOLD}</span>
-          {isDoneG && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-[#800000]" /></div>}
+          {isDoneG && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-black" /></div>}
         </Button>
       </CardContent>
     </Card>
@@ -808,7 +798,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
       <div className="flex items-center gap-3 overflow-hidden">
         <div className={cn(
           "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0", 
-          isDone ? "bg-[#D4AF37] text-[#800000]" : highlight ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+          isDone ? "bg-[#D4AF37] text-black" : highlight ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
         )}>
           {isLocked ? <Lock className="w-4 h-4" /> : <Zap className="w-4 h-4 fill-current" />}
         </div>
@@ -830,7 +820,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
           disabled={isLocked || isDone} 
           className={cn(
             "h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all shadow-sm", 
-            isDone ? "bg-[#D4AF37] text-[#800000] border-none" : "bg-[#800000] text-white hover:bg-[#800000]/90"
+            isDone ? "bg-[#D4AF37] text-black border-none" : "bg-[#800000] text-white hover:bg-[#800000]/90"
           )}
         >
           {isDone ? <CheckCircle2 className="w-4 h-4" /> : `+1`}
@@ -844,7 +834,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
   const isDone = count >= threshold;
   const themes: any = {
     maroon: isDone ? "bg-[#800000] text-white border-[#800000]" : "bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5",
-    black: isDone ? "bg-[#4d0000] text-[#D4AF37] border-[#4d0000]" : "bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5"
+    darkMaroon: isDone ? "bg-[#4d0000] text-white border-[#4d0000]" : "bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5"
   };
   return (
     <div 
