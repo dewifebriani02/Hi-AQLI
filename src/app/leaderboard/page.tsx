@@ -1,6 +1,9 @@
+
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { collection, query, orderBy, limit } from "firebase/firestore";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,27 +11,19 @@ import { Progress } from "@/components/ui/progress";
 import { 
   Trophy, 
   Medal, 
-  Star, 
-  TrendingUp, 
   ChevronRight, 
   Crown, 
   Gift, 
   Award, 
   Clock,
   Sparkles,
-  Zap
+  Zap,
+  Loader2,
+  TrendingUp,
+  Heart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-
-const topUsers = [
-  { id: 1, name: "Abdullah Mansur", points: 12450, rank: 1, avatar: "https://picsum.photos/seed/user1/100/100", trend: "up", level: "Hafiz" },
-  { id: 2, name: "Siti Aminah", points: 11200, rank: 2, avatar: "https://picsum.photos/seed/user2/100/100", trend: "up", level: "Alim" },
-  { id: 3, name: "Yusuf Ibrahim", points: 10850, rank: 3, avatar: "https://picsum.photos/seed/user3/100/100", trend: "down", level: "Alim" },
-  { id: 4, name: "Fatimah Az-Zahra", points: 9500, rank: 4, avatar: "https://picsum.photos/seed/user4/100/100", trend: "stable", level: "Murid" },
-  { id: 5, name: "Ahmad Fauzi", points: 8900, rank: 5, avatar: "https://picsum.photos/seed/user5/100/100", trend: "up", level: "Murid" },
-  { id: 6, name: "Zainab", points: 8200, rank: 6, avatar: "https://picsum.photos/seed/user6/100/100", trend: "down", level: "Murid" },
-];
 
 const activeChallenges = [
   {
@@ -54,6 +49,35 @@ const activeChallenges = [
 ];
 
 export default function LeaderboardPage() {
+  const db = useFirestore();
+  const { user } = useUser();
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(
+      collection(db, "users"),
+      orderBy("points", "desc"),
+      limit(50)
+    );
+  }, [db]);
+
+  const { data: users, isLoading } = useCollection(usersQuery);
+
+  const currentUserData = users?.find(u => u.id === user?.uid);
+  const currentUserRank = users?.findIndex(u => u.id === user?.uid) + 1 || 0;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-4">
+        <Loader2 className="animate-spin text-[#800000] h-10 w-10" />
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memuat Papan Juara...</p>
+      </div>
+    );
+  }
+
+  const topThree = users?.slice(0, 3) || [];
+  const restUsers = users?.slice(3) || [];
+
   return (
     <div className="flex flex-col gap-8 max-w-2xl mx-auto pb-32">
       {/* Header Section */}
@@ -64,12 +88,117 @@ export default function LeaderboardPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight text-[#800000]">Ksatria Al-Qur'an</h1>
         <p className="text-muted-foreground text-sm">
-          Berlomba-lomba dalam kebaikan, raih poin, dan menangkan hadiah menarik.
+          Berlomba-lomba dalam kebaikan, raih poin melalui kuis, dan menangkan hadiah menarik.
         </p>
       </div>
 
+      {/* Podium Section */}
+      <div className="space-y-4 px-1 mt-4">
+        <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-[#800000]">
+          <Crown className="w-5 h-5 text-[#D4AF37] fill-current" /> Papan Peringkat Utama
+        </h2>
+        
+        {topThree.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2 items-end pt-8 pb-4">
+            {/* Rank 2 */}
+            <div className="flex flex-col items-center gap-2">
+              {topThree[1] && (
+                <>
+                  <div className="relative">
+                    <Avatar className="w-16 h-16 border-4 border-[#800000]">
+                      <AvatarImage src={topThree[1].photoURL} />
+                      <AvatarFallback className="bg-[#800000] text-white font-bold">{topThree[1].username?.[0] || topThree[1].email?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">2</div>
+                  </div>
+                  <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topThree[1].username?.split(' ')[0]}</span>
+                  <div className="bg-[#800000]/5 w-full h-16 rounded-t-lg flex flex-col items-center justify-center">
+                    <Medal className="w-6 h-6 text-[#800000]/20" />
+                    <span className="text-[10px] font-black text-[#800000]">{topThree[1].points || 0}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Rank 1 */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative">
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2">
+                  <Crown className="w-8 h-8 text-[#D4AF37] fill-current animate-bounce" />
+                </div>
+                <Avatar className="w-20 h-20 border-4 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20">
+                  <AvatarImage src={topThree[0].photoURL} />
+                  <AvatarFallback className="bg-[#800000] text-white font-bold">{topThree[0].username?.[0] || topThree[0].email?.[0]}</AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">1</div>
+              </div>
+              <span className="text-xs font-black text-center truncate w-full uppercase text-[#800000]">{topThree[0].username?.split(' ')[0]}</span>
+              <div className="bg-[#D4AF37]/20 w-full h-24 rounded-t-lg flex flex-col items-center justify-center text-black">
+                <Trophy className="w-8 h-8 text-[#800000] mb-1" />
+                <span className="text-sm font-black">{topThree[0].points || 0}</span>
+              </div>
+            </div>
+
+            {/* Rank 3 */}
+            <div className="flex flex-col items-center gap-2">
+              {topThree[2] && (
+                <>
+                  <div className="relative">
+                    <Avatar className="w-16 h-16 border-4 border-[#800000]/60">
+                      <AvatarImage src={topThree[2].photoURL} />
+                      <AvatarFallback className="bg-[#800000]/60 text-white font-bold">{topThree[2].username?.[0] || topThree[2].email?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 -right-2 bg-[#800000]/60 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">3</div>
+                  </div>
+                  <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topThree[2].username?.split(' ')[0]}</span>
+                  <div className="bg-[#800000]/5 w-full h-12 rounded-t-lg flex flex-col items-center justify-center">
+                    <Medal className="w-6 h-6 text-[#800000]/20" />
+                    <span className="text-[10px] font-black text-[#800000]">{topThree[2].points || 0}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="py-10 text-center text-muted-foreground italic text-sm">Belum ada thalibah terdaftar.</div>
+        )}
+      </div>
+
+      {/* Full List */}
+      <Card className="border-none shadow-sm bg-muted overflow-hidden">
+        <CardContent className="p-0">
+          <div className="divide-y divide-[#800000]/5">
+            {restUsers.length > 0 ? restUsers.map((u, idx) => (
+              <div key={u.id} className="flex items-center justify-between p-4 hover:bg-white transition-colors">
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-black text-muted-foreground w-4">{idx + 4}</span>
+                  <Avatar className="h-10 w-10 border-2 border-white">
+                    <AvatarImage src={u.photoURL} />
+                    <AvatarFallback className="bg-[#800000] text-white font-bold">{u.username?.[0] || u.email?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-black text-black uppercase">{u.username || 'Hamba Allah'}</span>
+                    <div className="flex items-center gap-1.5">
+                      <Badge className="bg-[#800000] text-white text-[8px] font-black uppercase px-1.5 py-0">
+                        {u.roleId === 'learner' ? 'THALIBAH' : u.roleId?.toUpperCase() || 'SANTRI'}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase">{(u.points || 0).toLocaleString()} Poin</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+                </div>
+              </div>
+            )) : restUsers.length === 0 && topThree.length > 3 && (
+              <div className="p-10 text-center text-muted-foreground italic text-xs">Semua peserta tampil di podium.</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Challenges Section */}
-      <div className="space-y-4 px-1">
+      <div className="space-y-4 px-1 mt-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-[#800000]">
             <Zap className="w-5 h-5 text-[#D4AF37] fill-current" /> Tantangan Berhadiah
@@ -122,112 +251,28 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {/* Podium Section */}
-      <div className="space-y-4 px-1 mt-4">
-        <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-[#800000]">
-          <Crown className="w-5 h-5 text-[#D4AF37] fill-current" /> Papan Peringkat Global
-        </h2>
-        <div className="grid grid-cols-3 gap-2 items-end pt-8 pb-4">
-          {/* Rank 2 */}
-          <div className="flex flex-col items-center gap-2">
-            <div className="relative">
-              <Avatar className="w-16 h-16 border-4 border-[#800000]">
-                <AvatarImage src={topUsers[1].avatar} />
-                <AvatarFallback className="bg-[#800000] text-white">S</AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">2</div>
-            </div>
-            <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topUsers[1].name.split(' ')[0]}</span>
-            <div className="bg-[#800000]/5 w-full h-16 rounded-t-lg flex items-center justify-center">
-               <Medal className="w-6 h-6 text-[#800000]/20" />
-            </div>
-          </div>
-
-          {/* Rank 1 */}
-          <div className="flex flex-col items-center gap-2">
-            <div className="relative">
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2">
-                <Crown className="w-8 h-8 text-[#D4AF37] fill-current animate-bounce" />
-              </div>
-              <Avatar className="w-20 h-20 border-4 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20">
-                <AvatarImage src={topUsers[0].avatar} />
-                <AvatarFallback className="bg-[#800000] text-white">A</AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">1</div>
-            </div>
-            <span className="text-xs font-black text-center truncate w-full uppercase text-[#800000]">{topUsers[0].name.split(' ')[0]}</span>
-            <div className="bg-[#D4AF37]/20 w-full h-24 rounded-t-lg flex items-center justify-center text-black">
-               <Trophy className="w-8 h-8 text-[#800000]" />
-            </div>
-          </div>
-
-          {/* Rank 3 */}
-          <div className="flex flex-col items-center gap-2">
-            <div className="relative">
-              <Avatar className="w-16 h-16 border-4 border-[#800000]/60">
-                <AvatarImage src={topUsers[2].avatar} />
-                <AvatarFallback className="bg-[#800000]/60 text-white">Y</AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-2 -right-2 bg-[#800000]/60 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">3</div>
-            </div>
-            <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topUsers[2].name.split(' ')[0]}</span>
-            <div className="bg-[#800000]/5 w-full h-12 rounded-t-lg flex items-center justify-center">
-               <Medal className="w-6 h-6 text-[#800000]/20" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Full List */}
-      <Card className="border-none shadow-sm bg-muted overflow-hidden">
-        <CardContent className="p-0">
-          <div className="divide-y divide-[#800000]/5">
-            {topUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-4 hover:bg-white transition-colors">
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-black text-muted-foreground w-4">{user.rank}</span>
-                  <Avatar className="h-10 w-10 border-2 border-white">
-                    <AvatarImage src={user.avatar} />
-                    <AvatarFallback className="bg-[#800000] text-white">{user.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-black text-black uppercase">{user.name}</span>
-                    <div className="flex items-center gap-1.5">
-                      <Badge className="bg-[#800000] text-white text-[8px] font-black uppercase px-1.5 py-0">
-                        {user.level}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase">{user.points.toLocaleString()} Poin</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  {user.trend === "up" && <TrendingUp className="w-3 h-3 text-[#D4AF37]" />}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Your Rank Sticky Footer */}
-      <Card className="border-2 border-[#D4AF37] bg-[#800000] text-white shadow-lg sticky bottom-24 z-20 mx-1 border-b-4 rounded-2xl">
-        <CardContent className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#D4AF37] text-black flex items-center justify-center font-black text-sm">
-              142
+      {user && (
+        <Card className="border-2 border-[#D4AF37] bg-[#800000] text-white shadow-lg sticky bottom-24 z-20 mx-1 border-b-4 rounded-2xl">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-[#D4AF37] text-black flex items-center justify-center font-black text-sm">
+                {currentUserRank || '-'}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat Anda</span>
+                <span className="text-[9px] text-white/60 font-bold uppercase">
+                  {currentUserRank === 1 ? 'Pertahankan tahta Anda!' : 'Teruslah ber-Itqan!'}
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat Anda</span>
-              <span className="text-[9px] text-white/60 font-bold uppercase">Butuh 150 poin lagi</span>
+            <div className="text-right">
+               <span className="text-sm font-black block text-white">{currentUserData?.points || 0}</span>
+               <span className="text-[10px] text-[#D4AF37] uppercase font-black tracking-widest">Poin</span>
             </div>
-          </div>
-          <div className="text-right">
-             <span className="text-sm font-black block text-white">1,250</span>
-             <span className="text-[10px] text-[#D4AF37] uppercase font-black tracking-widest">Poin</span>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

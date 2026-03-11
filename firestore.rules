@@ -21,7 +21,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isAdmin();
+      allow list: if isSignedIn(); // Leaderboard needs to list users
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
       allow write: if isAdmin();
@@ -60,6 +60,12 @@ service cloud.firestore {
     match /roles_superadmin/{userId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+    }
+
+    match /page_exams/{examId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
     }
 
     match /{path=**} {

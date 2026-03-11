@@ -28,7 +28,7 @@ import {
   Fingerprint
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { collection, query, where, limit, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, limit, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -65,13 +65,14 @@ export default function ProfilePage() {
     return query(
       collection(db, "donations"),
       where("userId", "==", user.uid),
+      orderBy("createdAt", "desc"),
       limit(20)
     );
   }, [db, user?.uid]);
 
   const { data: donations } = useCollection(donationsQuery);
 
-  // Fetch user data for payment status
+  // Fetch user data for payment status and points
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return doc(db, "users", user.uid);
@@ -80,6 +81,16 @@ export default function ProfilePage() {
   const { data: userData } = useDoc(userDocRef);
   const isPaid = userData?.isTikrarPaid;
   const paidJuz = userData?.paidJuz;
+  const points = userData?.points || 0;
+
+  // Fetch all users to calculate rank
+  const allUsersQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return query(collection(db, "users"), orderBy("points", "desc"));
+  }, [db, user?.uid]);
+
+  const { data: allUsers } = useCollection(allUsersQuery);
+  const rank = allUsers?.findIndex(u => u.id === user?.uid) + 1 || '-';
 
   // AUTO-BOOTSTRAP ADMIN for dewifebriani@gmail.com
   useEffect(() => {
@@ -212,23 +223,53 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <Tabs defaultValue="halaqah" className="w-full">
+          <Tabs defaultValue="juara" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
+              <TabsTrigger value="juara" className="font-bold gap-2 rounded-lg data-[state=active]:text-[#800000]">
+                <Trophy className="w-4 h-4 hidden sm:block" /> Juara
+              </TabsTrigger>
               <TabsTrigger value="halaqah" className="font-bold gap-2 rounded-lg data-[state=active]:text-[#800000]">
                 <BookOpen className="w-4 h-4 hidden sm:block" /> Halaqah
               </TabsTrigger>
               <TabsTrigger value="donasi" className="font-bold gap-2 rounded-lg data-[state=active]:text-[#800000]">
                 <HeartHandshake className="w-4 h-4 hidden sm:block" /> Donasi
               </TabsTrigger>
-              <TabsTrigger value="juara" className="font-bold gap-2 rounded-lg data-[state=active]:text-[#800000]">
-                <Trophy className="w-4 h-4 hidden sm:block" /> Juara
-              </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="juara" className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="border-none bg-[#800000]/5 text-center p-6">
+                  <Trophy className="w-8 h-8 text-[#D4AF37] mx-auto mb-2" />
+                  <div className="text-2xl font-bold font-headline">{points.toLocaleString()}</div>
+                  <p className="text-[10px] font-bold text-[#800000] uppercase tracking-widest">Total Poin</p>
+                </Card>
+                <Card className="border-none bg-emerald-50 text-center p-6">
+                  <Medal className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold font-headline">{rank}</div>
+                  <p className="text-[10px] font-bold text-[#800000] uppercase tracking-widest">Peringkat Global</p>
+                </Card>
+              </div>
+
+              <div className="space-y-3">
+                 <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground px-1">Lencana</h3>
+                 <div className="flex flex-wrap gap-4 px-1">
+                   {[
+                     { name: points > 100 ? "Hafiz Pro" : "Hafiz Pemula", icon: Star, color: "text-[#D4AF37]" },
+                     { name: points > 0 ? "Santri Aktif" : "Santri Baru", icon: CheckCircle2, color: "text-emerald-600" }
+                   ].map((badge, idx) => (
+                     <div key={idx} className="flex flex-col items-center gap-1.5 p-3 border rounded-2xl bg-white w-24 text-center group hover:border-[#800000] transition-colors">
+                        <badge.icon className={cn("w-8 h-8", badge.color)} />
+                        <span className="text-[9px] font-bold leading-tight">{badge.name}</span>
+                     </div>
+                   ))}
+                 </div>
+              </div>
+            </TabsContent>
 
             <TabsContent value="halaqah" className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Materi Diikuti</h3>
-                <Badge variant="outline" className="text-[10px] font-bold">{isPaid ? '3' : '2'} Aktif</Badge>
+                <Badge variant="outline" className="text-[10px] font-bold">{userData?.followedHalaqahs?.length || 0} Aktif</Badge>
               </div>
               <div className="grid gap-3">
                 {isPaid && (
@@ -246,32 +287,23 @@ export default function ProfilePage() {
                           <p className="text-[10px] text-blue-700 font-medium">Metode 40x Repetisi</p>
                         </div>
                       </div>
-                      <Link href="/tajweed"><ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600" /></Link>
+                      <Link href="/hafal"><ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600" /></Link>
                     </CardContent>
                   </Card>
                 )}
-                {[
-                  { title: "Tafsir Juz' Amma", instructor: "Dr. Fatima Ahmed", progress: 45 },
-                  { title: "Tajwid Lanjutan: Sifaat", instructor: "Syekh Yusuf Ibrahim", progress: 12 }
-                ].map((item, idx) => (
-                  <Card key={idx} className="border shadow-none hover:bg-muted/30 transition-all cursor-pointer group">
+                {userData?.followedHalaqahs?.map((hid: string) => (
+                  <Card key={hid} className="border shadow-none hover:bg-muted/30 transition-all cursor-pointer group">
                     <CardContent className="p-4 flex items-center justify-between gap-4">
                       <div className="flex items-center gap-4 flex-1">
                         <div className="p-2.5 rounded-xl bg-[#800000]/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white transition-colors">
                           <BookOpen className="w-5 h-5" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-sm font-bold">{item.title}</h4>
-                          <p className="text-[10px] text-muted-foreground font-medium">{item.instructor}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                               <div className="h-full bg-[#800000] rounded-full" style={{ width: `${item.progress}%` }} />
-                             </div>
-                             <span className="text-[10px] font-bold text-[#800000]">{item.progress}%</span>
-                          </div>
+                          <h4 className="text-sm font-bold uppercase truncate">{hid.replace(/-/g, ' ')}</h4>
+                          <p className="text-[10px] text-muted-foreground font-medium">Halaqah Aktif</p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-[#800000]" />
+                      <Link href={`/study-circles/${hid}`}><ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-[#800000]" /></Link>
                     </CardContent>
                   </Card>
                 ))}
@@ -282,7 +314,7 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Riwayat Infaq</h3>
                 <Button variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] gap-1" asChild>
-                  <Link href="/donate"><History className="w-3 h-3" /> Tambah Donasi</Link>
+                  <Link href="/berbagi"><History className="w-3 h-3" /> Tambah Donasi</Link>
                 </Button>
               </div>
               
@@ -300,7 +332,7 @@ export default function ProfilePage() {
                       donations.map((d) => (
                         <TableRow key={d.id}>
                           <TableCell className="text-[11px] font-medium">
-                            {d.donationDate?.toDate ? d.donationDate.toDate().toLocaleDateString('id-ID') : '-'}
+                            {d.createdAt?.toDate ? d.createdAt.toDate().toLocaleDateString('id-ID') : '-'}
                           </TableCell>
                           <TableCell className="text-[11px] font-bold text-[#800000]">
                             Rp {d.amount?.toLocaleString('id-ID')}
@@ -308,9 +340,9 @@ export default function ProfilePage() {
                           <TableCell>
                             <Badge className={cn(
                               "text-[8px] font-bold px-1.5 py-0",
-                              d.status === 'active' || d.status === 'completed' ? "bg-emerald-500" : "bg-amber-500"
+                              d.status === 'active' || d.status === 'completed' || d.status === 'verified' ? "bg-emerald-500" : "bg-amber-500"
                             )}>
-                              {d.status === 'active' || d.status === 'completed' ? 'BERHASIL' : 'PENDING'}
+                              {d.status === 'active' || d.status === 'completed' || d.status === 'verified' ? 'BERHASIL' : 'PENDING'}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -324,36 +356,6 @@ export default function ProfilePage() {
                     )}
                   </TableBody>
                 </Table>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="juara" className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="border-none bg-[#800000]/5 text-center p-6">
-                  <Trophy className="w-8 h-8 text-[#D4AF37] mx-auto mb-2" />
-                  <div className="text-2xl font-bold font-headline">1,250</div>
-                  <p className="text-[10px] font-bold text-[#800000] uppercase tracking-widest">Total Poin</p>
-                </Card>
-                <Card className="border-none bg-emerald-50 text-center p-6">
-                  <Medal className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold font-headline">142</div>
-                  <p className="text-[10px] font-bold text-[#800000] uppercase tracking-widest">Peringkat Global</p>
-                </Card>
-              </div>
-
-              <div className="space-y-3">
-                 <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground px-1">Lencana</h3>
-                 <div className="flex flex-wrap gap-4 px-1">
-                   {[
-                     { name: "Hafiz Pemula", icon: Star, color: "text-[#D4AF37]" },
-                     { name: "Santri Aktif", icon: CheckCircle2, color: "text-emerald-600" }
-                   ].map((badge, idx) => (
-                     <div key={idx} className="flex flex-col items-center gap-1.5 p-3 border rounded-2xl bg-white w-24 text-center group hover:border-[#800000] transition-colors">
-                        <badge.icon className={cn("w-8 h-8", badge.color)} />
-                        <span className="text-[9px] font-bold leading-tight">{badge.name}</span>
-                     </div>
-                   ))}
-                 </div>
               </div>
             </TabsContent>
           </Tabs>

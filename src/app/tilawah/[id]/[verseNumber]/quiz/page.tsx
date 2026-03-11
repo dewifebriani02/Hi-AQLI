@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -12,8 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore, useUser } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
 
 interface WordData {
   id: number;
@@ -22,12 +23,6 @@ interface WordData {
     text: string;
   };
 }
-
-const mockVerseLeaderboard = [
-  { name: "Abdullah Mansur", time: "0:08", attempts: 1, rank: 1, avatar: "https://picsum.photos/seed/user1/100/100" },
-  { name: "Siti Aminah", time: "0:12", attempts: 1, rank: 2, avatar: "https://picsum.photos/seed/user2/100/100" },
-  { name: "Yusuf Ibrahim", time: "0:15", attempts: 2, rank: 3, avatar: "https://picsum.photos/seed/user3/100/100" },
-];
 
 export default function WordQuizPage() {
   const params = useParams();
@@ -52,6 +47,18 @@ export default function WordQuizPage() {
   const [totalTime, setTotalTime] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60); 
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
+
+  // Fetch real global leaderboard for this verse (top 5)
+  const leaderboardQuery = useMemoFirebase(() => {
+    if (!db || !id || !verseNumber) return null;
+    return query(
+      collection(db, "users"),
+      orderBy("points", "desc"),
+      limit(5)
+    );
+  }, [db, id, verseNumber]);
+
+  const { data: globalUsers } = useCollection(leaderboardQuery);
 
   // Auth Protection Redirect
   useEffect(() => {
@@ -105,6 +112,7 @@ export default function WordQuizPage() {
     const isPerfect = finalScore === words.length;
     
     try {
+      // 1. Record Attempt
       addDoc(collection(db, "users", user.uid, "quiz_attempts"), {
         userId: user.uid,
         quizId: `verse_${id}_${verseNumber}`,
@@ -115,9 +123,19 @@ export default function WordQuizPage() {
         isPassed: isPerfect,
         durationSeconds: totalTime,
         createdAt: serverTimestamp(),
-        startTime: serverTimestamp(),
-        endTime: serverTimestamp(),
       });
+
+      // 2. Grant Points if Perfect (Itqan)
+      if (isPerfect) {
+        const userRef = doc(db, "users", user.uid);
+        updateDoc(userRef, {
+          points: increment(10), // Give 10 points for each perfect verse memorization
+          updatedAt: serverTimestamp()
+        }).catch(() => {
+          // If updateDoc fails (e.g. field doesn't exist), try setDoc with merge
+          setDocumentNonBlocking(userRef, { points: increment(10) }, { merge: true });
+        });
+      }
     } catch (e) {
       console.error("Error saving progress:", e);
     }
@@ -275,7 +293,7 @@ export default function WordQuizPage() {
     const percentage = Math.round((score / words.length) * 100);
     
     return (
-      <div className="max-w-md mx-auto py-10 flex flex-col gap-10 pb-32">
+      <div className="max-w-md mx-auto py-10 flex flex-col gap-10 pb-32 px-4 sm:px-0">
         <Card className="text-center border-[#D4AF37]/20 shadow-xl overflow-hidden animate-in fade-in zoom-in duration-500">
           <div className={cn(
             "p-8 flex flex-col items-center gap-4 text-white transition-colors duration-500",
@@ -285,6 +303,7 @@ export default function WordQuizPage() {
             <h2 className="text-2xl font-bold font-headline">
               {isPerfect ? "Hafalan Sempurna!" : "Belum Sempurna"}
             </h2>
+            {isPerfect && <Badge className="bg-white text-black font-black">+10 POIN HI AQLI</Badge>}
           </div>
           <CardContent className="pt-8 space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -305,7 +324,7 @@ export default function WordQuizPage() {
                   <RotateCcw className="h-4 w-4 text-rose-800" />
                   <AlertTitle className="text-xs font-bold uppercase">Target Harus 100%</AlertTitle>
                   <AlertDescription className="text-[10px]">
-                    Silakan ulangi kuis hingga Anda benar-benar hafal seluruh arti kata dalam ayat ini untuk membuka ayat selanjutnya.
+                    Silakan ulangi kuis hingga Anda benar-benar hafal seluruh arti kata dalam ayat ini untuk membuka ayat selanjutnya dan mendapatkan poin.
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -313,7 +332,7 @@ export default function WordQuizPage() {
                   <CheckCircle2 className="h-4 w-4 text-emerald-800" />
                   <AlertTitle className="text-xs font-bold uppercase">Berhasil!</AlertTitle>
                   <AlertDescription className="text-[10px]">
-                    Masyallah! Anda telah menguasai ayat ini. Ayat selanjutnya telah terbuka untuk Anda pelajari.
+                    Masyallah! Anda telah menguasai ayat ini. Poin Anda telah bertambah. Teruslah ber-Itqan!
                   </AlertDescription>
                 </Alert>
               )}
@@ -339,33 +358,31 @@ export default function WordQuizPage() {
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-[#D4AF37] fill-current" />
-              <h3 className="text-sm font-bold font-headline uppercase tracking-widest">Papan Juara Ayat Ini</h3>
+              <h3 className="text-sm font-bold font-headline uppercase tracking-widest">Papan Juara Global</h3>
             </div>
-            <Badge variant="outline" className="text-[8px] font-bold border-[#D4AF37]/30 text-[#D4AF37]">GLOBAL</Badge>
+            <Badge variant="outline" className="text-[8px] font-bold border-[#D4AF37]/30 text-[#D4AF37]">TOP 5</Badge>
           </div>
           
           <Card className="border-none shadow-sm bg-muted/20">
             <CardContent className="p-0">
               <div className="divide-y">
-                {mockVerseLeaderboard.map((user) => (
-                  <div key={user.name} className="flex items-center justify-between p-3.5 hover:bg-white/50 transition-colors">
+                {globalUsers && globalUsers.length > 0 ? globalUsers.map((u, idx) => (
+                  <div key={u.id} className="flex items-center justify-between p-3.5 hover:bg-white/50 transition-colors">
                     <div className="flex items-center gap-3">
                       <span className={cn(
                         "text-[10px] font-bold w-4",
-                        user.rank === 1 ? "text-[#D4AF37]" : "text-muted-foreground"
-                      )}>{user.rank}</span>
+                        idx === 0 ? "text-[#D4AF37]" : "text-muted-foreground"
+                      )}>{idx + 1}</span>
                       <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback>{user.name[0]}</AvatarFallback>
+                        <AvatarImage src={u.photoURL} />
+                        <AvatarFallback className="bg-[#800000] text-white text-xs font-bold">{u.username?.[0] || u.email?.[0]}</AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold">{user.name}</span>
+                        <span className="text-xs font-bold">{u.username || 'Hamba Allah'}</span>
                         <div className="flex items-center gap-2">
                            <span className="text-[9px] text-muted-foreground font-medium flex items-center gap-1">
-                             <Timer className="w-2.5 h-2.5" /> {user.time}
+                             <Zap className="w-2.5 h-2.5 text-[#D4AF37]" /> {u.points || 0} Poin
                            </span>
-                           <span className="text-[9px] text-muted-foreground">•</span>
-                           <span className="text-[9px] text-muted-foreground font-medium">{user.attempts} Percobaan</span>
                         </div>
                       </div>
                     </div>
@@ -373,20 +390,21 @@ export default function WordQuizPage() {
                       <Button 
                         size="sm" 
                         variant="ghost" 
-                        onClick={() => handleSendCongrats(user.name)}
+                        onClick={() => handleSendCongrats(u.username || 'Thalibah')}
                         className={cn(
                           "h-7 px-2 text-[9px] font-bold gap-1 transition-all",
-                          sentCongrats.includes(user.name) ? "text-rose-500 bg-rose-50" : "text-muted-foreground hover:text-rose-500 hover:bg-rose-50"
+                          sentCongrats.includes(u.username || 'Thalibah') ? "text-rose-500 bg-rose-50" : "text-muted-foreground hover:text-rose-500 hover:bg-rose-50"
                         )}
                       >
-                        <Heart className={cn("w-3 h-3", sentCongrats.includes(user.name) && "fill-current")} />
-                        {sentCongrats.includes(user.name) ? "Terkirim" : "Selamat"}
+                        <Heart className={cn("w-3 h-3", sentCongrats.includes(u.username || 'Thalibah') && "fill-current")} />
+                        {sentCongrats.includes(u.username || 'Thalibah') ? "Terkirim" : "Selamat"}
                       </Button>
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[8px] font-bold h-5 px-1.5 shrink-0">100%</Badge>
-                      {user.rank === 1 && <Star className="w-3 h-3 fill-current text-[#D4AF37] shrink-0" />}
+                      {idx === 0 && <Star className="w-3 h-3 fill-current text-[#D4AF37] shrink-0" />}
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="py-8 text-center text-muted-foreground italic text-xs">Belum ada peringkat tersedia.</div>
+                )}
               </div>
             </CardContent>
           </Card>

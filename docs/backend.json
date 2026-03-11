@@ -11,6 +11,7 @@
         "username": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "roleId": { "type": "string" },
+        "points": { "type": "number", "default": 0 },
         "isTikrarPaid": { "type": "boolean" },
         "paidJuz": { "type": "number" },
         "tikrarLevel": { "type": "number" },
