@@ -64,38 +64,46 @@ export default function StudyCirclesPage() {
 
   const { data: userData } = useDoc(userDocRef);
 
-  // Check all pending registrations
+  // Check all user registrations to manage UI states
   const regQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, "halaqah_registrations"),
-      where("userId", "==", user.uid),
-      where("status", "==", "pending_verification")
+      where("userId", "==", user.uid)
     );
   }, [db, user?.uid]);
 
-  const { data: pendingRegs } = useCollection(regQuery);
+  const { data: allRegs } = useCollection(regQuery);
 
   const filteredCircles = studyCircles.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
     c.instructor.toLowerCase().includes(search.toLowerCase())
   );
 
-  const isHalaqahActive = (id: string) => {
-    return userData?.followedHalaqahs?.includes(id) || (id === 'tikrar-j30-b1' && userData?.isTikrarPaid);
+  const getHalaqahStatus = (id: string) => {
+    const reg = allRegs?.find(r => r.halaqahId === id);
+    if (!reg) {
+      // Special check for migrated/legacy tikrar data in user profile
+      if (id === 'tikrar-j30-b1' && userData?.isTikrarPaid) return 'active';
+      if (userData?.followedHalaqahs?.includes(id)) return 'active';
+      return 'none';
+    }
+    return reg.status; // 'active', 'pending_verification', 'rejected'
   };
 
-  const isHalaqahPending = (id: string) => {
-    return pendingRegs?.some(reg => reg.halaqahId === id);
-  };
+  const isHalaqahActive = (id: string) => getHalaqahStatus(id) === 'active';
+  const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
 
   const getFollowingCount = () => {
     return studyCircles.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id)).length;
   };
 
+  const getCompletedCount = () => 0; // Simulated for now
+
   const renderCircleCard = (circle: typeof studyCircles[0]) => {
-    const isActive = isHalaqahActive(circle.id);
-    const isPending = isHalaqahPending(circle.id);
+    const status = getHalaqahStatus(circle.id);
+    const isActive = status === 'active';
+    const isPending = status === 'pending_verification';
     
     let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
@@ -107,7 +115,7 @@ export default function StudyCirclesPage() {
         <Card 
           className={cn(
             "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
-            isActive ? "bg-blue-50 border-l-4 border-blue-600" :
+            isActive ? "bg-emerald-50 border-l-4 border-emerald-600" :
             isPending ? "bg-amber-50 border-l-4 border-amber-500" :
             circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
           )}
@@ -116,7 +124,7 @@ export default function StudyCirclesPage() {
             <div className="flex items-center gap-4 flex-1">
               <div className={cn(
                 "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
-                isActive ? "bg-blue-600 text-white" : 
+                isActive ? "bg-emerald-600 text-white" : 
                 isPending ? "bg-amber-500 text-white" :
                 circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
               )}>
@@ -126,9 +134,9 @@ export default function StudyCirclesPage() {
               </div>
               <div className="flex flex-col gap-0.5 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className={cn("font-bold text-base leading-tight", isActive && "text-blue-900", isPending && "text-amber-900")}>{circle.title}</h4>
+                  <h4 className={cn("font-bold text-base leading-tight", isActive && "text-emerald-900", isPending && "text-amber-900")}>{circle.title}</h4>
                   {isActive ? (
-                    <Badge className="bg-blue-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">AKTIF</Badge>
+                    <Badge className="bg-emerald-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">AKTIF</Badge>
                   ) : isPending ? (
                     <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">VERIFIKASI ADMIN</Badge>
                   ) : (
@@ -141,7 +149,7 @@ export default function StudyCirclesPage() {
                 </div>
                 <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground font-medium">
                   {isActive ? (
-                    <span className="text-blue-600 font-black uppercase tracking-widest flex items-center gap-1">
+                    <span className="text-emerald-600 font-black uppercase tracking-widest flex items-center gap-1">
                       <PlayCircle className="w-3 h-3" /> MASUK KELAS
                     </span>
                   ) : isPending ? (
@@ -164,7 +172,7 @@ export default function StudyCirclesPage() {
             </div>
             {!isPending && <ChevronRight className={cn(
               "w-5 h-5 transition-colors", 
-              isActive ? "text-blue-400" : "text-muted-foreground/30 group-hover:text-[#800000]"
+              isActive ? "text-emerald-400" : "text-muted-foreground/30 group-hover:text-[#800000]"
             )} />}
           </div>
         </Card>
@@ -196,12 +204,15 @@ export default function StudyCirclesPage() {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/50 p-1 rounded-xl mx-1">
+        <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl mx-1">
           <TabsTrigger value="all" className="font-bold text-xs uppercase tracking-widest">
             Semua ({filteredCircles.length})
           </TabsTrigger>
           <TabsTrigger value="following" className="font-bold text-xs uppercase tracking-widest">
             Diikuti ({getFollowingCount()})
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="font-bold text-xs uppercase tracking-widest">
+            Selesai ({getCompletedCount()})
           </TabsTrigger>
         </TabsList>
 
@@ -220,6 +231,13 @@ export default function StudyCirclesPage() {
                 <p className="text-sm text-muted-foreground italic">Anda belum memiliki pendaftaran aktif.</p>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="completed" className="space-y-3 m-0">
+            <div className="py-20 text-center space-y-4">
+              <CheckCircle2 className="w-12 h-12 mx-auto text-muted-foreground/20" />
+              <p className="text-sm text-muted-foreground italic">Belum ada materi yang diselesaikan.</p>
+            </div>
           </TabsContent>
         </div>
       </Tabs>
