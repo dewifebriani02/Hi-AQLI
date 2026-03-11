@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from "react";
@@ -7,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { 
   HeartHandshake, 
   CheckCircle2, 
@@ -17,6 +17,7 @@ import {
   Calendar, 
   User, 
   ArrowLeft, 
+  ArrowRight,
   Image as ImageIcon, 
   ChevronRight,
   Target,
@@ -89,7 +90,6 @@ export default function BerbagiPage() {
   const [submitted, setSubmitted] = useState(false);
 
   const [senderName, setSenderName] = useState("");
-  const [transferDate, setTransferDate] = useState("");
 
   const donationAmounts = [25000, 50000, 100000, 250000];
 
@@ -176,7 +176,7 @@ export default function BerbagiPage() {
               <p className="text-sm text-muted-foreground">
                 Terima kasih, <strong>{senderName}</strong>. Donasi Anda untuk <strong>{selectedCampaign?.title}</strong> sedang dalam proses verifikasi.
               </p>
-              <p className="text-xs italic bg-muted p-4 rounded-xl">"Harta tidak akan berkurang karena sedekah." (HR. Muslim)</p>
+              <p className="text-xs italic bg-muted p-4 rounded-xl text-black">"Harta tidak akan berkurang karena sedekah." (HR. Muslim)</p>
             </div>
             <Button onClick={() => window.location.href = '/'} className="w-full bg-[#800000] text-white hover:bg-[#800000]/90 font-black h-14 rounded-2xl shadow-xl">
               KEMBALI KE BERANDA
@@ -276,7 +276,7 @@ export default function BerbagiPage() {
                       variant="outline"
                       className={cn(
                         "h-14 text-sm font-black transition-all rounded-xl border-2",
-                        amount === val ? "bg-[#800000] border-[#800000] text-white shadow-lg" : "border-[#800000]/5 text-[#800000] hover:border-[#800000]"
+                        amount === val ? "bg-[#D4AF37] border-[#D4AF37] text-black shadow-lg" : "border-[#800000]/10 text-[#800000] hover:border-[#800000]"
                       )}
                       onClick={() => handleAmountSelect(val)}
                     >
@@ -294,7 +294,7 @@ export default function BerbagiPage() {
               <div className="space-y-2">
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#800000] font-black">Rp</span>
-                  <Input type="number" placeholder="Contoh: 150000" className="pl-11 h-14 text-lg font-black border-2 border-[#800000]/5 focus-visible:ring-[#800000] rounded-xl" value={customAmount} onChange={handleCustomAmountChange} />
+                  <Input type="number" placeholder="Contoh: 150000" className="pl-11 h-14 text-lg font-black border-2 border-[#800000]/10 focus-visible:ring-[#800000] rounded-xl" value={customAmount} onChange={handleCustomAmountChange} />
                 </div>
                 <p className="text-[9px] text-muted-foreground font-bold italic">*Minimal donasi Rp 10.000</p>
               </div>
@@ -360,10 +360,10 @@ export default function BerbagiPage() {
                   <div className="space-y-3 relative z-10">
                     <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">Rekening Tujuan (BSI)</p>
                     <div className="flex items-center justify-between bg-white/10 p-4 rounded-xl border border-white/20">
-                      <span className="font-mono font-black text-xl tracking-widest">7123456789</span>
+                      <span className="font-mono font-black text-xl tracking-widest text-white">7123456789</span>
                       <Button variant="ghost" size="sm" className="text-[#D4AF37] font-black" onClick={() => copyToClipboard("7123456789")}>SALIN</Button>
                     </div>
-                    <p className="text-[10px] text-center font-bold uppercase tracking-tighter">Yayasan HI AQLI</p>
+                    <p className="text-[10px] text-center font-bold uppercase tracking-tighter text-white/80">Yayasan HI AQLI</p>
                   </div>
                 )}
 
@@ -410,7 +410,7 @@ export default function BerbagiPage() {
           { label: "Kampanye Aktif", value: "3", icon: Target },
           { label: "Pemanfaat AI", value: "1.2K", icon: Zap },
         ].map((stat, i) => (
-          <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-[#800000]/5 flex flex-col items-center text-center gap-1">
+          <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-[#800000]/10 flex flex-col items-center text-center gap-1">
             <stat.icon className="w-5 h-5 text-[#D4AF37] mb-1" />
             <span className="text-lg font-black text-[#800000]">{stat.value}</span>
             <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</span>
