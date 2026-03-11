@@ -20,13 +20,6 @@ service cloud.firestore {
       );
     }
 
-    function isSuperAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == "dewifebriani@gmail.com" ||
-        exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid))
-      );
-    }
-
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
@@ -66,9 +59,10 @@ service cloud.firestore {
 
     match /roles_superadmin/{userId} {
       allow read: if isSignedIn();
-      allow write: if isSuperAdmin();
+      allow write: if isAdmin();
     }
 
+    // Jalur pintas admin global untuk memastikan akses penuh
     match /{path=**} {
       allow read, write: if isAdmin();
     }
