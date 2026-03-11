@@ -14,13 +14,10 @@ import {
   Loader2,
   Lock,
   CalendarDays,
-  ShieldCheck,
   Clock,
   Minus,
   Plus,
-  Layers,
-  Zap,
-  ArrowDown
+  Zap
 } from "lucide-react";
 import {
   Tooltip,
@@ -47,8 +44,8 @@ const LEVELS = [
 ];
 
 const TARGET_MAX = 40;
-const PASS_THRESHOLD = 5; 
-const META_PASS_THRESHOLD = 10; 
+const PASS_THRESHOLD = 5; // Minimal 5x untuk Maqta individu/gabungan blok
+const META_PASS_THRESHOLD = 10; // Minimal 10x untuk Gabungan antar blok
 
 interface Word {
   text_uthmani: string;
@@ -123,7 +120,7 @@ export function TikrarSystem() {
         const data = await res.json();
         setVerses(data.verses);
       } catch (error) {
-        console.error("Tikrar Fetch Error:", error);
+        console.error("Tikrar Maqta Fetch Error:", error);
       } finally {
         setLoading(false);
       }
@@ -179,18 +176,16 @@ export function TikrarSystem() {
     };
   }, [verses]);
 
-  const isTuntas = (bid: number) => blocks[bid].combined.count >= PASS_THRESHOLD;
+  const isTuntasMaqta = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
   const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= META_PASS_THRESHOLD;
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
-    // 4 Blocks x 3 parts each = 12 parts
     [1, 2, 3, 4].forEach(id => {
       totalDone += Math.min(blocks[id].a.count, PASS_THRESHOLD);
       totalDone += Math.min(blocks[id].b.count, PASS_THRESHOLD);
       totalDone += Math.min(blocks[id].combined.count, PASS_THRESHOLD);
     });
-    // 6 Meta steps
     Object.keys(metaCounts).forEach(k => {
       totalDone += (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * PASS_THRESHOLD;
     });
@@ -254,35 +249,29 @@ export function TikrarSystem() {
 
       <TooltipProvider delayDuration={0}>
         <div className="flex flex-col gap-10">
-          {/* STEP 1 & 2 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <BlockCard id={1} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} />
-            <BlockCard id={2} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntas(1)} onIncrement={setBlocks} fontSize={fontSize} />
+            <MaqtaCard id={1} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} />
+            <MaqtaCard id={2} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasMaqta(1)} onIncrement={setBlocks} fontSize={fontSize} />
           </div>
 
-          {/* GABUNG 1 & 2 (10x to unlock TM3) */}
           <MetaStep 
             label="GABUNG TM1 & TM2" 
             count={metaCounts['1_2']} 
-            isLocked={!isTuntas(1) || !isTuntas(2)} 
+            isLocked={!isTuntasMaqta(1) || !isTuntasMaqta(2)} 
             onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} 
           />
 
-          {/* STEP 3 (needs Gabung 1-2) */}
-          <BlockCard id={3} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} />
+          <MaqtaCard id={3} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} />
 
-          {/* GABUNG 2-3 & 1-3 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MetaStep label="GABUNG TM2 & TM3" count={metaCounts['2_3']} isLocked={!isTuntas(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
+            <MetaStep label="GABUNG TM2 & TM3" count={metaCounts['2_3']} isLocked={!isTuntasMaqta(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
             <MetaStep label="GABUNG TM1 s/d TM3" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3': p['1_2_3'] + 1}))} />
           </div>
 
-          {/* STEP 4 (needs Gabung 1-3) */}
-          <BlockCard id={4} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} />
+          <MaqtaCard id={4} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} />
 
-          {/* FINAL GABUNGAN CHAIN */}
           <div className="space-y-4">
-            <MetaStep label="GABUNG TM3 & TM4" count={metaCounts['3_4']} isLocked={!isTuntas(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
+            <MetaStep label="GABUNG TM3 & TM4" count={metaCounts['3_4']} isLocked={!isTuntasMaqta(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
             <MetaStep label="GABUNG TM2 s/d TM4" count={metaCounts['2_3_4']} isLocked={!isMetaTuntas('3_4')} onIncrement={() => setMetaCounts(p => ({...p, '2_3_4': p['2_3_4'] + 1}))} />
             <MetaStep label="GABUNG SELURUH HALAMAN (TM1 - TM4)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
           </div>
@@ -305,7 +294,7 @@ export function TikrarSystem() {
   );
 }
 
-function BlockCard({ id, state, verses, onIncrement, fontSize, isLocked }: any) {
+function MaqtaCard({ id, state, verses, onIncrement, fontSize, isLocked }: any) {
   const isDoneA = state.a.count >= PASS_THRESHOLD;
   const isDoneB = state.b.count >= PASS_THRESHOLD;
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
@@ -348,7 +337,7 @@ function BlockCard({ id, state, verses, onIncrement, fontSize, isLocked }: any) 
   return (
     <Card className={cn("border-2 transition-all shadow-md overflow-hidden", isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50 grayscale select-none")}>
       <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">BLOK {id} {isLocked && "• TERKUNCI"}</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">TIKRAR MAQTA {id} {isLocked && "• TERKUNCI"}</span>
         {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">TUNTAS</Badge>}
       </div>
       <CardContent className="p-4 space-y-4">
@@ -368,7 +357,7 @@ function BlockCard({ id, state, verses, onIncrement, fontSize, isLocked }: any) 
             TM{id} GABUNGAN
           </span>
           <span className="text-base">{state.combined.count} / {TARGET_MAX}</span>
-          <span className="text-[8px] opacity-70">Minimal {PASS_THRESHOLD}x</span>
+          <span className="text-[8px] opacity-70">Minimal {PASS_THRESHOLD} kali</span>
         </Button>
       </CardContent>
     </Card>
@@ -386,7 +375,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
         <div className="flex flex-col">
           <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Repetisi Gabungan</span>
           <span className={cn("text-sm font-black uppercase tracking-tight", highlight ? "text-amber-900" : "text-[#800000]")}>{label}</span>
-          <span className="text-[9px] font-bold text-muted-foreground">Minimal {META_PASS_THRESHOLD}x</span>
+          <span className="text-[9px] font-bold text-muted-foreground">Minimal {META_PASS_THRESHOLD} kali</span>
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -415,7 +404,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
         <span className="text-xl font-black">{count}</span>
         <span className="text-[8px] font-bold opacity-40">/ {TARGET_MAX}</span>
       </div>
-      <span className="text-[8px] font-bold opacity-60 mt-0.5">Min. {threshold}x</span>
+      <span className="text-[8px] font-bold opacity-60 mt-0.5">Minimal {threshold} kali</span>
       {isLocked && <Lock className="absolute top-1 right-1 w-2.5 h-2.5 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="w-3 h-3 text-current mt-0.5" />}
     </div>
