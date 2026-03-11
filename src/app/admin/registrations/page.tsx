@@ -36,17 +36,17 @@ export default function AdminRegistrationsPage() {
       return;
     }
 
-    // Set processing immediately to prevent double clicks
     setProcessingId(reg.id);
     
     try {
       const batch = writeBatch(db);
 
-      // 1. Update Registration Status
+      // 1. Update Registration Status with start date
       const regRef = doc(db, "halaqah_registrations", reg.id);
       batch.update(regRef, { 
         status: "active",
-        verifiedAt: serverTimestamp()
+        verifiedAt: serverTimestamp(),
+        startDate: serverTimestamp()
       });
 
       // 2. Update User Profile Access
@@ -56,11 +56,12 @@ export default function AdminRegistrationsPage() {
         updatedAt: serverTimestamp()
       };
 
-      // Special logic for Tikrar Premium
+      // Special logic for Tikrar Premium Start Date
       if (reg.halaqahId === 'tikrar-j30-b1') {
         updateData.isTikrarPaid = true;
         updateData.paidJuz = reg.targetJuz || 30;
         updateData.tikrarLevel = reg.level || 3;
+        updateData.tikrarStartDate = serverTimestamp(); // Admin sets start date here
       }
 
       batch.set(userRef, updateData, { merge: true });
@@ -70,7 +71,7 @@ export default function AdminRegistrationsPage() {
       
       toast({
         title: "Akses Diaktifkan",
-        description: `Masyallah, akses ${reg.halaqahTitle} untuk ${reg.userName} telah aktif.`,
+        description: `Masyallah, akses ${reg.halaqahTitle} untuk ${reg.userName} telah aktif mulai hari ini.`,
       });
     } catch (err: any) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -203,7 +204,7 @@ export default function AdminRegistrationsPage() {
                       disabled={processingId === reg.id}
                     >
                       {processingId === reg.id ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-                      VERIFIKASI & BUKA AKSES
+                      KONFIRMASI & TENTUKAN TGL MULAI
                     </Button>
                     <Button 
                       variant="ghost" 

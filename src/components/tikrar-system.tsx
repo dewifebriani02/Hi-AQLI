@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -72,9 +73,9 @@ interface BlockState {
 const TARGET_TM = 40;
 const RECOMMENDED_META = 40;
 const MIN_META = {
-  2: 10, // TM1 + TM2
-  3: 5,  // TM1 + TM2 + TM3
-  4: 3   // TM1 + TM2 + TM3 + TM4
+  2: 10,
+  3: 5,
+  4: 3
 };
 
 const LEVELS = [
@@ -104,7 +105,6 @@ export function TikrarSystem() {
   const [loading, setLoading] = useState(true);
   const [isPrevPageDone, setIsPrevPageDone] = useState(true);
   const [level, setLevel] = useState<number | null>(null);
-  const [pageStartDate, setPageStartDate] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(24);
   
   const [blocks, setBlocks] = useState<Record<number, BlockState>>({
@@ -120,20 +120,14 @@ export function TikrarSystem() {
     4: 0
   });
 
-  // Sync Level from User Profile
   useEffect(() => {
     if (userData?.tikrarLevel) {
       setLevel(userData.tikrarLevel);
-    } else if (isPaid && !level) {
-      // Fallback if record is missing but is paid
-      setLevel(3); 
-    } else if (!isPaid && !level) {
-      // Trial default
+    } else if (!level) {
       setLevel(3);
     }
-  }, [userData, isPaid, level]);
+  }, [userData, level]);
 
-  // Handle Initial Juz and Access
   useEffect(() => {
     if (!isUserDataLoading && userData) {
       if (isPaid && paidJuz) {
@@ -148,27 +142,6 @@ export function TikrarSystem() {
 
   const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1] || 1, [juz]);
   const nextJuzStartPage = juz < 30 ? JUZ_PAGES[juz] : 605;
-
-  const playSfx = useCallback((type: 'click' | 'finish') => {
-    if (typeof window === 'undefined') return;
-    const soundUrls = {
-      click: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
-      finish: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'
-    };
-    try {
-      const audio = new Audio(soundUrls[type]);
-      audio.volume = 0.4;
-      audio.play().catch(() => {});
-    } catch (e) {
-      console.error("Audio SFX Error:", e);
-    }
-  }, []);
-
-  const adjustFontSize = (delta: number) => {
-    const newSize = Math.max(16, Math.min(fontSize + delta, 48));
-    setFontSize(newSize);
-    localStorage.setItem('aqli_mushaf_font_size', newSize.toString());
-  };
 
   const checkPageCompletion = (pageNum: number) => {
     if (pageNum < 1) return true;
@@ -187,11 +160,6 @@ export function TikrarSystem() {
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedSize = localStorage.getItem('aqli_mushaf_font_size');
-      if (savedSize) setFontSize(Math.min(parseInt(savedSize), 32)); // Cap for tikrar system
-    }
-
     async function fetchVerses() {
       setLoading(true);
       try {
@@ -219,10 +187,7 @@ export function TikrarSystem() {
           4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
         });
         setMetaCombined(saved.metaCombined || { 2: 0, 3: 0, 4: 0 });
-        setPageStartDate(saved.startDate || null);
-      } catch (e) {
-        console.error("Parse Error", e);
-      }
+      } catch (e) {}
     } else {
       setBlocks({
         1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -231,8 +196,6 @@ export function TikrarSystem() {
         4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
       });
       setMetaCombined({ 2: 0, 3: 0, 4: 0 });
-      const now = new Date().toISOString();
-      setPageStartDate(now);
     }
 
     setIsPrevPageDone(page === currentJuzStartPage || checkPageCompletion(page - 1));
@@ -244,33 +207,28 @@ export function TikrarSystem() {
       localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({ 
         blocks, 
         metaCombined, 
-        startDate: pageStartDate 
+        startDate: userData?.tikrarStartDate?.toDate?.()?.toISOString() || userData?.createdAt?.toDate?.()?.toISOString()
       }));
     }
-  }, [blocks, metaCombined, page, loading, pageStartDate]);
+  }, [blocks, metaCombined, page, loading, userData]);
 
-  const incrementTM = (blockId: number, type: 'a' | 'b' | 'combined') => {
-    if (accessDenied) return;
-    const currentCount = blocks[blockId][type].count;
-    if (currentCount >= TARGET_TM) return;
-    const nextCount = currentCount + 1;
-    if (nextCount === TARGET_TM) playSfx('finish');
-    else playSfx('click');
-    setBlocks(prev => ({ 
-      ...prev, 
-      [blockId]: { ...prev[blockId], [type]: { count: nextCount } } 
-    }));
-  };
+  const scheduleInfo = useMemo(() => {
+    if (!level || !userData) return null;
+    const adminStart = userData.tikrarStartDate?.toDate?.() || userData.createdAt?.toDate?.();
+    if (!adminStart) return null;
 
-  const incrementMeta = (metaId: number) => {
-    if (accessDenied) return;
-    const currentCount = metaCombined[metaId];
-    if (currentCount >= RECOMMENDED_META) return;
-    const nextCount = currentCount + 1;
-    if (nextCount === RECOMMENDED_META) playSfx('finish');
-    else playSfx('click');
-    setMetaCombined(prev => ({ ...prev, [metaId]: nextCount }));
-  };
+    const start = new Date(adminStart);
+    const selectedLevel = LEVELS.find(l => l.id === level) || LEVELS[2];
+    
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return {
+      currentDay: diffDays,
+      totalDays: selectedLevel.days,
+    };
+  }, [level, userData]);
 
   const calculateTotalProgress = () => {
     let totalDone = 0;
@@ -286,59 +244,11 @@ export function TikrarSystem() {
 
   const totalProgress = calculateTotalProgress();
 
-  const scheduleInfo = useMemo(() => {
-    if (!level || !pageStartDate) return null;
-    const start = new Date(pageStartDate);
-    const selectedLevel = LEVELS.find(l => l.id === level);
-    if (!selectedLevel) return null;
-    
-    const targetDate = new Date(start);
-    targetDate.setDate(start.getDate() + selectedLevel.days);
-    
-    const today = new Date();
-    const diffTime = Math.abs(today.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return {
-      currentDay: diffDays,
-      totalDays: selectedLevel.days,
-      deadline: targetDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-      isOverdue: today > targetDate && totalProgress < 100
-    };
-  }, [level, pageStartDate, totalProgress]);
-
-  const currentTarget = useMemo(() => {
-    if (blocks[1].a.count < TARGET_TM) return "Blok 1a";
-    if (blocks[1].b.count < TARGET_TM) return "Blok 1b";
-    if (blocks[1].combined.count < TARGET_TM) return "Gabungan 1a+b";
-    if (blocks[2].a.count < TARGET_TM) return "Blok 2a";
-    if (blocks[2].b.count < TARGET_TM) return "Blok 2b";
-    if (blocks[2].combined.count < TARGET_TM) return "Gabungan 2a+b";
-    if (metaCombined[2] < MIN_META[2]) return "Gabungan TM1 + TM2";
-    if (blocks[3].a.count < TARGET_TM) return "Blok 3a";
-    if (blocks[3].b.count < TARGET_TM) return "Blok 3b";
-    if (blocks[3].combined.count < TARGET_TM) return "Gabungan 3a+b";
-    if (metaCombined[3] < MIN_META[3]) return "Gabungan TM1 + TM2 + TM3";
-    if (blocks[4].a.count < TARGET_TM) return "Blok 4a";
-    if (blocks[4].b.count < TARGET_TM) return "Blok 4b";
-    if (blocks[4].combined.count < TARGET_TM) return "Gabungan 4a+b";
-    if (metaCombined[4] < MIN_META[4]) return "Gabungan Akhir TM1-4";
-    return "Selesai! Siap Ujian";
-  }, [blocks, metaCombined]);
-
   if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
-
-  const getVersesForRange = (startBlock: number, endBlock: number) => {
-    if (verses.length === 0) return [];
-    const chunkSize = Math.ceil(verses.length / 4);
-    const start = (startBlock - 1) * chunkSize;
-    const end = endBlock * chunkSize;
-    return verses.slice(start, end);
-  };
 
   return (
     <div className="space-y-8">
-      {/* HEADER: INFO JUZ & JADWAL */}
+      {/* HEADER: INFO PERSONAL BERDASARKAN TGL ADMIN */}
       <Card className="border-none bg-gradient-to-br from-[#800000] to-[#b30000] text-white shadow-xl overflow-hidden relative">
         <div className="absolute right-[-20px] top-[-20px] opacity-10"><CalendarDays className="w-40 h-40" /></div>
         <CardContent className="p-6 relative z-10">
@@ -351,10 +261,10 @@ export function TikrarSystem() {
                   </Badge>
                   {isPaid ? (
                     <Badge className="bg-emerald-500/20 text-white border-none text-[10px] font-bold flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> JUZ {paidJuz} ACTIVE
+                      <ShieldCheck className="w-3 h-3" /> PERSONAL START DATE ACTIVE
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-white border-white/30 text-[9px] font-bold">MODE TRIAL (JUZ 1)</Badge>
+                    <Badge variant="outline" className="text-white border-white/30 text-[9px] font-bold">MODE TRIAL</Badge>
                   )}
                 </div>
                 <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
@@ -362,338 +272,139 @@ export function TikrarSystem() {
               
               <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 flex flex-col items-end">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter opacity-80 mb-1">
-                  <Clock className="w-3 h-3" /> Jadwal Hafalan
+                  <Clock className="w-3 h-3" /> Masa Belajar Hal. Ini
                 </div>
                 <div className="text-lg font-black">Hari ke-{scheduleInfo?.currentDay || 1} <span className="text-xs font-medium opacity-60">/ {scheduleInfo?.totalDays || 21}</span></div>
-                <p className={cn("text-[10px] font-bold mt-1 px-2 py-0.5 rounded", scheduleInfo?.isOverdue ? "bg-rose-500 text-white" : "bg-white/20")}>
-                  Target Selesai: {scheduleInfo?.deadline || "-"}
+                <p className="text-[10px] font-bold mt-1 px-2 py-0.5 rounded bg-white/20 uppercase tracking-widest">
+                  Personal Schedule
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-black/20 p-4 rounded-xl flex items-center gap-4 border border-white/5">
-                <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg">
-                  <Flag className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Target Sekarang</p>
-                  <p className="text-sm font-black text-amber-300 animate-pulse">{currentTarget}</p>
-                </div>
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[10px] font-bold uppercase opacity-60">Progres Halaman</span>
+                <span className="text-[10px] font-bold">{Math.round(totalProgress)}%</span>
               </div>
-              
-              {totalProgress >= 100 ? (
-                <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white font-black h-full py-4 rounded-xl gap-2 shadow-lg shadow-emerald-900/20">
-                  <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20Juz%20${juz}%20dan%20ingin%20mengajukan%20ujian.`} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="w-5 h-5" /> AJUKAN UJIAN SEKARANG
-                  </a>
-                </Button>
-              ) : (
-                <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-bold uppercase opacity-60">Progres Halaman</span>
-                    <span className="text-[10px] font-bold">{Math.round(totalProgress)}%</span>
-                  </div>
-                  <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-white" />
-                </div>
-              )}
+              <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-white" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* NAVIGATION & INFO UJIAN */}
+      {/* NAVIGATION */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md bg-white/90">
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-12 w-12 border-2">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <div className="text-center min-w-[120px]">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Halaman</p>
-                <p className="text-3xl font-black text-[#800000]">{page}</p>
-              </div>
-              <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1} className="rounded-xl h-12 w-12 border-2">
-                <ChevronRight className="h-5 w-5" />
-              </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-12 w-12 border-2">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="text-center min-w-[120px]">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Halaman</p>
+              <p className="text-3xl font-black text-[#800000]">{page}</p>
             </div>
+            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1} className="rounded-xl h-12 w-12 border-2">
+              <ChevronRight className="h-5 w-5" />
+            </Button>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => adjustFontSize(-4)}><Minus className="h-4 w-4" /></Button>
-              <div className="px-2 flex items-center gap-1.5">
-                <Type className="h-3 w-3 text-muted-foreground" />
-                <span className="text-xs font-bold w-4 text-center">{fontSize}</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => adjustFontSize(4)}><Plus className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.max(16, f - 2))}><Minus className="h-4 w-4" /></Button>
+              <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFontSize(f => Math.min(48, f + 2))}><Plus className="h-4 w-4" /></Button>
             </div>
-            
-            <div className="flex items-center gap-2 bg-amber-50 p-3 rounded-xl border border-amber-100 max-w-[200px]">
-              <Info className="w-4 h-4 text-amber-600 shrink-0" />
-              <p className="text-[9px] text-amber-800 leading-tight font-medium">Ujian dilakukan setiap tuntas <strong>1 halaman</strong>.</p>
-            </div>
+            {totalProgress >= 100 && (
+              <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl">
+                <a href={`https://wa.me/6281234567890?text=Assalamu'alaikum,%20saya%20sudah%20tuntas%20Tikrar%20Halaman%20${page}%20Juz%20${juz}.%20Mohon%20jadwal%20ujian.`} target="_blank">AJUKAN UJIAN</a>
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-[#800000]" />
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Menyiapkan Ayat...</p>
-        </div>
+        <div className="flex justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-[#800000]" /></div>
       ) : accessDenied ? (
-        <Card className="border-none bg-rose-50/50 py-20 border-2 border-dashed border-rose-200">
-          <CardContent className="flex flex-col items-center justify-center text-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shadow-lg"><Lock className="w-10 h-10" /></div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-bold font-headline text-rose-900">Akses Juz Terkunci</h3>
-              <p className="text-sm text-rose-800 max-w-sm mx-auto">Anda hanya memiliki akses penuh untuk <strong>Juz {paidJuz || "yang telah didaftarkan"}</strong>.</p>
-            </div>
-            <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 font-bold px-8 h-12 shadow-xl">
-              <Link href="/study-circles">Daftar Pilihan Juz di Menu Halaqah</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="py-20 text-center space-y-4 bg-muted/20 rounded-3xl border-2 border-dashed">
+          <Lock className="w-12 h-12 mx-auto text-muted-foreground/30" />
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Hanya untuk Juz yang Didaftarkan</p>
+          <Button asChild variant="outline" className="font-bold"><Link href="/study-circles">Daftar Juz {juz}</Link></Button>
+        </div>
       ) : !isPrevPageDone ? (
-        <Card className="border-none bg-muted/20 py-20">
-          <CardContent className="flex flex-col items-center justify-center text-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center"><Lock className="w-10 h-10" /></div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold font-headline">Halaman Terkunci</h3>
-              <p className="text-sm text-muted-foreground max-w-xs mx-auto">Anda harus menuntaskan seluruh Tikrar di <strong>Halaman {page - 1}</strong>.</p>
-            </div>
-            <Button onClick={() => setPage(page - 1)} variant="outline" className="font-bold gap-2"><ChevronLeft className="w-4 h-4" /> Kembali ke Hal {page - 1}</Button>
-          </CardContent>
-        </Card>
+        <div className="py-20 text-center space-y-4 bg-rose-50 rounded-3xl border-2 border-dashed border-rose-200">
+          <Lock className="w-12 h-12 mx-auto text-rose-300" />
+          <p className="text-sm font-bold text-rose-800 uppercase tracking-widest">Selesaikan Hal {page - 1} Terlebih Dahulu</p>
+          <Button onClick={() => setPage(page - 1)} className="bg-rose-600 font-bold">Kembali</Button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-8 pb-20">
-          <div className="flex items-center gap-2 px-1">
-            <Flag className="w-4 h-4 text-[#800000]" />
-            <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Urutan Menghafal (Langkah 1 - 7)</h4>
-          </div>
-
-          <BlockCard 
-            id={1} state={blocks[1]} verses={getVersesForRange(1, 1)}
-            onIncrement={incrementTM} target={TARGET_TM} isLocked={false} 
-            activeTarget={currentTarget.includes("1")}
-            fontSize={fontSize}
-          />
-          
-          <BlockCard 
-            id={2} state={blocks[2]} verses={getVersesForRange(2, 2)}
-            onIncrement={incrementTM} target={TARGET_TM} isLocked={blocks[1].combined.count < TARGET_TM} 
-            activeTarget={currentTarget.includes("2") && !currentTarget.includes("TM1")}
-            fontSize={fontSize}
-          />
-
-          <MetaCombinedCard 
-            id={2} title="Langkah 3: Gabungan TM1 + TM2" count={metaCombined[2]} min={MIN_META[2]} target={RECOMMENDED_META}
-            verses={getVersesForRange(1, 2)} isLocked={blocks[2].combined.count < TARGET_TM} onIncrement={() => incrementMeta(2)}
-            activeTarget={currentTarget === "Gabungan TM1 + TM2"}
-            fontSize={fontSize}
-          />
-
-          <BlockCard 
-            id={3} state={blocks[3]} verses={getVersesForRange(3, 3)}
-            onIncrement={incrementTM} target={TARGET_TM} isLocked={metaCombined[2] < MIN_META[2]} 
-            activeTarget={currentTarget.includes("3")}
-            fontSize={fontSize}
-          />
-
-          <MetaCombinedCard 
-            id={3} title="Langkah 5: Gabungan TM1 + TM2 + TM3" count={metaCombined[3]} min={MIN_META[3]} target={RECOMMENDED_META}
-            verses={getVersesForRange(1, 3)} isLocked={blocks[3].combined.count < TARGET_TM} onIncrement={() => incrementMeta(3)}
-            activeTarget={currentTarget === "Gabungan TM1 + TM2 + TM3"}
-            fontSize={fontSize}
-          />
-
-          <BlockCard 
-            id={4} state={blocks[4]} verses={getVersesForRange(4, 4)}
-            onIncrement={incrementTM} target={TARGET_TM} isLocked={metaCombined[3] < MIN_META[3]} 
-            activeTarget={currentTarget.includes("4")}
-            fontSize={fontSize}
-          />
-
-          <MetaCombinedCard 
-            id={4} title="Langkah 7: Gabungan Akhir TM1-4" count={metaCombined[4]} min={MIN_META[4]} target={RECOMMENDED_META}
-            verses={getVersesForRange(1, 4)} isLocked={blocks[4].combined.count < TARGET_TM} onIncrement={() => incrementMeta(4)}
-            activeTarget={currentTarget === "Gabungan Akhir TM1-4"}
-            fontSize={fontSize}
-          />
+          {[1, 2, 3, 4].map(id => (
+            <BlockCard 
+              key={id} id={id} state={blocks[id]} 
+              verses={verses.slice((id-1) * Math.ceil(verses.length/4), id * Math.ceil(verses.length/4))}
+              onIncrement={(bid: any, type: any) => {
+                const current = blocks[bid][type].count;
+                if (current < TARGET_TM) {
+                  setBlocks(prev => ({...prev, [bid]: {...prev[bid], [type]: {count: current + 1}}}));
+                }
+              }} 
+              target={TARGET_TM} 
+              fontSize={fontSize}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function BlockCard({ id, state, verses, onIncrement, target, isLocked, activeTarget, fontSize }: any) {
-  const isBlockDone = state.combined.count >= target;
-  
-  const { partA, partB } = useMemo(() => {
-    const allWords: any[] = [];
-    verses.forEach((v: Verse) => {
-      v.words.forEach((w, idx) => {
-        allWords.push({ 
-          ...w, 
-          verse_id: v.id, 
-          verse_key: v.verse_key,
-          is_last_word: idx === v.words.length - 1
-        });
-      });
-    });
-
-    const splitIdx = allWords.findIndex((w, i) => {
-      const isAtWaqaf = WAQAF_CHARS.some(char => w.text_uthmani.includes(char));
-      const isNearCenter = i >= allWords.length * 0.4 && i <= allWords.length * 0.6;
-      return (isAtWaqaf && isNearCenter) || (w.is_last_word && i >= allWords.length * 0.4 && i <= allWords.length * 0.6);
-    });
-
-    const finalSplit = splitIdx === -1 ? Math.ceil(allWords.length / 2) : splitIdx + 1;
-    return {
-      partA: allWords.slice(0, finalSplit),
-      partB: allWords.slice(finalSplit)
-    };
-  }, [verses]);
-
+function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
+  const isDone = state.combined.count >= target;
   return (
-    <Card className={cn(
-      "border-2 transition-all duration-500 overflow-hidden shadow-lg", 
-      isLocked ? "opacity-50 pointer-events-none grayscale" : 
-      activeTarget ? "border-[#800000] ring-2 ring-[#800000]/20 scale-[1.01]" :
-      isBlockDone ? "border-emerald-500 bg-emerald-50/20" : "border-muted"
-    )}>
-      <CardHeader className={cn(
-        "py-3 px-6 border-b flex flex-row items-center justify-between",
-        activeTarget ? "bg-[#800000] text-white" : "bg-[#800000]/5 text-[#800000]"
-      )}>
-        <CardTitle className="text-xl font-bold font-headline uppercase">Blok TM {id}</CardTitle>
-        <div className="flex gap-2">
-          {isBlockDone ? <Badge className="bg-emerald-500">SELESAI</Badge> : isLocked ? <Lock className="w-4 h-4" /> : <Badge variant="outline" className={activeTarget ? "border-white text-white" : ""}>PROGRESS</Badge>}
-        </div>
+    <Card className={cn("border-2 transition-all shadow-lg", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
+      <CardHeader className="bg-[#800000]/5 py-3 border-b flex flex-row items-center justify-between">
+        <CardTitle className="text-lg font-bold font-headline">BLOK TM {id}</CardTitle>
+        {isDone && <Badge className="bg-emerald-500">DONE</Badge>}
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        <div className="bg-[#fffdf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[280px] overflow-y-auto no-scrollbar" dir="rtl">
-           <TooltipProvider delayDuration={0}>
-             <div className="flex flex-wrap justify-center items-center gap-x-0 gap-y-3 text-center">
-               {partA.map((w, i) => (
-                 <WordItem key={`a-${i}`} word={w} color="text-[#800000]" fontSize={fontSize} />
-               ))}
-               {partB.map((w, i) => (
-                 <WordItem key={`b-${i}`} word={w} color="text-emerald-700" fontSize={fontSize} />
-               ))}
-             </div>
-           </TooltipProvider>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <MaqtaCounter label={`TM${id}a`} count={state.a.count} target={target} onClick={() => onIncrement(id, 'a')} disabled={isLocked} active={state.a.count < target && activeTarget} />
-          <MaqtaCounter label={`TM${id}b`} count={state.b.count} target={target} onClick={() => onIncrement(id, 'b')} disabled={isLocked || state.a.count < target} active={state.a.count >= target && state.b.count < target && activeTarget} />
-        </div>
-        <Button 
-          onClick={() => onIncrement(id, 'combined')} 
-          disabled={isLocked || state.a.count < target || state.b.count < target}
-          className={cn(
-            "w-full h-16 rounded-xl font-black transition-all text-lg", 
-            state.combined.count >= target ? "bg-emerald-500" : 
-            activeTarget && state.a.count >= target && state.b.count >= target ? "bg-[#800000] scale-105 shadow-xl animate-bounce" : "bg-muted text-muted-foreground"
-          )}
-        >
-          GABUNGAN {id}a+b: {state.combined.count} / {target}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-function MetaCombinedCard({ title, count, min, target, verses, isLocked, onIncrement, activeTarget, fontSize }: any) {
-  const isMinTapped = count >= min;
-  return (
-    <Card className={cn(
-      "border-2 shadow-xl transition-all", 
-      isLocked ? "opacity-50 grayscale pointer-events-none" : 
-      activeTarget ? "border-amber-500 ring-2 ring-amber-500/20 scale-[1.01]" :
-      "border-amber-200 bg-amber-50/30"
-    )}>
-      <CardHeader className={cn(
-        "py-3 px-6 border-b",
-        activeTarget ? "bg-amber-500 text-white" : "bg-amber-100/50 text-amber-900"
-      )}>
-        <CardTitle className="font-headline flex items-center gap-2 uppercase tracking-wider"><Zap className="w-4 h-4" /> {title}</CardTitle>
-      </CardHeader>
-      <CardContent className="p-6 space-y-4">
-        <div className="max-h-[220px] overflow-y-auto no-scrollbar bg-white/80 p-5 rounded-xl border-2 border-dashed border-amber-200" dir="rtl">
-          <div className="flex flex-wrap justify-center gap-x-1 gap-y-3 text-center">
-            {verses.map((v: Verse) => (
+        <div className="bg-[#fffcf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[200px] overflow-y-auto no-scrollbar" dir="rtl">
+          <div className="flex flex-wrap justify-center gap-x-1 gap-y-2">
+            {verses.map((v: any) => (
               <React.Fragment key={v.id}>
-                {v.words.map((w, idx) => (
-                  <span key={idx} style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} className="font-arabic text-amber-950 leading-[2.4]">{w.text_uthmani}</span>
+                {v.words.map((w: any, idx: any) => (
+                  <span key={idx} style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} className="font-arabic text-[#800000]">{w.text_uthmani}</span>
                 ))}
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-amber-300 text-[9px] font-bold mx-1 text-amber-800 bg-amber-50">({v.verse_key.split(':')[1]})</span>
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#800000]/20 text-[8px] font-bold mx-1 text-[#800000] bg-white/50">({v.verse_key.split(':')[1]})</span>
               </React.Fragment>
             ))}
           </div>
         </div>
-        <Button onClick={onIncrement} className={cn(
-          "w-full h-20 rounded-2xl text-2xl font-black transition-all", 
-          isMinTapped ? "bg-emerald-500 hover:bg-emerald-600 scale-105 shadow-xl" : 
-          activeTarget ? "bg-amber-600 hover:bg-amber-700 animate-pulse" : "bg-muted text-muted-foreground"
-        )}>
-          {count} / {target}
-        </Button>
-        <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase text-amber-800 bg-amber-100/50 py-2 rounded-lg">
-          {isMinTapped ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Lock className="w-3 h-3" />}
-          Minimal {min}x untuk lanjut ke tahap berikutnya
+        <div className="grid grid-cols-2 gap-4">
+          <CounterBox label={`TM${id}a`} count={state.a.count} target={target} onClick={() => onIncrement(id, 'a')} />
+          <CounterBox label={`TM${id}b`} count={state.b.count} target={target} onClick={() => onIncrement(id, 'b')} />
         </div>
+        <Button 
+          onClick={() => onIncrement(id, 'combined')}
+          disabled={state.a.count < target || state.b.count < target}
+          className={cn("w-full h-14 rounded-xl font-black text-lg", isDone ? "bg-emerald-500" : "bg-[#800000]")}
+        >
+          GABUNGAN {id}: {state.combined.count} / {target}
+        </Button>
       </CardContent>
     </Card>
   );
 }
 
-function WordItem({ word, color, fontSize }: any) {
-  return (
-    <React.Fragment>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span 
-            style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
-            className={cn("font-arabic outline-none cursor-help px-0.5 inline-block transition-colors hover:bg-black/5 rounded", color)}
-          >
-            {word.text_uthmani}
-          </span>
-        </TooltipTrigger>
-        <TooltipPortal>
-          <TooltipContent className="bg-black text-white border-none shadow-lg py-1 px-2 z-[100]">
-            <p className="text-[10px] font-medium">{word.translation?.text || "..."}</p>
-          </TooltipContent>
-        </TooltipPortal>
-      </Tooltip>
-      {word.is_last_word && (
-        <span className={cn("inline-flex items-center justify-center w-6 h-6 rounded-full border text-[8px] font-bold mx-1 bg-white/50", color.replace('text-', 'border-'))}>
-          ({word.verse_key.split(':')[1]})
-        </span>
-      )}
-    </React.Fragment>
-  );
-}
-
-function MaqtaCounter({ label, count, target, onClick, disabled, active }: any) {
+function CounterBox({ label, count, target, onClick }: any) {
   const isDone = count >= target;
   return (
     <div 
-      onClick={disabled || isDone ? undefined : onClick} 
-      className={cn(
-        "relative h-24 rounded-xl border-2 flex flex-col items-center justify-center cursor-pointer transition-all", 
-        disabled ? "bg-muted opacity-50 cursor-not-allowed" : 
-        isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" :
-        active ? "border-[#800000] bg-white shadow-md scale-105 z-10 ring-4 ring-[#800000]/10" : "bg-muted/20 border-muted"
-      )}
+      onClick={isDone ? undefined : onClick}
+      className={cn("h-20 rounded-xl border-2 flex flex-col items-center justify-center cursor-pointer transition-all", isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-muted/20 border-muted hover:border-[#800000]/30")}
     >
       <span className="text-[10px] font-bold uppercase opacity-60">{label}</span>
-      <span className="text-3xl font-black">{count}</span>
-      <span className="text-[8px] font-bold opacity-40">/ {target}</span>
-      {isDone && <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-emerald-500" />}
-      {!isDone && active && <div className="absolute -top-2 -right-2 bg-[#800000] text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-lg">AKTIF</div>}
+      <span className="text-2xl font-black">{count} <span className="text-[10px] font-bold opacity-40">/ {target}</span></span>
     </div>
   );
 }

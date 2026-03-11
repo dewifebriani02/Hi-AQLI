@@ -65,14 +65,19 @@ export function TikrarSchedule() {
     const endPage = juz < 30 ? JUZ_PAGES[juz] - 1 : 604;
     const items = [];
     
-    // Default to account creation or a reasonable start date
-    let currentDate = userData?.createdAt ? new Date(userData.createdAt) : new Date();
+    // Admin defined start date (verifiedAt)
+    // Fallback to createdAt if admin verified date is missing
+    const adminStartDate = userData?.tikrarStartDate?.toDate?.() || 
+                          userData?.createdAt?.toDate?.() || 
+                          new Date();
+    
+    let currentDate = new Date(adminStartDate);
     
     for (let p = startPage; p <= endPage; p++) {
       const pageStart = new Date(currentDate);
       const pageEnd = addWorkDays(pageStart, level.days);
       
-      // Check local progress
+      // Check local progress for DONE status
       let isDone = false;
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem(`tikrar_progress_p${p}`);
@@ -81,7 +86,6 @@ export function TikrarSchedule() {
             const data = JSON.parse(saved);
             const b = data.blocks || {};
             const m = data.metaCombined || {};
-            // Simplified "Done" check for UI
             const blocksDone = [1, 2, 3, 4].every(id => b[id]?.combined?.count >= 40);
             const metaDone = m[4] >= 3;
             isDone = blocksDone && metaDone;
@@ -96,7 +100,7 @@ export function TikrarSchedule() {
         isDone,
       });
 
-      // Sequential: next page starts when this one is planned to end
+      // Next page starts where previous ended
       currentDate = new Date(pageEnd);
     }
 
@@ -113,7 +117,7 @@ export function TikrarSchedule() {
           <div className="space-y-2">
             <h3 className="text-xl font-bold">Jadwal Hanya Untuk Santri Terdaftar</h3>
             <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-              Silakan selesaikan pendaftaran Halaqah Tikrar untuk mendapatkan rencana jadwal personal yang melompati hari libur Sabtu & Ahad.
+              Silakan selesaikan pendaftaran Halaqah Tikrar untuk mendapatkan rencana jadwal personal yang dimulai sejak konfirmasi Admin.
             </p>
           </div>
           <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 font-bold">
@@ -124,8 +128,7 @@ export function TikrarSchedule() {
     );
   }
 
-  const totalExams = scheduleData.length;
-  const completedExams = scheduleData.filter(i => i.isDone).length;
+  const completedCount = scheduleData.filter(i => i.isDone).length;
 
   return (
     <div className="space-y-8">
@@ -136,17 +139,17 @@ export function TikrarSchedule() {
             <CalendarDays className="w-6 h-6 text-[#800000]" /> Rencana Belajar Juz {juz}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Level: <strong className="text-foreground">{level.name}</strong> • Target: <strong className="text-foreground">{level.days} hari/halaman</strong> (Libur Sabtu-Ahad).
+            Mulai: <strong className="text-foreground">{userData?.tikrarStartDate?.toDate?.()?.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) || "Tgl Konfirmasi Admin"}</strong>
           </p>
         </div>
         <div className="flex gap-3">
           <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-center">
             <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Total Ujian</p>
-            <p className="text-xl font-black text-[#800000]">{totalExams}</p>
+            <p className="text-xl font-black text-[#800000]">{scheduleData.length}</p>
           </div>
           <div className="bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl text-center">
             <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Tuntas</p>
-            <p className="text-xl font-black text-emerald-600">{completedExams}</p>
+            <p className="text-xl font-black text-emerald-600">{completedCount}</p>
           </div>
         </div>
       </div>
@@ -158,7 +161,6 @@ export function TikrarSchedule() {
           
           return (
             <div key={item.page} className="relative">
-              {/* Timeline Indicator */}
               <div className={cn(
                 "absolute -left-[25px] top-0 w-5 h-5 rounded-full border-4 bg-white z-10 transition-all duration-500",
                 item.isDone ? "border-emerald-500 shadow-lg shadow-emerald-500/20 scale-110" : 
@@ -178,11 +180,11 @@ export function TikrarSchedule() {
                       <div className="flex items-center gap-3">
                         <span className="text-3xl font-black text-[#800000]">Hal. {item.page}</span>
                         {item.isDone ? (
-                          <Badge className="bg-emerald-500 text-white font-black text-[9px] px-2 py-0.5 tracking-widest">SELESAI</Badge>
+                          <Badge className="bg-emerald-500 text-white font-black text-[9px] px-2 py-0.5 tracking-widest">DONE</Badge>
                         ) : isActive ? (
-                          <Badge className="bg-amber-500 text-white font-black text-[9px] px-2 py-0.5 animate-pulse tracking-widest">AKTIF SEKARANG</Badge>
+                          <Badge className="bg-amber-500 text-white font-black text-[9px] px-2 py-0.5 animate-pulse tracking-widest">AKTIF</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Antrean</Badge>
+                          <Badge variant="outline" className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Menunggu</Badge>
                         )}
                       </div>
 
@@ -190,7 +192,7 @@ export function TikrarSchedule() {
                         <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border-2 border-dashed">
                           <Calendar className="w-5 h-5 text-muted-foreground" />
                           <div>
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Masa Belajar</p>
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Target Durasi</p>
                             <p className="text-xs font-bold text-foreground">
                               {item.start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - {item.end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
@@ -202,7 +204,7 @@ export function TikrarSchedule() {
                         )}>
                           <GraduationCap className={cn("w-5 h-5", item.isDone ? "text-emerald-600" : "text-[#800000]")} />
                           <div>
-                            <p className={cn("text-[10px] font-black uppercase tracking-wider", item.isDone ? "text-emerald-700" : "text-[#800000]")}>Jadwal Ujian Lisan</p>
+                            <p className={cn("text-[10px] font-black uppercase tracking-wider", item.isDone ? "text-emerald-700" : "text-[#800000]")}>Batas Akhir & Ujian</p>
                             <p className="text-sm font-black text-foreground">
                               {item.end.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })}
                             </p>
@@ -213,13 +215,13 @@ export function TikrarSchedule() {
 
                     <div className="md:w-32 flex md:flex-col items-center justify-center border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6 gap-3">
                       <div className="text-center">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Ujian Ke-</p>
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Ujian Lisan</p>
                         <p className="text-3xl font-black text-muted-foreground/40">#{idx + 1}</p>
                       </div>
                       {item.isDone && (
                         <div className="flex items-center gap-1 text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-lg">
                           <ShieldCheck className="w-4 h-4" />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Verified</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest">Tuntas</span>
                         </div>
                       )}
                     </div>
@@ -231,16 +233,15 @@ export function TikrarSchedule() {
         })}
       </div>
 
-      {/* FOOTER INFO */}
       <Card className="bg-blue-50 border-blue-100 shadow-none mt-10">
         <CardContent className="p-5 flex items-start gap-4">
           <div className="p-2 rounded-full bg-blue-100 text-blue-600">
             <Info className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-black text-blue-900 uppercase tracking-widest">Kebijakan Jadwal</p>
+            <p className="text-xs font-black text-blue-900 uppercase tracking-widest">Informasi Penting</p>
             <p className="text-[11px] text-blue-800 leading-relaxed font-medium">
-              Jadwal ini dihitung secara sistematis dengan mengasumsikan libur pada hari Sabtu dan Ahad untuk murajaah mandiri. Jika Anda menyelesaikan Tikrar sebelum target tanggal selesai, Anda diperbolehkan langsung mengajukan ujian lisan kepada Tutor dan melompat ke halaman berikutnya lebih awal.
+              Tanggal mulai Anda ditentukan oleh Admin saat proses konfirmasi pendaftaran. Program ini mengasumsikan libur di hari Sabtu dan Ahad. Jika Anda lebih cepat menyelesaikan progres, Anda bisa mengajukan ujian lisan lebih awal.
             </p>
           </div>
         </CardContent>
