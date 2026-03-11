@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, doc, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -40,7 +40,7 @@ const INITIAL_FORM = {
   day: "Senin",
   time: "19:00",
   startDate: "",
-  duration: "",
+  durationWeeks: 4,
   level: "Semua Level",
   isPremium: false,
   hasExam: true,
@@ -77,6 +77,14 @@ export default function AdminClassesPage() {
 
   const { data: allUsers } = useCollection(usersQuery);
 
+  // Calculate End Date
+  const calculatedEndDate = useMemo(() => {
+    if (!form.startDate || !form.durationWeeks) return null;
+    const start = new Date(form.startDate);
+    const end = new Date(start.getTime() + (form.durationWeeks * 7 * 24 * 60 * 60 * 1000));
+    return end.toISOString().split('T')[0];
+  }, [form.startDate, form.durationWeeks]);
+
   const handleOpenAdd = () => {
     setEditingHalaqah(null);
     setForm(INITIAL_FORM);
@@ -94,7 +102,7 @@ export default function AdminClassesPage() {
       day: day || "Senin",
       time: time || "19:00",
       startDate: h.startDate || "",
-      duration: h.duration || "",
+      durationWeeks: h.durationWeeks || 4,
       level: h.level || "Semua Level",
       isPremium: h.isPremium || false,
       hasExam: h.hasExam ?? true,
@@ -107,8 +115,8 @@ export default function AdminClassesPage() {
   };
 
   const handleSave = async () => {
-    if (!form.title || !form.muallimahId) {
-      toast({ variant: "destructive", title: "Mohon lengkapi judul dan pilih Mu'allimah." });
+    if (!form.title || !form.muallimahId || !form.startDate) {
+      toast({ variant: "destructive", title: "Mohon lengkapi judul, Mu'allimah, dan tanggal mulai." });
       return;
     }
 
@@ -124,7 +132,8 @@ export default function AdminClassesPage() {
       description: form.description,
       schedule: `${form.day}, ${form.time}`,
       startDate: form.startDate,
-      duration: form.duration,
+      endDate: calculatedEndDate,
+      durationWeeks: form.durationWeeks,
       level: form.level,
       isPremium: form.isPremium,
       hasExam: form.hasExam,
@@ -226,12 +235,12 @@ export default function AdminClassesPage() {
                 <div className="flex items-center justify-between border-t pt-3 mt-auto">
                   <div className="flex flex-col gap-1">
                     <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{h.level}</span>
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Timer className="w-2.5 h-2.5" /> {h.duration || '-'}</span>
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Timer className="w-2.5 h-2.5" /> {h.durationWeeks || '-'} Pekan</span>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
                       <Calendar className="w-3 h-3 text-[#800000]" />
-                      Mulai: {h.startDate ? new Date(h.startDate).toLocaleDateString('id-ID') : '-'}
+                      {h.startDate ? new Date(h.startDate).toLocaleDateString('id-ID') : '-'} s/d {h.endDate ? new Date(h.endDate).toLocaleDateString('id-ID') : '-'}
                     </div>
                     <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground uppercase">
                       <Clock className="w-3 h-3 text-[#800000]" />
@@ -333,11 +342,16 @@ export default function AdminClassesPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Durasi Belajar</Label>
+                <Label className="text-xs font-black uppercase">Durasi (Jumlah Pekan)</Label>
                 <div className="relative">
                   <Timer className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input value={form.duration} onChange={(e) => setForm({...form, duration: e.target.value})} placeholder="Misal: 3 Bulan / 12 Pertemuan" className="pl-10" />
+                  <Input type="number" min="1" value={form.durationWeeks} onChange={(e) => setForm({...form, durationWeeks: parseInt(e.target.value) || 1})} className="pl-10" />
                 </div>
+                {calculatedEndDate && (
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter mt-1">
+                    Otomatis berakhir: {new Date(calculatedEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                )}
               </div>
             </div>
 

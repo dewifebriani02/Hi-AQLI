@@ -152,12 +152,15 @@ export default function NgajiPage() {
                 <span className="text-[10px] font-bold flex items-center gap-1"><Clock className="w-2.5 h-2.5 text-[#800000]" /> {circle.schedule}</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[8px] font-black text-muted-foreground uppercase">Mulai</span>
-                <span className="text-[10px] font-bold flex items-center gap-1"><Calendar className="w-2.5 h-2.5 text-[#800000]" /> {circle.startDate ? new Date(circle.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+                <span className="text-[8px] font-black text-muted-foreground uppercase">Rentang</span>
+                <span className="text-[9px] font-bold flex flex-col leading-tight">
+                  <span className="flex items-center gap-1"><Calendar className="w-2.5 h-2.5 text-[#800000]" /> {circle.startDate ? new Date(circle.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+                  <span className="flex items-center gap-1 ml-3.5 text-muted-foreground">s/d {circle.endDate ? new Date(circle.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+                </span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Durasi</span>
-                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {circle.duration || '-'}</span>
+                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {circle.durationWeeks || '-'} Pekan</span>
               </div>
               <div className="flex flex-col items-end">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Sisa Kuota</span>
