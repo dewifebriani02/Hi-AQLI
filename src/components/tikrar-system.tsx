@@ -120,6 +120,19 @@ export function TikrarSystem() {
     4: 0
   });
 
+  // Sync Level from User Profile
+  useEffect(() => {
+    if (userData?.tikrarLevel) {
+      setLevel(userData.tikrarLevel);
+    } else if (isPaid && !level) {
+      // Fallback if record is missing but is paid
+      setLevel(3); 
+    } else if (!isPaid && !level) {
+      // Trial default
+      setLevel(3);
+    }
+  }, [userData, isPaid, level]);
+
   // Handle Initial Juz and Access
   useEffect(() => {
     if (!isUserDataLoading && userData) {
@@ -175,9 +188,6 @@ export function TikrarSystem() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedLevel = localStorage.getItem('tikrar_level');
-      if (savedLevel) setLevel(parseInt(savedLevel));
-      
       const savedSize = localStorage.getItem('aqli_mushaf_font_size');
       if (savedSize) setFontSize(Math.min(parseInt(savedSize), 32)); // Cap for tikrar system
     }
@@ -238,13 +248,6 @@ export function TikrarSystem() {
       }));
     }
   }, [blocks, metaCombined, page, loading, pageStartDate]);
-
-  const handleLevelSelect = (levelId: number) => {
-    setLevel(levelId);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tikrar_level', levelId.toString());
-    }
-  };
 
   const incrementTM = (blockId: number, type: 'a' | 'b' | 'combined') => {
     if (accessDenied) return;
@@ -325,35 +328,6 @@ export function TikrarSystem() {
 
   if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
-  if (!level) {
-    return (
-      <div className="flex flex-col gap-8 items-center justify-center py-10 animate-in fade-in duration-500">
-        <div className="text-center space-y-2 max-w-md px-4">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-[#800000]/10 flex items-center justify-center mb-4">
-            <Trophy className="w-8 h-8 text-[#800000]" />
-          </div>
-          <h2 className="text-2xl font-bold font-headline">Pilih Level Tikrar Daily</h2>
-          <p className="text-sm text-muted-foreground">Tentukan intensitas hafalan Anda.</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4">
-          {LEVELS.map((l) => (
-            <Card key={l.id} className="cursor-pointer hover:border-[#800000] hover:bg-[#800000]/5 transition-all group" onClick={() => handleLevelSelect(l.id)}>
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="font-bold text-lg group-hover:text-[#800000] transition-colors">{l.name}</h3>
-                  <p className="text-xs text-muted-foreground font-medium">{l.desc}</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#800000] group-hover:text-white transition-all">
-                  <ArrowRight className="w-5 h-5" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   const getVersesForRange = (startBlock: number, endBlock: number) => {
     if (verses.length === 0) return [];
     const chunkSize = Math.ceil(verses.length / 4);
@@ -373,7 +347,7 @@ export function TikrarSystem() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
-                    Level {LEVELS.find(l => l.id === level)?.name}
+                    Level {LEVELS.find(l => l.id === level)?.name || "Santai"}
                   </Badge>
                   {isPaid ? (
                     <Badge className="bg-emerald-500/20 text-white border-none text-[10px] font-bold flex items-center gap-1">
@@ -390,9 +364,9 @@ export function TikrarSystem() {
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter opacity-80 mb-1">
                   <Clock className="w-3 h-3" /> Jadwal Hafalan
                 </div>
-                <div className="text-lg font-black">Hari ke-{scheduleInfo?.currentDay} <span className="text-xs font-medium opacity-60">/ {scheduleInfo?.totalDays}</span></div>
+                <div className="text-lg font-black">Hari ke-{scheduleInfo?.currentDay || 1} <span className="text-xs font-medium opacity-60">/ {scheduleInfo?.totalDays || 21}</span></div>
                 <p className={cn("text-[10px] font-bold mt-1 px-2 py-0.5 rounded", scheduleInfo?.isOverdue ? "bg-rose-500 text-white" : "bg-white/20")}>
-                  Target Selesai: {scheduleInfo?.deadline}
+                  Target Selesai: {scheduleInfo?.deadline || "-"}
                 </p>
               </div>
             </div>
@@ -573,7 +547,7 @@ function BlockCard({ id, state, verses, onIncrement, target, isLocked, activeTar
     const splitIdx = allWords.findIndex((w, i) => {
       const isAtWaqaf = WAQAF_CHARS.some(char => w.text_uthmani.includes(char));
       const isNearCenter = i >= allWords.length * 0.4 && i <= allWords.length * 0.6;
-      return (isAtWaqaf && isNearCenter) || (w.is_last_word && isNearCenter);
+      return (isAtWaqaf && isNearCenter) || (w.is_last_word && i >= allWords.length * 0.4 && i <= allWords.length * 0.6);
     });
 
     const finalSplit = splitIdx === -1 ? Math.ceil(allWords.length / 2) : splitIdx + 1;
