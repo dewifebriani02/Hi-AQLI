@@ -44,8 +44,8 @@ const LEVELS = [
 ];
 
 const TARGET_MAX = 40;
-const PASS_THRESHOLD = 5; // Minimal 5x untuk Maqta individu/gabungan blok
-const META_PASS_THRESHOLD = 10; // Minimal 10x untuk Gabungan antar blok
+const PASS_THRESHOLD = 5; // Minimal 5x untuk Maqta internal
+const META_PASS_THRESHOLD = 10; // Minimal 10x untuk Gabungan antar TM
 
 interface Word {
   text_uthmani: string;
@@ -176,7 +176,7 @@ export function TikrarSystem() {
     };
   }, [verses]);
 
-  const isTuntasMaqta = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
+  const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
   const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= META_PASS_THRESHOLD;
 
   const totalProgress = useMemo(() => {
@@ -251,27 +251,27 @@ export function TikrarSystem() {
         <div className="flex flex-col gap-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MaqtaCard id={1} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} />
-            <MaqtaCard id={2} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasMaqta(1)} onIncrement={setBlocks} fontSize={fontSize} />
+            <MaqtaCard id={2} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasTM(1)} onIncrement={setBlocks} fontSize={fontSize} />
           </div>
 
           <MetaStep 
             label="GABUNG TM1 & TM2" 
             count={metaCounts['1_2']} 
-            isLocked={!isTuntasMaqta(1) || !isTuntasMaqta(2)} 
+            isLocked={!isTuntasTM(1) || !isTuntasTM(2)} 
             onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} 
           />
 
           <MaqtaCard id={3} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MetaStep label="GABUNG TM2 & TM3" count={metaCounts['2_3']} isLocked={!isTuntasMaqta(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
+            <MetaStep label="GABUNG TM2 & TM3" count={metaCounts['2_3']} isLocked={!isTuntasTM(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
             <MetaStep label="GABUNG TM1 s/d TM3" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3': p['1_2_3'] + 1}))} />
           </div>
 
           <MaqtaCard id={4} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} />
 
           <div className="space-y-4">
-            <MetaStep label="GABUNG TM3 & TM4" count={metaCounts['3_4']} isLocked={!isTuntasMaqta(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
+            <MetaStep label="GABUNG TM3 & TM4" count={metaCounts['3_4']} isLocked={!isTuntasTM(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
             <MetaStep label="GABUNG TM2 s/d TM4" count={metaCounts['2_3_4']} isLocked={!isMetaTuntas('3_4')} onIncrement={() => setMetaCounts(p => ({...p, '2_3_4': p['2_3_4'] + 1}))} />
             <MetaStep label="GABUNG SELURUH HALAMAN (TM1 - TM4)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
           </div>
@@ -337,7 +337,7 @@ function MaqtaCard({ id, state, verses, onIncrement, fontSize, isLocked }: any) 
   return (
     <Card className={cn("border-2 transition-all shadow-md overflow-hidden", isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50 grayscale select-none")}>
       <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">TIKRAR MAQTA {id} {isLocked && "• TERKUNCI"}</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">TIKRAR MAQTA {id} (TM{id}) {isLocked && "• TERKUNCI"}</span>
         {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">TUNTAS</Badge>}
       </div>
       <CardContent className="p-4 space-y-4">

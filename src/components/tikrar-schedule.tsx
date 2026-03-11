@@ -78,7 +78,7 @@ export function TikrarSchedule() {
     
     let currentDate = new Date(adminStartDate);
     
-    // Time distribution across 10 logical stages
+    // Time distribution across 10 steps
     const dayAllocation = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]; 
 
     for (let p = startPage; p <= endPage; p++) {
@@ -96,8 +96,7 @@ export function TikrarSchedule() {
 
       const pageEnd = new Date(stepCurrentDate);
       
-      // Progres check based on localStorage (same keys as TikrarSystem)
-      let maqtaProgress: Record<number, boolean> = {};
+      let tmProgress: Record<number, boolean> = {};
       let metaProgress: Record<string, boolean> = {};
       let isAllDone = false;
 
@@ -110,11 +109,10 @@ export function TikrarSchedule() {
             const m = data.metaCounts || {};
             
             for (let i = 1; i <= 4; i++) {
-              // TM is tuntas if internal a, b, and combined all >= threshold
               const a = (b[i]?.a?.count || 0) >= PASS_THRESHOLD;
               const b_ = (b[i]?.b?.count || 0) >= PASS_THRESHOLD;
               const g = (b[i]?.combined?.count || 0) >= PASS_THRESHOLD;
-              maqtaProgress[i] = a && b_ && g;
+              tmProgress[i] = a && b_ && g;
             }
             
             metaProgress['1_2'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
@@ -129,8 +127,8 @@ export function TikrarSchedule() {
         }
       }
 
-      if (Object.keys(maqtaProgress).length === 0) {
-        for (let i = 1; i <= 4; i++) maqtaProgress[i] = false;
+      if (Object.keys(tmProgress).length === 0) {
+        for (let i = 1; i <= 4; i++) tmProgress[i] = false;
         metaProgress = { '1_2': false, '2_3': false, '1_2_3': false, '3_4': false, '2_3_4': false, '1_2_3_4': false };
       }
 
@@ -139,7 +137,7 @@ export function TikrarSchedule() {
         start: pageStart,
         end: pageEnd,
         steps: stepsDates,
-        maqtaProgress,
+        tmProgress,
         metaProgress,
         isDone: isAllDone,
       });
@@ -251,16 +249,15 @@ export function TikrarSchedule() {
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        {/* Rendering the exact steps from TikrarSystem */}
-                        <StepRow label="TM1 (a, b, Gabung)" isDone={item.maqtaProgress[1]} date={item.steps[0].end} />
-                        <StepRow label="TM2 (a, b, Gabung)" isDone={item.maqtaProgress[2]} date={item.steps[1].end} />
+                        <StepRow label="Tikrar Maqta 1 (TM1)" isDone={item.tmProgress[1]} date={item.steps[0].end} />
+                        <StepRow label="Tikrar Maqta 2 (TM2)" isDone={item.tmProgress[2]} date={item.steps[1].end} />
                         <StepRow label="Gabung TM1 & TM2" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta />
                         
-                        <StepRow label="TM3 (a, b, Gabung)" isDone={item.maqtaProgress[3]} date={item.steps[3].end} />
+                        <StepRow label="Tikrar Maqta 3 (TM3)" isDone={item.tmProgress[3]} date={item.steps[3].end} />
                         <StepRow label="Gabung TM2 & TM3" isDone={item.metaProgress['2_3']} date={item.steps[4].end} isMeta />
                         <StepRow label="Gabung TM1 s/d TM3" isDone={item.metaProgress['1_2_3']} date={item.steps[5].end} isMeta />
                         
-                        <StepRow label="TM4 (a, b, Gabung)" isDone={item.maqtaProgress[4]} date={item.steps[6].end} />
+                        <StepRow label="Tikrar Maqta 4 (TM4)" isDone={item.tmProgress[4]} date={item.steps[6].end} />
                         <StepRow label="Gabung TM3 & TM4" isDone={item.metaProgress['3_4']} date={item.steps[7].end} isMeta />
                         <StepRow label="Gabung TM2 s/d TM4" isDone={item.metaProgress['2_3_4']} date={item.steps[8].end} isMeta />
                         <StepRow label="GABUNG SELURUH HALAMAN" isDone={item.metaProgress['1_2_3_4']} date={item.steps[9].end} isMeta highlight />
