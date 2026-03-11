@@ -78,7 +78,7 @@ export function TikrarSchedule() {
     
     let currentDate = new Date(adminStartDate);
     
-    // Time distribution across 10 steps
+    // Time distribution across 10 steps (approx matching the daily system)
     const dayAllocation = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]; 
 
     for (let p = startPage; p <= endPage; p++) {
@@ -96,7 +96,7 @@ export function TikrarSchedule() {
 
       const pageEnd = new Date(stepCurrentDate);
       
-      let tmProgress: Record<number, boolean> = {};
+      let tmProgress: Record<string, boolean> = {};
       let metaProgress: Record<string, boolean> = {};
       let isAllDone = false;
 
@@ -108,28 +108,24 @@ export function TikrarSchedule() {
             const b = data.blocks || {};
             const m = data.metaCounts || {};
             
+            const letters = ["", "A", "B", "C", "D"];
             for (let i = 1; i <= 4; i++) {
-              const a = (b[i]?.a?.count || 0) >= PASS_THRESHOLD;
-              const b_ = (b[i]?.b?.count || 0) >= PASS_THRESHOLD;
-              const g = (b[i]?.combined?.count || 0) >= PASS_THRESHOLD;
-              tmProgress[i] = a && b_ && g;
+              const l = letters[i];
+              tmProgress[`${l}1`] = (b[i]?.a?.count || 0) >= PASS_THRESHOLD;
+              tmProgress[`${l}2`] = (b[i]?.b?.count || 0) >= PASS_THRESHOLD;
+              tmProgress[`${l}G`] = (b[i]?.combined?.count || 0) >= PASS_THRESHOLD;
             }
             
-            metaProgress['1_2'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['2_3'] = (m['2_3'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['1_2_3'] = (m['1_2_3'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['3_4'] = (m['3_4'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['2_3_4'] = (m['2_3_4'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['1_2_3_4'] = (m['1_2_3_4'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['AB'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['BC'] = (m['2_3'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['ABC'] = (m['1_2_3'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['CD'] = (m['3_4'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['BCD'] = (m['2_3_4'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['ABCD'] = (m['1_2_3_4'] || 0) >= META_PASS_THRESHOLD;
 
-            isAllDone = metaProgress['1_2_3_4'];
+            isAllDone = metaProgress['ABCD'];
           } catch (e) {}
         }
-      }
-
-      if (Object.keys(tmProgress).length === 0) {
-        for (let i = 1; i <= 4; i++) tmProgress[i] = false;
-        metaProgress = { '1_2': false, '2_3': false, '1_2_3': false, '3_4': false, '2_3_4': false, '1_2_3_4': false };
       }
 
       items.push({
@@ -249,18 +245,18 @@ export function TikrarSchedule() {
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        <StepRow label={`Blok A (${item.page}A)`} isDone={item.tmProgress[1]} date={item.steps[0].end} />
-                        <StepRow label={`Blok B (${item.page}B)`} isDone={item.tmProgress[2]} date={item.steps[1].end} />
-                        <StepRow label="Gabung Blok A & B" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta />
+                        <StepRow label={`BLOK A (${item.page}A-1, A-2, G)`} isDone={item.tmProgress['A1'] && item.tmProgress['A2'] && item.tmProgress['AG']} date={item.steps[0].end} threshold={PASS_THRESHOLD} />
+                        <StepRow label={`BLOK B (${item.page}B-1, B-2, G)`} isDone={item.tmProgress['B1'] && item.tmProgress['B2'] && item.tmProgress['BG']} date={item.steps[1].end} threshold={PASS_THRESHOLD} />
+                        <StepRow label="GABUNG BLOK A & B" isDone={item.metaProgress['AB']} date={item.steps[2].end} isMeta threshold={META_PASS_THRESHOLD} />
                         
-                        <StepRow label={`Blok C (${item.page}C)`} isDone={item.tmProgress[3]} date={item.steps[3].end} />
-                        <StepRow label="Gabung Blok B & C" isDone={item.metaProgress['2_3']} date={item.steps[4].end} isMeta />
-                        <StepRow label="Gabung Blok A s/d C" isDone={item.metaProgress['1_2_3']} date={item.steps[5].end} isMeta />
+                        <StepRow label={`BLOK C (${item.page}C-1, C-2, G)`} isDone={item.tmProgress['C1'] && item.tmProgress['C2'] && item.tmProgress['CG']} date={item.steps[3].end} threshold={PASS_THRESHOLD} />
+                        <StepRow label="GABUNG BLOK B & C" isDone={item.metaProgress['BC']} date={item.steps[4].end} isMeta threshold={META_PASS_THRESHOLD} />
+                        <StepRow label="GABUNG BLOK A s/d C" isDone={item.metaProgress['ABC']} date={item.steps[5].end} isMeta threshold={META_PASS_THRESHOLD} />
                         
-                        <StepRow label={`Blok D (${item.page}D)`} isDone={item.tmProgress[4]} date={item.steps[6].end} />
-                        <StepRow label="Gabung Blok C & D" isDone={item.metaProgress['3_4']} date={item.steps[7].end} isMeta />
-                        <StepRow label="Gabung Blok B s/d D" isDone={item.metaProgress['2_3_4']} date={item.steps[8].end} isMeta />
-                        <StepRow label="GABUNG SELURUH HALAMAN" isDone={item.metaProgress['1_2_3_4']} date={item.steps[9].end} isMeta highlight />
+                        <StepRow label={`BLOK D (${item.page}D-1, D-2, G)`} isDone={item.tmProgress['D1'] && item.tmProgress['D2'] && item.tmProgress['DG']} date={item.steps[6].end} threshold={PASS_THRESHOLD} />
+                        <StepRow label="GABUNG BLOK C & D" isDone={item.metaProgress['CD']} date={item.steps[7].end} isMeta threshold={META_PASS_THRESHOLD} />
+                        <StepRow label="GABUNG BLOK B s/d D" isDone={item.metaProgress['BCD']} date={item.steps[8].end} isMeta threshold={META_PASS_THRESHOLD} />
+                        <StepRow label="GABUNG SELURUH HALAMAN (A-D)" isDone={item.metaProgress['ABCD']} date={item.steps[9].end} isMeta highlight threshold={META_PASS_THRESHOLD} />
                       </div>
 
                       <div className="bg-[#800000] p-4 rounded-2xl flex items-center justify-between mt-4">
@@ -284,7 +280,7 @@ export function TikrarSchedule() {
   );
 }
 
-function StepRow({ label, isDone, date, isMeta, highlight }: { label: string, isDone: boolean, date: Date, isMeta?: boolean, highlight?: boolean }) {
+function StepRow({ label, isDone, date, isMeta, highlight, threshold }: { label: string, isDone: boolean, date: Date, isMeta?: boolean, highlight?: boolean, threshold: number }) {
   return (
     <div className={cn(
       "flex items-center justify-between p-3 rounded-xl border transition-all",
@@ -301,7 +297,7 @@ function StepRow({ label, isDone, date, isMeta, highlight }: { label: string, is
         <div className="flex flex-col">
           <span className={cn("text-[11px] font-bold", highlight ? "text-[#800000]" : "text-foreground")}>{label}</span>
           <span className="text-[9px] text-muted-foreground font-medium">
-            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+            Estimasi: {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Min {threshold}x
           </span>
         </div>
       </div>
