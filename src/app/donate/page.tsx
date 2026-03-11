@@ -12,6 +12,7 @@ import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { Separator } from "@/components/ui/separator";
 
 const paymentMethods = [
   { id: 'transfer', label: 'Transfer Bank', icon: Landmark, detail: 'Bank Syariah Indonesia (BSI) - 7123456789 a.n. HI AQLI' },
@@ -107,7 +108,7 @@ export default function DonatePage() {
       <div className="flex justify-center items-center min-h-[60vh] px-4">
         <Card className="w-full max-w-md text-center border-none shadow-2xl border-b-8 border-[#D4AF37]">
           <CardContent className="pt-10 pb-10 space-y-6">
-            <div className="mx-auto bg-black text-[#D4AF37] rounded-full p-4 w-fit animate-bounce">
+            <div className="mx-auto bg-[#800000] text-[#D4AF37] rounded-full p-4 w-fit animate-bounce">
               <CheckCircle2 className="h-12 w-12" />
             </div>
             <div className="space-y-2">
@@ -116,7 +117,7 @@ export default function DonatePage() {
                 Terima kasih, <strong>{senderName}</strong>. Donasi Anda sangat berarti untuk operasional HI AQLI.
               </p>
             </div>
-            <Button onClick={() => window.location.href = '/'} className="w-full bg-black text-white hover:bg-black/90 font-bold h-12 rounded-xl">
+            <Button onClick={() => window.location.href = '/'} className="w-full bg-[#800000] text-white hover:bg-[#800000]/90 font-bold h-12 rounded-xl">
               Kembali ke Beranda
             </Button>
           </CardContent>
@@ -131,14 +132,14 @@ export default function DonatePage() {
     <div className="flex justify-center items-start pt-10 px-4 pb-20">
       <Card className="w-full max-w-lg border-none shadow-xl border-t-4 border-[#800000]">
         <CardHeader className="text-center relative">
-          {step === 2 && <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-black" onClick={() => setStep(1)}><ArrowLeft className="h-5 w-5" /></Button>}
-          <div className="mx-auto bg-black text-[#D4AF37] rounded-full p-3 w-fit mb-4">
+          {step === 2 && <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-[#800000]" onClick={() => setStep(1)}><ArrowLeft className="h-5 w-5" /></Button>}
+          <div className="mx-auto bg-[#800000] text-[#D4AF37] rounded-full p-3 w-fit mb-4">
             <HeartHandshake className="h-8 w-8" />
           </div>
-          <CardTitle className="font-headline text-2xl text-black uppercase font-black">
+          <CardTitle className="font-headline text-2xl text-[#800000] uppercase font-black">
             {step === 1 ? "Infaq Digital" : "Pembayaran"}
           </CardTitle>
-          <CardDescription className="font-bold text-[#800000] uppercase text-[10px] tracking-widest">
+          <CardDescription className="font-bold text-[#800000] uppercase text-[10px] tracking-widest opacity-60">
             Dukung HI AQLI Syiarkan Qur'an
           </CardDescription>
         </CardHeader>
@@ -155,7 +156,7 @@ export default function DonatePage() {
                       variant="outline"
                       className={cn(
                         "h-14 text-sm font-black transition-all rounded-xl border-2",
-                        amount === val ? "bg-black border-black text-[#D4AF37] shadow-lg" : "border-black/5 text-black hover:border-black"
+                        amount === val ? "bg-[#800000] border-[#800000] text-[#D4AF37] shadow-lg" : "border-[#800000]/5 text-[#800000] hover:border-[#800000]"
                       )}
                       onClick={() => handleAmountSelect(val)}
                     >
@@ -172,8 +173,8 @@ export default function DonatePage() {
 
               <div className="space-y-2">
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black font-black">Rp</span>
-                  <Input type="number" placeholder="Contoh: 150000" className="pl-11 h-14 text-lg font-black border-2 border-black/5 focus-visible:ring-black rounded-xl" value={customAmount} onChange={handleCustomAmountChange} />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#800000] font-black">Rp</span>
+                  <Input type="number" placeholder="Contoh: 150000" className="pl-11 h-14 text-lg font-black border-2 border-[#800000]/5 focus-visible:ring-[#800000] rounded-xl" value={customAmount} onChange={handleCustomAmountChange} />
                 </div>
               </div>
 
@@ -186,14 +187,14 @@ export default function DonatePage() {
                       onClick={() => setMethod(pm.id)}
                       className={cn(
                         "flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all",
-                        method === pm.id ? "border-black bg-black text-white" : "border-black/5 bg-muted/30 hover:border-black/20"
+                        method === pm.id ? "border-[#800000] bg-[#800000]/5 text-[#800000]" : "border-[#800000]/5 bg-muted/30 hover:border-[#800000]/20"
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <pm.icon className={cn("h-5 w-5", method === pm.id ? "text-[#D4AF37]" : "text-black")} />
+                        <pm.icon className={cn("h-5 w-5", method === pm.id ? "text-[#D4AF37]" : "text-[#800000]")} />
                         <div className="flex flex-col">
                           <span className="font-black text-xs uppercase">{pm.label}</span>
-                          <span className={cn("text-[9px] font-medium truncate max-w-[180px]", method === pm.id ? "text-white/60" : "text-muted-foreground")}>{pm.detail}</span>
+                          <span className={cn("text-[9px] font-medium truncate max-w-[180px]", method === pm.id ? "text-[#800000]/60" : "text-muted-foreground")}>{pm.detail}</span>
                         </div>
                       </div>
                       {method === pm.id && <CheckCircle2 className="h-4 w-4 text-[#D4AF37]" />}
@@ -204,8 +205,8 @@ export default function DonatePage() {
             </>
           ) : (
             <>
-              <div className="bg-black text-white p-8 rounded-[2rem] border-b-8 border-[#D4AF37] space-y-6 relative overflow-hidden">
-                <div className="absolute right-[-20px] top-[-20px] opacity-10"><Landmark className="w-32 h-32" /></div>
+              <div className="bg-[#800000] text-white p-8 rounded-[2rem] border-b-8 border-[#D4AF37] space-y-6 relative overflow-hidden">
+                <div className="absolute right-[-20px] top-[-20px] opacity-10"><Landmark className="w-32 h-32 text-[#D4AF37]" /></div>
                 <div className="text-center space-y-2 relative z-10">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">Total Infaq</p>
                   <div className="text-4xl font-black flex items-center justify-center gap-2">
@@ -231,7 +232,7 @@ export default function DonatePage() {
                 {method === 'qris' && (
                   <div className="space-y-4 text-center relative z-10">
                     <div className="mx-auto w-44 h-44 bg-white p-2 border-4 border-[#D4AF37] rounded-3xl flex items-center justify-center">
-                      <Image src="https://placehold.co/400x400/000000/D4AF37?text=QRIS+AQLI" alt="QRIS" width={160} height={160} className="rounded-lg" />
+                      <Image src="https://placehold.co/400x400/800000/D4AF37?text=QRIS+AQLI" alt="QRIS" width={160} height={160} className="rounded-lg" />
                     </div>
                     <p className="text-[9px] text-white/60 font-bold uppercase tracking-widest">Pindai menggunakan Aplikasi Bank/E-Wallet</p>
                   </div>
@@ -243,14 +244,14 @@ export default function DonatePage() {
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black" />
-                      <Input placeholder="Nama Pengirim Sesuai Rekening" className="pl-11 h-12 font-bold border-2 rounded-xl" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]" />
+                      <Input placeholder="Nama Pengirim Sesuai Rekening" className="pl-11 h-12 font-bold border-2 rounded-xl focus-visible:ring-[#800000]" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="relative">
-                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black" />
-                      <Input type="date" className="pl-11 h-12 font-bold border-2 rounded-xl" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]" />
+                      <Input type="date" className="pl-11 h-12 font-bold border-2 rounded-xl focus-visible:ring-[#800000]" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
                     </div>
                   </div>
                 </div>
@@ -262,7 +263,7 @@ export default function DonatePage() {
         <CardFooter>
           <Button 
             size="lg" 
-            className="w-full font-black text-lg bg-black text-[#D4AF37] hover:bg-black/90 shadow-xl h-16 rounded-2xl uppercase tracking-widest"
+            className="w-full font-black text-lg bg-[#800000] text-[#D4AF37] hover:bg-[#800000]/90 shadow-xl h-16 rounded-2xl uppercase tracking-widest"
             disabled={(!amount && !customAmount) || loading}
             onClick={step === 1 ? nextStep : handleConfirmDonation}
           >

@@ -40,7 +40,7 @@ export function HifzProgressChart() {
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.completed ? "#D4AF37" : "#000000"} 
+                    fill={entry.completed ? "#D4AF37" : "#800000"} 
                     className="transition-all duration-1000"
                     opacity={entry.completed ? 1 : 0.05}
                   />
@@ -58,7 +58,7 @@ export function HifzProgressChart() {
                           <tspan
                             x={viewBox.cx}
                             y={viewBox.cy}
-                            className="fill-black text-5xl font-black font-headline"
+                            className="fill-[#800000] text-5xl font-black font-headline"
                           >
                             {percentage}%
                           </tspan>
@@ -81,18 +81,18 @@ export function HifzProgressChart() {
 
         <div className="flex-1 space-y-6 w-full">
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-5 rounded-3xl bg-black border-b-4 border-[#D4AF37] space-y-1 shadow-sm">
+            <div className="p-5 rounded-3xl bg-[#800000] border-b-4 border-[#D4AF37] space-y-1 shadow-sm">
               <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">Itqan</p>
               <p className="text-3xl font-black text-white text-center">{completedCount} <span className="text-xs opacity-60">Juz</span></p>
             </div>
-            <div className="p-5 rounded-3xl bg-[#800000] border-b-4 border-black space-y-1 shadow-sm">
-              <p className="text-[10px] font-black text-white uppercase tracking-widest text-center">Target</p>
-              <p className="text-3xl font-black text-white text-center">{30 - completedCount} <span className="text-xs opacity-60">Juz</span></p>
+            <div className="p-5 rounded-3xl bg-white border-2 border-[#800000] border-b-4 space-y-1 shadow-sm">
+              <p className="text-[10px] font-black text-[#800000] uppercase tracking-widest text-center">Target</p>
+              <p className="text-3xl font-black text-[#800000] text-center">{30 - completedCount} <span className="text-xs opacity-60">Juz</span></p>
             </div>
           </div>
           
-          <div className="space-y-2 bg-muted p-5 rounded-3xl border border-black/5">
-            <h4 className="text-xs font-black text-black uppercase tracking-widest flex items-center gap-2">
+          <div className="space-y-2 bg-muted p-5 rounded-3xl border border-[#800000]/5">
+            <h4 className="text-xs font-black text-[#800000] uppercase tracking-widest flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-[#D4AF37]" /> Ringkasan
             </h4>
             <p className="text-sm text-black/70 leading-relaxed font-medium">
@@ -104,8 +104,8 @@ export function HifzProgressChart() {
 
       <div className="space-y-5">
         <div className="flex items-center justify-between px-1">
-          <h4 className="text-sm font-black font-headline uppercase text-black">Matriks Hafalan</h4>
-          <Badge className="bg-black text-[#D4AF37] text-[9px] font-black tracking-widest">30 JUZ</Badge>
+          <h4 className="text-sm font-black font-headline uppercase text-[#800000]">Matriks Hafalan</h4>
+          <Badge className="bg-[#800000] text-[#D4AF37] text-[9px] font-black tracking-widest">30 JUZ</Badge>
         </div>
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-3">
           {juzStatus.map((j) => (
@@ -114,14 +114,14 @@ export function HifzProgressChart() {
               className={cn(
                 "h-14 flex flex-col items-center justify-center rounded-2xl border-2 transition-all cursor-default select-none relative",
                 j.completed 
-                  ? "bg-[#D4AF37] border-black text-black shadow-lg scale-105" 
-                  : "bg-white border-black/5 text-muted-foreground hover:border-[#800000]/20"
+                  ? "bg-[#D4AF37] border-[#800000] text-[#800000] shadow-lg scale-105" 
+                  : "bg-white border-[#800000]/5 text-muted-foreground hover:border-[#800000]/20"
               )}
             >
               <span className="text-[10px] font-black uppercase tracking-tighter">Juz</span>
               <span className="text-xl font-black leading-none">{j.number}</span>
               {j.completed && (
-                <div className="absolute -top-1 -right-1 bg-black rounded-full text-[#D4AF37] p-0.5 border border-white">
+                <div className="absolute -top-1 -right-1 bg-[#800000] rounded-full text-[#D4AF37] p-0.5 border border-white">
                   <CheckCircle2 className="w-3 h-3" />
                 </div>
               )}

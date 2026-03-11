@@ -91,7 +91,7 @@ export default function DashboardPage() {
           </h1>
         </div>
         <Link href="/leaderboard" className="flex flex-col items-end gap-1 group">
-          <Badge className="bg-black text-white gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-black/10 group-hover:bg-[#800000] transition-colors">
+          <Badge className="bg-[#800000] text-white gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-[#800000]/10 hover:bg-[#800000]/90 transition-colors">
             ALIM <div className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
           </Badge>
           <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter flex items-center gap-1">
@@ -102,7 +102,7 @@ export default function DashboardPage() {
 
       {/* Active Program Shortcut (ONLY FOR PAID USERS) */}
       {isPaid && (
-        <Card className="bg-black text-white border-none shadow-xl overflow-hidden relative group">
+        <Card className="bg-[#800000] text-white border-none shadow-xl overflow-hidden relative group border-b-4 border-[#D4AF37]">
           <div className="absolute right-[-10px] top-[-10px] opacity-20 group-hover:scale-110 transition-transform">
             <Zap className="w-32 h-32 text-[#D4AF37]" />
           </div>
@@ -120,7 +120,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] opacity-90">Lanjutkan repetisi hari ini.</p>
               )}
             </div>
-            <Button asChild size="sm" className="bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 font-bold gap-2 shadow-lg border-none">
+            <Button asChild size="sm" className="bg-[#D4AF37] text-[#800000] hover:bg-[#D4AF37]/90 font-bold gap-2 shadow-lg border-none">
               <Link href="/tajweed">MASUK KELAS <ArrowRight className="w-4 h-4" /></Link>
             </Button>
           </CardContent>
@@ -148,7 +148,7 @@ export default function DashboardPage() {
                     "w-6 h-6 rotate-45 border-2 rounded-sm flex items-center justify-center transition-all",
                     day.active ? "bg-[#D4AF37] border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20" : "border-muted-foreground/20"
                   )}>
-                    {day.active && <div className="w-1.5 h-1.5 bg-black rounded-full" />}
+                    {day.active && <div className="w-1.5 h-1.5 bg-[#800000] rounded-full" />}
                   </div>
                 </div>
               ))}
@@ -164,7 +164,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* Main Challenge Card */}
-      <Card className="overflow-hidden border-none shadow-md">
+      <Card className="overflow-hidden border-none shadow-md border-t-4 border-[#800000]">
         <CardContent className="p-0">
           <div className="p-6 flex justify-between items-start gap-4">
             <div className="space-y-4 flex-1">
@@ -210,13 +210,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Al-Qur'an Ad */}
           <Link href="/tilawah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#800000] to-black text-white h-44 transition-transform group-hover:scale-[1.02]">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#800000] to-[#4d0000] text-white h-44 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
                   <BookMarked className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold">UTAMA</Badge>
+                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[10px] font-bold">UTAMA</Badge>
                   <h4 className="font-bold text-lg">Mushaf Digital</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Baca Al-Qur'an dengan terjemahan per kata dan tafsir mendalam.</p>
                 </div>
@@ -229,13 +229,13 @@ export default function DashboardPage() {
 
           {/* AI Scholar Ad */}
           <Link href="/ai-scholar" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-black to-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#4d0000] to-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
                   <Globe className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold">CERDAS</Badge>
+                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[10px] font-bold">CERDAS</Badge>
                   <h4 className="font-bold text-lg">Cendekiawan AI</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Tanyakan apa pun tentang hukum Islam dan Tafsir kepada AI kami.</p>
                 </div>
@@ -248,13 +248,13 @@ export default function DashboardPage() {
 
           {/* Hafalan Ad */}
           <Link href="/tajweed" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#800000] via-black to-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-[#800000] via-[#b30000] to-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
                   <Award className="w-32 h-32" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold">LATIHAN</Badge>
+                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[10px] font-bold">LATIHAN</Badge>
                   <h4 className="font-bold text-lg">{isPaid ? `Tikrar Juz ${paidJuz}` : 'Modul Hafalan'}</h4>
                   <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">
                     {isPaid ? 'Lanjutkan repetisi hafalan Anda hari ini.' : 'Perkuat hafalan dengan metode Tikrar harian.'}
@@ -269,15 +269,15 @@ export default function DashboardPage() {
 
           {/* Leaderboard Ad */}
           <Link href="/leaderboard" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-black text-white h-44 transition-transform group-hover:scale-[1.02] border-2 border-[#D4AF37]/20">
+            <Card className="overflow-hidden border-none shadow-sm bg-white text-[#800000] h-44 transition-transform group-hover:scale-[1.02] border-2 border-[#D4AF37]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-10px] opacity-20">
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-10">
                   <Trophy className="w-32 h-32 text-[#D4AF37]" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold">KOMPETISI</Badge>
+                  <Badge className="bg-[#800000] text-white border-none text-[10px] font-bold">KOMPETISI</Badge>
                   <h4 className="font-bold text-lg">Papan Peringkat</h4>
-                  <p className="text-[10px] text-white/70 line-clamp-2 leading-relaxed">Bersainglah dalam kebaikan bersama pengguna HI AQLI lainnya.</p>
+                  <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">Bersainglah dalam kebaikan bersama pengguna HI AQLI lainnya.</p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-bold relative z-10 uppercase tracking-wider text-[#D4AF37]">
                   Lihat Juara <ChevronRight className="w-3 h-3" />
@@ -288,13 +288,13 @@ export default function DashboardPage() {
 
           {/* Donation Ad */}
           <Link href="/donate" className="block group sm:col-span-2">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-r from-black via-[#800000] to-black text-white h-44 transition-transform group-hover:scale-[1.01]">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.01] border-b-4 border-[#D4AF37]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
                 <div className="absolute right-[-20px] bottom-[-20px] opacity-20">
                   <HeartHandshake className="w-48 h-48 text-[#D4AF37]" />
                 </div>
                 <div className="space-y-2 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold tracking-widest">WAKAF DIGITAL</Badge>
+                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[10px] font-bold tracking-widest">WAKAF DIGITAL</Badge>
                   <h4 className="font-bold text-xl">Infaq &amp; Sedekah</h4>
                   <p className="text-sm text-white/70 max-w-sm leading-relaxed">
                     Dukung pemeliharaan infrastruktur AI HI AQLI untuk manfaat umat yang berkelanjutan.

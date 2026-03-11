@@ -220,7 +220,7 @@ export function PageExamSimulation({ page }: { page: number }) {
         <Card className="text-center border-none shadow-2xl overflow-hidden animate-in zoom-in duration-500">
           <div className={cn(
             "p-10 flex flex-col items-center gap-4 text-white",
-            isPassed ? "bg-black border-b-4 border-[#D4AF37]" : "bg-[#800000]"
+            isPassed ? "bg-[#800000] border-b-4 border-[#D4AF37]" : "bg-[#4d0000]"
           )}>
             <Trophy className={cn("w-20 h-20", isPassed ? "text-[#D4AF37] animate-bounce" : "text-white")} />
             <h2 className="text-2xl font-black font-headline uppercase tracking-widest">
@@ -230,22 +230,22 @@ export function PageExamSimulation({ page }: { page: number }) {
           <CardContent className="pt-10 space-y-8">
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-muted p-4 rounded-3xl border-2 border-dashed">
-                <div className="text-2xl font-black text-black">{finalScore}%</div>
+                <div className="text-2xl font-black text-[#800000]">{finalScore}%</div>
                 <p className="text-[8px] font-black text-muted-foreground uppercase mt-1">Akurasi</p>
               </div>
               <div className="bg-muted p-4 rounded-3xl border-2 border-dashed">
-                <div className="text-2xl font-black text-black">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')}</div>
+                <div className="text-2xl font-black text-[#800000]">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')}</div>
                 <p className="text-[8px] font-black text-muted-foreground uppercase mt-1">Durasi</p>
               </div>
               <div className="bg-muted p-4 rounded-3xl border-2 border-dashed">
-                <div className="text-2xl font-black text-black">{attempts}</div>
+                <div className="text-2xl font-black text-[#800000]">{attempts}</div>
                 <p className="text-[8px] font-black text-muted-foreground uppercase mt-1">Percobaan</p>
               </div>
             </div>
             
             <div className="bg-[#D4AF37]/5 border-2 border-[#D4AF37]/20 p-5 rounded-3xl text-left space-y-2">
-              <div className="flex items-center gap-2 text-black font-black text-xs uppercase">
-                <BrainCircuit className="w-4 h-4 text-[#800000]" /> Evaluasi
+              <div className="flex items-center gap-2 text-[#800000] font-black text-xs uppercase">
+                <BrainCircuit className="w-4 h-4" /> Evaluasi
               </div>
               <p className="text-xs text-black/80 leading-relaxed font-medium">
                 {isPassed ? "Luar biasa! Hafalan Anda halaman ini sangat kuat." : "Coba ulangi repetisi blok sebelum simulasi lagi."}
@@ -253,7 +253,7 @@ export function PageExamSimulation({ page }: { page: number }) {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3 p-6 pt-0">
-            <Button asChild className="w-full bg-black text-[#D4AF37] font-black h-14 rounded-2xl shadow-xl uppercase">
+            <Button asChild className="w-full bg-[#800000] text-[#D4AF37] font-black h-14 rounded-2xl shadow-xl uppercase hover:bg-[#800000]/90">
               <Link href="/tajweed">KEMBALI KE DASBOR</Link>
             </Button>
             <Button variant="ghost" onClick={handleReset} className="w-full text-[#800000] font-black gap-2 uppercase text-xs">
@@ -263,10 +263,10 @@ export function PageExamSimulation({ page }: { page: number }) {
         </Card>
 
         {/* PERSONAL RANK */}
-        <Card className="border-2 border-black/10 bg-white shadow-lg mx-1">
+        <Card className="border-2 border-[#800000]/10 bg-white shadow-lg mx-1">
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-black text-[#D4AF37] flex items-center justify-center font-black text-lg border-2 border-[#D4AF37]">
+              <div className="w-12 h-12 rounded-2xl bg-[#800000] text-[#D4AF37] flex items-center justify-center font-black text-lg border-2 border-[#D4AF37]">
                 {myRank}
               </div>
               <div className="flex flex-col">
@@ -288,32 +288,32 @@ export function PageExamSimulation({ page }: { page: number }) {
               <Trophy className="w-5 h-5 text-[#D4AF37] fill-current" />
               <h3 className="text-sm font-black font-headline uppercase text-black">Papan Juara Halaman {page}</h3>
             </div>
-            <Badge className="bg-black text-[#D4AF37] text-[8px] font-black">GLOBAL</Badge>
+            <Badge className="bg-[#800000] text-[#D4AF37] text-[8px] font-black">GLOBAL</Badge>
           </div>
           
           <Card className="border-none shadow-lg bg-muted overflow-hidden">
             <CardContent className="p-0">
-              <div className="divide-y divide-black/5">
+              <div className="divide-y divide-[#800000]/5">
                 {mockSimulationLeaderboard.map((u) => (
                   <div key={u.name} className="flex items-center justify-between p-4 hover:bg-white transition-colors">
                     <div className="flex items-center gap-4">
-                      <span className={cn("text-[10px] font-black w-4 text-center", u.rank === 1 ? "text-[#D4AF37]" : "text-black")}>{u.rank}</span>
+                      <span className={cn("text-[10px] font-black w-4 text-center", u.rank === 1 ? "text-[#D4AF37]" : "text-[#800000]")}>{u.rank}</span>
                       <div className="relative">
                         <Avatar className="h-10 w-10 border-2 border-white">
                           <AvatarImage src={u.avatar} />
-                          <AvatarFallback className="bg-black text-[#D4AF37] text-xs font-bold">{u.name[0]}</AvatarFallback>
+                          <AvatarFallback className="bg-[#800000] text-[#D4AF37] text-xs font-bold">{u.name[0]}</AvatarFallback>
                         </Avatar>
-                        {u.rank === 1 && <div className="absolute -top-1 -right-1 bg-[#D4AF37] text-black rounded-full p-0.5 border border-white"><Star className="w-2 h-2 fill-current" /></div>}
+                        {u.rank === 1 && <div className="absolute -top-1 -right-1 bg-[#D4AF37] text-[#800000] rounded-full p-0.5 border border-white"><Star className="w-2 h-2 fill-current" /></div>}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs font-black text-black uppercase">{u.name}</span>
                         <div className="flex items-center gap-2">
                            <span className="text-[9px] text-muted-foreground font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5" /> {u.time}</span>
-                           <span className="text-[9px] font-black text-black uppercase">{u.accuracy}%</span>
+                           <span className="text-[9px] font-black text-[#800000] uppercase">{u.accuracy}%</span>
                         </div>
                       </div>
                     </div>
-                    <Button size="sm" variant="ghost" onClick={() => handleSendCongrats(u.name)} className={cn("h-8 px-3 text-[10px] font-black gap-1.5 rounded-full", sentCongrats.includes(u.name) ? "text-[#800000] bg-[#800000]/10" : "text-black hover:text-[#800000]")}>
+                    <Button size="sm" variant="ghost" onClick={() => handleSendCongrats(u.name)} className={cn("h-8 px-3 text-[10px] font-black gap-1.5 rounded-full", sentCongrats.includes(u.name) ? "text-[#800000] bg-[#800000]/10" : "text-[#800000] hover:text-[#800000]/80")}>
                       <Heart className={cn("w-3.5 h-3.5", sentCongrats.includes(u.name) && "fill-current")} />
                       {sentCongrats.includes(u.name) ? "Terkirim" : "Selamat"}
                     </Button>
@@ -332,14 +332,14 @@ export function PageExamSimulation({ page }: { page: number }) {
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6 px-4 pb-32">
       <div className="flex items-center justify-between">
-        <Button asChild variant="ghost" size="icon" className="rounded-full text-black">
+        <Button asChild variant="ghost" size="icon" className="rounded-full text-[#800000]">
           <Link href="/tajweed"><ChevronLeft className="h-6 w-6" /></Link>
         </Button>
         <div className="text-center">
           <h1 className="text-sm font-black font-headline uppercase tracking-[0.2em] text-[#800000]">Simulasi Ujian</h1>
           <p className="text-[10px] text-muted-foreground font-bold">Halaman {page} • Juz {Math.floor(page/20) + 1}</p>
         </div>
-        <Badge className="bg-black text-[#D4AF37] h-8 px-3 font-black rounded-xl border-none">
+        <Badge className="bg-[#800000] text-[#D4AF37] h-8 px-3 font-black rounded-xl border-none">
           {score} / {questions.length}
         </Badge>
       </div>
@@ -349,12 +349,12 @@ export function PageExamSimulation({ page }: { page: number }) {
       </div>
 
       <Card className="border-none shadow-2xl overflow-hidden rounded-[2.5rem]">
-        <CardHeader className="text-center pb-10 pt-14 bg-black text-white relative border-b-4 border-[#D4AF37]">
+        <CardHeader className="text-center pb-10 pt-14 bg-[#800000] text-white relative border-b-4 border-[#D4AF37]">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-white shadow-md flex items-center justify-center mb-6">
             {currentQ.type === 'word_translation' && <Languages className="w-7 h-7 text-[#800000]" />}
-            {currentQ.type === 'sentence_translation' && <BookOpen className="w-7 h-7 text-black" />}
+            {currentQ.type === 'sentence_translation' && <BookOpen className="w-7 h-7 text-[#800000]" />}
             {currentQ.type === 'verse_number' && <Target className="w-7 h-7 text-[#D4AF37]" />}
-            {currentQ.type === 'fill_blank' && <Zap className="w-7 h-7 text-black" />}
+            {currentQ.type === 'fill_blank' && <Zap className="w-7 h-7 text-[#D4AF37]" />}
             {currentQ.type === 'connect_verse' && <BrainCircuit className="w-7 h-7 text-[#800000]" />}
           </div>
           <div className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37] mb-4 opacity-70">
@@ -379,15 +379,15 @@ export function PageExamSimulation({ page }: { page: number }) {
                 selectedAnswer === option && isCorrect === true && "bg-[#D4AF37]/10 border-[#D4AF37] text-black",
                 selectedAnswer === option && isCorrect === false && "bg-[#800000]/10 border-[#800000] text-[#800000]",
                 selectedAnswer && option === currentQ.correctAnswer && isCorrect === false && "bg-[#D4AF37]/10 border-[#D4AF37] text-black",
-                !selectedAnswer && "hover:border-black hover:bg-muted"
+                !selectedAnswer && "hover:border-[#800000] hover:bg-muted"
               )}
             >
               <span className={cn("flex-1", (currentQ.type === 'fill_blank' || currentQ.type === 'connect_verse') ? "font-arabic text-2xl text-right" : "text-base")} dir={(currentQ.type === 'fill_blank' || currentQ.type === 'connect_verse') ? "rtl" : "ltr"}>
                 {option}
               </span>
-              {selectedAnswer === option && isCorrect === true && <CheckCircle2 className="w-6 h-6 text-black shrink-0" />}
+              {selectedAnswer === option && isCorrect === true && <CheckCircle2 className="w-6 h-6 text-[#800000] shrink-0" />}
               {selectedAnswer === option && isCorrect === false && <XCircle className="w-6 h-6 text-[#800000] shrink-0" />}
-              {selectedAnswer && option === currentQ.correctAnswer && isCorrect === false && <CheckCircle2 className="w-6 h-6 text-black shrink-0" />}
+              {selectedAnswer && option === currentQ.correctAnswer && isCorrect === false && <CheckCircle2 className="w-6 h-6 text-[#800000] shrink-0" />}
             </Button>
           ))}
         </CardContent>
