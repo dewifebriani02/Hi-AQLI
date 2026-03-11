@@ -11,6 +11,7 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Simplified isAdmin to prevent potential recursion and prioritize email
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == "dewifebriani@gmail.com" ||

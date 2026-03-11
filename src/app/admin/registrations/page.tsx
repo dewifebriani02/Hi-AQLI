@@ -31,58 +31,71 @@ export default function AdminRegistrationsPage() {
 
   const { data: registrations, isLoading, error } = useCollection(regQuery);
 
-  const handleApprove = async (reg: any) => {
+  const handleApprove = (reg: any) => {
+    if (!reg?.id || !reg?.userId) {
+      toast({ variant: "destructive", title: "Data pendaftaran tidak lengkap." });
+      return;
+    }
+
     if (!confirm(`Berikan akses ${reg.halaqahTitle} untuk ${reg.userName}?`)) return;
     
     setProcessingId(reg.id);
-    try {
-      const batch = writeBatch(db);
+    
+    const batch = writeBatch(db);
 
-      // 1. Update Registration Status
-      const regRef = doc(db, "halaqah_registrations", reg.id);
-      batch.update(regRef, { 
-        status: "active",
-        verifiedAt: serverTimestamp()
-      });
+    // 1. Update Registration Status
+    const regRef = doc(db, "halaqah_registrations", reg.id);
+    batch.update(regRef, { 
+      status: "active",
+      verifiedAt: serverTimestamp()
+    });
 
-      // 2. Update User Profile Access
-      const userRef = doc(db, "users", reg.userId);
-      const updateData: any = {
-        followedHalaqahs: arrayUnion(reg.halaqahId),
-        updatedAt: serverTimestamp()
-      };
+    // 2. Update User Profile Access - Use SET with MERGE for reliability
+    const userRef = doc(db, "users", reg.userId);
+    const updateData: any = {
+      followedHalaqahs: arrayUnion(reg.halaqahId),
+      updatedAt: serverTimestamp()
+    };
 
-      // Special logic for Tikrar Premium
-      if (reg.halaqahId === 'tikrar-j30-b1') {
-        updateData.isTikrarPaid = true;
-        updateData.paidJuz = reg.targetJuz || 30;
-        updateData.tikrarLevel = reg.level || 3;
-      }
-
-      batch.update(userRef, updateData);
-
-      // Commit the batch and wait for it
-      await batch.commit();
-      
-      toast({
-        title: "Berhasil Diverifikasi",
-        description: `Akses ${reg.halaqahTitle} telah aktif untuk ${reg.userName}.`,
-      });
-    } catch (err: any) {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `halaqah_registrations/${reg.id} & users/${reg.userId}`,
-        operation: 'write',
-        requestResourceData: { status: 'active', grantAccess: reg.halaqahId }
-      }));
-    } finally {
-      setProcessingId(null);
+    // Special logic for Tikrar Premium
+    if (reg.halaqahId === 'tikrar-j30-b1') {
+      updateData.isTikrarPaid = true;
+      updateData.paidJuz = reg.targetJuz || 30;
+      updateData.tikrarLevel = reg.level || 3;
     }
+
+    batch.set(userRef, updateData, { merge: true });
+
+    // Commit the batch using non-blocking pattern
+    batch.commit()
+      .then(() => {
+        toast({
+          title: "Berhasil Diverifikasi",
+          description: `Akses ${reg.halaqahTitle} telah aktif untuk ${reg.userName}.`,
+        });
+      })
+      .catch(async (serverError) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `halaqah_registrations/${reg.id} & users/${reg.userId}`,
+          operation: 'write',
+          requestResourceData: { status: 'active', grantAccess: reg.halaqahId }
+        }));
+      })
+      .finally(() => {
+        setProcessingId(null);
+      });
   };
 
-  const handleReject = async (regId: string) => {
+  const handleReject = (regId: string) => {
     if (!confirm("Tolak pendaftaran ini?")) return;
-    updateDocumentNonBlocking(doc(db, "halaqah_registrations", regId), { status: "rejected" });
+    setProcessingId(regId);
+    
+    const regRef = doc(db, "halaqah_registrations", regId);
+    updateDocumentNonBlocking(regRef, { status: "rejected" });
+    
+    // Simulate immediate feedback
     toast({ title: "Pendaftaran Ditolak" });
+    setProcessingId(null);
   };
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-[#800000]" /></div>;
