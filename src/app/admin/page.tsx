@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen } from "lucide-react";
+import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -31,13 +31,19 @@ export default function AdminDashboard() {
     );
   }, [db, user?.uid]);
 
+  const usersQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return collection(db, "users");
+  }, [db, user?.uid]);
+
   const { data: pending } = useCollection(pendingQuery);
   const { data: active } = useCollection(activeQuery);
+  const { data: users } = useCollection(usersQuery);
 
   const stats = [
     { label: "Menunggu Verifikasi", value: pending?.length || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "Pendaftaran Aktif", value: active?.length || 0, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Total Halaqah", value: "4", icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Santri Terdaftar", value: users?.length || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Total Halaqah", value: "4", icon: BookOpen, color: "text-emerald-600", bg: "bg-emerald-50" },
   ];
 
   return (
@@ -48,7 +54,7 @@ export default function AdminDashboard() {
           <span className="text-xs font-bold uppercase tracking-widest">Panel Kontrol Utama</span>
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Dashboard Admin</h1>
-        <p className="text-muted-foreground">Kelola operasional Sahabat AQLI Digital.</p>
+        <p className="text-muted-foreground">Kelola operasional dan data peserta Sahabat AQLI Digital.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -71,14 +77,14 @@ export default function AdminDashboard() {
         <Card className="border-none shadow-md overflow-hidden">
           <CardHeader className="bg-muted/30">
             <CardTitle className="text-lg font-headline flex items-center justify-between">
-              Manajemen Pendaftaran
+              Verifikasi Pendaftaran
               <Badge className="bg-amber-500">{pending?.length || 0} BARU</Badge>
             </CardTitle>
-            <CardDescription>Verifikasi pendaftaran berbayar & gratis untuk semua Halaqah.</CardDescription>
+            <CardDescription>Tinjau bukti pembayaran dan aktifkan akses kelas manual.</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Tinjau profil santri dan aktifkan akses kelas secara manual.</p>
+              <p className="text-sm text-muted-foreground">Aktifkan akun santri setelah validasi infaq atau pendaftaran gratis.</p>
               <Link href="/admin/registrations">
                 <Button className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
                   Buka Antrean Verifikasi <ArrowUpRight className="w-4 h-4" />
@@ -90,15 +96,20 @@ export default function AdminDashboard() {
 
         <Card className="border-none shadow-md overflow-hidden">
           <CardHeader className="bg-muted/30">
-            <CardTitle className="text-lg font-headline">Laporan Donasi</CardTitle>
-            <CardDescription>Pantau arus kas infaq dan wakaf digital.</CardDescription>
+            <CardTitle className="text-lg font-headline flex items-center gap-2">
+              Manajemen Peserta
+              <UserCog className="w-5 h-5 text-[#800000]" />
+            </CardTitle>
+            <CardDescription>Edit data santri, ganti target Juz, atau update level.</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Lihat riwayat donasi umum untuk operasional infrastruktur AI.</p>
-              <Button variant="outline" className="w-full font-bold gap-2" disabled>
-                Segera Hadir <Clock className="w-4 h-4" />
-              </Button>
+              <p className="text-sm text-muted-foreground">Kelola hak akses dan profil santri yang sudah aktif dalam program.</p>
+              <Link href="/admin/users">
+                <Button variant="outline" className="w-full font-bold gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/5">
+                  Kelola Seluruh Peserta <Users className="w-4 h-4" />
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

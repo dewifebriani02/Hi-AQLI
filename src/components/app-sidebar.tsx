@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Lock,
   Trophy,
+  UserCog,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,8 @@ import { doc } from "firebase/firestore";
 
 const adminItems = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
-  { href: "/admin/registrations", label: "Verifikasi Tikrar", icon: Lock },
+  { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
+  { href: "/admin/users", label: "Manajemen Peserta", icon: UserCog },
 ];
 
 const navItems = [
@@ -71,7 +73,6 @@ export function AppSidebar() {
     if (isMobile) {
       setOpenMobile(false);
     } else {
-      // Opsi: Jika ingin sidebar menciut ke mode ikon di desktop setelah diklik
       setOpen(false);
     }
   };
