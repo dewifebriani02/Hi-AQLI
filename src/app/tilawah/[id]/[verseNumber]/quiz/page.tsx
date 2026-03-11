@@ -4,7 +4,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer, Star, Heart, Clock } from "lucide-react";
+import { ChevronLeft, Loader2, GraduationCap, CheckCircle2, XCircle, RefreshCw, Trophy, RotateCcw, Timer, Star, Heart, Clock, Zap } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -14,7 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, query, orderBy, limit } from "firebase/firestore";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface WordData {
   id: number;
@@ -48,7 +49,7 @@ export default function WordQuizPage() {
   const [timeLeft, setTimeLeft] = useState(60); 
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
 
-  // Fetch real global leaderboard for this verse (top 5)
+  // Fetch real global leaderboard for points (top 5)
   const leaderboardQuery = useMemoFirebase(() => {
     if (!db || !id || !verseNumber) return null;
     return query(
@@ -129,10 +130,9 @@ export default function WordQuizPage() {
       if (isPerfect) {
         const userRef = doc(db, "users", user.uid);
         updateDoc(userRef, {
-          points: increment(10), // Give 10 points for each perfect verse memorization
+          points: increment(10), 
           updatedAt: serverTimestamp()
         }).catch(() => {
-          // If updateDoc fails (e.g. field doesn't exist), try setDoc with merge
           setDocumentNonBlocking(userRef, { points: increment(10) }, { merge: true });
         });
       }
