@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Search, UserCog, ShieldCheck, Mail, BookOpen, Zap, Loader2, ArrowLeft, CheckCircle2, Users } from "lucide-react";
+import { Search, UserCog, ShieldCheck, Mail, BookOpen, Zap, Loader2, ArrowLeft, CheckCircle2, Users, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -70,13 +70,22 @@ export default function AdminUsersPage() {
     if (!editingUser?.id) return;
 
     const userRef = doc(db, "users", editingUser.id);
-    updateDocumentNonBlocking(userRef, {
+    
+    // Prepare update data
+    const updateData: any = {
       username: editingUser.username,
       paidJuz: parseInt(editingUser.paidJuz || "1"),
       tikrarLevel: parseInt(editingUser.tikrarLevel || "3"),
       isTikrarPaid: editingUser.isTikrarPaid,
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    // Handle date conversion if it was edited
+    if (editingUser.tempDate) {
+      updateData.tikrarStartDate = Timestamp.fromDate(new Date(editingUser.tempDate));
+    }
+
+    updateDocumentNonBlocking(userRef, updateData);
 
     toast({
       title: "Data Diperbarui",
@@ -123,13 +132,14 @@ export default function AdminUsersPage() {
                 <TableHead className="text-[10px] font-black uppercase">Santri</TableHead>
                 <TableHead className="text-[10px] font-black uppercase">Program Tikrar</TableHead>
                 <TableHead className="text-[10px] font-black uppercase">Level</TableHead>
+                <TableHead className="text-[10px] font-black uppercase">Tanggal Mulai</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!filteredUsers || filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-20 text-muted-foreground italic text-sm">
+                  <TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic text-sm">
                     Tidak ada data peserta yang ditemukan.
                   </TableCell>
                 </TableRow>
@@ -157,6 +167,12 @@ export default function AdminUsersPage() {
                         {LEVELS.find(l => parseInt(l.id) === u.tikrarLevel)?.name || 'Santai'}
                       </span>
                     </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+                        <Calendar className="w-3 h-3 text-[#800000]" />
+                        {u.tikrarStartDate?.toDate ? u.tikrarStartDate.toDate().toLocaleDateString('id-ID') : '-'}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">
                       <Dialog open={isDialogOpen && editingUser?.id === u.id} onOpenChange={(open) => {
                         if (!open) setEditingUser(null);
@@ -167,7 +183,10 @@ export default function AdminUsersPage() {
                             variant="ghost" 
                             size="sm" 
                             className="h-8 w-8 p-0 hover:bg-[#800000]/10 hover:text-[#800000]"
-                            onClick={() => setEditingUser({ ...u })}
+                            onClick={() => setEditingUser({ 
+                              ...u, 
+                              tempDate: u.tikrarStartDate?.toDate ? u.tikrarStartDate.toDate().toISOString().split('T')[0] : "" 
+                            })}
                           >
                             <UserCog className="h-4 w-4" />
                           </Button>
@@ -222,6 +241,20 @@ export default function AdminUsersPage() {
                                   </SelectContent>
                                 </Select>
                               </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase text-muted-foreground">Tanggal Mulai Program</Label>
+                              <div className="relative">
+                                <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                  type="date"
+                                  className="pl-10"
+                                  value={editingUser?.tempDate || ""} 
+                                  onChange={(e) => setEditingUser({ ...editingUser, tempDate: e.target.value })}
+                                />
+                              </div>
+                              <p className="text-[10px] text-muted-foreground italic">Menentukan awal kalkulasi jadwal di tab 'Jadwal Saya'.</p>
                             </div>
 
                             <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
