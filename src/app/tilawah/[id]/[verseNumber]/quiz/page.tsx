@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -66,7 +65,6 @@ export default function WordQuizPage() {
   const [timeLeft, setTimeLeft] = useState(60); 
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
 
-  // Fetch real global leaderboard for points (top 5)
   const leaderboardQuery = useMemoFirebase(() => {
     if (!db || !id || !verseNumber) return null;
     return query(
@@ -78,7 +76,6 @@ export default function WordQuizPage() {
 
   const { data: globalUsers } = useCollection(leaderboardQuery);
 
-  // Auth Protection Redirect
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -105,7 +102,6 @@ export default function WordQuizPage() {
   const fetchWordsAndSurah = useCallback(async () => {
     try {
       setLoading(true);
-      // Fetch Words
       const res = await fetch(
         `https://api.quran.com/api/v4/verses/by_key/${id}:${verseNumber}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id`
       );
@@ -114,7 +110,6 @@ export default function WordQuizPage() {
       const validWords = data.verse.words.filter((w: any) => w.text_uthmani && w.translation.text);
       setWords(validWords);
 
-      // Fetch Surah Info for Navigation
       const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
       const sData = await sRes.json();
       setTotalVerses(sData.chapter.verses_count);
@@ -137,7 +132,6 @@ export default function WordQuizPage() {
     const isPerfect = finalScore === words.length;
     
     try {
-      // 1. Record Attempt
       addDoc(collection(db, "users", user.uid, "quiz_attempts"), {
         userId: user.uid,
         quizId: `verse_${id}_${verseNumber}`,
@@ -150,7 +144,6 @@ export default function WordQuizPage() {
         createdAt: serverTimestamp(),
       });
 
-      // 2. Grant Points if Perfect (Itqan)
       if (isPerfect) {
         const userRef = doc(db, "users", user.uid);
         updateDoc(userRef, {
@@ -201,6 +194,9 @@ export default function WordQuizPage() {
 
     setTimeout(() => {
       if (currentIdx + 1 < words.length) {
+        // CRITICAL FIX: Reset selection state BEFORE incrementing index to clear UI indicators
+        setSelectedAnswer(null);
+        setIsCorrect(null);
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
@@ -245,6 +241,7 @@ export default function WordQuizPage() {
 
   useEffect(() => {
     if (words.length > 0 && currentIdx < words.length) {
+      // Secondary reset safety check
       setSelectedAnswer(null);
       setIsCorrect(null);
       setTimeLeft(60); 
