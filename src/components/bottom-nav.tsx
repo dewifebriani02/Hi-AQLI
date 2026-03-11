@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, GraduationCap, Users, Trophy, HeartHandshake, Globe } from "lucide-react";
+import { LayoutDashboard, BookOpen, GraduationCap, HeartHandshake, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 

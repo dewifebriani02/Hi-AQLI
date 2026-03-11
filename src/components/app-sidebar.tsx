@@ -1,4 +1,3 @@
-
 "use client";
 
 import { usePathname } from "next/navigation";
@@ -17,7 +16,6 @@ import {
 import {
   BookOpen,
   GraduationCap,
-  Users,
   LayoutDashboard,
   HeartHandshake,
   Settings,
@@ -44,8 +42,7 @@ const navItems = [
   { href: "/tajweed", label: "Hi Hafal", icon: GraduationCap },
   { href: "/ai-scholar", label: "Hi Mufradat", icon: Globe },
   { href: "/donate", label: "Hi Berbagi", icon: HeartHandshake },
-  { href: "/study-circles", label: "Halaqah", icon: Users },
-  { href: "/leaderboard", label: "Juara", icon: Trophy },
+  { href: "/leaderboard", label: "Papan Juara", icon: Trophy },
 ];
 
 export function AppSidebar() {

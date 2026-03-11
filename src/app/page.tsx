@@ -1,38 +1,27 @@
-
 'use client';
 
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Flame,
-  TrendingUp,
-  PlayCircle,
-  BookMarked,
   ChevronRight,
   Award,
-  Bell,
-  PlusCircle,
-  BarChart3,
-  Globe,
-  Calendar,
   Sparkles,
-  Users,
   HeartHandshake,
   Trophy,
   Zap,
   ArrowRight,
   Clock,
-  BookOpen
+  BookOpen,
+  Globe,
+  Mic2
 } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
-import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
@@ -74,7 +63,7 @@ export default function DashboardPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
             <Sparkles className="w-4 h-4 fill-current animate-pulse text-[#D4AF37]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Hi AQLI DIGITAL</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">HI AQLI DIGITAL</span>
           </div>
           <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight">
             Assalamu'alaikum,<br />
@@ -116,53 +105,59 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Feature Ads Section */}
+      {/* Feature Grid */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold font-headline">Layanan Hi AQLI</h2>
+        <h2 className="text-lg font-bold font-headline">Layanan HI AQLI</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          {/* 1. HI NGAJI */}
           <Link href="/tilawah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-40 transition-transform group-hover:scale-[1.02]">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><BookOpen className="w-24 h-24" /></div>
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Mic2 className="w-24 h-24" /></div>
                 <div className="space-y-1 relative z-10">
                   <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Tahsin & Iqra</Badge>
-                  <h4 className="font-bold text-lg text-white leading-tight">Hi Ngaji</h4>
+                  <h4 className="font-black text-xl text-white leading-tight">Hi Ngaji</h4>
+                  <p className="text-[10px] text-white/70 max-w-[140px]">Belajar membaca Al-Qur'an dengan benar.</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-wider text-[#D4AF37]">Mulai Membaca <ChevronRight className="w-3 h-3" /></div>
+                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Mulai Membaca <ChevronRight className="w-3 h-3" /></div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link href="/ai-scholar" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-40 transition-transform group-hover:scale-[1.02]">
+          {/* 2. HI HAFAL */}
+          <Link href="/tajweed" className="block group">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-44 transition-transform group-hover:scale-[1.02] relative border-b-4 border-[#D4AF37]">
               <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Globe className="w-24 h-24" /></div>
-                <div className="space-y-1 relative z-10">
-                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Kosakata</Badge>
-                  <h4 className="font-bold text-lg text-white leading-tight">Hi Mufradat</h4>
-                </div>
-                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-wider text-[#D4AF37]">Ajukan Pertanyaan <ChevronRight className="w-3 h-3" /></div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/tajweed" className="block group sm:col-span-2">
-            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-40 transition-transform group-hover:scale-[1.01] border-b-4 border-[#D4AF37]">
-              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Award className="w-32 h-32" /></div>
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Award className="w-24 h-24" /></div>
                 <div className="space-y-1 relative z-10">
                   <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Tikrar</Badge>
-                  <h4 className="font-black text-xl text-white">Hi Hafal</h4>
-                  <p className="text-[10px] text-white/70 max-w-[200px]">Perkuat kualitas hafalan dengan metode repetisi terstruktur.</p>
+                  <h4 className="font-black text-xl text-white leading-tight">Hi Hafal</h4>
+                  <p className="text-[10px] text-white/70 max-w-[140px]">Metode repetisi 40x untuk hafalan Itqan.</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Buka Modul <ChevronRight className="w-4 h-4" /></div>
+                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Buka Modul <ChevronRight className="w-3 h-3" /></div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* 3. HI MUFRADAT */}
+          <Link href="/ai-scholar" className="block group sm:col-span-2">
+            <Card className="overflow-hidden border-none shadow-sm bg-[#800000] text-white h-40 transition-transform group-hover:scale-[1.01] relative">
+              <CardContent className="p-5 flex flex-col justify-between h-full relative overflow-hidden">
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-20"><Globe className="w-32 h-32" /></div>
+                <div className="space-y-1 relative z-10">
+                  <Badge className="bg-[#D4AF37] text-black border-none text-[9px] font-black uppercase">Kosakata AI</Badge>
+                  <h4 className="font-black text-xl text-white">Hi Mufradat</h4>
+                  <p className="text-[10px] text-white/70 max-w-[220px]">Tanyakan arti, tafsir, dan kosakata sulit kepada asisten AI HI AQLI.</p>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-black relative z-10 uppercase tracking-widest text-[#D4AF37]">Ajukan Pertanyaan <ChevronRight className="w-4 h-4" /></div>
               </CardContent>
             </Card>
           </Link>
         </div>
       </div>
 
-      {/* Donation Ad */}
+      {/* 4. HI BERBAGI (Donation Ad) */}
       <Link href="/donate" className="block group">
         <Card className="overflow-hidden border-2 border-[#800000]/10 bg-white text-[#800000] h-32 transition-all group-hover:border-[#D4AF37] shadow-sm">
           <CardContent className="p-5 flex items-center justify-between h-full gap-4">
@@ -172,7 +167,7 @@ export default function DashboardPage() {
               </div>
               <div className="space-y-0.5">
                 <h4 className="font-black text-lg uppercase leading-tight">Hi Berbagi</h4>
-                <p className="text-[10px] text-muted-foreground font-bold">Dukung operasional Baksos & Infrastruktur AI.</p>
+                <p className="text-[10px] text-muted-foreground font-bold">Infaq Bakti Sosial & Operasional Dakwah.</p>
               </div>
             </div>
             <ArrowRight className="w-5 h-5 opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
