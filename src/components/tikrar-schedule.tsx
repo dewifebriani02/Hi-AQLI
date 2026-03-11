@@ -158,7 +158,7 @@ export function TikrarSchedule() {
           <div className="space-y-2">
             <h3 className="text-xl font-bold">Jadwal Khusus Peserta Tikrar</h3>
             <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-              Silakan selesaikan pendaftaran untuk mendapatkan rencana jadwal personal berdasarkan Tikrar Maqta.
+              Silakan selesaikan pendaftaran untuk mendapatkan rencana jadwal personal berdasarkan Blok Repetisi.
             </p>
           </div>
           <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 font-bold">
@@ -176,7 +176,7 @@ export function TikrarSchedule() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-1">
         <div className="space-y-1">
           <h2 className="text-2xl font-bold font-headline flex items-center gap-2">
-            <CalendarDays className="w-6 h-6 text-[#800000]" /> Rencana Tikrar Maqta
+            <CalendarDays className="w-6 h-6 text-[#800000]" /> Rencana Belajar
           </h2>
           <p className="text-sm text-muted-foreground">
             Juz {juz} • Level: <strong className="text-[#800000]">{level.name}</strong>
@@ -245,21 +245,21 @@ export function TikrarSchedule() {
                     <div className="mt-6 pt-6 border-t border-dashed space-y-6 animate-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center gap-2">
                         <Layers className="w-4 h-4 text-[#800000]" />
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Tahapan Tikrar Maqta</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Tahapan Repetisi</h4>
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        <StepRow label="Tikrar Maqta 1 (TM1)" isDone={item.tmProgress[1]} date={item.steps[0].end} />
-                        <StepRow label="Tikrar Maqta 2 (TM2)" isDone={item.tmProgress[2]} date={item.steps[1].end} />
-                        <StepRow label="Gabung TM1 & TM2" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta />
+                        <StepRow label={`Blok A (${item.page}A)`} isDone={item.tmProgress[1]} date={item.steps[0].end} />
+                        <StepRow label={`Blok B (${item.page}B)`} isDone={item.tmProgress[2]} date={item.steps[1].end} />
+                        <StepRow label="Gabung Blok A & B" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta />
                         
-                        <StepRow label="Tikrar Maqta 3 (TM3)" isDone={item.tmProgress[3]} date={item.steps[3].end} />
-                        <StepRow label="Gabung TM2 & TM3" isDone={item.metaProgress['2_3']} date={item.steps[4].end} isMeta />
-                        <StepRow label="Gabung TM1 s/d TM3" isDone={item.metaProgress['1_2_3']} date={item.steps[5].end} isMeta />
+                        <StepRow label={`Blok C (${item.page}C)`} isDone={item.tmProgress[3]} date={item.steps[3].end} />
+                        <StepRow label="Gabung Blok B & C" isDone={item.metaProgress['2_3']} date={item.steps[4].end} isMeta />
+                        <StepRow label="Gabung Blok A s/d C" isDone={item.metaProgress['1_2_3']} date={item.steps[5].end} isMeta />
                         
-                        <StepRow label="Tikrar Maqta 4 (TM4)" isDone={item.tmProgress[4]} date={item.steps[6].end} />
-                        <StepRow label="Gabung TM3 & TM4" isDone={item.metaProgress['3_4']} date={item.steps[7].end} isMeta />
-                        <StepRow label="Gabung TM2 s/d TM4" isDone={item.metaProgress['2_3_4']} date={item.steps[8].end} isMeta />
+                        <StepRow label={`Blok D (${item.page}D)`} isDone={item.tmProgress[4]} date={item.steps[6].end} />
+                        <StepRow label="Gabung Blok C & D" isDone={item.metaProgress['3_4']} date={item.steps[7].end} isMeta />
+                        <StepRow label="Gabung Blok B s/d D" isDone={item.metaProgress['2_3_4']} date={item.steps[8].end} isMeta />
                         <StepRow label="GABUNG SELURUH HALAMAN" isDone={item.metaProgress['1_2_3_4']} date={item.steps[9].end} isMeta highlight />
                       </div>
 
