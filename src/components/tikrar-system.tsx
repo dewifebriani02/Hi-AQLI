@@ -44,8 +44,8 @@ const LEVELS = [
 ];
 
 const TARGET_MAX = 40;
-const PASS_THRESHOLD = 40; // SEMUA 40 KALI WAJIB
-const META_PASS_THRESHOLD = 10; // KECUALI REPETISI GABUNGAN BLOK
+const PASS_THRESHOLD = 40; // Maqta Individu Wajib 40x
+const META_PASS_THRESHOLD = 10; // Gabungan Blok Minimal 10x
 
 interface Word {
   text_uthmani: string;
@@ -79,7 +79,7 @@ export function TikrarSystem() {
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fontSize, setFontSize] = useState(18); // Default font 18px
+  const [fontSize, setFontSize] = useState(18); // Default 18px
   
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -338,29 +338,33 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked }:
   };
 
   return (
-    <Card className={cn("border-2 transition-all shadow-md overflow-hidden", isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50 grayscale select-none")}>
-      <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">BLOK {letter} (HALAMAN {page}{letter}) {isLocked && "• TERKUNCI"}</span>
-        {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">TUNTAS</Badge>}
+    <Card className={cn("border-2 transition-all shadow-md overflow-hidden flex flex-col h-full", isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50 grayscale select-none")}>
+      <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center shrink-0">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#800000] truncate">BLOK {letter} (HAL. {page}{letter}) {isLocked && "• LOCK"}</span>
+        {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
       </div>
-      <CardContent className="p-4 space-y-4">
-        <div className="bg-[#fffcf5] p-4 rounded-xl border-2 border-[#800000]/10 max-h-[200px] overflow-y-auto no-scrollbar" dir="rtl">
+      <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">
+        <div className="bg-[#fffcf5] p-4 rounded-xl border-2 border-[#800000]/10 flex-1 overflow-y-auto no-scrollbar" dir="rtl">
           <div className="flex flex-wrap justify-center gap-x-1 gap-y-2">
             {tokensA.map(t => renderToken(t, "text-rose-600"))}
             {tokensB.map(t => renderToken(t, "text-emerald-600"))}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox label={`${page}${letter}-1`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} color="rose" threshold={PASS_THRESHOLD} />
           <CounterBox label={`${page}${letter}-2`} count={state.b.count} isLocked={isLocked || !isDoneA} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="emerald" threshold={PASS_THRESHOLD} />
         </div>
-        <Button onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} disabled={isLocked || !isDoneB} className={cn("w-full h-14 flex-col rounded-xl font-black uppercase tracking-widest", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}>
-          <span className="text-[10px] flex items-center gap-1">
-            {isLocked || !isDoneB ? <Lock className="w-3 h-3" /> : null}
+        <Button 
+          onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} 
+          disabled={isLocked || !isDoneB} 
+          className={cn("w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}
+        >
+          <span className="text-[9px] flex items-center gap-1 leading-none">
+            {isLocked || !isDoneB ? <Lock className="w-2.5 h-2.5" /> : null}
             {page}{letter} GABUNGAN
           </span>
-          <span className="text-base">{state.combined.count} / {TARGET_MAX}</span>
-          <span className="text-[8px] opacity-70">Minimal {PASS_THRESHOLD} kali</span>
+          <span className="text-sm">{state.combined.count} / {TARGET_MAX}</span>
+          <span className="text-[7px] opacity-70 leading-none">Minimal {PASS_THRESHOLD}x</span>
         </Button>
       </CardContent>
     </Card>
@@ -371,23 +375,23 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
   const isDone = count >= META_PASS_THRESHOLD;
   return (
     <div className={cn("relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", isDone ? "bg-emerald-50 border-emerald-500" : "bg-muted/10 border-muted", highlight && "border-amber-500 bg-amber-50/30", isLocked && "opacity-40 grayscale select-none")}>
-      <div className="flex items-center gap-4">
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs", isDone ? "bg-emerald-500 text-white" : highlight ? "bg-amber-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
+      <div className="flex items-center gap-3 overflow-hidden">
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0", isDone ? "bg-emerald-500 text-white" : highlight ? "bg-amber-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
           {isLocked ? <Lock className="w-4 h-4" /> : <Zap className="w-4 h-4 fill-current" />}
         </div>
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Repetisi Gabungan</span>
-          <span className={cn("text-sm font-black uppercase tracking-tight", highlight ? "text-amber-900" : "text-[#800000]")}>{label}</span>
-          <span className="text-[9px] font-bold text-muted-foreground">Minimal {META_PASS_THRESHOLD} kali</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate">Repetisi Gabungan</span>
+          <span className={cn("text-[11px] font-black uppercase tracking-tight truncate", highlight ? "text-amber-900" : "text-[#800000]")}>{label}</span>
+          <span className="text-[8px] font-bold text-muted-foreground">Minimal {META_PASS_THRESHOLD} kali</span>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 shrink-0">
         <div className="text-right flex flex-col items-end">
           <span className="text-[10px] font-bold text-muted-foreground uppercase">{count} / {TARGET_MAX}</span>
-          <div className="w-20 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} /></div>
+          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} /></div>
         </div>
-        <Button onClick={onIncrement} disabled={isLocked || isDone} className={cn("h-10 w-10 rounded-lg p-0 font-black text-xs", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-2 border-[#800000] hover:bg-[#800000] hover:text-white")}>
-          {isDone ? <CheckCircle2 className="w-5 h-5" /> : `+1`}
+        <Button onClick={onIncrement} disabled={isLocked || isDone} className={cn("h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-2 border-[#800000] hover:bg-[#800000] hover:text-white")}>
+          {isDone ? <CheckCircle2 className="w-4 h-4" /> : `+1`}
         </Button>
       </div>
     </div>
@@ -401,15 +405,15 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
     emerald: isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-muted hover:border-emerald-300"
   };
   return (
-    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-20 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
-      <span className="text-[8px] font-black uppercase opacity-60 tracking-[0.2em]">{label}</span>
-      <div className="flex items-baseline gap-1">
-        <span className="text-xl font-black">{count}</span>
-        <span className="text-[8px] font-bold opacity-40">/ {TARGET_MAX}</span>
+    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
+      <span className="text-[7px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center">{label}</span>
+      <div className="flex items-baseline gap-0.5">
+        <span className="text-base font-black">{count}</span>
+        <span className="text-[7px] font-bold opacity-40">/ 40</span>
       </div>
-      <span className="text-[8px] font-bold opacity-60 mt-0.5">Minimal {threshold} kali</span>
-      {isLocked && <Lock className="absolute top-1 right-1 w-2.5 h-2.5 text-muted-foreground" />}
-      {isDone && <CheckCircle2 className="w-3 h-3 text-current mt-0.5" />}
+      <span className="text-[7px] font-bold opacity-60 leading-none">Min {threshold}x</span>
+      {isLocked && <Lock className="absolute top-1 right-1 w-2 h-2 text-muted-foreground" />}
+      {isDone && <CheckCircle2 className="w-2.5 h-2.5 text-current mt-0.5" />}
     </div>
   );
 }

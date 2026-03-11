@@ -33,8 +33,8 @@ const LEVELS = [
   { id: 4, name: "Pemula", days: 28 },
 ];
 
-const PASS_THRESHOLD = 40; // SEMUA 40 KALI WAJIB
-const META_PASS_THRESHOLD = 10; // KECUALI REPETISI GABUNGAN BLOK
+const PASS_THRESHOLD = 40; // Maqta Individu Wajib 40x
+const META_PASS_THRESHOLD = 10; // Gabungan Blok Minimal 10x
 
 // Helper to skip weekends
 function addWorkDays(startDate: Date, days: number): Date {
@@ -115,14 +115,14 @@ export function TikrarSchedule() {
               tmProgress[`${l}G`] = (b[i]?.combined?.count || 0) >= PASS_THRESHOLD;
             }
             
-            metaProgress['AB'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['BC'] = (m['2_3'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['ABC'] = (m['1_2_3'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['CD'] = (m['3_4'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['BCD'] = (m['2_3_4'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['ABCD'] = (m['1_2_3_4'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['1_2'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['2_3'] = (m['2_3'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['1_2_3'] = (m['1_2_3'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['3_4'] = (m['3_4'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['2_3_4'] = (m['2_3_4'] || 0) >= META_PASS_THRESHOLD;
+            metaProgress['1_2_3_4'] = (m['1_2_3_4'] || 0) >= META_PASS_THRESHOLD;
 
-            isAllDone = metaProgress['ABCD'];
+            isAllDone = metaProgress['1_2_3_4'];
           } catch (e) {}
         }
       }
@@ -153,7 +153,7 @@ export function TikrarSchedule() {
           <div className="space-y-2">
             <h3 className="text-xl font-bold">Jadwal Khusus Peserta Tikrar</h3>
             <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-              Silakan selesaikan pendaftaran untuk mendapatkan rencana jadwal personal berdasarkan Blok Repetisi.
+              Silakan selesaikan pendaftaran untuk mendapatkan rencana jadwal personal berdasarkan Manhaj Tikrar.
             </p>
           </div>
           <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 font-bold">
@@ -240,22 +240,22 @@ export function TikrarSchedule() {
                     <div className="mt-6 pt-6 border-t border-dashed space-y-6 animate-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center gap-2">
                         <Layers className="w-4 h-4 text-[#800000]" />
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Tahapan Repetisi</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">10 Tahapan Manhaj Tikrar</h4>
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        <StepRow label={`BLOK A (${item.page}A-1, A-2, G)`} isDone={item.tmProgress['A1'] && item.tmProgress['A2'] && item.tmProgress['AG']} date={item.steps[0].end} threshold={PASS_THRESHOLD} />
-                        <StepRow label={`BLOK B (${item.page}B-1, B-2, G)`} isDone={item.tmProgress['B1'] && item.tmProgress['B2'] && item.tmProgress['BG']} date={item.steps[1].end} threshold={PASS_THRESHOLD} />
-                        <StepRow label="GABUNG BLOK A & B" isDone={item.metaProgress['AB']} date={item.steps[2].end} isMeta threshold={META_PASS_THRESHOLD} />
+                        <StepRow label={`BLOK A (${item.page}A-1, A-2, G)`} isDone={item.tmProgress['A1'] && item.tmProgress['A2'] && item.tmProgress['AG']} date={item.steps[0].end} threshold={40} />
+                        <StepRow label={`BLOK B (${item.page}B-1, B-2, G)`} isDone={item.tmProgress['B1'] && item.tmProgress['B2'] && item.tmProgress['BG']} date={item.steps[1].end} threshold={40} />
+                        <StepRow label="GABUNG BLOK A & B" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta threshold={10} />
                         
-                        <StepRow label={`BLOK C (${item.page}C-1, C-2, G)`} isDone={item.tmProgress['C1'] && item.tmProgress['C2'] && item.tmProgress['CG']} date={item.steps[3].end} threshold={PASS_THRESHOLD} />
-                        <StepRow label="GABUNG BLOK B & C" isDone={item.metaProgress['BC']} date={item.steps[4].end} isMeta threshold={META_PASS_THRESHOLD} />
-                        <StepRow label="GABUNG BLOK A s/d C" isDone={item.metaProgress['ABC']} date={item.steps[5].end} isMeta threshold={META_PASS_THRESHOLD} />
+                        <StepRow label={`BLOK C (${item.page}C-1, C-2, G)`} isDone={item.tmProgress['C1'] && item.tmProgress['C2'] && item.tmProgress['CG']} date={item.steps[3].end} threshold={40} />
+                        <StepRow label="GABUNG BLOK B & C" isDone={item.metaProgress['2_3']} date={item.steps[4].end} isMeta threshold={10} />
+                        <StepRow label="GABUNG BLOK A s/d C" isDone={item.metaProgress['1_2_3']} date={item.steps[5].end} isMeta threshold={10} />
                         
-                        <StepRow label={`BLOK D (${item.page}D-1, D-2, G)`} isDone={item.tmProgress['D1'] && item.tmProgress['D2'] && item.tmProgress['DG']} date={item.steps[6].end} threshold={PASS_THRESHOLD} />
-                        <StepRow label="GABUNG BLOK C & D" isDone={item.metaProgress['CD']} date={item.steps[7].end} isMeta threshold={META_PASS_THRESHOLD} />
-                        <StepRow label="GABUNG BLOK B s/d D" isDone={item.metaProgress['BCD']} date={item.steps[8].end} isMeta threshold={META_PASS_THRESHOLD} />
-                        <StepRow label="GABUNG SELURUH HALAMAN (A-D)" isDone={item.metaProgress['ABCD']} date={item.steps[9].end} isMeta highlight threshold={META_PASS_THRESHOLD} />
+                        <StepRow label={`BLOK D (${item.page}D-1, D-2, G)`} isDone={item.tmProgress['D1'] && item.tmProgress['D2'] && item.tmProgress['DG']} date={item.steps[6].end} threshold={40} />
+                        <StepRow label="GABUNG BLOK C & D" isDone={item.metaProgress['3_4']} date={item.steps[7].end} isMeta threshold={10} />
+                        <StepRow label="GABUNG BLOK B s/d D" isDone={item.metaProgress['2_3_4']} date={item.steps[8].end} isMeta threshold={10} />
+                        <StepRow label="GABUNG SELURUH HALAMAN (A-D)" isDone={item.metaProgress['1_2_3_4']} date={item.steps[9].end} isMeta highlight threshold={10} />
                       </div>
 
                       <div className="bg-[#800000] p-4 rounded-2xl flex items-center justify-between mt-4">
@@ -286,21 +286,21 @@ function StepRow({ label, isDone, date, isMeta, highlight, threshold }: { label:
       isDone ? "bg-emerald-50 border-emerald-200" : "bg-white",
       highlight && !isDone && "border-amber-500 bg-amber-50/20"
     )}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 overflow-hidden">
         <div className={cn(
-          "w-6 h-6 rounded-lg flex items-center justify-center",
+          "w-6 h-6 rounded-lg flex items-center justify-center shrink-0",
           isDone ? "bg-emerald-500 text-white" : isMeta ? "bg-muted text-muted-foreground" : "bg-[#800000]/10 text-[#800000]"
         )}>
           {isDone ? <Check className="w-3 h-3" /> : isMeta ? <Zap className="w-3 h-3" /> : <Check className="w-3 h-3 opacity-20" />}
         </div>
-        <div className="flex flex-col">
-          <span className={cn("text-[11px] font-bold", highlight ? "text-[#800000]" : "text-foreground")}>{label}</span>
-          <span className="text-[9px] text-muted-foreground font-medium">
-            Estimasi: {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Min {threshold}x
+        <div className="flex flex-col min-w-0">
+          <span className={cn("text-[10px] font-bold truncate", highlight ? "text-[#800000]" : "text-foreground")}>{label}</span>
+          <span className="text-[8px] text-muted-foreground font-medium truncate">
+            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Min {threshold}x
           </span>
         </div>
       </div>
-      {isDone && <Badge className="bg-emerald-500 h-4 px-1.5 text-[8px] font-black uppercase">OK</Badge>}
+      {isDone && <Badge className="bg-emerald-500 h-4 px-1.5 text-[8px] font-black uppercase shrink-0">OK</Badge>}
     </div>
   );
 }
