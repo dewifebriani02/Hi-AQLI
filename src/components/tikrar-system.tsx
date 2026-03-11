@@ -46,6 +46,7 @@ import { doc } from "firebase/firestore";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
+// Mapping Standard Madani Mushaf
 const JUZ_PAGES = [
   1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
@@ -106,6 +107,7 @@ export function TikrarSystem() {
 
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const isAutoPlayingRef = useRef(false); // Used for instant logic checks
   const [playingVerseIndex, setPlayingVerseIndex] = useState<number | null>(null);
   const [currentLoop, setCurrentLoop] = useState(0);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
@@ -214,17 +216,19 @@ export function TikrarSystem() {
       audioRef.current.onended = null;
     }
     setIsAutoPlaying(false);
+    isAutoPlayingRef.current = false;
     setPlayingVerseIndex(null);
     nextAudioUrlRef.current = null;
   };
 
   const getAudioUrl = async (vIndex: number) => {
-    if (vIndex >= verses.length) return null;
+    if (vIndex < 0 || vIndex >= verses.length) return null;
     const verseKey = verses[vIndex].verse_key;
     try {
       const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
       const data = await res.json();
       const audioUrl = data.audio_files[0]?.url;
+      if (!audioUrl) return null;
       return audioUrl.startsWith('//') ? `https:${audioUrl}` : audioUrl.startsWith('http') ? audioUrl : `https://audio.qurancdn.com/${audioUrl}`;
     } catch (e) {
       return null;
@@ -232,7 +236,7 @@ export function TikrarSystem() {
   };
 
   const playVerse = useCallback(async (vIndex: number, loopNum: number) => {
-    if (!isAutoPlaying) return;
+    if (!isAutoPlayingRef.current) return;
 
     if (vIndex >= verses.length) {
       if (loopNum < 4) { 
@@ -285,25 +289,25 @@ export function TikrarSystem() {
       console.error("Playback error:", err);
       stopAutoPlay();
     });
-  }, [verses, isAutoPlaying, selectedReciterId, toast]);
+  }, [verses, selectedReciterId, toast]);
 
-  const startAutoPlay = () => {
+  const startAutoPlay = async () => {
     if (!selectedReciterId) {
       setShowReciterDialog(true);
       return;
     }
+    if (verses.length === 0) return;
+
     setIsAutoPlaying(true);
+    isAutoPlayingRef.current = true;
     setCurrentLoop(0);
     nextAudioUrlRef.current = null;
-    // We need to set isAutoPlaying first before calling recursive playVerse
-    setTimeout(() => {
-      setIsAutoPlaying(true);
-      playVerse(0, 0);
-    }, 0);
+    
+    // Start playback
+    playVerse(0, 0);
   };
 
   useEffect(() => {
-    // Cleanup on unmount
     return () => stopAutoPlay();
   }, []);
 
@@ -463,9 +467,9 @@ export function TikrarSystem() {
                     <Button 
                       onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay}
                       className={cn(
-                        "w-full h-12 font-black rounded-xl border-2 transition-all gap-2",
+                        "w-full h-12 font-black rounded-xl border-2 transition-all gap-2 shadow-sm",
                         isAutoPlaying ? "bg-rose-50 border-rose-500 text-rose-600 hover:bg-rose-100" : 
-                        prepListenCount >= 5 ? "bg-emerald-50 border-emerald-500 text-emerald-600" :
+                        prepListenCount >= 5 ? "bg-emerald-50 border-emerald-500 text-emerald-600 hover:bg-emerald-100" :
                         "bg-[#800000] text-white border-transparent hover:bg-[#800000]/90"
                       )}
                     >
@@ -476,7 +480,7 @@ export function TikrarSystem() {
                       )}
                     </Button>
                     
-                    {/* AYAT AKTIF PERSIS DI BAWAH TOMBOL PLAY */}
+                    {/* AYAT AKTIF DI BAWAH TOMBOL PLAY */}
                     {isAutoPlaying && playingVerseIndex !== null && verses[playingVerseIndex] && (
                       <div className="mt-4 p-6 bg-[#fffcf5] rounded-3xl border-2 border-amber-400 shadow-lg animate-in fade-in slide-in-from-top-2 duration-500" dir="rtl">
                         <div className="flex flex-col gap-4">
@@ -489,8 +493,9 @@ export function TikrarSystem() {
                               <Tooltip key={wIdx}>
                                 <TooltipTrigger asChild>
                                   <span 
+                                    tabIndex={0}
                                     style={{ fontSize: `${fontSize * 1.2}px`, lineHeight: 1.6 }} 
-                                    className="font-arabic text-[#800000] font-bold transition-all duration-300 rounded px-0.5 outline-none cursor-help select-none"
+                                    className="font-arabic text-[#800000] font-bold transition-all duration-300 rounded px-0.5 outline-none cursor-help select-none hover:bg-[#800000]/5"
                                   >
                                     {word.text_uthmani}
                                   </span>
@@ -620,6 +625,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
         <Tooltip key={`${token.verse_key}-${token.word_idx}`}>
           <TooltipTrigger asChild>
             <span 
+              tabIndex={0}
               style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
               className={cn("font-arabic cursor-help hover:bg-muted/50 rounded px-0.5 outline-none transition-colors", colorClass)}
             >
@@ -731,7 +737,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
           onClick={onIncrement} 
           disabled={isLocked || isDone} 
           className={cn(
-            "h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all", 
+            "h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all shadow-sm", 
             isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-2 border-[#800000] hover:bg-[#800000] hover:text-white"
           )}
         >
@@ -752,8 +758,8 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
     <div 
       onClick={isLocked || isDone ? undefined : onInc} 
       className={cn(
-        "h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1", 
-        isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color]
+        "h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1 shadow-sm", 
+        isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20 shadow-none" : themes[color]
       )}
     >
       <span className="text-[10px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none mb-1">
