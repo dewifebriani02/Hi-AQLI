@@ -24,7 +24,8 @@ import {
   BookOpen,
   Heart,
   Star,
-  Timer
+  Timer,
+  User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +64,8 @@ export function PageExamSimulation({ page }: { page: number }) {
   const [isFinished, setIsFinished] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [startTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState(Date.now());
+  const [attempts, setAttempts] = useState(1);
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -211,6 +213,17 @@ export function PageExamSimulation({ page }: { page: number }) {
     }, 1500);
   };
 
+  const handleReset = () => {
+    setScore(0);
+    setCurrentIdx(0);
+    setIsFinished(false);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setAttempts(prev => prev + 1);
+    setStartTime(Date.now());
+    generateQuestions(verses);
+  };
+
   const handleSendCongrats = (userName: string) => {
     if (sentCongrats.includes(userName)) return;
     setSentCongrats(prev => [...prev, userName]);
@@ -226,6 +239,9 @@ export function PageExamSimulation({ page }: { page: number }) {
     const finalScore = Math.round((score / questions.length) * 100);
     const duration = Math.round((Date.now() - startTime) / 1000);
     const isPassed = finalScore >= 80;
+    
+    // Simulate personal rank
+    const myRank = finalScore === 100 ? 4 : finalScore >= 80 ? 12 : 25;
 
     return (
       <div className="max-w-md mx-auto py-10 flex flex-col gap-10 pb-32 px-4">
@@ -243,14 +259,18 @@ export function PageExamSimulation({ page }: { page: number }) {
             </div>
           </div>
           <CardContent className="pt-10 space-y-8">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-muted/30 p-5 rounded-3xl border-2 border-dashed">
-                <div className="text-4xl font-black text-foreground">{finalScore}%</div>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1">Akurasi</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-muted/30 p-4 rounded-3xl border-2 border-dashed">
+                <div className="text-2xl font-black text-foreground">{finalScore}%</div>
+                <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-1">Akurasi</p>
               </div>
-              <div className="bg-muted/30 p-5 rounded-3xl border-2 border-dashed">
-                <div className="text-4xl font-black text-foreground">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')}</div>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1">Durasi</p>
+              <div className="bg-muted/30 p-4 rounded-3xl border-2 border-dashed">
+                <div className="text-2xl font-black text-foreground">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')}</div>
+                <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-1">Durasi</p>
+              </div>
+              <div className="bg-muted/30 p-4 rounded-3xl border-2 border-dashed">
+                <div className="text-2xl font-black text-foreground">{attempts}</div>
+                <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-1">Percobaan</p>
               </div>
             </div>
             
@@ -269,12 +289,29 @@ export function PageExamSimulation({ page }: { page: number }) {
             <Button asChild className="w-full bg-black text-white font-black h-14 rounded-2xl shadow-xl uppercase tracking-widest">
               <Link href="/tajweed">KEMBALI KE DASBOR</Link>
             </Button>
-            {!isPassed && (
-              <Button variant="ghost" onClick={() => window.location.reload()} className="w-full text-[#800000] font-black gap-2 uppercase tracking-widest text-xs">
-                <RotateCcw className="w-4 h-4" /> Ulangi Simulasi
-              </Button>
-            )}
+            <Button variant="ghost" onClick={handleReset} className="w-full text-[#800000] font-black gap-2 uppercase tracking-widest text-xs">
+              <RotateCcw className="w-4 h-4" /> Ulangi Simulasi (Percobaan ke-{attempts + 1})
+            </Button>
           </CardFooter>
+        </Card>
+
+        {/* PERSONAL RANK SUMMARY */}
+        <Card className="border-2 border-[#800000]/10 bg-white shadow-lg mx-1 animate-in slide-in-from-bottom-4 duration-500 delay-200">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#800000] text-white flex items-center justify-center font-black text-lg shadow-lg shadow-[#800000]/20">
+                {myRank}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-black text-foreground">Peringkat Anda</span>
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Halaman {page}</span>
+              </div>
+            </div>
+            <div className="text-right">
+               <span className="text-xs font-black text-[#800000] block">Percobaan ke-{attempts}</span>
+               <span className="text-[9px] text-muted-foreground font-medium italic">Update: Hari ini</span>
+            </div>
+          </CardContent>
         </Card>
 
         {/* LEADERBOARD SECTION */}
