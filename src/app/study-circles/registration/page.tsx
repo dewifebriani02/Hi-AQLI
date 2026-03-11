@@ -33,13 +33,6 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-const studyCircles = [
-  { id: "tikrar-j30-b1", title: "Tikrar Daily Juz 30 - Batch 1", isPaid: true, basePrice: 50000 },
-  { id: "tafsir-j30", title: "Tafsir Juz' Amma", isPaid: false, basePrice: 0 },
-  { id: "tajweed-adv", title: "Tajwid Lanjutan: Sifaat", isPaid: false, basePrice: 0 },
-  { id: "sirah-nabi", title: "Sirah Nabi (SAW)", isPaid: false, basePrice: 0 },
-];
-
 const levels = [
   { id: "1", name: "Intensif", price: 100000 },
   { id: "2", name: "Reguler", price: 75000 },
@@ -55,7 +48,14 @@ function RegistrationForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const halaqahId = searchParams.get('id');
-  const circle = studyCircles.find(c => c.id === halaqahId) || studyCircles[0];
+
+  // Fetch specific halaqah data from Firestore
+  const halaqahDocRef = useMemoFirebase(() => {
+    if (!db || !halaqahId) return null;
+    return doc(db, "halaqahs", halaqahId);
+  }, [db, halaqahId]);
+
+  const { data: circle, isLoading: isHalaqahLoading } = useDoc(halaqahDocRef);
 
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -77,15 +77,13 @@ function RegistrationForm() {
 
   const { data: existingRegs, isLoading: isRegLoading } = useCollection(regQuery);
   
-  // Logic to determine if user IS ALREADY ACTIVE based on profile OR registration doc
-  // IMPORTANT: We use a state to ensure the loading flicker doesn't allow re-registration
   const [isProcessingAccess, setIsProcessingAccess] = useState(true);
 
   useEffect(() => {
-    if (!isUserLoading && !isUserDocLoading && !isRegLoading) {
+    if (!isUserLoading && !isUserDocLoading && !isRegLoading && !isHalaqahLoading) {
       setIsProcessingAccess(false);
     }
-  }, [isUserLoading, isUserDocLoading, isRegLoading]);
+  }, [isUserLoading, isUserDocLoading, isRegLoading, isHalaqahLoading]);
 
   const isProfileActive = (
     (halaqahId === 'tikrar-j30-b1' && userData?.isTikrarPaid) ||
@@ -109,7 +107,10 @@ function RegistrationForm() {
   const [senderName, setSenderName] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
 
-  const PRICE = circle.id === 'tikrar-j30-b1' ? levels.find(l => l.id === level)?.price || 50000 : 0;
+  // Calculate Price: If Tikrar special ID, use levels array. Else use basePrice from Firestore circle.
+  const PRICE = halaqahId === 'tikrar-j30-b1' 
+    ? (levels.find(l => l.id === level)?.price || 50000) 
+    : (circle?.basePrice || 0);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -120,17 +121,17 @@ function RegistrationForm() {
   }, [user, isUserLoading, router, name, halaqahId]);
 
   useEffect(() => {
-    if (step === 2 && circle.isPaid) {
+    if (step === 2 && circle?.isPremium) {
       setUniqueCode(Math.floor(100 + Math.random() * 899));
     }
-  }, [step, circle.isPaid]);
+  }, [step, circle?.isPremium]);
 
   const handleNext = () => {
     if (!whatsapp || whatsapp.length < 10) {
       toast({ variant: "destructive", title: "Nomor WhatsApp tidak valid" });
       return;
     }
-    if (circle.isPaid) setStep(2);
+    if (circle?.isPremium) setStep(2);
     else setStep(3); 
   };
 
@@ -142,28 +143,28 @@ function RegistrationForm() {
   };
 
   const handleConfirm = async () => {
-    if (circle.isPaid && (!senderName || !proofFile)) {
+    if (circle?.isPremium && (!senderName || !proofFile)) {
       toast({ variant: "destructive", title: "Lengkapi data pembayaran" });
       return;
     }
 
     setLoading(true);
     try {
-      const finalAmount = circle.isPaid ? PRICE + uniqueCode : 0;
+      const finalAmount = circle?.isPremium ? PRICE + uniqueCode : 0;
       
       await addDoc(collection(db, "halaqah_registrations"), {
         userId: user?.uid,
         userName: name,
         userEmail: user?.email,
         whatsapp: whatsapp,
-        halaqahId: circle.id,
-        halaqahTitle: circle.title,
-        isPaid: circle.isPaid,
-        level: circle.id === 'tikrar-j30-b1' ? parseInt(level) : null,
-        targetJuz: circle.id === 'tikrar-j30-b1' ? parseInt(targetJuz) : null,
+        halaqahId: circle?.id,
+        halaqahTitle: circle?.title,
+        isPaid: circle?.isPremium || false,
+        level: halaqahId === 'tikrar-j30-b1' ? parseInt(level) : null,
+        targetJuz: halaqahId === 'tikrar-j30-b1' ? parseInt(targetJuz) : null,
         amount: finalAmount,
-        paymentMethod: circle.isPaid ? "transfer" : "free",
-        senderName: circle.isPaid ? senderName : null,
+        paymentMethod: circle?.isPremium ? "transfer" : "free",
+        senderName: circle?.isPremium ? senderName : null,
         proofFileName: proofFile?.name || null,
         status: "pending_verification",
         createdAt: serverTimestamp(),
@@ -187,7 +188,6 @@ function RegistrationForm() {
     );
   }
 
-  // If already registered or has profile access, show status and block form
   if (isActuallyActive || isActuallyPending) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
@@ -202,8 +202,8 @@ function RegistrationForm() {
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive 
-                  ? `Pendaftaran Anda untuk ${circle.title} sudah tuntas. Silakan masuk ke dalam kelas.`
-                  : `Pendaftaran Anda untuk ${circle.title} sedang dalam antrean verifikasi manual.`}
+                  ? `Pendaftaran Anda untuk ${circle?.title} sudah tuntas. Silakan masuk ke dalam kelas.`
+                  : `Pendaftaran Anda untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
               </p>
               {isActuallyPending && (
                 <div className="p-4 bg-muted/50 rounded-xl text-[10px] font-bold text-amber-700 italic border border-amber-200">
@@ -212,7 +212,7 @@ function RegistrationForm() {
               )}
             </div>
             <Button asChild className={cn("w-full font-black h-14 rounded-xl text-lg shadow-lg", isActuallyActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#800000]")}>
-              <Link href={isActuallyActive ? (circle.id === 'tikrar-j30-b1' ? '/tajweed' : `/study-circles/${circle.id}`) : "/"}>
+              <Link href={isActuallyActive ? (halaqahId === 'tikrar-j30-b1' ? '/hafal' : `/study-circles/${circle?.id}`) : "/"}>
                 {isActuallyActive ? <><PlayCircle className="mr-2 w-6 h-6" /> MASUK KELAS</> : "KEMBALI KE DASBOR"}
               </Link>
             </Button>
@@ -231,7 +231,7 @@ function RegistrationForm() {
               <CheckCircle2 className="h-12 w-12" />
             </div>
             <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">Jazakallahu Khairan, pendaftaran Anda sedang kami proses. Cek status di menu Halaqah secara berkala.</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">Jazakallahu Khairan, pendaftaran Anda sedang kami proses. Cek status di menu Hi Ngaji secara berkala.</p>
             <Button onClick={() => router.push('/')} className="w-full bg-[#800000] font-bold h-12">Kembali ke Beranda</Button>
           </CardContent>
         </Card>
@@ -246,7 +246,7 @@ function RegistrationForm() {
           {step > 1 && <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white hover:bg-white/10" onClick={() => setStep(step - 1)}><ArrowLeft className="h-5 w-5" /></Button>}
           <div className="mx-auto bg-white/20 rounded-full p-4 w-fit mb-4 border-2 border-white/10"><BookOpen className="h-8 w-8 text-amber-300" /></div>
           <CardTitle className="font-headline text-3xl font-black">Pendaftaran Halaqah</CardTitle>
-          <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">{circle.title}</CardDescription>
+          <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">{circle?.title}</CardDescription>
         </CardHeader>
         
         <CardContent className="space-y-8 pt-10">
@@ -267,7 +267,7 @@ function RegistrationForm() {
                 </div>
               </div>
               
-              {circle.id === 'tikrar-j30-b1' && (
+              {halaqahId === 'tikrar-j30-b1' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 bg-muted/30 rounded-2xl border-2 border-dashed">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest">Pilih Level</Label>
@@ -290,7 +290,7 @@ function RegistrationForm() {
                 </div>
               )}
               <Button onClick={handleNext} className="w-full h-16 text-lg font-black bg-[#800000] hover:bg-[#800000]/90 rounded-xl shadow-lg shadow-[#800000]/20 mt-4 uppercase tracking-widest">
-                {circle.isPaid ? "Lanjut Pembayaran" : "Konfirmasi Daftar"} <ArrowRight className="ml-2 h-6 w-6" />
+                {circle?.isPremium ? "Lanjut Pembayaran" : "Konfirmasi Daftar"} <ArrowRight className="ml-2 h-6 w-6" />
               </Button>
             </div>
           ) : step === 2 ? (
@@ -312,7 +312,7 @@ function RegistrationForm() {
             </div>
           ) : (
             <div className="space-y-8 animate-in fade-in duration-500">
-              {circle.isPaid ? (
+              {circle?.isPremium ? (
                 <div className="grid gap-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nama Pengirim Sesuai Rekening</Label>

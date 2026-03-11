@@ -37,7 +37,8 @@
         "level": { "type": "string" },
         "isPremium": { "type": "boolean" },
         "tag": { "type": "string" },
-        "basePrice": { "type": "number" },
+        "basePrice": { "type": "number", "description": "Biaya infaq pendaftaran" },
+        "quota": { "type": "number", "description": "Maksimal jumlah peserta" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "muallimah", "level"]

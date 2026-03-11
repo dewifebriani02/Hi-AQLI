@@ -27,7 +27,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, Zap, BookOpen, User, Calendar, Clock } from "lucide-react";
+import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,7 @@ const INITIAL_FORM = {
   isPremium: false,
   tag: "",
   basePrice: 0,
+  quota: 20,
 };
 
 const DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
@@ -80,7 +81,6 @@ export default function AdminClassesPage() {
 
   const handleOpenEdit = (h: any) => {
     setEditingHalaqah(h);
-    // Split schedule if it exists (Format: "Hari, Jam")
     const [day, time] = (h.schedule || "Senin, 19:00").split(", ");
     setForm({
       title: h.title,
@@ -93,6 +93,7 @@ export default function AdminClassesPage() {
       isPremium: h.isPremium || false,
       tag: h.tag || "",
       basePrice: h.basePrice || 0,
+      quota: h.quota || 20,
     });
     setIsDialogOpen(true);
   };
@@ -114,6 +115,7 @@ export default function AdminClassesPage() {
       isPremium: form.isPremium,
       tag: form.tag,
       basePrice: form.basePrice,
+      quota: form.quota,
       updatedAt: serverTimestamp()
     };
 
@@ -196,10 +198,19 @@ export default function AdminClassesPage() {
                 </div>
                 <p className="text-[11px] text-muted-foreground line-clamp-2 mb-4 leading-relaxed">{h.description}</p>
                 <div className="flex items-center justify-between border-t pt-3 mt-auto">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">{h.level}</span>
-                  <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
-                    <Calendar className="w-3 h-3 text-[#800000]" />
-                    {h.schedule}
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{h.level}</span>
+                    {h.isPremium && <span className="text-[10px] font-black text-[#800000]">Rp {h.basePrice?.toLocaleString('id-ID')}</span>}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
+                      <Calendar className="w-3 h-3 text-[#800000]" />
+                      {h.schedule}
+                    </div>
+                    <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground uppercase">
+                      <Users className="w-3 h-3 text-[#800000]" />
+                      Kuota: {h.quota || 0}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -278,13 +289,21 @@ export default function AdminClassesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed h-full">
-                <div className="space-y-0.5">
-                  <Label className="text-[10px] font-bold uppercase">Premium</Label>
-                  <p className="text-[8px] text-muted-foreground italic">Aktifkan infaq pendaftaran.</p>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase">Kuota Peserta</Label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input type="number" value={form.quota} onChange={(e) => setForm({...form, quota: parseInt(e.target.value) || 0})} className="pl-10" />
                 </div>
-                <Switch checked={form.isPremium} onCheckedChange={(v) => setForm({...form, isPremium: v})} />
               </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
+              <div className="space-y-0.5">
+                <Label className="text-[10px] font-bold uppercase">Berbayar (Premium)</Label>
+                <p className="text-[8px] text-muted-foreground italic">Aktifkan infaq pendaftaran.</p>
+              </div>
+              <Switch checked={form.isPremium} onCheckedChange={(v) => setForm({...form, isPremium: v})} />
             </div>
 
             {form.isPremium && (

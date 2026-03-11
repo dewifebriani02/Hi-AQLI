@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Banknote } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -35,8 +35,19 @@ export default function NgajiPage() {
 
   const { data: dbHalaqahs, isLoading: isHalaqahsLoading } = useCollection(halaqahQuery);
 
-  // Check all user registrations
-  const regQuery = useMemoFirebase(() => {
+  // Fetch all registrations across all users to calculate quota
+  const allRegsGlobalQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(
+      collection(db, "halaqah_registrations"),
+      where("status", "in", ["active", "pending_verification"])
+    );
+  }, [db]);
+
+  const { data: allRegsGlobal } = useCollection(allRegsGlobalQuery);
+
+  // Check current user registrations
+  const userRegQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, "halaqah_registrations"),
@@ -44,7 +55,7 @@ export default function NgajiPage() {
     );
   }, [db, user?.uid]);
 
-  const { data: allRegs } = useCollection(regQuery);
+  const { data: userRegs } = useCollection(userRegQuery);
 
   const filteredCircles = dbHalaqahs?.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -52,7 +63,7 @@ export default function NgajiPage() {
   );
 
   const getHalaqahStatus = (id: string) => {
-    const reg = allRegs?.find(r => r.halaqahId === id);
+    const reg = userRegs?.find(r => r.halaqahId === id);
     if (!reg) {
       if (id === TIKRAR_ID && userData?.isTikrarPaid) return 'active';
       if (userData?.followedHalaqahs?.includes(id)) return 'active';
@@ -64,14 +75,17 @@ export default function NgajiPage() {
   const isHalaqahActive = (id: string) => getHalaqahStatus(id) === 'active';
   const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
 
-  const getFollowingCount = () => {
-    return dbHalaqahs?.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id)).length || 0;
+  const getSisaKuota = (halaqah: any) => {
+    const totalReg = allRegsGlobal?.filter(r => r.halaqahId === halaqah.id).length || 0;
+    return Math.max(0, (halaqah.quota || 0) - totalReg);
   };
 
   const renderCircleCard = (circle: any) => {
     const status = getHalaqahStatus(circle.id);
     const isActive = status === 'active';
     const isPending = status === 'pending_verification';
+    const sisaKuota = getSisaKuota(circle);
+    const isFull = sisaKuota <= 0 && !isActive && !isPending;
     
     let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
@@ -79,13 +93,14 @@ export default function NgajiPage() {
     }
 
     return (
-      <Link key={circle.id} href={isPending ? "#" : href}>
+      <Link key={circle.id} href={(isPending || isFull) ? "#" : href}>
         <Card 
           className={cn(
             "p-4 hover:bg-accent/5 transition-all cursor-pointer group border-none shadow-sm",
             isActive ? "bg-white border-l-4 border-[#D4AF37]" :
             isPending ? "bg-white border-l-4 border-amber-500" :
-            circle.isPremium ? "bg-white border-l-4 border-[#800000]" : "bg-card/50"
+            circle.isPremium ? "bg-white border-l-4 border-[#800000]" : "bg-card/50",
+            isFull && "opacity-60"
           )}
         >
           <div className="flex items-center justify-between gap-4">
@@ -107,6 +122,8 @@ export default function NgajiPage() {
                     <Badge className="bg-[#D4AF37] text-black border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">AKTIF</Badge>
                   ) : isPending ? (
                     <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">VERIFIKASI</Badge>
+                  ) : isFull ? (
+                    <Badge variant="outline" className="text-destructive border-destructive text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">PENUH</Badge>
                   ) : (
                     circle.isPremium && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">PREMIUM</Badge>
                   )}
@@ -115,23 +132,29 @@ export default function NgajiPage() {
                   <User className="w-3 h-3 text-[#800000]" />
                   <span>Mu'allimah: {circle.muallimah}</span>
                 </div>
-                {isActive ? (
-                  <div className="flex items-center gap-1 mt-1 text-[9px] font-black text-[#D4AF37] uppercase tracking-widest">
-                    <CheckCircle2 className="w-3 h-3" /> Siap Belajar
+                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 text-[#800000]" />
+                    <span>{circle.schedule}</span>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-3 mt-1.5 text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-2.5 h-2.5 text-[#800000]" />
-                      <span>{circle.schedule}</span>
-                    </div>
-                    <span className="text-[#800000]/40">•</span>
-                    <span>{circle.level}</span>
+                  <span className="text-[#800000]/40">•</span>
+                  <div className="flex items-center gap-1">
+                    <Users className="w-2.5 h-2.5 text-[#800000]" />
+                    <span>Sisa Kuota: {sisaKuota}</span>
                   </div>
-                )}
+                  {circle.isPremium && !isActive && !isPending && (
+                    <>
+                      <span className="text-[#800000]/40">•</span>
+                      <div className="flex items-center gap-1 text-[#800000]">
+                        <Banknote className="w-2.5 h-2.5" />
+                        <span>Rp {circle.basePrice?.toLocaleString('id-ID')}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-            {!isPending && <ChevronRight className={cn(
+            {!isPending && !isFull && <ChevronRight className={cn(
               "w-5 h-5 transition-colors", 
               isActive ? "text-[#D4AF37]" : "text-muted-foreground/30 group-hover:text-[#800000]"
             )} />}
@@ -170,7 +193,7 @@ export default function NgajiPage() {
             Semua
           </TabsTrigger>
           <TabsTrigger value="following" className="font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-[#800000] data-[state=active]:text-white">
-            Diikuti ({getFollowingCount()})
+            Diikuti
           </TabsTrigger>
           <TabsTrigger value="completed" className="font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-[#800000] data-[state=active]:text-white">
             Selesai
@@ -199,7 +222,7 @@ export default function NgajiPage() {
                 {dbHalaqahs
                   ?.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id))
                   .map(renderCircleCard)}
-                {getFollowingCount() === 0 && (
+                {dbHalaqahs?.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id)).length === 0 && (
                   <div className="py-20 text-center space-y-4">
                     <Users className="w-12 h-12 mx-auto text-muted-foreground/20" />
                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Belum ada kelas yang diikuti</p>
