@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -109,7 +109,9 @@ export function TikrarSystem() {
   const [playingVerseIndex, setPlayingVerseIndex] = useState<number | null>(null);
   const [currentLoop, setCurrentLoop] = useState(0);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const nextAudioUrlRef = useRef<string | null>(null);
 
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -209,13 +211,29 @@ export function TikrarSystem() {
   const stopAutoPlay = () => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current = null;
+      audioRef.current.onended = null;
     }
     setIsAutoPlaying(false);
     setPlayingVerseIndex(null);
+    nextAudioUrlRef.current = null;
   };
 
-  const playVerse = async (vIndex: number, loopNum: number) => {
+  const getAudioUrl = async (vIndex: number) => {
+    if (vIndex >= verses.length) return null;
+    const verseKey = verses[vIndex].verse_key;
+    try {
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
+      const data = await res.json();
+      const audioUrl = data.audio_files[0]?.url;
+      return audioUrl.startsWith('//') ? `https:${audioUrl}` : audioUrl.startsWith('http') ? audioUrl : `https://audio.qurancdn.com/${audioUrl}`;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const playVerse = useCallback(async (vIndex: number, loopNum: number) => {
+    if (!isAutoPlaying) return;
+
     if (vIndex >= verses.length) {
       if (loopNum < 4) { 
         setPrepListenCount(p => Math.min(5, p + 1));
@@ -230,23 +248,44 @@ export function TikrarSystem() {
     }
 
     setPlayingVerseIndex(vIndex);
-    const verseKey = verses[vIndex].verse_key;
-
-    try {
-      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
-      const data = await res.json();
-      const audioUrl = data.audio_files[0]?.url;
-      let fullUrl = audioUrl.startsWith('//') ? `https:${audioUrl}` : audioUrl.startsWith('http') ? audioUrl : `https://audio.qurancdn.com/${audioUrl}`;
-
-      const audio = new Audio(fullUrl);
-      audioRef.current = audio;
-      audio.onended = () => playVerse(vIndex + 1, loopNum);
-      await audio.play();
-    } catch (err) {
-      stopAutoPlay();
-      toast({ variant: "destructive", title: "Gagal memutar audio" });
+    
+    // Get URL (either from prefetch cache or fetch now)
+    let fullUrl = nextAudioUrlRef.current;
+    if (!fullUrl) {
+      fullUrl = await getAudioUrl(vIndex);
     }
-  };
+
+    if (!fullUrl) {
+      stopAutoPlay();
+      toast({ variant: "destructive", title: "Gagal memuat audio" });
+      return;
+    }
+
+    // Start pre-fetching next verse while current one is playing
+    if (vIndex + 1 < verses.length) {
+      getAudioUrl(vIndex + 1).then(url => {
+        nextAudioUrlRef.current = url;
+      });
+    } else if (loopNum < 4) {
+      getAudioUrl(0).then(url => {
+        nextAudioUrlRef.current = url;
+      });
+    }
+
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+
+    audioRef.current.src = fullUrl;
+    audioRef.current.onended = () => {
+      playVerse(vIndex + 1, loopNum);
+    };
+    
+    audioRef.current.play().catch(err => {
+      console.error("Playback error:", err);
+      stopAutoPlay();
+    });
+  }, [verses, isAutoPlaying, selectedReciterId, toast]);
 
   const startAutoPlay = () => {
     if (!selectedReciterId) {
@@ -255,8 +294,18 @@ export function TikrarSystem() {
     }
     setIsAutoPlaying(true);
     setCurrentLoop(0);
-    playVerse(0, 0);
+    nextAudioUrlRef.current = null;
+    // We need to set isAutoPlaying first before calling recursive playVerse
+    setTimeout(() => {
+      setIsAutoPlaying(true);
+      playVerse(0, 0);
+    }, 0);
   };
+
+  useEffect(() => {
+    // Cleanup on unmount
+    return () => stopAutoPlay();
+  }, []);
 
   const selectReciter = (id: number) => {
     setSelectedReciterId(id);
