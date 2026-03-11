@@ -369,6 +369,11 @@ export function TikrarSystem() {
 function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
   const isDone = state.combined.count >= target;
   
+  // Split verses into part A and B for coloring
+  const midIndex = Math.ceil(verses.length / 2);
+  const versesA = verses.slice(0, midIndex);
+  const versesB = verses.slice(midIndex);
+
   return (
     <Card className={cn("border-2 transition-all shadow-lg overflow-hidden", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
       <div className="bg-[#800000]/5 py-3 px-6 border-b flex flex-row items-center justify-between">
@@ -376,9 +381,10 @@ function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
         {isDone && <Badge className="bg-emerald-500 text-white font-black text-[10px] tracking-widest">DONE</Badge>}
       </div>
       <CardContent className="p-6 space-y-6">
-        <div className="bg-[#fffcf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[250px] overflow-y-auto no-scrollbar" dir="rtl">
+        <div className="bg-[#fffcf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[300px] overflow-y-auto no-scrollbar" dir="rtl">
           <div className="flex flex-wrap justify-center gap-x-1 gap-y-3">
-            {verses.map((v: any) => (
+            {/* PART A - RED TEXT */}
+            {versesA.map((v: any) => (
               <React.Fragment key={v.id}>
                 {v.words.map((w: any, idx: number) => (
                   <Tooltip key={`${v.id}-${idx}`}>
@@ -386,7 +392,7 @@ function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
                       <span 
                         tabIndex={0} 
                         style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
-                        className="font-arabic text-[#800000] cursor-help hover:bg-[#800000]/5 rounded px-0.5 transition-colors"
+                        className="font-arabic text-rose-600 cursor-help hover:bg-rose-50 rounded px-0.5 transition-colors"
                       >
                         {w.text_uthmani}
                       </span>
@@ -398,7 +404,32 @@ function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
                     </TooltipPortal>
                   </Tooltip>
                 ))}
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#800000]/20 text-[10px] font-bold mx-1 text-[#800000] bg-white/50 shadow-sm translate-y-[-2px]">({v.verse_key.split(':')[1]})</span>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-rose-200 text-[10px] font-bold mx-1 text-rose-600 bg-white/50 shadow-sm translate-y-[-2px]">({v.verse_key.split(':')[1]})</span>
+              </React.Fragment>
+            ))}
+
+            {/* PART B - GREEN TEXT */}
+            {versesB.map((v: any) => (
+              <React.Fragment key={v.id}>
+                {v.words.map((w: any, idx: number) => (
+                  <Tooltip key={`${v.id}-${idx}`}>
+                    <TooltipTrigger asChild>
+                      <span 
+                        tabIndex={0} 
+                        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
+                        className="font-arabic text-emerald-600 cursor-help hover:bg-emerald-50 rounded px-0.5 transition-colors"
+                      >
+                        {w.text_uthmani}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                        <p className="text-xs font-medium">{w.translation?.text || "..."}</p>
+                      </TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
+                ))}
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-emerald-200 text-[10px] font-bold mx-1 text-emerald-600 bg-white/50 shadow-sm translate-y-[-2px]">({v.verse_key.split(':')[1]})</span>
               </React.Fragment>
             ))}
           </div>
