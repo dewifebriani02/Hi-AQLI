@@ -27,20 +27,25 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, Zap, BookOpen, User } from "lucide-react";
+import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, Zap, BookOpen, User, Calendar, Clock } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const INITIAL_FORM = {
   title: "",
-  instructor: "",
+  muallimah: "",
+  muallimahId: "",
   description: "",
-  schedule: "",
+  day: "Senin",
+  time: "19:00",
   level: "Semua Level",
   isPremium: false,
   tag: "",
   basePrice: 0,
 };
+
+const DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
 export default function AdminClassesPage() {
   const db = useFirestore();
@@ -51,12 +56,21 @@ export default function AdminClassesPage() {
   const [editingHalaqah, setEditingHalaqah] = useState<any>(null);
   const [form, setForm] = useState(INITIAL_FORM);
 
+  // Fetch Classes
   const halaqahQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return collection(db, "halaqahs");
   }, [db, user?.uid]);
 
   const { data: halaqahs, isLoading } = useCollection(halaqahQuery);
+
+  // Fetch Users for Mu'allimah Selection
+  const usersQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return collection(db, "users");
+  }, [db, user?.uid]);
+
+  const { data: allUsers } = useCollection(usersQuery);
 
   const handleOpenAdd = () => {
     setEditingHalaqah(null);
@@ -66,11 +80,15 @@ export default function AdminClassesPage() {
 
   const handleOpenEdit = (h: any) => {
     setEditingHalaqah(h);
+    // Split schedule if it exists (Format: "Hari, Jam")
+    const [day, time] = (h.schedule || "Senin, 19:00").split(", ");
     setForm({
       title: h.title,
-      instructor: h.instructor,
+      muallimah: h.muallimah || "",
+      muallimahId: h.muallimahId || "",
       description: h.description || "",
-      schedule: h.schedule || "",
+      day: day || "Senin",
+      time: time || "19:00",
       level: h.level || "Semua Level",
       isPremium: h.isPremium || false,
       tag: h.tag || "",
@@ -80,25 +98,35 @@ export default function AdminClassesPage() {
   };
 
   const handleSave = async () => {
-    if (!form.title || !form.instructor) {
-      toast({ variant: "destructive", title: "Mohon lengkapi judul dan instruktur." });
+    if (!form.title || !form.muallimahId) {
+      toast({ variant: "destructive", title: "Mohon lengkapi judul dan pilih Mu'allimah." });
       return;
     }
+
+    const selectedMuallimah = allUsers?.find(u => u.id === form.muallimahId);
+    const finalData = {
+      title: form.title,
+      muallimah: selectedMuallimah?.username || "Mu'allimah AQLI",
+      muallimahId: form.muallimahId,
+      description: form.description,
+      schedule: `${form.day}, ${form.time}`,
+      level: form.level,
+      isPremium: form.isPremium,
+      tag: form.tag,
+      basePrice: form.basePrice,
+      updatedAt: serverTimestamp()
+    };
 
     try {
       if (editingHalaqah) {
         const ref = doc(db, "halaqahs", editingHalaqah.id);
-        setDocumentNonBlocking(ref, {
-          ...form,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
+        setDocumentNonBlocking(ref, finalData, { merge: true });
         toast({ title: "Kelas Diperbarui" });
       } else {
         const col = collection(db, "halaqahs");
         addDocumentNonBlocking(col, {
-          ...form,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          ...finalData,
+          createdAt: serverTimestamp()
         });
         toast({ title: "Kelas Berhasil Ditambahkan" });
       }
@@ -154,7 +182,7 @@ export default function AdminClassesPage() {
                       {h.isPremium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
                     </div>
                     <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                      <User className="w-3 h-3" /> {h.instructor}
+                      <User className="w-3 h-3 text-[#800000]" /> Mu'allimah: {h.muallimah}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -169,7 +197,10 @@ export default function AdminClassesPage() {
                 <p className="text-[11px] text-muted-foreground line-clamp-2 mb-4 leading-relaxed">{h.description}</p>
                 <div className="flex items-center justify-between border-t pt-3 mt-auto">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">{h.level}</span>
-                  <span className="text-[9px] font-bold text-muted-foreground">{h.schedule}</span>
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
+                    <Calendar className="w-3 h-3 text-[#800000]" />
+                    {h.schedule}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -194,8 +225,19 @@ export default function AdminClassesPage() {
                 <Input value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} placeholder="Contoh: Tahsin Dasar Al-Fatihah" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Nama Instruktur</Label>
-                <Input value={form.instructor} onChange={(e) => setForm({...form, instructor: e.target.value})} placeholder="Contoh: Ustadzah Fulanah" />
+                <Label className="text-xs font-black uppercase">Pilih Mu'allimah</Label>
+                <Select value={form.muallimahId} onValueChange={(v) => setForm({...form, muallimahId: v})}>
+                  <SelectTrigger><SelectValue placeholder="Pilih user mu'allimah" /></SelectTrigger>
+                  <SelectContent>
+                    {!allUsers || allUsers.length === 0 ? (
+                      <SelectItem value="none" disabled>Tidak ada user terdaftar</SelectItem>
+                    ) : (
+                      allUsers.map(u => (
+                        <SelectItem key={u.id} value={u.id}>{u.username || u.email}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -206,9 +248,24 @@ export default function AdminClassesPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Jadwal Belajar</Label>
-                <Input value={form.schedule} onChange={(e) => setForm({...form, schedule: e.target.value})} placeholder="Contoh: Setiap Senin, 19:30 WIB" />
+                <Label className="text-xs font-black uppercase">Hari Belajar</Label>
+                <Select value={form.day} onValueChange={(v) => setForm({...form, day: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DAYS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase">Jam Belajar</Label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input type="time" value={form.time} onChange={(e) => setForm({...form, time: e.target.value})} className="pl-10" />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase">Level Program</Label>
                 <Select value={form.level} onValueChange={(v) => setForm({...form, level: v})}>
@@ -221,14 +278,13 @@ export default function AdminClassesPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border-2 border-dashed">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold">Program Berbayar (Premium)</Label>
-                <p className="text-[10px] text-muted-foreground italic">Aktifkan jika memerlukan infaq pendaftaran.</p>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed h-full">
+                <div className="space-y-0.5">
+                  <Label className="text-[10px] font-bold uppercase">Premium</Label>
+                  <p className="text-[8px] text-muted-foreground italic">Aktifkan infaq pendaftaran.</p>
+                </div>
+                <Switch checked={form.isPremium} onCheckedChange={(v) => setForm({...form, isPremium: v})} />
               </div>
-              <Switch checked={form.isPremium} onCheckedChange={(v) => setForm({...form, isPremium: v})} />
             </div>
 
             {form.isPremium && (

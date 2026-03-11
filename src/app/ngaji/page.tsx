@@ -48,7 +48,7 @@ export default function NgajiPage() {
 
   const filteredCircles = dbHalaqahs?.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
-    c.instructor.toLowerCase().includes(search.toLowerCase())
+    c.muallimah.toLowerCase().includes(search.toLowerCase())
   );
 
   const getHalaqahStatus = (id: string) => {
@@ -113,7 +113,7 @@ export default function NgajiPage() {
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground mt-1">
                   <User className="w-3 h-3 text-[#800000]" />
-                  <span>{circle.instructor}</span>
+                  <span>Mu'allimah: {circle.muallimah}</span>
                 </div>
                 {isActive ? (
                   <div className="flex items-center gap-1 mt-1 text-[9px] font-black text-[#D4AF37] uppercase tracking-widest">
@@ -157,7 +157,7 @@ export default function NgajiPage() {
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="Cari program atau instruktur..." 
+          placeholder="Cari program atau mu'allimah..." 
           className="pl-11 h-12 bg-white border-2 border-[#800000]/5 focus-visible:ring-[#800000] text-sm font-medium" 
           value={search}
           onChange={(e) => setSearch(e.target.value)}

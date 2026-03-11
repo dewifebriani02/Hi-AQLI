@@ -30,16 +30,17 @@
       "properties": {
         "id": { "type": "string" },
         "title": { "type": "string" },
-        "instructor": { "type": "string" },
+        "muallimah": { "type": "string", "description": "Nama Mu'allimah pengampu" },
+        "muallimahId": { "type": "string", "description": "ID user Mu'allimah" },
         "description": { "type": "string" },
-        "schedule": { "type": "string" },
+        "schedule": { "type": "string", "description": "Format: Hari, Jam (misal: Senin, 19:30)" },
         "level": { "type": "string" },
         "isPremium": { "type": "boolean" },
         "tag": { "type": "string" },
         "basePrice": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["title", "instructor", "level"]
+      "required": ["title", "muallimah", "level"]
     },
     "PageExamRequest": {
       "title": "PageExamRequest",
