@@ -18,7 +18,9 @@ import {
   HelpCircle,
   Clock,
   Zap,
-  Target
+  Target,
+  Languages,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -54,37 +56,22 @@ export function PageExamSimulation({ page }: { page: number }) {
   const [startTime] = useState(Date.now());
   const { toast } = useToast();
 
-  const fetchVerses = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(
-        `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`
-      );
-      if (!res.ok) throw new Error("Gagal memuat ayat");
-      const data = await res.json();
-      setVerses(data.verses);
-      generateQuestions(data.verses);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Gagal memuat data simulasi." });
-    } finally {
-      setLoading(false);
-    }
-  }, [page, toast]);
-
   const generateQuestions = (allVerses: Verse[]) => {
     const qs: Question[] = [];
     const shuffled = [...allVerses].sort(() => Math.random() - 0.5);
 
     // 1. Word Translation (2-3 Questions)
     shuffled.slice(0, 2).forEach(v => {
-      const word = v.words[Math.floor(Math.random() * v.words.length)];
-      if (!word.text_uthmani || !word.translation.text) return;
+      const validWords = v.words.filter(w => w.text_uthmani && w.translation?.text);
+      if (validWords.length === 0) return;
+      
+      const word = validWords[Math.floor(Math.random() * validWords.length)];
       
       const options = [word.translation.text];
       while (options.length < 4) {
         const randomVerse = allVerses[Math.floor(Math.random() * allVerses.length)];
         const randomWord = randomVerse.words[Math.floor(Math.random() * randomVerse.words.length)];
-        if (randomWord.translation.text && !options.includes(randomWord.translation.text)) {
+        if (randomWord.translation?.text && !options.includes(randomWord.translation.text)) {
           options.push(randomWord.translation.text);
         }
       }
@@ -101,12 +88,14 @@ export function PageExamSimulation({ page }: { page: number }) {
 
     // 2. Sentence Translation (2 Questions)
     shuffled.slice(2, 4).forEach(v => {
-      const translation = v.translations[0].text.replace(/<[^>]*>?/gm, '');
+      const translation = v.translations[0]?.text.replace(/<[^>]*>?/gm, '') || "";
+      if (!translation) return;
+
       const options = [translation];
       while (options.length < 4) {
         const randomVerse = allVerses[Math.floor(Math.random() * allVerses.length)];
-        const randTrans = randomVerse.translations[0].text.replace(/<[^>]*>?/gm, '');
-        if (!options.includes(randTrans)) options.push(randTrans);
+        const randTrans = randomVerse.translations[0]?.text.replace(/<[^>]*>?/gm, '') || "";
+        if (randTrans && !options.includes(randTrans)) options.push(randTrans);
       }
 
       qs.push({
@@ -124,7 +113,7 @@ export function PageExamSimulation({ page }: { page: number }) {
       const vNum = v.verse_key.split(':')[1];
       const options = [vNum];
       while (options.length < 4) {
-        const rand = Math.floor(Math.random() * 100).toString();
+        const rand = (Math.floor(Math.random() * 100) + 1).toString();
         if (!options.includes(rand)) options.push(rand);
       }
 
@@ -152,7 +141,7 @@ export function PageExamSimulation({ page }: { page: number }) {
       while (options.length < 4) {
         const randV = allVerses[Math.floor(Math.random() * allVerses.length)];
         const randW = randV.words[Math.floor(Math.random() * randV.words.length)].text_uthmani;
-        if (!options.includes(randW)) options.push(randW);
+        if (randW && !options.includes(randW)) options.push(randW);
       }
 
       qs.push({
@@ -176,7 +165,7 @@ export function PageExamSimulation({ page }: { page: number }) {
       while (options.length < 4) {
         const randV = allVerses[Math.floor(Math.random() * allVerses.length)];
         const randS = randV.words.slice(0, 3).map(w => w.text_uthmani).join(" ");
-        if (!options.includes(randS)) options.push(randS);
+        if (randS && !options.includes(randS)) options.push(randS);
       }
 
       qs.push({
@@ -191,6 +180,23 @@ export function PageExamSimulation({ page }: { page: number }) {
 
     setQuestions(qs.sort(() => Math.random() - 0.5));
   };
+
+  const fetchVerses = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`
+      );
+      if (!res.ok) throw new Error("Gagal memuat ayat");
+      const data = await res.json();
+      setVerses(data.verses);
+      generateQuestions(data.verses);
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Gagal memuat data simulasi." });
+    } finally {
+      setLoading(false);
+    }
+  }, [page, toast]);
 
   useEffect(() => {
     fetchVerses();

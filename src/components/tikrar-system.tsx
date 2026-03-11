@@ -29,7 +29,8 @@ import {
   GraduationCap,
   MessageSquare,
   ClipboardCheck,
-  Sparkles
+  Sparkles,
+  ArrowRight
 } from "lucide-react";
 import {
   Tooltip,
@@ -635,15 +636,26 @@ export function TikrarSystem() {
             <MetaStep label="GABUNG SELURUH HALAMAN (A - D)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
           </div>
 
-          {/* TAHAP UJIAN HALAMAN */}
-          {isMetaTuntas('1_2_3_4') && (
-            <div className="flex flex-col gap-6 mt-4 animate-in zoom-in duration-500">
-              <div className="flex items-center gap-2 px-1">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                <h4 className="text-xl font-black font-headline text-[#800000] uppercase tracking-widest">Tahap Ujian Halaman</h4>
-              </div>
+          {/* TAHAP UJIAN HALAMAN - SELALU MUNCUL SEBAGAI GOAL */}
+          <div className="flex flex-col gap-6 mt-4">
+            <div className="flex items-center gap-2 px-1">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <h4 className="text-xl font-black font-headline text-[#800000] uppercase tracking-widest">Tahap Ujian Halaman</h4>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {!isMetaTuntas('1_2_3_4') ? (
+              <Card className="border-2 border-dashed bg-muted/20 py-10">
+                <CardContent className="flex flex-col items-center justify-center text-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                    <Lock className="w-6 h-6 text-muted-foreground/40" />
+                  </div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest max-w-[200px]">
+                    Selesaikan repetisi gabungan seluruh halaman untuk membuka ujian.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in duration-500">
                 {/* Simulasi Ujian Mandiri */}
                 <Card className="border-none bg-blue-600 text-white shadow-xl overflow-hidden group hover:scale-[1.02] transition-transform">
                   <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
@@ -699,8 +711,8 @@ export function TikrarSystem() {
                   </CardContent>
                 </Card>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </TooltipProvider>
     </div>
@@ -773,7 +785,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
         
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox 
-            label={`${page}${letter}-1`} 
+            label={`${page}{letter}-1`} 
             count={state.a.count} 
             isLocked={isLocked} 
             onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} 
@@ -781,7 +793,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             threshold={PASS_THRESHOLD} 
           />
           <CounterBox 
-            label={`${page}${letter}-2`} 
+            label={`${page}{letter}-2`} 
             count={state.b.count} 
             isLocked={isLocked || state.a.count < PASS_THRESHOLD} 
             onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} 
@@ -879,10 +891,4 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
       {isDone && <CheckCircle2 className="absolute top-1 right-1 w-3 h-3 text-current" />}
     </div>
   );
-}
-
-function ArrowRight(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-  )
 }
