@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   BookOpen,
@@ -47,6 +48,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
   const db = useFirestore();
+  const { setOpen, setOpenMobile, isMobile } = useSidebar();
 
   const adminDocRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -65,6 +67,15 @@ export function AppSidebar() {
   const isEmailAdmin = user?.email === "dewifebriani@gmail.com";
   const hasAdminAccess = isEmailAdmin || !!isAdmin || !!isSuperAdmin;
 
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      // Opsi: Jika ingin sidebar menciut ke mode ikon di desktop setelah diklik
+      setOpen(false);
+    }
+  };
+
   if (!hasAdminAccess) {
     return null;
   }
@@ -73,7 +84,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b py-4">
         <div className="flex items-center justify-between px-2">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" onClick={handleLinkClick}>
             <Logo className="group-data-[collapsible=icon]:hidden" />
           </Link>
           <SidebarTrigger className="hidden md:flex" />
@@ -91,6 +102,7 @@ export function AppSidebar() {
                   asChild
                   isActive={pathname === item.href}
                   tooltip={item.label}
+                  onClick={handleLinkClick}
                 >
                   <Link href={item.href}>
                     <item.icon className={cn(pathname === item.href && "text-[#800000]")} />
@@ -115,6 +127,7 @@ export function AppSidebar() {
                   asChild
                   isActive={pathname === item.href}
                   tooltip={item.label}
+                  onClick={handleLinkClick}
                 >
                   <Link href={item.href}>
                     <item.icon className={cn(pathname === item.href && "text-[#800000]")} />
@@ -129,7 +142,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-2 border-t">
         <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton tooltip="Pengaturan Admin">
+                <SidebarMenuButton tooltip="Pengaturan Admin" onClick={handleLinkClick}>
                     <Settings />
                     <span>Pengaturan Admin</span>
                 </SidebarMenuButton>
