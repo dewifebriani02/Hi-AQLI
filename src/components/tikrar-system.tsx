@@ -157,9 +157,7 @@ export function TikrarSystem() {
   useEffect(() => {
     async function fetchVerses() {
       setLoading(true);
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      if (audioRef.current) audioRef.current.pause();
       setIsAutoPlaying(false);
       isAutoPlayingRef.current = false;
       setPlayingVerseIndex(null);
@@ -247,6 +245,17 @@ export function TikrarSystem() {
     }
   };
 
+  const stopAutoPlay = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+    }
+    setIsAutoPlaying(false);
+    isAutoPlayingRef.current = false;
+    setPlayingVerseIndex(null);
+    nextAudioUrlRef.current = null;
+  };
+
   const playVerse = useCallback(async (vIndex: number, loopNum: number) => {
     if (!isAutoPlayingRef.current) return;
 
@@ -264,40 +273,24 @@ export function TikrarSystem() {
     }
 
     setPlayingVerseIndex(vIndex);
-    
-    let fullUrl = nextAudioUrlRef.current;
-    if (!fullUrl) {
-      fullUrl = await getAudioUrl(vIndex);
-    }
+    let fullUrl = nextAudioUrlRef.current || await getAudioUrl(vIndex);
 
     if (!fullUrl) {
       stopAutoPlay();
       return;
     }
 
-    // Pre-fetch next
     if (vIndex + 1 < verses.length) {
       getAudioUrl(vIndex + 1).then(url => { nextAudioUrlRef.current = url; });
     } else if (loopNum < 4) {
       getAudioUrl(0).then(url => { nextAudioUrlRef.current = url; });
     }
 
-    if (!audioRef.current) { audioRef.current = new Audio(); }
+    if (!audioRef.current) audioRef.current = new Audio();
     audioRef.current.src = fullUrl;
     audioRef.current.onended = () => { playVerse(vIndex + 1, loopNum); };
     audioRef.current.play().catch(() => stopAutoPlay());
   }, [verses, selectedReciterId, toast]);
-
-  const stopAutoPlay = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.onended = null;
-    }
-    setIsAutoPlaying(false);
-    isAutoPlayingRef.current = false;
-    setPlayingVerseIndex(null);
-    nextAudioUrlRef.current = null;
-  };
 
   const startAutoPlay = async () => {
     if (!selectedReciterId) {
@@ -359,14 +352,13 @@ export function TikrarSystem() {
 
   return (
     <div className="space-y-8 pb-32">
-      {/* HEADER STATS */}
       <Card className="border-none bg-[#800000] text-white shadow-xl overflow-hidden relative border-b-4 border-[#D4AF37]">
         <div className="absolute right-[-20px] top-[-20px] opacity-10"><CalendarDays className="w-40 h-40 text-[#D4AF37]" /></div>
         <CardContent className="p-6 relative z-10">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2">
-                <Badge className="bg-white text-[#800000] border-none text-[10px] font-bold uppercase tracking-widest">HI AQLI Tikrar System</Badge>
+                <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold uppercase tracking-widest">HI AQLI Tikrar System</Badge>
                 <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
               </div>
               <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 flex flex-col items-end">
@@ -381,7 +373,6 @@ export function TikrarSystem() {
         </CardContent>
       </Card>
 
-      {/* CONTROLS */}
       <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md border-[#800000]/10">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(JUZ_PAGES[juz-1]||1, p - 1))} disabled={loading || page <= (JUZ_PAGES[juz-1]||1)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
@@ -399,7 +390,6 @@ export function TikrarSystem() {
         </div>
       </div>
 
-      {/* TAHAP PERSIAPAN */}
       <TooltipProvider delayDuration={0}>
         <Card className={cn("border-2 transition-all shadow-md overflow-hidden", isPrepTuntas ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-[#800000]/30 bg-white")}>
           <div className="bg-[#800000] py-2 px-4 border-b flex justify-between items-center">
@@ -496,7 +486,6 @@ export function TikrarSystem() {
           </CardContent>
         </Card>
 
-        {/* ITQAN BLOCKS */}
         <div className="flex flex-col gap-10 mt-10">
           <div className="bg-[#800000] text-white p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 mx-1 shadow-lg">
             <Info className="w-5 h-5 shrink-0 mt-0.5" />
@@ -527,7 +516,6 @@ export function TikrarSystem() {
             <MetaStep label="GABUNG SELURUH HALAMAN (A - D)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
           </div>
 
-          {/* EXAM STAGE */}
           <div className="flex flex-col gap-6 mt-4">
             <div className="flex items-center gap-2 px-1">
               <Sparkles className="w-5 h-5 text-[#D4AF37]" />
@@ -630,6 +618,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
 
 function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
   const isDone = count >= META_PASS_THRESHOLD;
+  const TARGET_MAX_LOCAL = 10;
   return (
     <div className={cn("relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", isDone ? "bg-[#D4AF37]/10 border-[#D4AF37]" : "bg-white border-[#800000]/10", highlight && !isDone && "border-[#800000] bg-[#800000]/5", isLocked && "opacity-40 grayscale select-none")}>
       <div className="flex items-center gap-3 overflow-hidden">
@@ -644,8 +633,8 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <div className="text-right flex flex-col items-end">
-          <span className="text-[10px] font-bold text-black uppercase">{count} / {TARGET_MAX}</span>
-          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} /></div>
+          <span className="text-[10px] font-bold text-black uppercase">{count} / {TARGET_MAX_LOCAL}</span>
+          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX_LOCAL)*100}%` }} /></div>
         </div>
         <Button onClick={onIncrement} disabled={isLocked || isDone} className={cn("h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all shadow-sm", isDone ? "bg-[#D4AF37] text-black border-none" : "bg-[#800000] text-white hover:bg-[#800000]/90")}>{isDone ? <CheckCircle2 className="w-4 h-4" /> : `+1`}</Button>
       </div>

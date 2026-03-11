@@ -64,7 +64,7 @@ const campaigns = [
     goal: 15000000,
     current: 5400000,
     donors: 215,
-    daysLeft: 0, // Ongoing
+    daysLeft: 0,
     image: "https://picsum.photos/seed/tech/600/400",
     category: "INFAQ"
   }
@@ -80,7 +80,7 @@ export default function BerbagiPage() {
   const db = useFirestore();
   const { toast } = useToast();
   
-  const [step, setStep] = useState(1); // 1: List, 2: Amount, 3: Payment
+  const [step, setStep] = useState(1);
   const [selectedCampaign, setSelectedCampaign] = useState<typeof campaigns[0] | null>(null);
   const [amount, setAmount] = useState<number>(0);
   const [customAmount, setCustomAmount] = useState<string>("");
@@ -88,7 +88,6 @@ export default function BerbagiPage() {
   const [uniqueCode, setUniqueCode] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
   const [senderName, setSenderName] = useState("");
 
   const donationAmounts = [25000, 50000, 100000, 250000];
@@ -108,11 +107,6 @@ export default function BerbagiPage() {
   const handleAmountSelect = (val: number) => {
     setAmount(val);
     setCustomAmount("");
-  };
-
-  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomAmount(e.target.value);
-    setAmount(0);
   };
 
   const goToPayment = () => {
@@ -166,17 +160,17 @@ export default function BerbagiPage() {
   if (submitted) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
-        <Card className="w-full max-w-md text-center border-none shadow-2xl overflow-hidden">
+        <Card className="w-full max-w-md text-center border-none shadow-2xl overflow-hidden bg-white">
           <div className="bg-[#800000] py-12 flex flex-col items-center gap-4 text-white">
             <CheckCircle2 className="h-20 w-20 text-[#D4AF37] animate-bounce" />
             <h2 className="text-3xl font-black font-headline uppercase tracking-widest">Jazakallahu Khairan!</h2>
           </div>
           <CardContent className="pt-10 pb-10 space-y-6">
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Terima kasih, <strong>{senderName}</strong>. Donasi Anda untuk <strong>{selectedCampaign?.title}</strong> sedang dalam proses verifikasi.
               </p>
-              <p className="text-xs italic bg-muted p-4 rounded-xl text-black">"Harta tidak akan berkurang karena sedekah." (HR. Muslim)</p>
+              <p className="text-xs italic bg-[#800000]/5 p-4 rounded-xl text-[#800000]">"Harta tidak akan berkurang karena sedekah." (HR. Muslim)</p>
             </div>
             <Button onClick={() => window.location.href = '/'} className="w-full bg-[#800000] text-white hover:bg-[#800000]/90 font-black h-14 rounded-2xl shadow-xl">
               KEMBALI KE BERANDA
@@ -189,11 +183,10 @@ export default function BerbagiPage() {
 
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32">
-      {/* HEADER */}
       <div className="flex flex-col gap-2 mt-4 px-1">
         <div className="flex items-center gap-2 text-[#800000] mb-1">
           <HeartHandshake className="w-5 h-5" />
-          <span className="text-xs font-black uppercase tracking-widest">Hi Berbagi • Infaq Digital</span>
+          <span className="text-xs font-black uppercase tracking-widest text-[#800000]">Hi Berbagi • Infaq Digital</span>
         </div>
         <h1 className="text-3xl font-black font-headline tracking-tight uppercase text-[#800000]">Jembatan Kebaikan</h1>
         <p className="text-muted-foreground text-sm font-medium">
@@ -201,7 +194,6 @@ export default function BerbagiPage() {
         </p>
       </div>
 
-      {/* STEP 1: CAMPAIGN LIST */}
       {step === 1 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-1">
           {campaigns.map((camp) => {
@@ -244,7 +236,7 @@ export default function BerbagiPage() {
                 <CardFooter className="p-0 border-t">
                   <Button 
                     onClick={() => handleCampaignSelect(camp)}
-                    className="w-full rounded-none h-12 bg-white text-[#800000] hover:bg-[#800000] hover:text-white font-black uppercase text-[10px] tracking-widest transition-colors gap-2"
+                    className="w-full rounded-none h-12 bg-white text-[#800000] hover:bg-[#800000] hover:text-white font-black uppercase text-[10px] tracking-widest transition-colors gap-2 border-t border-[#800000]/10"
                   >
                     Donasi Sekarang <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -255,12 +247,11 @@ export default function BerbagiPage() {
         </div>
       )}
 
-      {/* STEP 2: AMOUNT SELECTION */}
       {step === 2 && selectedCampaign && (
         <div className="max-w-lg mx-auto w-full px-1">
-          <Card className="border-none shadow-2xl overflow-hidden">
+          <Card className="border-none shadow-2xl overflow-hidden bg-white">
             <CardHeader className="bg-[#800000] text-white relative py-8">
-              <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white" onClick={() => setStep(1)}><ArrowLeft className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white hover:bg-white/10" onClick={() => setStep(1)}><ArrowLeft className="h-5 w-5" /></Button>
               <div className="text-center space-y-2">
                 <Badge className="bg-[#D4AF37] text-black font-black text-[9px] mx-auto border-none uppercase">{selectedCampaign.category}</Badge>
                 <CardTitle className="font-headline text-xl font-black uppercase leading-tight px-8">{selectedCampaign.title}</CardTitle>
@@ -294,7 +285,7 @@ export default function BerbagiPage() {
               <div className="space-y-2">
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#800000] font-black">Rp</span>
-                  <Input type="number" placeholder="Contoh: 150000" className="pl-11 h-14 text-lg font-black border-2 border-[#800000]/10 focus-visible:ring-[#800000] rounded-xl" value={customAmount} onChange={handleCustomAmountChange} />
+                  <Input type="number" placeholder="Contoh: 150000" className="pl-11 h-14 text-lg font-black border-2 border-[#800000]/10 focus-visible:ring-[#800000] rounded-xl" value={customAmount} onChange={(e) => setCustomAmount(e.target.value)} />
                 </div>
                 <p className="text-[9px] text-muted-foreground font-bold italic">*Minimal donasi Rp 10.000</p>
               </div>
@@ -333,12 +324,11 @@ export default function BerbagiPage() {
         </div>
       )}
 
-      {/* STEP 3: PAYMENT DETAILS */}
       {step === 3 && selectedCampaign && (
         <div className="max-w-lg mx-auto w-full px-1">
-          <Card className="border-none shadow-2xl overflow-hidden">
+          <Card className="border-none shadow-2xl overflow-hidden bg-white">
             <CardHeader className="bg-[#800000] text-white relative py-8 text-center">
-              <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white" onClick={() => setStep(2)}><ArrowLeft className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white hover:bg-white/10" onClick={() => setStep(2)}><ArrowLeft className="h-5 w-5" /></Button>
               <CardTitle className="font-headline text-2xl font-black uppercase">Instruksi Pembayaran</CardTitle>
               <CardDescription className="text-white/60 font-bold uppercase text-[9px] tracking-widest">Hi Berbagi • Digital Receipt</CardDescription>
             </CardHeader>
@@ -361,7 +351,7 @@ export default function BerbagiPage() {
                     <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">Rekening Tujuan (BSI)</p>
                     <div className="flex items-center justify-between bg-white/10 p-4 rounded-xl border border-white/20">
                       <span className="font-mono font-black text-xl tracking-widest text-white">7123456789</span>
-                      <Button variant="ghost" size="sm" className="text-[#D4AF37] font-black" onClick={() => copyToClipboard("7123456789")}>SALIN</Button>
+                      <Button variant="ghost" size="sm" className="text-[#D4AF37] font-black hover:bg-white/10" onClick={() => copyToClipboard("7123456789")}>SALIN</Button>
                     </div>
                     <p className="text-[10px] text-center font-bold uppercase tracking-tighter text-white/80">Yayasan HI AQLI</p>
                   </div>
@@ -402,7 +392,6 @@ export default function BerbagiPage() {
         </div>
       )}
 
-      {/* FOOTER STATS */}
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 px-1">
         {[
           { label: "Donasi Terkumpul", value: "Rp 36.6M", icon: TrendingUp },
