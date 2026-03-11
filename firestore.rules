@@ -11,18 +11,19 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isSuperAdmin() {
+    // Pengecekan Admin berbasis email (Prioritas Utama) atau Document (Database)
+    function isAdmin() {
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid)) ||
-        request.auth.token.email == "dewifebriani@gmail.com"
+        request.auth.token.email == "dewifebriani@gmail.com" ||
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid))
       );
     }
 
-    function isAdmin() {
+    function isSuperAdmin() {
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) || 
-        isSuperAdmin() ||
-        request.auth.token.email == "dewifebriani@gmail.com"
+        request.auth.token.email == "dewifebriani@gmail.com" ||
+        exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid))
       );
     }
 
@@ -33,19 +34,15 @@ service cloud.firestore {
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
       
-      // Progres hafalan per ayat
       match /quiz_attempts/{attemptId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
     }
 
     match /tikrar_registrations/{registrationId} {
-      // Izinkan admin melihat semua data tanpa filter
-      allow list: if isAdmin();
-      // Izinkan user melihat datanya sendiri (kueri harus difilter userId)
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      // Izinkan baca dokumen tunggal
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      // Izinkan list jika admin atau pemilik
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
@@ -53,9 +50,8 @@ service cloud.firestore {
     }
 
     match /donations/{donationId} {
-      allow list: if isAdmin();
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
@@ -63,7 +59,7 @@ service cloud.firestore {
 
     match /roles_admin/{userId} {
       allow read: if isSignedIn();
-      // Bootstrap: Izinkan email khusus untuk membuat entry admin miliknya sendiri
+      // Izinkan dewifebriani untuk mendaftarkan dirinya sendiri sebagai admin awal
       allow create, update: if isAdmin() || (request.auth.token.email == "dewifebriani@gmail.com" && request.auth.uid == userId);
       allow delete: if isAdmin();
     }
@@ -73,7 +69,6 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
-    // Default deny untuk path lain yang tidak didefinisikan secara spesifik
     match /{path=**} {
       allow read, write: if isAdmin();
     }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Metadata, Viewport } from 'next';
@@ -13,26 +14,27 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User as UserIcon } from 'lucide-react';
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
   const adminDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return doc(db, "roles_admin", user.uid);
   }, [db, user?.uid]);
 
   const superAdminDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return doc(db, "roles_superadmin", user.uid);
   }, [db, user?.uid]);
 
-  const { data: isAdmin } = useDoc(adminDocRef);
-  const { data: isSuperAdmin } = useDoc(superAdminDocRef);
+  const { data: isAdminDoc } = useDoc(adminDocRef);
+  const { data: isSuperAdminDoc } = useDoc(superAdminDocRef);
 
-  const hasAdminAccess = !!isAdmin || !!isSuperAdmin;
+  // Deteksi admin gabungan (Email + Database)
+  const isSpecialAdmin = user?.email === "dewifebriani@gmail.com";
+  const hasAdminAccess = isSpecialAdmin || !!isAdminDoc || !!isSuperAdminDoc;
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -89,7 +91,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
-        <link rel="manifest" href="/manifest.webmanifest" />
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
         <FirebaseClientProvider>

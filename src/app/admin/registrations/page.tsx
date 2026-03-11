@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where, orderBy, doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, Phone, Mail, User, ImageIcon, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle2, Phone, Mail, User, ImageIcon, ArrowLeft, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -16,16 +16,20 @@ import { useState } from "react";
 
 export default function AdminRegistrationsPage() {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const regQuery = useMemoFirebase(() => query(
-    collection(db, "tikrar_registrations"),
-    where("status", "==", "pending_verification"),
-    orderBy("createdAt", "desc")
-  ), [db]);
+  const regQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, "tikrar_registrations"),
+      where("status", "==", "pending_verification"),
+      orderBy("createdAt", "desc")
+    );
+  }, [db, user?.uid]);
 
-  const { data: registrations, isLoading } = useCollection(regQuery);
+  const { data: registrations, isLoading, error } = useCollection(regQuery);
 
   const handleApprove = async (reg: any) => {
     if (!confirm(`Aktifkan akses Juz ${reg.targetJuz} untuk ${reg.userName}?`)) return;
@@ -74,6 +78,17 @@ export default function AdminRegistrationsPage() {
   };
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-[#800000]" /></div>;
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+        <ShieldAlert className="w-12 h-12 text-destructive" />
+        <h2 className="text-xl font-bold">Akses Ditolak</h2>
+        <p className="text-muted-foreground max-w-md">Anda memerlukan hak akses administrator untuk melihat antrean pendaftaran.</p>
+        <Button asChild variant="outline"><Link href="/">Kembali ke Dasbor</Link></Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8 max-w-5xl mx-auto pb-20">
