@@ -33,17 +33,16 @@ const LEVELS = [
   { id: 4, name: "Pemula", days: 28 },
 ];
 
-const PASS_THRESHOLD = 40; // Maqta Individu Wajib 40x
-const META_PASS_THRESHOLD = 10; // Gabungan Blok Minimal 10x
+const PASS_THRESHOLD = 40; 
+const META_PASS_THRESHOLD = 10; 
 
-// Helper to skip weekends
 function addWorkDays(startDate: Date, days: number): Date {
   const result = new Date(startDate);
   let added = 0;
   while (added < Math.floor(days)) {
     result.setDate(result.getDate() + 1);
     const day = result.getDay();
-    if (day !== 0 && day !== 6) { // 0: Sunday, 6: Saturday
+    if (day !== 0 && day !== 6) { 
       added++;
     }
   }
@@ -77,7 +76,6 @@ export function TikrarSchedule() {
                           new Date();
     
     let currentDate = new Date(adminStartDate);
-    
     const dayAllocation = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]; 
 
     for (let p = startPage; p <= endPage; p++) {
@@ -141,7 +139,7 @@ export function TikrarSchedule() {
     }
 
     return items;
-  }, [juz, level, userData, page]);
+  }, [juz, level, userData]);
 
   if (!isPaid && juz !== 1) {
     return (
@@ -240,19 +238,19 @@ export function TikrarSchedule() {
                     <div className="mt-6 pt-6 border-t border-dashed space-y-6 animate-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center gap-2">
                         <Layers className="w-4 h-4 text-[#800000]" />
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">10 Tahapan Manhaj Tikrar</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Tahapan Manhaj Tikrar</h4>
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        <StepRow label={`BLOK A (${item.page}A-1, A-2, G)`} isDone={item.tmProgress['A1'] && item.tmProgress['A2'] && item.tmProgress['AG']} date={item.steps[0].end} threshold={40} />
-                        <StepRow label={`BLOK B (${item.page}B-1, B-2, G)`} isDone={item.tmProgress['B1'] && item.tmProgress['B2'] && item.tmProgress['BG']} date={item.steps[1].end} threshold={40} />
+                        <StepRow label={`BLOK A (${item.page}A-1, ${item.page}A-2, G)`} isDone={item.tmProgress['A1'] && item.tmProgress['A2'] && item.tmProgress['AG']} date={item.steps[0].end} threshold={40} />
+                        <StepRow label={`BLOK B (${item.page}B-1, ${item.page}B-2, G)`} isDone={item.tmProgress['B1'] && item.tmProgress['B2'] && item.tmProgress['BG']} date={item.steps[1].end} threshold={40} />
                         <StepRow label="GABUNG BLOK A & B" isDone={item.metaProgress['1_2']} date={item.steps[2].end} isMeta threshold={10} />
                         
-                        <StepRow label={`BLOK C (${item.page}C-1, C-2, G)`} isDone={item.tmProgress['C1'] && item.tmProgress['C2'] && item.tmProgress['CG']} date={item.steps[3].end} threshold={40} />
+                        <StepRow label={`BLOK C (${item.page}C-1, ${item.page}C-2, G)`} isDone={item.tmProgress['C1'] && item.tmProgress['C2'] && item.tmProgress['CG']} date={item.steps[3].end} threshold={40} />
                         <StepRow label="GABUNG BLOK B & C" isDone={item.metaProgress['2_3']} date={item.steps[4].end} isMeta threshold={10} />
                         <StepRow label="GABUNG BLOK A s/d C" isDone={item.metaProgress['1_2_3']} date={item.steps[5].end} isMeta threshold={10} />
                         
-                        <StepRow label={`BLOK D (${item.page}D-1, D-2, G)`} isDone={item.tmProgress['D1'] && item.tmProgress['D2'] && item.tmProgress['DG']} date={item.steps[6].end} threshold={40} />
+                        <StepRow label={`BLOK D (${item.page}D-1, ${item.page}D-2, G)`} isDone={item.tmProgress['D1'] && item.tmProgress['D2'] && item.tmProgress['DG']} date={item.steps[6].end} threshold={40} />
                         <StepRow label="GABUNG BLOK C & D" isDone={item.metaProgress['3_4']} date={item.steps[7].end} isMeta threshold={10} />
                         <StepRow label="GABUNG BLOK B s/d D" isDone={item.metaProgress['2_3_4']} date={item.steps[8].end} isMeta threshold={10} />
                         <StepRow label="GABUNG SELURUH HALAMAN (A-D)" isDone={item.metaProgress['1_2_3_4']} date={item.steps[9].end} isMeta highlight threshold={10} />
@@ -296,7 +294,7 @@ function StepRow({ label, isDone, date, isMeta, highlight, threshold }: { label:
         <div className="flex flex-col min-w-0">
           <span className={cn("text-[10px] font-bold truncate", highlight ? "text-[#800000]" : "text-foreground")}>{label}</span>
           <span className="text-[8px] text-muted-foreground font-medium truncate">
-            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Target {threshold}x
+            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Min. {threshold}x
           </span>
         </div>
       </div>

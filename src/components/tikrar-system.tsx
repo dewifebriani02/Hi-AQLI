@@ -37,16 +37,9 @@ const JUZ_PAGES = [
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
 ];
 
-const LEVELS = [
-  { id: 1, name: "Intensif", days: 7 },
-  { id: 2, name: "Reguler", days: 14 },
-  { id: 3, name: "Santai", days: 21 },
-  { id: 4, name: "Pemula", days: 28 },
-];
-
 const TARGET_MAX = 40;
-const PASS_THRESHOLD = 40; // Maqta Individu Wajib 40x
-const META_PASS_THRESHOLD = 10; // Gabungan Blok Minimal 10x
+const PASS_THRESHOLD = 40; 
+const META_PASS_THRESHOLD = 10; 
 
 interface Word {
   text_uthmani: string;
@@ -215,7 +208,7 @@ export function TikrarSystem() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2">
                 <Badge className="bg-white/20 text-white border-none text-[10px] font-bold uppercase tracking-widest">
-                  Level {LEVELS.find(l => l.id === userData?.tikrarLevel)?.name || "Santai"}
+                  Tikrar Daily System
                 </Badge>
                 <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
               </div>
@@ -251,15 +244,15 @@ export function TikrarSystem() {
       <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1">
         <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
-          <strong>Aturan Itqan:</strong> Maqta (contoh: {page}A-1) wajib diulang <strong>40 kali</strong>. Repetisi Gabungan Blok minimal <strong>10 kali</strong>. Kunci akan terbuka otomatis setelah target terpenuhi.
+          <strong>Info Itqan:</strong> Maqta (contoh: {page}A-1) wajib diulang <strong>40 kali</strong>. Repetisi Gabungan Blok minimal <strong>10 kali</strong>. Kunci akan terbuka otomatis setelah target terpenuhi.
         </div>
       </div>
 
       <TooltipProvider delayDuration={0}>
         <div className="flex flex-col gap-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <MaqtaCard id={1} page={page} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} />
-            <MaqtaCard id={2} page={page} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasTM(1)} onIncrement={setBlocks} fontSize={fontSize} />
+            <MaqtaCard id={1} page={page} state={blocks[1]} verses={blockVerses[1]} isLocked={false} onIncrement={setBlocks} fontSize={fontSize} letter="A" />
+            <MaqtaCard id={2} page={page} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasTM(1)} onIncrement={setBlocks} fontSize={fontSize} letter="B" />
           </div>
 
           <MetaStep 
@@ -269,14 +262,14 @@ export function TikrarSystem() {
             onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} 
           />
 
-          <MaqtaCard id={3} page={page} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} />
+          <MaqtaCard id={3} page={page} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} letter="C" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <MetaStep label="GABUNG BLOK B & C" count={metaCounts['2_3']} isLocked={!isTuntasTM(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
             <MetaStep label="GABUNG BLOK A s/d C" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3': p['1_2_3'] + 1}))} />
           </div>
 
-          <MaqtaCard id={4} page={page} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} />
+          <MaqtaCard id={4} page={page} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} letter="D" />
 
           <div className="space-y-4">
             <MetaStep label="GABUNG BLOK C & D" count={metaCounts['3_4']} isLocked={!isTuntasTM(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
@@ -302,10 +295,8 @@ export function TikrarSystem() {
   );
 }
 
-function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked }: any) {
+function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, letter }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
-  const blockLetters = ["", "A", "B", "C", "D"];
-  const letter = blockLetters[id];
 
   const tokens = useMemo(() => {
     const items: any[] = [];
@@ -362,7 +353,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked }:
         <Button 
           onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} 
           disabled={isLocked || state.b.count < PASS_THRESHOLD} 
-          className={cn("w-full h-10 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}
+          className={cn("w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}
         >
           <span className="text-[8px] flex items-center gap-1 leading-none opacity-80">
             {isLocked || state.b.count < PASS_THRESHOLD ? <Lock className="w-2 h-2" /> : null}
@@ -410,13 +401,13 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
   };
   return (
     <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
-      <span className="text-[8px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none mb-1">{label}</span>
-      <div className="flex items-baseline gap-0.5 leading-none">
+      <span className="text-[10px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none">{label}</span>
+      <div className="flex items-baseline gap-0.5 leading-none mt-1">
         <span className="text-base font-black">{count}</span>
         <span className="text-[8px] font-bold opacity-40">/ 40</span>
       </div>
       {isLocked && <Lock className="absolute top-1 right-1 w-2 h-2 text-muted-foreground" />}
-      {isDone && <CheckCircle2 className="w-3 h-3 text-current mt-0.5" />}
+      {isDone && <CheckCircle2 className="absolute top-1 right-1 w-3 h-3 text-current" />}
     </div>
   );
 }
