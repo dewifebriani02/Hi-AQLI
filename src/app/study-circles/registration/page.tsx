@@ -42,7 +42,7 @@ import Link from "next/link";
 const studyCircles = [
   { id: "tikrar-j30-b1", title: "Tikrar Daily Juz 30 - Batch 1", isPaid: true, basePrice: 50000 },
   { id: "tafsir-j30", title: "Tafsir Juz' Amma", isPaid: false, basePrice: 0 },
-  { id: "tajwid-adv", title: "Tajwid Lanjutan: Sifaat", isPaid: false, basePrice: 0 },
+  { id: "tajweed-adv", title: "Tajwid Lanjutan: Sifaat", isPaid: false, basePrice: 0 },
   { id: "sirah-nabi", title: "Sirah Nabi (SAW)", isPaid: false, basePrice: 0 },
 ];
 
@@ -68,7 +68,7 @@ function RegistrationForm() {
     return doc(db, "users", user.uid);
   }, [db, user?.uid]);
 
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
   // Check for ANY existing registration for this halaqah to prevent duplicates
   const regQuery = useMemoFirebase(() => {
@@ -81,8 +81,17 @@ function RegistrationForm() {
     );
   }, [db, user?.uid, halaqahId]);
 
-  const { data: existingRegs, isLoading: isCheckLoading } = useCollection(regQuery);
+  const { data: existingRegs, isLoading: isRegLoading } = useCollection(regQuery);
   const existingReg = existingRegs?.[0];
+
+  // Logic to determine if user IS ALREADY ACTIVE based on profile OR registration doc
+  const isProfileActive = (
+    (halaqahId === 'tikrar-j30-b1' && userData?.isTikrarPaid) ||
+    (userData?.followedHalaqahs?.includes(halaqahId || ''))
+  );
+
+  const isActuallyActive = isProfileActive || existingReg?.status === 'active';
+  const isActuallyPending = !isActuallyActive && existingReg?.status === 'pending_verification';
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -167,29 +176,28 @@ function RegistrationForm() {
     }
   };
 
-  if (isCheckLoading) return <div className="flex flex-col items-center py-20 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-xs font-bold uppercase">Memeriksa Status...</p></div>;
+  if (isRegLoading || isUserDocLoading) return <div className="flex flex-col items-center py-20 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-xs font-bold uppercase">Memeriksa Status...</p></div>;
 
-  // If already registered, handle based on status
-  if (existingReg) {
-    const isActive = existingReg.status === 'active';
+  // If already registered or has profile access, handle based on status
+  if (isActuallyActive || isActuallyPending) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
         <Card className="w-full max-w-md text-center border-none shadow-2xl overflow-hidden">
-          <div className={cn("py-8 flex flex-col items-center gap-2 text-white", isActive ? "bg-emerald-600" : "bg-amber-500")}>
-            {isActive ? <CheckCircle2 className="h-12 w-12" /> : <Clock className="h-12 w-12 animate-pulse" />}
+          <div className={cn("py-8 flex flex-col items-center gap-2 text-white", isActuallyActive ? "bg-emerald-600" : "bg-amber-500")}>
+            {isActuallyActive ? <CheckCircle2 className="h-12 w-12" /> : <Clock className="h-12 w-12 animate-pulse" />}
             <h2 className="text-xl font-bold font-headline uppercase tracking-wider">
-              {isActive ? "Pendaftaran Aktif" : "Menunggu Verifikasi"}
+              {isActuallyActive ? "Pendaftaran Aktif" : "Menunggu Verifikasi"}
             </h2>
           </div>
           <CardContent className="pt-8 pb-10 space-y-6">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Assalamu'alaikum, <strong>{name}</strong>. {isActive 
+              Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive 
                 ? `Pendaftaran Anda untuk ${circle.title} sudah aktif. Anda dapat langsung masuk ke kelas sekarang.`
                 : `Pendaftaran Anda untuk ${circle.title} sedang kami tinjau. Mohon tunggu maksimal 1x24 jam.`}
             </p>
-            <Button asChild className={cn("w-full font-bold h-12", isActive ? "bg-emerald-600" : "bg-[#800000]")}>
-              <Link href={isActive ? (circle.id === 'tikrar-j30-b1' ? '/tajweed' : `/study-circles/${circle.id}`) : "/"}>
-                {isActive ? <><PlayCircle className="mr-2 w-5 h-5" /> MASUK KELAS SEKARANG</> : "Kembali ke Dasbor"}
+            <Button asChild className={cn("w-full font-bold h-12", isActuallyActive ? "bg-emerald-600" : "bg-[#800000]")}>
+              <Link href={isActuallyActive ? (circle.id === 'tikrar-j30-b1' ? '/tajweed' : `/study-circles/${circle.id}`) : "/"}>
+                {isActuallyActive ? <><PlayCircle className="mr-2 w-5 h-5" /> MASUK KELAS SEKARANG</> : "Kembali ke Dasbor"}
               </Link>
             </Button>
           </CardContent>
