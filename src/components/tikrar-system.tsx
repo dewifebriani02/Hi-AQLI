@@ -110,7 +110,6 @@ export function TikrarSystem() {
   const [currentLoop, setCurrentLoop] = useState(0);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -181,15 +180,6 @@ export function TikrarSystem() {
     }
     fetchVerses();
   }, [page]);
-
-  useEffect(() => {
-    if (playingVerseIndex !== null && scrollContainerRef.current) {
-      const activeVerseEl = document.getElementById(`prep-verse-${playingVerseIndex}`);
-      if (activeVerseEl) {
-        activeVerseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }, [playingVerseIndex]);
 
   useEffect(() => {
     if (!loading && typeof window !== 'undefined') {
@@ -382,7 +372,7 @@ export function TikrarSystem() {
                     </div>
                     <div>
                       <h4 className="text-sm font-bold">Simak Murattal 5x</h4>
-                      <p className="text-[10px] text-muted-foreground">Putar otomatis & teks berjalan</p>
+                      <p className="text-[10px] text-muted-foreground">Putar otomatis & fokus ayat</p>
                     </div>
                   </div>
                   <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
@@ -436,11 +426,38 @@ export function TikrarSystem() {
                         <><Play className="w-5 h-5 fill-current" /> {prepListenCount >= 5 ? 'PUTAR LAGI (AUTO 5X)' : 'MULAI SIMAK (AUTO 5X)'}</>
                       )}
                     </Button>
-                    {isAutoPlaying && (
-                      <div className="flex items-center justify-center gap-2 animate-pulse">
-                        <span className="text-[10px] font-black text-rose-600 uppercase">
-                          Siklus {currentLoop + 1} • Memutar Ayat {playingVerseIndex !== null && verses[playingVerseIndex] ? verses[playingVerseIndex].verse_key.split(':')[1] : '-'}
-                        </span>
+                    
+                    {/* AYAT AKTIF PERSIS DI BAWAH TOMBOL PLAY */}
+                    {isAutoPlaying && playingVerseIndex !== null && verses[playingVerseIndex] && (
+                      <div className="mt-4 p-6 bg-[#fffcf5] rounded-3xl border-2 border-amber-400 shadow-lg animate-in fade-in slide-in-from-top-2 duration-500" dir="rtl">
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-center justify-center gap-2 mb-2">
+                            <Badge className="bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest animate-pulse">Siklus {currentLoop + 1}</Badge>
+                            <Badge variant="outline" className="text-[8px] font-black border-[#800000]/20 text-[#800000]">Ayat {verses[playingVerseIndex].verse_key.split(':')[1]}</Badge>
+                          </div>
+                          <div className="flex flex-wrap justify-center gap-x-1 gap-y-3">
+                            {verses[playingVerseIndex].words.map((word, wIdx) => (
+                              <Tooltip key={wIdx}>
+                                <TooltipTrigger asChild>
+                                  <span 
+                                    style={{ fontSize: `${fontSize * 1.2}px`, lineHeight: 1.6 }} 
+                                    className="font-arabic text-[#800000] font-bold transition-all duration-300 rounded px-0.5 outline-none cursor-help select-none"
+                                  >
+                                    {word.text_uthmani}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipPortal>
+                                  <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                                    <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
+                                  </TooltipContent>
+                                </TooltipPortal>
+                              </Tooltip>
+                            ))}
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-[#800000] text-white text-[10px] font-bold mx-1 translate-y-[-2px] shadow-sm">
+                              ({verses[playingVerseIndex].verse_key.split(':')[1]})
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -472,72 +489,15 @@ export function TikrarSystem() {
                 </Button>
               </div>
             </div>
-
-            {/* MUSHAF VISUAL FOR PREPARATION */}
-            <div className="pt-4 border-t border-[#800000]/10">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-[#800000]/60 flex items-center gap-2">
-                  <BookOpen className="w-3 h-3" /> Tampilan Mushaf Persiapan
-                </h4>
-                {isAutoPlaying && <Badge className="bg-amber-500 text-white text-[8px] font-black animate-pulse">TEKS BERJALAN AKTIF</Badge>}
-              </div>
-              <div 
-                ref={scrollContainerRef}
-                className="bg-[#fffcf5] p-6 rounded-3xl border-2 border-[#800000]/10 max-h-[400px] overflow-y-auto no-scrollbar relative shadow-inner" 
-                dir="rtl"
-              >
-                <div className="flex flex-wrap justify-center gap-x-2 gap-y-6">
-                  {verses.map((v, vIdx) => {
-                    const isVerseActive = isAutoPlaying && playingVerseIndex === vIdx;
-                    return (
-                      <div 
-                        key={v.id} 
-                        id={`prep-verse-${vIdx}`}
-                        className={cn(
-                          "flex flex-wrap justify-center items-center gap-x-1 gap-y-2 transition-all duration-500 rounded-2xl p-2",
-                          isVerseActive ? "bg-amber-100/80 shadow-md ring-2 ring-amber-400 scale-[1.02]" : "opacity-80"
-                        )}
-                      >
-                        {v.words.map((word, wIdx) => (
-                          <Tooltip key={`${v.id}-${wIdx}`}>
-                            <TooltipTrigger asChild>
-                              <span 
-                                style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
-                                className={cn(
-                                  "font-arabic transition-all duration-300 rounded px-0.5 outline-none cursor-help select-none",
-                                  isVerseActive ? "text-[#800000] font-bold" : "text-foreground/80 hover:bg-muted/50"
-                                )}
-                              >
-                                {word.text_uthmani}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipPortal>
-                              <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                                <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
-                              </TooltipContent>
-                            </TooltipPortal>
-                          </Tooltip>
-                        ))}
-                        <span className={cn(
-                          "inline-flex items-center justify-center px-2 py-0.5 rounded-full border text-[10px] font-bold mx-1 translate-y-[-2px] transition-all",
-                          isVerseActive ? "bg-[#800000] text-white border-[#800000] scale-110 shadow-lg" : "bg-white/50 text-muted-foreground"
-                        )}>
-                          ({v.verse_key.split(':')[1]})
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
+        {/* LOGIKA ITQAN BLOK A-D */}
         <div className="flex flex-col gap-10 mt-10">
           <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1">
             <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
-              <strong>Aturan Itqan:</strong> Unit Maqta wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
+              <strong>Aturan Itqan:</strong> Unit Maqta (A-1, A-2, G) wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
               Selesaikan Tahap Persiapan sebelum lanjut ke Blok A-D.
             </div>
           </div>
