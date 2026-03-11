@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Star, Zap, CheckCircle2, PlayCircle, Timer } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -30,6 +31,7 @@ const studyCircles = [
     description: "Studi mendalam tentang makna dan konteks bagian terakhir Al-Qur'an, cocok untuk pemula.",
     schedule: "Sabtu, 10:00 WIB",
     level: "Pemula",
+    status: "following"
   },
   {
     id: "2",
@@ -38,6 +40,7 @@ const studyCircles = [
     description: "Eksplorasi rinci tentang karakteristik huruf Arab (Sifaat) untuk qari berpengalaman.",
     schedule: "Senin & Rabu, 19:00 WIB",
     level: "Lanjutan",
+    status: "following"
   },
   {
     id: "3",
@@ -46,6 +49,7 @@ const studyCircles = [
     description: "Perjalanan melalui kehidupan Nabi Muhammad (SAW) dan dapatkan pelajaran abadi untuk hari ini.",
     schedule: "Minggu, 14:00 WIB",
     level: "Semua Level",
+    status: "completed"
   },
 ];
 
@@ -74,10 +78,116 @@ export default function StudyCirclesPage() {
 
   const { data: pendingReg } = useCollection(regQuery);
 
+  const isTikrarActive = userData?.isTikrarPaid;
+  const isTikrarPending = pendingReg && pendingReg.length > 0;
+
   const filteredCircles = studyCircles.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
     c.instructor.toLowerCase().includes(search.toLowerCase())
   );
+
+  const getFollowingCount = () => {
+    let count = filteredCircles.filter(c => c.status === 'following').length;
+    if (isTikrarActive || isTikrarPending) count += 1;
+    return count;
+  };
+
+  const renderCircleCard = (circle: typeof studyCircles[0]) => {
+    const isTikrar = circle.id === 'tikrar-j30-b1';
+    const isRegistered = isTikrar && isTikrarActive;
+    const isPending = isTikrar && isTikrarPending;
+    const isCompleted = circle.status === 'completed';
+    const userPaidJuz = userData?.paidJuz;
+
+    let href = `/study-circles/${circle.id}`;
+    if (isRegistered) href = '/tajweed';
+    else if (isTikrar) href = '/study-circles/tikrar-registration';
+
+    return (
+      <Link key={circle.id} href={href}>
+        <Card 
+          className={cn(
+            "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
+            isRegistered ? "bg-blue-50 border-l-4 border-blue-600" :
+            isPending ? "bg-amber-50 border-l-4 border-amber-500" :
+            isCompleted ? "bg-emerald-50 border-l-4 border-emerald-500" :
+            circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
+          )}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1">
+              <div className={cn(
+                "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
+                isRegistered ? "bg-blue-600 text-white" : 
+                isPending ? "bg-amber-500 text-white" :
+                isCompleted ? "bg-emerald-500 text-white" :
+                circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+              )}>
+                {isRegistered ? <PlayCircle className="w-6 h-6 animate-pulse" /> : 
+                 isPending ? <Timer className="w-6 h-6" /> :
+                 isCompleted ? <CheckCircle2 className="w-6 h-6" /> :
+                 circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+              </div>
+              <div className="flex flex-col gap-0.5 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className={cn("font-bold text-base leading-tight", isRegistered && "text-blue-900", isPending && "text-amber-900", isCompleted && "text-emerald-900")}>{circle.title}</h4>
+                  {isRegistered ? (
+                    <Badge className="bg-blue-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">AKTIF - JUZ {userPaidJuz}</Badge>
+                  ) : isPending ? (
+                    <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">MENUNGGU VERIFIKASI</Badge>
+                  ) : isCompleted ? (
+                    <Badge className="bg-emerald-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">LULUS</Badge>
+                  ) : (
+                    circle.tag && (
+                      <Badge className="bg-emerald-500 text-white border-none text-[6px] sm:text-[7px] h-4 px-1.5 font-black uppercase tracking-tighter whitespace-nowrap">
+                        {circle.tag}
+                      </Badge>
+                    )
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <User className="w-3 h-3" />
+                  <span>{circle.instructor}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground font-medium">
+                  {isRegistered ? (
+                    <span className="text-blue-600 font-black uppercase tracking-widest flex items-center gap-1">
+                      <PlayCircle className="w-3 h-3" /> MASUK KELAS SEKARANG
+                    </span>
+                  ) : isPending ? (
+                    <span className="text-amber-600 font-black uppercase tracking-widest flex items-center gap-1">
+                      <Timer className="w-3 h-3" /> PROSES VERIFIKASI ADMIN
+                    </span>
+                  ) : isCompleted ? (
+                    <span className="text-emerald-600 font-black uppercase tracking-widest flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> MATERI SELESAI
+                    </span>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{circle.schedule}</span>
+                      </div>
+                      <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 py-0 border-[#800000]/20 text-[#800000] uppercase">
+                        {circle.level}
+                      </Badge>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <ChevronRight className={cn(
+              "w-5 h-5 transition-colors", 
+              isRegistered ? "text-blue-400" : 
+              isPending ? "text-amber-400" :
+              isCompleted ? "text-emerald-400" :
+              "text-muted-foreground/30 group-hover:text-[#800000]"
+            )} />
+          </div>
+        </Card>
+      </Link>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-8 max-w-3xl mx-auto pb-24">
@@ -88,7 +198,7 @@ export default function StudyCirclesPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
-          Daftar program unggulan Tikrar Daily atau pilih materi lingkar studi lainnya.
+          Kelola perjalanan belajar Anda di Lingkar Studi Sahabat AQLI.
         </p>
       </div>
 
@@ -102,93 +212,47 @@ export default function StudyCirclesPage() {
         />
       </div>
 
-      <div className="flex flex-col gap-3 px-1">
-        {filteredCircles.map((circle) => {
-          const isTikrar = circle.id === 'tikrar-j30-b1';
-          const isRegistered = isTikrar && userData?.isTikrarPaid;
-          const isPending = isTikrar && pendingReg && pendingReg.length > 0;
-          const userPaidJuz = userData?.paidJuz;
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl mx-1">
+          <TabsTrigger value="all" className="font-bold text-[10px] sm:text-xs uppercase tracking-tight">
+            Semua ({filteredCircles.length})
+          </TabsTrigger>
+          <TabsTrigger value="following" className="font-bold text-[10px] sm:text-xs uppercase tracking-tight">
+            Diikuti ({getFollowingCount()})
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="font-bold text-[10px] sm:text-xs uppercase tracking-tight">
+            Selesai ({filteredCircles.filter(c => c.status === 'completed').length})
+          </TabsTrigger>
+        </TabsList>
 
-          let href = `/study-circles/${circle.id}`;
-          if (isRegistered) href = '/tajweed';
-          else if (isTikrar) href = '/study-circles/tikrar-registration';
+        <div className="mt-6 flex flex-col gap-3 px-1">
+          <TabsContent value="all" className="space-y-3 m-0">
+            {filteredCircles.map(renderCircleCard)}
+          </TabsContent>
 
-          return (
-            <Link key={circle.id} href={href}>
-              <Card 
-                className={cn(
-                  "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
-                  isRegistered ? "bg-blue-50 border-l-4 border-blue-600" :
-                  isPending ? "bg-amber-50 border-l-4 border-amber-500" :
-                  circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
-                )}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className={cn(
-                      "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
-                      isRegistered ? "bg-blue-600 text-white" : 
-                      isPending ? "bg-amber-500 text-white" :
-                      circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
-                    )}>
-                      {isRegistered ? <PlayCircle className="w-6 h-6 animate-pulse" /> : 
-                       isPending ? <Timer className="w-6 h-6" /> :
-                       circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
-                    </div>
-                    <div className="flex flex-col gap-0.5 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className={cn("font-bold text-base leading-tight", isRegistered && "text-blue-900", isPending && "text-amber-900")}>{circle.title}</h4>
-                        {isRegistered ? (
-                          <Badge className="bg-blue-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">AKTIF - JUZ {userPaidJuz}</Badge>
-                        ) : isPending ? (
-                          <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">MENUNGGU VERIFIKASI</Badge>
-                        ) : (
-                          circle.tag && (
-                            <Badge className="bg-emerald-500 text-white border-none text-[6px] sm:text-[7px] h-4 px-1.5 font-black uppercase tracking-tighter whitespace-nowrap">
-                              {circle.tag}
-                            </Badge>
-                          )
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <User className="w-3 h-3" />
-                        <span>{circle.instructor}</span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground font-medium">
-                        {isRegistered ? (
-                          <span className="text-blue-600 font-black uppercase tracking-widest flex items-center gap-1">
-                            <PlayCircle className="w-3 h-3" /> MASUK KELAS SEKARANG
-                          </span>
-                        ) : isPending ? (
-                          <span className="text-amber-600 font-black uppercase tracking-widest flex items-center gap-1">
-                            <Timer className="w-3 h-3" /> PROSES VERIFIKASI ADMIN
-                          </span>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{circle.schedule}</span>
-                            </div>
-                            <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 py-0 border-[#800000]/20 text-[#800000] uppercase">
-                              {circle.level}
-                            </Badge>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight className={cn(
-                    "w-5 h-5 transition-colors", 
-                    isRegistered ? "text-blue-400" : 
-                    isPending ? "text-amber-400" :
-                    "text-muted-foreground/30 group-hover:text-[#800000]"
-                  )} />
-                </div>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
+          <TabsContent value="following" className="space-y-3 m-0">
+            {filteredCircles
+              .filter(c => c.status === 'following' || (c.id === 'tikrar-j30-b1' && (isTikrarActive || isTikrarPending)))
+              .map(renderCircleCard)}
+            {getFollowingCount() === 0 && (
+              <div className="py-20 text-center space-y-4">
+                <Users className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                <p className="text-sm text-muted-foreground italic">Anda belum mengikuti kelas apa pun.</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="completed" className="space-y-3 m-0">
+            {filteredCircles.filter(c => c.status === 'completed').map(renderCircleCard)}
+            {filteredCircles.filter(c => c.status === 'completed').length === 0 && (
+              <div className="py-20 text-center space-y-4">
+                <CheckCircle2 className="w-12 h-12 mx-auto text-muted-foreground/20" />
+                <p className="text-sm text-muted-foreground italic">Belum ada kelas yang diselesaikan.</p>
+              </div>
+            )}
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }
