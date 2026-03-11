@@ -17,7 +17,8 @@ import {
   Clock,
   Minus,
   Plus,
-  Zap
+  Zap,
+  Info
 } from "lucide-react";
 import {
   Tooltip,
@@ -79,7 +80,7 @@ export function TikrarSystem() {
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fontSize, setFontSize] = useState(18); // Default 18px
+  const [fontSize, setFontSize] = useState(18); 
   
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -247,6 +248,13 @@ export function TikrarSystem() {
         </div>
       </div>
 
+      <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1">
+        <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
+          <strong>Aturan Itqan:</strong> Maqta (contoh: {page}A-1) wajib diulang <strong>40 kali</strong>. Repetisi Gabungan Blok minimal <strong>10 kali</strong>. Kunci akan terbuka otomatis setelah target terpenuhi.
+        </div>
+      </div>
+
       <TooltipProvider delayDuration={0}>
         <div className="flex flex-col gap-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -295,10 +303,7 @@ export function TikrarSystem() {
 }
 
 function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked }: any) {
-  const isDoneA = state.a.count >= PASS_THRESHOLD;
-  const isDoneB = state.b.count >= PASS_THRESHOLD;
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
-
   const blockLetters = ["", "A", "B", "C", "D"];
   const letter = blockLetters[id];
 
@@ -341,7 +346,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked }:
     <Card className={cn("border-2 transition-all shadow-md overflow-hidden flex flex-col h-full", isDoneG ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50 grayscale select-none")}>
       <div className="bg-[#800000]/5 py-2 px-4 border-b flex justify-between items-center shrink-0">
         <span className="text-[10px] font-black uppercase tracking-widest text-[#800000] truncate">BLOK {letter} (HAL. {page}{letter}) {isLocked && "• LOCK"}</span>
-        {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
+        {isDoneG && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4 shrink-0">OK</Badge>}
       </div>
       <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">
         <div className="bg-[#fffcf5] p-4 rounded-xl border-2 border-[#800000]/10 flex-1 overflow-y-auto no-scrollbar" dir="rtl">
@@ -352,19 +357,18 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked }:
         </div>
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox label={`${page}${letter}-1`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} color="rose" threshold={PASS_THRESHOLD} />
-          <CounterBox label={`${page}${letter}-2`} count={state.b.count} isLocked={isLocked || !isDoneA} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="emerald" threshold={PASS_THRESHOLD} />
+          <CounterBox label={`${page}${letter}-2`} count={state.b.count} isLocked={isLocked || state.a.count < PASS_THRESHOLD} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="emerald" threshold={PASS_THRESHOLD} />
         </div>
         <Button 
           onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} 
-          disabled={isLocked || !isDoneB} 
-          className={cn("w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}
+          disabled={isLocked || state.b.count < PASS_THRESHOLD} 
+          className={cn("w-full h-10 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1", isDoneG ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90")}
         >
-          <span className="text-[9px] flex items-center gap-1 leading-none">
-            {isLocked || !isDoneB ? <Lock className="w-2.5 h-2.5" /> : null}
+          <span className="text-[8px] flex items-center gap-1 leading-none opacity-80">
+            {isLocked || state.b.count < PASS_THRESHOLD ? <Lock className="w-2 h-2" /> : null}
             {page}{letter} GABUNGAN
           </span>
-          <span className="text-sm">{state.combined.count} / {TARGET_MAX}</span>
-          <span className="text-[7px] opacity-70 leading-none">Minimal {PASS_THRESHOLD}x</span>
+          <span className="text-sm leading-none mt-0.5">{state.combined.count} / 40</span>
         </Button>
       </CardContent>
     </Card>
@@ -405,15 +409,14 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
     emerald: isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-muted hover:border-emerald-300"
   };
   return (
-    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
-      <span className="text-[7px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center">{label}</span>
-      <div className="flex items-baseline gap-0.5">
+    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted/20" : themes[color])}>
+      <span className="text-[8px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none mb-1">{label}</span>
+      <div className="flex items-baseline gap-0.5 leading-none">
         <span className="text-base font-black">{count}</span>
-        <span className="text-[7px] font-bold opacity-40">/ 40</span>
+        <span className="text-[8px] font-bold opacity-40">/ 40</span>
       </div>
-      <span className="text-[7px] font-bold opacity-60 leading-none">Min {threshold}x</span>
       {isLocked && <Lock className="absolute top-1 right-1 w-2 h-2 text-muted-foreground" />}
-      {isDone && <CheckCircle2 className="w-2.5 h-2.5 text-current mt-0.5" />}
+      {isDone && <CheckCircle2 className="w-3 h-3 text-current mt-0.5" />}
     </div>
   );
 }

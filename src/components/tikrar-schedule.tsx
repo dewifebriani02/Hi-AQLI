@@ -141,7 +141,7 @@ export function TikrarSchedule() {
     }
 
     return items;
-  }, [juz, level, userData]);
+  }, [juz, level, userData, page]);
 
   if (!isPaid && juz !== 1) {
     return (
@@ -296,7 +296,7 @@ function StepRow({ label, isDone, date, isMeta, highlight, threshold }: { label:
         <div className="flex flex-col min-w-0">
           <span className={cn("text-[10px] font-bold truncate", highlight ? "text-[#800000]" : "text-foreground")}>{label}</span>
           <span className="text-[8px] text-muted-foreground font-medium truncate">
-            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Min {threshold}x
+            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Target {threshold}x
           </span>
         </div>
       </div>
