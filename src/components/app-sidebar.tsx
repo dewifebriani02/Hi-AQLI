@@ -49,19 +49,21 @@ export function AppSidebar() {
   const db = useFirestore();
 
   const adminDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return doc(db, "roles_admin", user.uid);
   }, [db, user?.uid]);
 
   const superAdminDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return doc(db, "roles_superadmin", user.uid);
   }, [db, user?.uid]);
 
   const { data: isAdmin } = useDoc(adminDocRef);
   const { data: isSuperAdmin } = useDoc(superAdminDocRef);
 
-  const hasAdminAccess = !!isAdmin || !!isSuperAdmin;
+  // Email-based admin detection for the bootstrap user
+  const isEmailAdmin = user?.email === "dewifebriani@gmail.com";
+  const hasAdminAccess = isEmailAdmin || !!isAdmin || !!isSuperAdmin;
 
   if (!hasAdminAccess) {
     return null;

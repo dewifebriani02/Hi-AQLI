@@ -53,7 +53,7 @@ service cloud.firestore {
     match /roles_admin/{userId} {
       allow read: if isSignedIn();
       // Izinkan dewifebriani untuk mendaftarkan dirinya sendiri sebagai admin awal
-      allow create, update: if isAdmin() || (request.auth.token.email == "dewifebriani@gmail.com" && request.auth.uid == userId);
+      allow create, update: if isAdmin() || (isSignedIn() && request.auth.token.email == "dewifebriani@gmail.com" && request.auth.uid == userId);
       allow delete: if isAdmin();
     }
 

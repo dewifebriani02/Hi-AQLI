@@ -22,10 +22,10 @@ export default function AdminRegistrationsPage() {
 
   const regQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
+    // Removed orderBy to avoid index issues during debugging
     return query(
       collection(db, "tikrar_registrations"),
-      where("status", "==", "pending_verification"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "pending_verification")
     );
   }, [db, user?.uid]);
 
@@ -84,7 +84,7 @@ export default function AdminRegistrationsPage() {
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
         <ShieldAlert className="w-12 h-12 text-destructive" />
         <h2 className="text-xl font-bold">Akses Ditolak</h2>
-        <p className="text-muted-foreground max-w-md">Anda memerlukan hak akses administrator untuk melihat antrean pendaftaran.</p>
+        <p className="text-muted-foreground max-w-md">Anda memerlukan hak akses administrator untuk melihat antrean pendaftaran. {error.message}</p>
         <Button asChild variant="outline"><Link href="/">Kembali ke Dasbor</Link></Button>
       </div>
     );
@@ -129,7 +129,7 @@ export default function AdminRegistrationsPage() {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Phone className="w-3.5 h-3.5" />
-                      <a href={`https://wa.me/${reg.whatsapp.replace(/^0/, '62')}`} target="_blank" className="hover:underline text-blue-600 font-bold">{reg.whatsapp}</a>
+                      <a href={`https://wa.me/${reg.whatsapp?.replace(/^0/, '62')}`} target="_blank" className="hover:underline text-blue-600 font-bold">{reg.whatsapp}</a>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Mail className="w-3.5 h-3.5" />
