@@ -24,7 +24,8 @@ import {
   Check,
   Play,
   Pause,
-  Headphones
+  Headphones,
+  Languages
 } from "lucide-react";
 import {
   Tooltip,
@@ -45,6 +46,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { Separator } from "@/components/ui/separator";
 
 // Mapping Standard Madani Mushaf
 const JUZ_PAGES = [
@@ -78,6 +80,7 @@ interface Verse {
   verse_key: string;
   text_uthmani: string;
   words: Word[];
+  translations?: { text: string }[];
 }
 
 export function TikrarSystem() {
@@ -107,7 +110,7 @@ export function TikrarSystem() {
 
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
-  const isAutoPlayingRef = useRef(false); // Used for instant logic checks
+  const isAutoPlayingRef = useRef(false); 
   const [playingVerseIndex, setPlayingVerseIndex] = useState<number | null>(null);
   const [currentLoop, setCurrentLoop] = useState(0);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
@@ -143,7 +146,7 @@ export function TikrarSystem() {
       stopAutoPlay();
       try {
         const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id`
+          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33`
         );
         if (!res.ok) throw new Error("Gagal memuat ayat");
         const data = await res.json();
@@ -253,7 +256,6 @@ export function TikrarSystem() {
 
     setPlayingVerseIndex(vIndex);
     
-    // Get URL (either from prefetch cache or fetch now)
     let fullUrl = nextAudioUrlRef.current;
     if (!fullUrl) {
       fullUrl = await getAudioUrl(vIndex);
@@ -265,7 +267,6 @@ export function TikrarSystem() {
       return;
     }
 
-    // Start pre-fetching next verse while current one is playing
     if (vIndex + 1 < verses.length) {
       getAudioUrl(vIndex + 1).then(url => {
         nextAudioUrlRef.current = url;
@@ -303,7 +304,6 @@ export function TikrarSystem() {
     setCurrentLoop(0);
     nextAudioUrlRef.current = null;
     
-    // Start playback
     playVerse(0, 0);
   };
 
@@ -413,9 +413,9 @@ export function TikrarSystem() {
             {isPrepTuntas && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
           </div>
           <CardContent className="p-6 space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex flex-col gap-8">
               <div className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
@@ -424,111 +424,116 @@ export function TikrarSystem() {
                       <Headphones className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold">Simak Murattal 5x</h4>
-                      <p className="text-[10px] text-muted-foreground">Putar otomatis & fokus ayat</p>
+                      <h4 className="text-sm font-bold">Simak Murattal & Tadabbur</h4>
+                      <p className="text-[10px] text-muted-foreground">Putar otomatis 5x siklus halaman</p>
                     </div>
                   </div>
-                  <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-xl w-10 h-10">
-                        <Mic2 className="w-5 h-5" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Pilih Qori'</DialogTitle>
-                      </DialogHeader>
-                      <div className="grid gap-2 py-4">
-                        {RECITERS.map((reciter) => (
-                          <Button
-                            key={reciter.id}
-                            variant={selectedReciterId === reciter.id ? "default" : "outline"}
-                            onClick={() => selectReciter(reciter.id)}
-                            className="justify-start gap-3"
-                          >
-                            {selectedReciterId === reciter.id && <Check className="w-4 h-4" />}
-                            {reciter.name}
-                          </Button>
-                        ))}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-[#800000] bg-white px-3 py-1 rounded-full border border-[#800000]/20 shadow-sm">{prepListenCount} / 5</span>
+                    <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="rounded-xl h-9 gap-2 font-bold">
+                          <Mic2 className="w-4 h-4" /> Pilih Qari
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
+                        <div className="grid gap-2 py-4">
+                          {RECITERS.map((r) => (
+                            <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className="justify-start gap-3 font-bold">
+                              {selectedReciterId === r.id && <Check className="w-4 h-4" />} {r.name}
+                            </Button>
+                          ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden border">
-                      <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${(Math.min(prepListenCount, 5) / 5) * 100}%` }} />
-                    </div>
-                    <span className="text-sm font-black text-[#800000]">{prepListenCount} / 5</span>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    <Button 
-                      onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay}
-                      className={cn(
-                        "w-full h-12 font-black rounded-xl border-2 transition-all gap-2 shadow-sm",
-                        isAutoPlaying ? "bg-rose-50 border-rose-500 text-rose-600 hover:bg-rose-100" : 
-                        prepListenCount >= 5 ? "bg-emerald-50 border-emerald-500 text-emerald-600 hover:bg-emerald-100" :
-                        "bg-[#800000] text-white border-transparent hover:bg-[#800000]/90"
-                      )}
-                    >
-                      {isAutoPlaying ? (
-                        <><Pause className="w-5 h-5 fill-current" /> BERHENTI MENYIMAK</>
-                      ) : (
-                        <><Play className="w-5 h-5 fill-current" /> {prepListenCount >= 5 ? 'PUTAR LAGI (AUTO 5X)' : 'MULAI SIMAK (AUTO 5X)'}</>
-                      )}
-                    </Button>
-                    
-                    {/* AYAT AKTIF DI BAWAH TOMBOL PLAY */}
-                    {isAutoPlaying && playingVerseIndex !== null && verses[playingVerseIndex] && (
-                      <div className="mt-4 p-6 bg-[#fffcf5] rounded-3xl border-2 border-amber-400 shadow-lg animate-in fade-in slide-in-from-top-2 duration-500" dir="rtl">
-                        <div className="flex flex-col gap-4">
-                          <div className="flex items-center justify-center gap-2 mb-2">
-                            <Badge className="bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest animate-pulse">Siklus {currentLoop + 1}</Badge>
-                            <Badge variant="outline" className="text-[8px] font-black border-[#800000]/20 text-[#800000]">Ayat {verses[playingVerseIndex].verse_key.split(':')[1]}</Badge>
-                          </div>
-                          <div className="flex flex-wrap justify-center gap-x-1 gap-y-3">
-                            {verses[playingVerseIndex].words.map((word, wIdx) => (
-                              <Tooltip key={wIdx}>
-                                <TooltipTrigger asChild>
-                                  <span 
-                                    tabIndex={0}
-                                    style={{ fontSize: `${fontSize * 1.2}px`, lineHeight: 1.6 }} 
-                                    className="font-arabic text-[#800000] font-bold transition-all duration-300 rounded px-0.5 outline-none cursor-help select-none hover:bg-[#800000]/5"
-                                  >
-                                    {word.text_uthmani}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipPortal>
-                                  <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                                    <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
-                                  </TooltipContent>
-                                </TooltipPortal>
-                              </Tooltip>
-                            ))}
-                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-[#800000] text-white text-[10px] font-bold mx-1 translate-y-[-2px] shadow-sm">
-                              ({verses[playingVerseIndex].verse_key.split(':')[1]})
-                            </span>
-                          </div>
+                <Button 
+                  onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay}
+                  className={cn(
+                    "w-full h-14 font-black rounded-2xl border-2 transition-all gap-3 shadow-md uppercase tracking-widest",
+                    isAutoPlaying ? "bg-rose-50 border-rose-500 text-rose-600 hover:bg-rose-100" : 
+                    prepListenCount >= 5 ? "bg-emerald-50 border-emerald-500 text-emerald-600 hover:bg-emerald-100" :
+                    "bg-[#800000] text-white border-transparent hover:bg-[#800000]/90"
+                  )}
+                >
+                  {isAutoPlaying ? (
+                    <><Pause className="w-6 h-6 fill-current" /> Berhenti Menyimak</>
+                  ) : (
+                    <><Play className="w-6 h-6 fill-current" /> {prepListenCount >= 5 ? 'Ulangi Simak (Auto 5x)' : 'Mulai Simak (Auto 5x)'}</>
+                  )}
+                </Button>
+                
+                {/* DISPLAY AYAT + TERJEMAHAN + PER KATA */}
+                {isAutoPlaying && playingVerseIndex !== null && verses[playingVerseIndex] && (
+                  <div className="mt-6 p-6 sm:p-8 bg-[#fffcf5] rounded-[2.5rem] border-2 border-amber-400 shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
+                    <div className="flex flex-col gap-8">
+                      {/* Badge Info */}
+                      <div className="flex items-center justify-center gap-2">
+                        <Badge className="bg-amber-500 text-white text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">Siklus {currentLoop + 1}</Badge>
+                        <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">Ayat {verses[playingVerseIndex].id}</Badge>
+                      </div>
+
+                      {/* Arabic Text */}
+                      <div className="flex flex-wrap justify-center gap-x-2 gap-y-4" dir="rtl">
+                        {verses[playingVerseIndex].words.map((word, wIdx) => (
+                          <span 
+                            key={wIdx}
+                            style={{ fontSize: `${fontSize * 1.4}px`, lineHeight: 1.6 }} 
+                            className="font-arabic text-[#800000] font-bold transition-all duration-300 rounded-lg px-1 select-none"
+                          >
+                            {word.text_uthmani}
+                          </span>
+                        ))}
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-[#800000] text-white text-xs font-bold mx-1 translate-y-[-4px] shadow-sm">
+                          ({verses[playingVerseIndex].verse_key.split(':')[1]})
+                        </span>
+                      </div>
+
+                      <Separator className="bg-amber-200/50" />
+
+                      {/* Word-by-Word Break-down */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">
+                          <Languages className="w-3 h-3" /> Arti Per Kata
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {verses[playingVerseIndex].words.map((word, wIdx) => (
+                            <div key={wIdx} className="bg-white border-2 border-amber-100 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]">
+                              <span className="font-arabic text-[#800000] text-sm font-bold leading-none">{word.text_uthmani}</span>
+                              <span className="text-[9px] font-medium text-amber-800 leading-none">{word.translation?.text || "-"}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    )}
+
+                      {/* Full Verse Translation */}
+                      <div className="bg-amber-100/30 p-5 rounded-3xl border-l-4 border-amber-500">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">
+                          <BookOpen className="w-3 h-3" /> Terjemahan Kalimat
+                        </div>
+                        <p className="text-sm sm:text-base text-amber-900 leading-relaxed italic font-medium">
+                          "{verses[playingVerseIndex].translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || "Memuat terjemahan..."}"
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              <div className="space-y-4">
+              <div className="bg-white p-6 rounded-3xl border-2 border-dashed border-[#800000]/20 space-y-4">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
                     prepTranslationDone ? "bg-emerald-500 text-white" : "bg-white text-[#800000] border-2 border-[#800000]/20"
                   )}>
-                    <BookOpen className="w-5 h-5" />
+                    <Languages className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold">Pahami Terjemahan</h4>
-                    <p className="text-[10px] text-muted-foreground">Baca rincian per kata & kalimat</p>
+                    <h4 className="text-sm font-bold">Konfirmasi Pemahaman</h4>
+                    <p className="text-[10px] text-muted-foreground">Sudah membaca & mengerti rincian ayat</p>
                   </div>
                 </div>
                 <Button 
@@ -548,11 +553,11 @@ export function TikrarSystem() {
 
         {/* LOGIKA ITQAN BLOK A-D */}
         <div className="flex flex-col gap-10 mt-10">
-          <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1">
+          <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-start gap-3 mx-1 shadow-sm">
             <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
-              <strong>Aturan Itqan:</strong> Unit Maqta (A-1, A-2, G) wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
-              Selesaikan Tahap Persiapan sebelum lanjut ke Blok A-D.
+              <strong>Aturan Itqan:</strong> Unit Maqta wajib <strong>40x</strong> repetisi. Gabungan Blok wajib <strong>10x</strong>. 
+              Selesaikan Tahap Persiapan (Simak 5x & Paham Arti) sebelum lanjut ke Blok A-D.
             </div>
           </div>
 
