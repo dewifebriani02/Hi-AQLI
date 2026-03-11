@@ -26,10 +26,11 @@ import {
   Zap,
   ArrowRight,
   Copy,
-  Fingerprint
+  Fingerprint,
+  ShieldAlert
 } from 'lucide-react';
-import { useEffect } from 'react';
-import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { collection, query, where, orderBy, limit, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { 
   Table, 
@@ -49,6 +50,15 @@ export default function ProfilePage() {
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [isBootstrapping, setIsBootstrapping] = useState(false);
+
+  // Check Admin Role
+  const adminDocRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "roles_admin", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: adminRole, isLoading: isAdminLoading } = useDoc(adminDocRef);
 
   // Fetch real donation history
   const donationsQuery = useMemoFirebase(() => {
@@ -67,11 +77,36 @@ export default function ProfilePage() {
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "users", user.uid);
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: userData } = useDoc(userDocRef);
   const isPaid = userData?.isTikrarPaid;
   const paidJuz = userData?.paidJuz;
+
+  // AUTO-BOOTSTRAP ADMIN for dewifebriani@gmail.com
+  useEffect(() => {
+    async function bootstrapAdmin() {
+      if (user?.email === "dewifebriani@gmail.com" && !adminRole && !isAdminLoading && !isBootstrapping) {
+        setIsBootstrapping(true);
+        try {
+          await setDoc(doc(db, "roles_admin", user.uid), {
+            email: user.email,
+            role: "admin",
+            createdAt: serverTimestamp()
+          });
+          toast({
+            title: "Akses Admin Aktif",
+            description: "Masyallah, akun Anda telah otomatis ditingkatkan menjadi Admin.",
+          });
+        } catch (e) {
+          console.error("Bootstrap Error:", e);
+        } finally {
+          setIsBootstrapping(false);
+        }
+      }
+    }
+    bootstrapAdmin();
+  }, [user, adminRole, isAdminLoading, db, toast, isBootstrapping]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -89,7 +124,7 @@ export default function ProfilePage() {
       navigator.clipboard.writeText(user.uid);
       toast({
         title: "UID Berhasil Disalin",
-        description: "Gunakan UID ini di Firebase Console untuk mengatur peran admin.",
+        description: "Gunakan UID ini jika ingin menambah peran manual di console.",
       });
     }
   };
@@ -126,7 +161,14 @@ export default function ProfilePage() {
           </Avatar>
           <div className="pt-14 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle className="text-2xl font-bold font-headline">{user.displayName || 'Sahabat AQLI'}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-2xl font-bold font-headline">{user.displayName || 'Sahabat AQLI'}</CardTitle>
+                {adminRole && (
+                  <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] gap-1">
+                    <ShieldCheck className="w-3 h-3" /> ADMIN
+                  </Badge>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground font-medium">
                 <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-[#800000]" /> {user.email}</span>
                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-[#800000]" /> Sejak {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : '-'}</span>
@@ -144,6 +186,26 @@ export default function ProfilePage() {
         </CardHeader>
 
         <CardContent className="px-6 sm:px-8 pt-4">
+          {/* Status Admin Banner */}
+          {user?.email === "dewifebriani@gmail.com" && (
+            <Card className="mb-8 border-2 border-amber-200 bg-amber-50 p-4 animate-in fade-in zoom-in duration-500">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-amber-900 uppercase">Status Admin: AKTIF</h4>
+                    <p className="text-[10px] text-amber-700 font-medium">Anda memiliki akses penuh ke Dashboard Verifikasi.</p>
+                  </div>
+                </div>
+                <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold h-8">
+                  <Link href="/admin">BUKA DASHBOARD <ArrowRight className="ml-1 w-3 h-3" /></Link>
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Admin UID Card (Quick Setup Helper) */}
           <Card className="mb-8 border-dashed border-2 bg-muted/20">
             <CardContent className="p-4 flex items-center justify-between gap-4">

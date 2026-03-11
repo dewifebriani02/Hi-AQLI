@@ -35,10 +35,23 @@ service cloud.firestore {
     }
 
     match /donations/{donationId} {
-      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
-      allow get: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      // Izinkan list jika filternya adalah userId milik sendiri atau user adalah admin
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
+    }
+
+    match /roles_admin/{userId} {
+      allow read: if isSignedIn();
+      // Bootstrap: Izinkan email khusus untuk membuat entry admin miliknya sendiri
+      allow create, update: if isAdmin() || (request.auth.token.email == "dewifebriani@gmail.com" && request.auth.uid == userId);
+      allow delete: if isAdmin();
+    }
+
+    match /roles_superadmin/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
     }
 
     match /{path=**} {
