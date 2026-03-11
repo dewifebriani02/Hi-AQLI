@@ -28,6 +28,16 @@ body {
     --input: 0 0% 90%;
     --ring: 46 65% 52%;
     --radius: 1rem;
+
+    /* Sidebar Variables */
+    --sidebar-background: 0 100% 25%; /* Maroon #800000 */
+    --sidebar-foreground: 0 0% 100%; /* White */
+    --sidebar-primary: 46 65% 52%; /* Gold #D4AF37 */
+    --sidebar-primary-foreground: 0 0% 0%; /* Black */
+    --sidebar-accent: 46 65% 52%; /* Gold */
+    --sidebar-accent-foreground: 0 0% 0%; /* Black */
+    --sidebar-border: 46 65% 52%; /* Gold */
+    --sidebar-ring: 46 65% 52%; /* Gold */
   }
 }
 

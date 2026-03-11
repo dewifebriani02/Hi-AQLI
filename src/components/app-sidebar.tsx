@@ -24,7 +24,6 @@ import {
   Trophy,
   UserCog,
   LayoutGrid,
-  Bot,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
@@ -75,70 +74,86 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b py-4">
+    <Sidebar collapsible="icon" className="border-r-[#D4AF37]/30">
+      <SidebarHeader className="border-b border-[#D4AF37]/30 py-4 bg-[#800000]">
         <div className="flex items-center justify-between px-2">
           <Link href="/" className="flex items-center gap-2" onClick={handleLinkClick}>
-            <Logo className="group-data-[collapsible=icon]:hidden" />
+            <Logo className="group-data-[collapsible=icon]:hidden scale-90 origin-left" />
           </Link>
-          <SidebarTrigger className="hidden md:flex" />
+          <SidebarTrigger className="hidden md:flex text-white hover:bg-white/10" />
         </div>
       </SidebarHeader>
-      <SidebarContent className="p-2 pt-4">
+      <SidebarContent className="p-2 pt-4 bg-[#800000]">
         <div className="px-3 py-2">
-          <h2 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground group-data-[collapsible=icon]:hidden">
+          <h2 className="mb-2 px-4 text-[10px] font-black uppercase tracking-widest text-white/50 group-data-[collapsible=icon]:hidden">
             Menu Admin
           </h2>
           <SidebarMenu>
-            {adminItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                  onClick={handleLinkClick}
-                >
-                  <Link href={item.href}>
-                    <item.icon className={cn(pathname === item.href && "text-[#800000]")} />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {adminItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    tooltip={item.label}
+                    className={cn(
+                      "transition-all duration-300",
+                      isActive ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90" : "text-white hover:bg-white/10"
+                    )}
+                  >
+                    <Link href={item.href} onClick={handleLinkClick}>
+                      <item.icon className={cn("shrink-0", isActive ? "text-black" : "text-white")} />
+                      <span className="font-bold">{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </div>
         
         <SidebarSeparator />
 
         <div className="px-3 py-2">
-          <h2 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground group-data-[collapsible=icon]:hidden">
+          <h2 className="mb-2 px-4 text-[10px] font-black uppercase tracking-widest text-white/50 group-data-[collapsible=icon]:hidden">
             Navigasi Utama
           </h2>
           <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                  onClick={handleLinkClick}
-                >
-                  <Link href={item.href}>
-                    <item.icon className={cn(pathname === item.href && "text-[#800000]")} />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    tooltip={item.label}
+                    className={cn(
+                      "transition-all duration-300",
+                      isActive ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90" : "text-white hover:bg-white/10"
+                    )}
+                  >
+                    <Link href={item.href} onClick={handleLinkClick}>
+                      <item.icon className={cn("shrink-0", isActive ? "text-black" : "text-white")} />
+                      <span className="font-bold">{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </div>
       </SidebarContent>
-      <SidebarFooter className="p-2 border-t">
+      <SidebarFooter className="p-2 border-t border-[#D4AF37]/30 bg-[#800000]">
         <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton tooltip="Pengaturan Admin" onClick={handleLinkClick}>
-                    <Settings />
-                    <span>Pengaturan Admin</span>
+                <SidebarMenuButton 
+                  tooltip="Pengaturan Admin" 
+                  onClick={handleLinkClick}
+                  className="text-white hover:bg-white/10"
+                >
+                    <Settings className="text-white" />
+                    <span className="font-bold">Pengaturan</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
         </SidebarMenu>
@@ -148,5 +163,5 @@ export function AppSidebar() {
 }
 
 function SidebarSeparator() {
-  return <div className="mx-4 my-4 h-px bg-border group-data-[collapsible=icon]:hidden" />;
+  return <div className="mx-4 my-4 h-px bg-[#D4AF37]/20 group-data-[collapsible=icon]:hidden" />;
 }
