@@ -18,24 +18,16 @@ body {
     --primary-foreground: 0 0% 100%; /* White */
     --secondary: 0 0% 0%; /* Black */
     --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 95%; /* Very light tint */
+    --muted: 0 0% 95%; 
     --muted-foreground: 0 0% 40%;
     --accent: 46 65% 52%; /* Gold #D4AF37 */
     --accent-foreground: 0 0% 0%;
-    --destructive: 0 100% 20%; /* Deep Maroon */
+    --destructive: 0 100% 20%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 90%;
     --input: 0 0% 90%;
     --ring: 46 65% 52%;
-    --radius: 0.75rem;
-    --sidebar-background: 0 0% 0%; /* Black */
-    --sidebar-foreground: 0 0% 100%; /* White */
-    --sidebar-primary: 46 65% 52%; /* Gold */
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 100% 25%; /* Maroon */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 46 65% 52%;
+    --radius: 1rem;
   }
 }
 

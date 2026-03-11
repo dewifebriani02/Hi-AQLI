@@ -97,7 +97,6 @@ export function TikrarSystem() {
   }, [db, user?.uid]);
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
-  
   const paidJuz = userData?.paidJuz || 1;
 
   const [juz, setJuz] = useState(1);
@@ -158,7 +157,13 @@ export function TikrarSystem() {
   useEffect(() => {
     async function fetchVerses() {
       setLoading(true);
-      stopAutoPlay();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setIsAutoPlaying(false);
+      isAutoPlayingRef.current = false;
+      setPlayingVerseIndex(null);
+      
       try {
         const res = await fetch(
           `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33`
@@ -228,17 +233,6 @@ export function TikrarSystem() {
     };
   }, [verses]);
 
-  const stopAutoPlay = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.onended = null;
-    }
-    setIsAutoPlaying(false);
-    isAutoPlayingRef.current = false;
-    setPlayingVerseIndex(null);
-    nextAudioUrlRef.current = null;
-  };
-
   const getAudioUrl = async (vIndex: number) => {
     if (vIndex < 0 || vIndex >= verses.length) return null;
     const verseKey = verses[vIndex].verse_key;
@@ -278,34 +272,32 @@ export function TikrarSystem() {
 
     if (!fullUrl) {
       stopAutoPlay();
-      toast({ variant: "destructive", title: "Gagal memuat audio" });
       return;
     }
 
+    // Pre-fetch next
     if (vIndex + 1 < verses.length) {
-      getAudioUrl(vIndex + 1).then(url => {
-        nextAudioUrlRef.current = url;
-      });
+      getAudioUrl(vIndex + 1).then(url => { nextAudioUrlRef.current = url; });
     } else if (loopNum < 4) {
-      getAudioUrl(0).then(url => {
-        nextAudioUrlRef.current = url;
-      });
+      getAudioUrl(0).then(url => { nextAudioUrlRef.current = url; });
     }
 
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-    }
-
+    if (!audioRef.current) { audioRef.current = new Audio(); }
     audioRef.current.src = fullUrl;
-    audioRef.current.onended = () => {
-      playVerse(vIndex + 1, loopNum);
-    };
-    
-    audioRef.current.play().catch(err => {
-      console.error("Playback error:", err);
-      stopAutoPlay();
-    });
+    audioRef.current.onended = () => { playVerse(vIndex + 1, loopNum); };
+    audioRef.current.play().catch(() => stopAutoPlay());
   }, [verses, selectedReciterId, toast]);
+
+  const stopAutoPlay = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+    }
+    setIsAutoPlaying(false);
+    isAutoPlayingRef.current = false;
+    setPlayingVerseIndex(null);
+    nextAudioUrlRef.current = null;
+  };
 
   const startAutoPlay = async () => {
     if (!selectedReciterId) {
@@ -313,18 +305,15 @@ export function TikrarSystem() {
       return;
     }
     if (verses.length === 0) return;
-
     setIsAutoPlaying(true);
     isAutoPlayingRef.current = true;
     setCurrentLoop(0);
     nextAudioUrlRef.current = null;
-    
     playVerse(0, 0);
   };
 
   const handleRequestExam = async () => {
     if (!user || isRequestingExam) return;
-    
     setIsRequestingExam(true);
     try {
       await addDocumentNonBlocking(collection(db, "page_exams"), {
@@ -335,29 +324,15 @@ export function TikrarSystem() {
         status: "requested",
         requestedAt: serverTimestamp()
       });
-      
       const text = `Assalamu'alaikum Admin HI AQLI, saya ${userData?.username || user.displayName} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
       window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(text)}`, '_blank');
-      
-      toast({
-        title: "Permohonan Dikirim",
-        description: "Admin HI AQLI akan segera menjadwalkan ujian lisan Anda.",
-      });
+      toast({ title: "Permohonan Dikirim", description: "Admin HI AQLI akan segera menjadwalkan ujian lisan Anda." });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal mengajukan ujian" });
     } finally {
       setIsRequestingExam(false);
     }
   };
-
-  const selectReciter = (id: number) => {
-    setSelectedReciterId(id);
-    localStorage.setItem('aqli_reciter_id', id.toString());
-    setShowReciterDialog(false);
-  };
-
-  const currentJuzStartPage = useMemo(() => JUZ_PAGES[juz - 1] || 1, [juz]);
-  const nextJuzStartPage = juz < 30 ? JUZ_PAGES[juz] : 605;
 
   const isPrepTuntas = prepListenCount >= PREP_LISTEN_THRESHOLD && prepTranslationDone;
   const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
@@ -367,18 +342,15 @@ export function TikrarSystem() {
     let totalDone = 0;
     if (prepListenCount >= PREP_LISTEN_THRESHOLD) totalDone += 5;
     if (prepTranslationDone) totalDone += 5;
-
     [1, 2, 3, 4].forEach(id => {
       totalDone += (Math.min(blocks[id].a.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
       totalDone += (Math.min(blocks[id].b.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
       totalDone += (Math.min(blocks[id].combined.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
     });
-    
     const metaWeight = 5;
     Object.keys(metaCounts).forEach(k => {
       totalDone += (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * metaWeight;
     });
-
     const totalWeight = 10 + (4 * 30) + (6 * metaWeight);
     return Math.min(100, (totalDone / totalWeight) * 100);
   }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
@@ -394,9 +366,7 @@ export function TikrarSystem() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2">
-                <Badge className="bg-white text-[#800000] border-none text-[10px] font-bold uppercase tracking-widest">
-                  HI AQLI Tikrar System
-                </Badge>
+                <Badge className="bg-white text-[#800000] border-none text-[10px] font-bold uppercase tracking-widest">HI AQLI Tikrar System</Badge>
                 <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
               </div>
               <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 flex flex-col items-end">
@@ -414,11 +384,11 @@ export function TikrarSystem() {
       {/* CONTROLS */}
       <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md border-[#800000]/10">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(currentJuzStartPage, p - 1))} disabled={loading || page <= currentJuzStartPage} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
+          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(JUZ_PAGES[juz-1]||1, p - 1))} disabled={loading || page <= (JUZ_PAGES[juz-1]||1)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
             <ChevronLeft className="h-5 w-5 text-[#800000]" />
           </Button>
           <span className="text-xl font-black text-[#800000] w-12 text-center">{page}</span>
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(nextJuzStartPage - 1, p + 1))} disabled={loading || page >= nextJuzStartPage - 1} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
+          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(juz < 30 ? (JUZ_PAGES[juz]||605)-1 : 604, p + 1))} disabled={loading || page >= (juz < 30 ? (JUZ_PAGES[juz]||605)-1 : 604)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
             <ChevronRight className="h-5 w-5 text-[#800000]" />
           </Button>
         </div>
@@ -431,14 +401,9 @@ export function TikrarSystem() {
 
       {/* TAHAP PERSIAPAN */}
       <TooltipProvider delayDuration={0}>
-        <Card className={cn(
-          "border-2 transition-all shadow-md overflow-hidden",
-          isPrepTuntas ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-[#800000]/30 bg-white"
-        )}>
+        <Card className={cn("border-2 transition-all shadow-md overflow-hidden", isPrepTuntas ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-[#800000]/30 bg-white")}>
           <div className="bg-[#800000] py-2 px-4 border-b flex justify-between items-center">
-            <span className="text-[10px] font-black uppercase tracking-widest text-white">
-              Tahap 0: Persiapan (Prasyarat)
-            </span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-white">Tahap 0: Persiapan (Prasyarat)</span>
             {isPrepTuntas && <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4">SIAP MENGHAFAL</Badge>}
           </div>
           <CardContent className="p-6 space-y-8">
@@ -446,10 +411,7 @@ export function TikrarSystem() {
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                      prepListenCount >= 5 ? "bg-[#D4AF37] text-black" : "bg-white text-[#800000] border-2 border-[#800000]/20"
-                    )}>
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", prepListenCount >= 5 ? "bg-[#D4AF37] text-black" : "bg-white text-[#800000] border-2 border-[#800000]/20")}>
                       <Headphones className="w-5 h-5" />
                     </div>
                     <div>
@@ -469,7 +431,7 @@ export function TikrarSystem() {
                         <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
                         <div className="grid gap-2 py-4">
                           {RECITERS.map((r) => (
-                            <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className={cn("justify-start gap-3 font-bold", selectedReciterId === r.id && "bg-[#800000] text-white")}>
+                            <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => { setSelectedReciterId(r.id); localStorage.setItem('aqli_reciter_id', r.id.toString()); setShowReciterDialog(false); }} className={cn("justify-start gap-3 font-bold", selectedReciterId === r.id && "bg-[#800000] text-white")}>
                               {selectedReciterId === r.id && <Check className="w-4 h-4" />} {r.name}
                             </Button>
                           ))}
@@ -479,20 +441,8 @@ export function TikrarSystem() {
                   </div>
                 </div>
 
-                <Button 
-                  onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay}
-                  className={cn(
-                    "w-full h-14 font-black rounded-2xl border-2 transition-all gap-3 shadow-md uppercase tracking-widest",
-                    isAutoPlaying ? "bg-[#800000] text-white border-white hover:bg-[#800000]/90" : 
-                    prepListenCount >= 5 ? "bg-[#D4AF37] border-[#D4AF37] text-black hover:bg-[#D4AF37]/90" :
-                    "bg-[#800000] text-white border-transparent hover:bg-[#800000]/90"
-                  )}
-                >
-                  {isAutoPlaying ? (
-                    <><Pause className="w-6 h-6 fill-current" /> Berhenti Menyimak</>
-                  ) : (
-                    <><Play className="w-6 h-6 fill-current" /> {prepListenCount >= 5 ? 'Ulangi Simak' : 'Mulai Simak'}</>
-                  )}
+                <Button onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay} className={cn("w-full h-14 font-black rounded-2xl border-2 transition-all gap-3 shadow-md uppercase tracking-widest", isAutoPlaying ? "bg-[#800000] text-white border-white" : prepListenCount >= 5 ? "bg-[#D4AF37] border-[#D4AF37] text-black" : "bg-[#800000] text-white border-transparent")}>
+                  {isAutoPlaying ? <><Pause className="w-6 h-6 fill-current" /> Berhenti</> : <><Play className="w-6 h-6 fill-current" /> {prepListenCount >= 5 ? 'Ulangi Simak' : 'Mulai Simak'}</>}
                 </Button>
                 
                 {playingVerseIndex !== null && verses[playingVerseIndex] && (
@@ -502,25 +452,14 @@ export function TikrarSystem() {
                         <Badge className="bg-[#800000] text-white text-[9px] font-black uppercase tracking-[0.2em]">Siklus {currentLoop + 1}</Badge>
                         <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">Ayat {verses[playingVerseIndex].verse_key.split(':')[1]}</Badge>
                       </div>
-
                       <div className="flex flex-wrap justify-center gap-x-2 gap-y-4" dir="rtl">
                         {verses[playingVerseIndex].words.map((word, wIdx) => (
-                          <span 
-                            key={wIdx}
-                            style={{ fontSize: `${fontSize * 1.4}px`, lineHeight: 1.6 }} 
-                            className="font-arabic text-[#800000] font-bold"
-                          >
-                            {word.text_uthmani}
-                          </span>
+                          <span key={wIdx} style={{ fontSize: `${fontSize * 1.4}px`, lineHeight: 1.6 }} className="font-arabic text-[#800000] font-bold">{word.text_uthmani}</span>
                         ))}
                       </div>
-
                       <Separator className="bg-[#D4AF37]/20" />
-
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-[#D4AF37] uppercase tracking-widest mb-2">
-                          <Languages className="w-3 h-3" /> Arti Per Kata
-                        </div>
+                        <div className="flex items-center gap-2 text-[10px] font-black text-[#D4AF37] uppercase tracking-widest mb-2"><Languages className="w-3 h-3" /> Arti Per Kata</div>
                         <div className="flex flex-wrap justify-center gap-2">
                           {verses[playingVerseIndex].words.filter(w => w.text_uthmani).map((word, wIdx) => (
                             <div key={wIdx} className="bg-muted border-2 border-muted-foreground/10 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]">
@@ -530,14 +469,9 @@ export function TikrarSystem() {
                           ))}
                         </div>
                       </div>
-
                       <div className="bg-[#800000]/5 p-5 rounded-3xl border-l-4 border-[#800000]">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest mb-2">
-                          <BookOpen className="w-3 h-3" /> Terjemahan Kalimat
-                        </div>
-                        <p className="text-sm sm:text-base text-black leading-relaxed italic font-medium">
-                          "{verses[playingVerseIndex].translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || "Memuat terjemahan..."}"
-                        </p>
+                        <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest mb-2"><BookOpen className="w-3 h-3" /> Terjemahan Kalimat</div>
+                        <p className="text-sm sm:text-base text-black leading-relaxed italic font-medium">"{verses[playingVerseIndex].translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || "Memuat terjemahan..."}"</p>
                       </div>
                     </div>
                   </div>
@@ -546,10 +480,7 @@ export function TikrarSystem() {
 
               <div className="bg-muted p-6 rounded-3xl border-2 border-dashed border-muted-foreground/20 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                    prepTranslationDone ? "bg-[#D4AF37] text-black" : "bg-white text-[#800000] border-2 border-[#800000]/20"
-                  )}>
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", prepTranslationDone ? "bg-[#D4AF37] text-black" : "bg-white text-[#800000] border-2 border-[#800000]/20")}>
                     <Languages className="w-5 h-5" />
                   </div>
                   <div>
@@ -557,14 +488,7 @@ export function TikrarSystem() {
                     <p className="text-[10px] text-muted-foreground uppercase">Sudah tadabbur</p>
                   </div>
                 </div>
-                <Button 
-                  variant={prepTranslationDone ? "default" : "outline"}
-                  onClick={() => setPrepTranslationDone(!prepTranslationDone)}
-                  className={cn(
-                    "w-full h-12 font-black rounded-xl border-2 uppercase tracking-widest text-[10px]",
-                    prepTranslationDone ? "bg-[#D4AF37] hover:bg-[#D4AF37]/90 border-transparent text-black" : "border-[#800000] text-[#800000] hover:bg-[#800000]/5"
-                  )}
-                >
+                <Button variant={prepTranslationDone ? "default" : "outline"} onClick={() => setPrepTranslationDone(!prepTranslationDone)} className={cn("w-full h-12 font-black rounded-xl border-2 uppercase tracking-widest text-[10px]", prepTranslationDone ? "bg-[#D4AF37] hover:bg-[#D4AF37]/90 border-transparent text-black" : "border-[#800000] text-[#800000] hover:bg-[#800000]/5")}>
                   {prepTranslationDone ? "SUDAH DIPAHAMI" : "KONFIRMASI PEMAHAMAN"}
                 </Button>
               </div>
@@ -572,12 +496,12 @@ export function TikrarSystem() {
           </CardContent>
         </Card>
 
-        {/* ITQAN BLOKS */}
+        {/* ITQAN BLOCKS */}
         <div className="flex flex-col gap-10 mt-10">
           <div className="bg-[#800000] text-white p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 mx-1 shadow-lg">
             <Info className="w-5 h-5 shrink-0 mt-0.5" />
             <div className="text-[11px] leading-relaxed font-bold uppercase tracking-wide">
-              <strong>Aturan Itqan:</strong> Maqta wajib <strong>40x</strong>. Gabungan wajib <strong>10x</strong>. Selesaikan Persiapan sebelum lanjut.
+              <strong>Aturan Itqan:</strong> Maqta wajib <strong>40x</strong>. Gabungan wajib <strong>10x</strong>.
             </div>
           </div>
 
@@ -586,12 +510,7 @@ export function TikrarSystem() {
             <MaqtaCard id={2} page={page} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasTM(1)} onIncrement={setBlocks} fontSize={fontSize} letter="B" />
           </div>
 
-          <MetaStep 
-            label="GABUNG BLOK A & B" 
-            count={metaCounts['1_2']} 
-            isLocked={!isTuntasTM(1) || !isTuntasTM(2)} 
-            onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} 
-          />
+          <MetaStep label="GABUNG BLOK A & B" count={metaCounts['1_2']} isLocked={!isTuntasTM(1) || !isTuntasTM(2)} onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} />
 
           <MaqtaCard id={3} page={page} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} letter="C" />
 
@@ -608,22 +527,17 @@ export function TikrarSystem() {
             <MetaStep label="GABUNG SELURUH HALAMAN (A - D)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
           </div>
 
-          {/* TAHAP UJIAN */}
+          {/* EXAM STAGE */}
           <div className="flex flex-col gap-6 mt-4">
             <div className="flex items-center gap-2 px-1">
               <Sparkles className="w-5 h-5 text-[#D4AF37]" />
               <h4 className="text-xl font-black font-headline text-black uppercase tracking-widest">Tahap Ujian Halaman</h4>
             </div>
-
             {!isMetaTuntas('1_2_3_4') ? (
               <Card className="border-2 border-dashed bg-muted py-10">
                 <CardContent className="flex flex-col items-center justify-center text-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-dashed">
-                    <Lock className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[200px]">
-                    Selesaikan repetisi gabungan seluruh halaman untuk membuka ujian.
-                  </p>
+                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-dashed"><Lock className="w-6 h-6 text-muted-foreground" /></div>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[200px]">Selesaikan repetisi gabungan seluruh halaman untuk membuka ujian.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -631,44 +545,24 @@ export function TikrarSystem() {
                 <Card className="border-none bg-[#800000] text-white shadow-xl overflow-hidden group hover:scale-[1.02] transition-transform border-b-4 border-[#D4AF37]">
                   <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                     <div className="space-y-2">
-                      <div className="w-12 h-12 rounded-2xl bg-[#D4AF37] flex items-center justify-center mb-4">
-                        <ClipboardCheck className="w-6 h-6 text-[#800000]" />
-                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-[#D4AF37] flex items-center justify-center mb-4"><ClipboardCheck className="w-6 h-6 text-black" /></div>
                       <h5 className="text-lg font-black leading-tight uppercase">Simulasi Ujian Mandiri</h5>
-                      <p className="text-[11px] opacity-80 leading-relaxed">
-                        Uji pemahaman terjemahan dan sambung ayat halaman ini.
-                      </p>
+                      <p className="text-[11px] opacity-80 leading-relaxed">Uji pemahaman terjemahan dan sambung ayat halaman ini.</p>
                     </div>
                     <Button asChild className="bg-[#D4AF37] text-black font-black w-full rounded-xl hover:bg-[#D4AF37]/90 h-12 shadow-lg">
                       <Link href={`/tajweed/simulation?page=${page}`}>MULAI SIMULASI <ArrowRight className="ml-2 w-4 h-4" /></Link>
                     </Button>
                   </CardContent>
                 </Card>
-
-                <Card className={cn(
-                  "border-none shadow-xl overflow-hidden transition-all border-b-4",
-                  activeExam ? "bg-[#800000] text-white border-white" : "bg-white text-[#800000] hover:scale-[1.02] border-[#D4AF37] border-2"
-                )}>
+                <Card className={cn("border-none shadow-xl overflow-hidden transition-all border-b-4", activeExam ? "bg-[#800000] text-white border-white" : "bg-white text-[#800000] hover:scale-[1.02] border-[#D4AF37] border-2")}>
                   <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                     <div className="space-y-2">
-                      <div className="w-12 h-12 rounded-2xl bg-[#800000]/10 flex items-center justify-center mb-4">
-                        {activeExam ? <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" /> : <MessageSquare className="w-6 h-6 text-[#800000]" />}
-                      </div>
-                      <h5 className="text-lg font-black leading-tight uppercase">
-                        {activeExam ? "Ujian Diajukan" : "Ajukan Ujian Lisan"}
-                      </h5>
-                      <p className="text-[11px] opacity-80 leading-relaxed">
-                        {activeExam 
-                          ? `Status: ${activeExam.status.toUpperCase()}. Tunggu instruksi Admin.`
-                          : "Dapatkan sertifikasi Itqan melalui ujian lisan resmi."}
-                      </p>
+                      <div className="w-12 h-12 rounded-2xl bg-[#800000]/10 flex items-center justify-center mb-4">{activeExam ? <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" /> : <MessageSquare className="w-6 h-6 text-[#800000]" />}</div>
+                      <h5 className="text-lg font-black leading-tight uppercase">{activeExam ? "Ujian Diajukan" : "Ajukan Ujian Lisan"}</h5>
+                      <p className="text-[11px] opacity-80 leading-relaxed">{activeExam ? `Status: ${activeExam.status.toUpperCase()}. Tunggu instruksi Admin.` : "Dapatkan sertifikasi Itqan melalui ujian lisan resmi."}</p>
                     </div>
                     {!activeExam && (
-                      <Button 
-                        onClick={handleRequestExam} 
-                        disabled={isRequestingExam}
-                        className="bg-[#800000] text-white font-black w-full rounded-xl hover:bg-[#800000]/90 h-12 shadow-lg"
-                      >
+                      <Button onClick={handleRequestExam} disabled={isRequestingExam} className="bg-[#800000] text-white font-black w-full rounded-xl hover:bg-[#800000]/90 h-12 shadow-lg">
                         {isRequestingExam ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 w-4 h-4 fill-current text-[#D4AF37]" /> AJUKAN SEKARANG</>}
                       </Button>
                     )}
@@ -685,58 +579,32 @@ export function TikrarSystem() {
 
 function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, letter }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
-
   const tokens = useMemo(() => {
     const items: any[] = [];
     verses.forEach((v: any) => {
-      v.words.forEach((w: any, idx: number) => {
-        items.push({ type: 'word', data: w, verse_key: v.verse_key, word_idx: idx });
-      });
+      v.words.forEach((w: any, idx: number) => { items.push({ type: 'word', data: w, verse_key: v.verse_key, word_idx: idx }); });
       items.push({ type: 'marker', text: `(${v.verse_key.split(':')[1]})`, verse_key: v.verse_key });
     });
     return items;
   }, [verses]);
-
   const mid = Math.ceil(tokens.length / 2);
   const tokensA = tokens.slice(0, mid);
   const tokensB = tokens.slice(mid);
-
   const renderToken = (token: any, colorClass: string) => {
     if (token.type === 'word') {
       return (
         <Tooltip key={`${token.verse_key}-${token.word_idx}`}>
-          <TooltipTrigger asChild>
-            <span 
-              tabIndex={0}
-              style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} 
-              className={cn("font-arabic cursor-help hover:bg-[#D4AF37]/20 rounded px-0.5 outline-none transition-colors", colorClass)}
-            >
-              {token.data.text_uthmani}
-            </span>
-          </TooltipTrigger>
-          <TooltipPortal>
-            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-              <p className="text-xs font-bold">{token.data.translation?.text || "..."}</p>
-            </TooltipContent>
-          </TooltipPortal>
+          <TooltipTrigger asChild><span tabIndex={0} style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }} className={cn("font-arabic cursor-help hover:bg-[#D4AF37]/20 rounded px-0.5 outline-none transition-colors", colorClass)}>{token.data.text_uthmani}</span></TooltipTrigger>
+          <TooltipPortal><TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]"><p className="text-xs font-bold">{token.data.translation?.text || "..."}</p></TooltipContent></TooltipPortal>
         </Tooltip>
       );
     }
-    return <span key={`${token.verse_key}-m`} className="inline-flex items-center justify-center px-2 rounded-full border border-[#800000]/20 text-[10px] font-bold mx-1 bg-white translate-y-[-2px]">
-      {token.text}
-    </span>;
+    return <span key={`${token.verse_key}-m`} className="inline-flex items-center justify-center px-2 rounded-full border border-[#800000]/20 text-[10px] font-bold mx-1 bg-white translate-y-[-2px]">{token.text}</span>;
   };
-
   return (
-    <Card className={cn(
-      "border-2 transition-all shadow-md overflow-hidden flex flex-col h-full", 
-      isDoneG ? "border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10" : "border-[#800000]/20", 
-      isLocked && "opacity-50 grayscale select-none"
-    )}>
+    <Card className={cn("border-2 transition-all shadow-md overflow-hidden flex flex-col h-full", isDoneG ? "border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10" : "border-[#800000]/20", isLocked && "opacity-50 grayscale select-none")}>
       <div className="bg-[#800000] py-2 px-4 border-b flex justify-between items-center shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-widest text-white truncate">
-          BLOK {letter} ({page}{letter}) {isLocked && "• LOCK"}
-        </span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-white truncate">BLOK {letter} ({page}{letter}) {isLocked && "• LOCK"}</span>
         {isDoneG && <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
       </div>
       <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">
@@ -746,38 +614,12 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
             {tokensB.map(t => renderToken(t, "text-black"))}
           </div>
         </div>
-        
         <div className="grid grid-cols-2 gap-2 shrink-0">
-          <CounterBox 
-            label={`${page}${letter}-1`} 
-            count={state.a.count} 
-            isLocked={isLocked} 
-            onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} 
-            color="maroon" 
-            threshold={PASS_THRESHOLD} 
-          />
-          <CounterBox 
-            label={`${page}${letter}-2`} 
-            count={state.b.count} 
-            isLocked={isLocked || state.a.count < PASS_THRESHOLD} 
-            onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} 
-            color="darkMaroon" 
-            threshold={PASS_THRESHOLD} 
-          />
+          <CounterBox label={`${page}${letter}-1`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} color="maroon" threshold={PASS_THRESHOLD} />
+          <CounterBox label={`${page}${letter}-2`} count={state.b.count} isLocked={isLocked || state.a.count < PASS_THRESHOLD} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="darkMaroon" threshold={PASS_THRESHOLD} />
         </div>
-        
-        <Button 
-          onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} 
-          disabled={isLocked || state.b.count < PASS_THRESHOLD} 
-          className={cn(
-            "w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1 transition-all relative", 
-            isDoneG ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg" : "bg-[#800000] text-white hover:bg-[#800000]/90"
-          )}
-        >
-          <span className="text-[8px] flex items-center gap-1 leading-none opacity-80 mb-0.5">
-            {isLocked || state.b.count < PASS_THRESHOLD ? <Lock className="w-2 h-2" /> : null}
-            GABUNG {page}{letter}
-          </span>
+        <Button onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} disabled={isLocked || state.b.count < PASS_THRESHOLD} className={cn("w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1 transition-all relative", isDoneG ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg" : "bg-[#800000] text-white hover:bg-[#800000]/90")}>
+          <span className="text-[8px] flex items-center gap-1 leading-none opacity-80 mb-0.5">{isLocked || state.b.count < PASS_THRESHOLD ? <Lock className="w-2 h-2" /> : null} GABUNG {page}{letter}</span>
           <span className="text-sm leading-none">{state.combined.count} / {PASS_THRESHOLD}</span>
           {isDoneG && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-black" /></div>}
         </Button>
@@ -789,17 +631,9 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
 function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
   const isDone = count >= META_PASS_THRESHOLD;
   return (
-    <div className={cn(
-      "relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", 
-      isDone ? "bg-[#D4AF37]/10 border-[#D4AF37]" : "bg-white border-[#800000]/10", 
-      highlight && !isDone && "border-[#800000] bg-[#800000]/5", 
-      isLocked && "opacity-40 grayscale select-none"
-    )}>
+    <div className={cn("relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all", isDone ? "bg-[#D4AF37]/10 border-[#D4AF37]" : "bg-white border-[#800000]/10", highlight && !isDone && "border-[#800000] bg-[#800000]/5", isLocked && "opacity-40 grayscale select-none")}>
       <div className="flex items-center gap-3 overflow-hidden">
-        <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0", 
-          isDone ? "bg-[#D4AF37] text-black" : highlight ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
-        )}>
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0", isDone ? "bg-[#D4AF37] text-black" : highlight ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]")}>
           {isLocked ? <Lock className="w-4 h-4" /> : <Zap className="w-4 h-4 fill-current" />}
         </div>
         <div className="flex flex-col min-w-0">
@@ -811,20 +645,9 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
       <div className="flex items-center gap-3 shrink-0">
         <div className="text-right flex flex-col items-end">
           <span className="text-[10px] font-bold text-black uppercase">{count} / {TARGET_MAX}</span>
-          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden">
-            <div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} />
-          </div>
+          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX)*100}%` }} /></div>
         </div>
-        <Button 
-          onClick={onIncrement} 
-          disabled={isLocked || isDone} 
-          className={cn(
-            "h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all shadow-sm", 
-            isDone ? "bg-[#D4AF37] text-black border-none" : "bg-[#800000] text-white hover:bg-[#800000]/90"
-          )}
-        >
-          {isDone ? <CheckCircle2 className="w-4 h-4" /> : `+1`}
-        </Button>
+        <Button onClick={onIncrement} disabled={isLocked || isDone} className={cn("h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all shadow-sm", isDone ? "bg-[#D4AF37] text-black border-none" : "bg-[#800000] text-white hover:bg-[#800000]/90")}>{isDone ? <CheckCircle2 className="w-4 h-4" /> : `+1`}</Button>
       </div>
     </div>
   );
@@ -837,20 +660,9 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
     darkMaroon: isDone ? "bg-[#4d0000] text-white border-[#4d0000]" : "bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5"
   };
   return (
-    <div 
-      onClick={isLocked || isDone ? undefined : onInc} 
-      className={cn(
-        "h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1 shadow-sm", 
-        isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted shadow-none" : themes[color]
-      )}
-    >
-      <span className="text-[10px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none mb-1">
-        {label}
-      </span>
-      <div className="flex items-baseline gap-0.5 leading-none">
-        <span className="text-base font-black">{count}</span>
-        <span className="text-[8px] font-bold opacity-40">/ {threshold}</span>
-      </div>
+    <div onClick={isLocked || isDone ? undefined : onInc} className={cn("h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative px-1 shadow-sm", isLocked ? "opacity-50 grayscale cursor-not-allowed bg-muted shadow-none" : themes[color])}>
+      <span className="text-[10px] font-black uppercase opacity-60 tracking-wider truncate w-full text-center leading-none mb-1">{label}</span>
+      <div className="flex items-baseline gap-0.5 leading-none"><span className="text-base font-black">{count}</span><span className="text-[8px] font-bold opacity-40">/ {threshold}</span></div>
       {isLocked && <Lock className="absolute top-1 right-1 w-2 h-2 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="absolute top-1 right-1 w-3 h-3 text-current" />}
     </div>
