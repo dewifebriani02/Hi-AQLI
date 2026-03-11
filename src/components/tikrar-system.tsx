@@ -45,7 +45,8 @@ const LEVELS = [
   { id: 4, name: "Pemula", days: 28 },
 ];
 
-const TARGET_TM = 40;
+const TARGET_MAX = 40;
+const PASS_THRESHOLD = 5; // Minimal 5x to unlock next
 const TARGET_META = 3; 
 
 interface Word {
@@ -162,14 +163,14 @@ export function TikrarSystem() {
   const totalProgress = useMemo(() => {
     let totalDone = 0;
     Object.values(blocks).forEach((b: any) => {
-      totalDone += Math.min(b.a.count, TARGET_TM);
-      totalDone += Math.min(b.b.count, TARGET_TM);
-      totalDone += Math.min(b.combined.count, TARGET_TM);
+      totalDone += Math.min(b.a.count, PASS_THRESHOLD);
+      totalDone += Math.min(b.b.count, PASS_THRESHOLD);
+      totalDone += Math.min(b.combined.count, PASS_THRESHOLD);
     });
     Object.values(metaCombined).forEach((val) => {
-      totalDone += (val / TARGET_META) * TARGET_TM;
+      totalDone += (val / TARGET_META) * PASS_THRESHOLD;
     });
-    const totalTarget = (4 * 3 * TARGET_TM) + (3 * TARGET_TM);
+    const totalTarget = (4 * 3 * PASS_THRESHOLD) + (3 * PASS_THRESHOLD);
     return Math.min(100, (totalDone / totalTarget) * 100);
   }, [blocks, metaCombined]);
 
@@ -227,7 +228,7 @@ export function TikrarSystem() {
 
             <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold uppercase opacity-60">Progres 7 Langkah Tikrar</span>
+                <span className="text-[10px] font-bold uppercase opacity-60">Progres Penguasaan Halaman</span>
                 <span className="text-[10px] font-bold">{Math.round(totalProgress)}%</span>
               </div>
               <Progress value={totalProgress} className="h-1.5 bg-white/10 [&>div]:bg-white" />
@@ -271,37 +272,44 @@ export function TikrarSystem() {
           <div className="grid grid-cols-1 gap-8 pb-32">
             <div className="px-1 flex items-center gap-2">
               <Layers className="w-5 h-5 text-[#800000]" />
-              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 1: Penguasaan Blok (Langkah 1-4)</h4>
+              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 1: Penguasaan Blok (TM 1-4)</h4>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2, 3, 4].map(id => (
-                <BlockCard 
-                  key={id} 
-                  id={id} 
-                  state={blocks[id]} 
-                  verses={verses.slice((id-1) * Math.ceil(verses.length/4), id * Math.ceil(verses.length/4))}
-                  onIncrement={(bid: number, type: 'a' | 'b' | 'combined') => {
-                    const current = blocks[bid][type].count;
-                    if (current < TARGET_TM) {
-                      setBlocks((prev: any) => ({
-                        ...prev, 
-                        [bid]: {
-                          ...prev[bid], 
-                          [type]: { count: current + 1 }
-                        }
-                      }));
-                    }
-                  }} 
-                  target={TARGET_TM} 
-                  fontSize={fontSize}
-                />
-              ))}
+              {[1, 2, 3, 4].map(id => {
+                // Check if previous block's combined is done
+                const prevBlockDone = id === 1 || blocks[id-1].combined.count >= PASS_THRESHOLD;
+                
+                return (
+                  <BlockCard 
+                    key={id} 
+                    id={id} 
+                    isLocked={!prevBlockDone}
+                    state={blocks[id]} 
+                    verses={verses.slice((id-1) * Math.ceil(verses.length/4), id * Math.ceil(verses.length/4))}
+                    onIncrement={(bid: number, type: 'a' | 'b' | 'combined') => {
+                      const current = blocks[bid][type].count;
+                      if (current < TARGET_MAX) {
+                        setBlocks((prev: any) => ({
+                          ...prev, 
+                          [bid]: {
+                            ...prev[bid], 
+                            [type]: { count: current + 1 }
+                          }
+                        }));
+                      }
+                    }} 
+                    target={TARGET_MAX} 
+                    passThreshold={PASS_THRESHOLD}
+                    fontSize={fontSize}
+                  />
+                );
+              })}
             </div>
 
             <div className="px-1 flex items-center gap-2 mt-8">
               <Zap className="w-5 h-5 text-amber-500 fill-current" />
-              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 2: Repetisi Gabungan (Langkah 5-7)</h4>
+              <h4 className="font-black font-headline text-lg uppercase tracking-widest text-[#800000]">Tahap 2: Repetisi Gabungan</h4>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
@@ -309,15 +317,23 @@ export function TikrarSystem() {
                 const metaIdx = stepNum - 3;
                 const metaLabel = stepNum === 5 ? "Blok 1+2" : stepNum === 6 ? "Blok 1+2+3" : "Halaman Penuh (1-4)";
                 const count = metaCombined[metaIdx] || 0;
-                const isDone = count >= TARGET_META;
+                const isPassed = count >= TARGET_META;
+
+                // Step 5 depends on TM2 Combined >= 5
+                // Step 6 depends on Step 5 >= 3
+                // Step 7 depends on Step 6 >= 3
+                let stepLocked = false;
+                if (stepNum === 5) stepLocked = blocks[2].combined.count < PASS_THRESHOLD;
+                if (stepNum === 6) stepLocked = (metaCombined[2] || 0) < TARGET_META;
+                if (stepNum === 7) stepLocked = (metaCombined[3] || 0) < TARGET_META;
 
                 return (
-                  <Card key={stepNum} className={cn("border-2 transition-all shadow-md", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
+                  <Card key={stepNum} className={cn("border-2 transition-all shadow-md", isPassed ? "border-emerald-500 bg-emerald-50/10" : "border-muted", stepLocked && "opacity-50")}>
                     <CardContent className="p-6">
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                         <div className="flex items-center gap-4">
-                          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl", isDone ? "bg-emerald-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
-                            {stepNum}
+                          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl", isPassed ? "bg-emerald-500 text-white" : "bg-[#800000]/10 text-[#800000]")}>
+                            {stepLocked ? <Lock className="w-5 h-5" /> : stepNum}
                           </div>
                           <div className="flex flex-col">
                             <h5 className="font-black uppercase tracking-widest text-[#800000]">Langkah {stepNum}</h5>
@@ -335,14 +351,14 @@ export function TikrarSystem() {
                           </div>
                           <Button 
                             onClick={() => {
-                              if (count < TARGET_META) {
+                              if (!stepLocked && count < TARGET_META) {
                                 setMetaCombined(prev => ({ ...prev, [metaIdx]: count + 1 }));
                               }
                             }}
-                            disabled={isDone}
-                            className={cn("h-12 w-12 rounded-xl shrink-0 font-black border-2", isDone ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-[#800000] hover:bg-[#800000] hover:text-white")}
+                            disabled={isPassed || stepLocked}
+                            className={cn("h-12 w-12 rounded-xl shrink-0 font-black border-2", isPassed ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-[#800000] border-[#800000] hover:bg-[#800000] hover:text-white")}
                           >
-                            {isDone ? <CheckCircle2 /> : `+1`}
+                            {isPassed ? <CheckCircle2 /> : `+1`}
                           </Button>
                         </div>
                       </div>
@@ -358,8 +374,8 @@ export function TikrarSystem() {
   );
 }
 
-function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
-  const isDone = state.combined.count >= target;
+function BlockCard({ id, state, verses, onIncrement, target, passThreshold, fontSize, isLocked }: any) {
+  const isBlockTuntas = state.combined.count >= passThreshold;
   
   const tokens = useMemo(() => {
     const items: any[] = [];
@@ -412,11 +428,15 @@ function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
     }
   };
 
+  // Internal sequential locking
+  const isBLocked = state.a.count < passThreshold;
+  const isCombinedLocked = state.b.count < passThreshold;
+
   return (
-    <Card className={cn("border-2 transition-all shadow-lg overflow-hidden", isDone ? "border-emerald-500 bg-emerald-50/10" : "border-muted")}>
+    <Card className={cn("border-2 transition-all shadow-lg overflow-hidden", isBlockTuntas ? "border-emerald-500 bg-emerald-50/10" : "border-muted", isLocked && "opacity-50")}>
       <div className="bg-[#800000]/5 py-3 px-6 border-b flex flex-row items-center justify-between">
-        <h4 className="text-sm font-black uppercase tracking-widest text-[#800000]">Blok {id}</h4>
-        {isDone && <Badge className="bg-emerald-500 text-white font-black text-[10px] tracking-widest">DONE</Badge>}
+        <h4 className="text-sm font-black uppercase tracking-widest text-[#800000]">Blok {id} {isLocked && <Lock className="inline w-3 h-3 ml-1" />}</h4>
+        {isBlockTuntas && <Badge className="bg-emerald-500 text-white font-black text-[10px] tracking-widest">TUNTAS</Badge>}
       </div>
       <CardContent className="p-6 space-y-6">
         <div className="bg-[#fffcf5] p-5 rounded-2xl border-2 border-[#800000]/10 max-h-[300px] overflow-y-auto no-scrollbar" dir="rtl">
@@ -428,60 +448,75 @@ function BlockCard({ id, state, verses, onIncrement, target, fontSize }: any) {
         
         <div className="grid grid-cols-2 gap-4">
           <CounterBox 
-            label={`${id}a`} 
+            label={`TM${id}a`} 
             count={state.a.count} 
             target={target} 
+            isLocked={isLocked}
+            passThreshold={passThreshold}
             onClick={() => onIncrement(id, 'a')} 
             colorClass="rose"
           />
           <CounterBox 
-            label={`${id}b`} 
+            label={`TM${id}b`} 
             count={state.b.count} 
             target={target} 
+            isLocked={isLocked || isBLocked}
+            passThreshold={passThreshold}
             onClick={() => onIncrement(id, 'b')} 
             colorClass="emerald"
           />
         </div>
         
-        <Button 
-          onClick={() => onIncrement(id, 'combined')}
-          disabled={state.a.count < target || state.b.count < target || isDone}
-          className={cn(
-            "w-full h-14 rounded-xl font-black text-lg transition-all shadow-md", 
-            isDone ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90 shadow-[#800000]/20"
+        <div className="space-y-2">
+          <Button 
+            onClick={() => onIncrement(id, 'combined')}
+            disabled={isLocked || isCombinedLocked}
+            className={cn(
+              "w-full h-14 rounded-xl font-black text-lg transition-all shadow-md", 
+              state.combined.count >= target ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#800000] hover:bg-[#800000]/90 shadow-[#800000]/20",
+              (isLocked || isCombinedLocked) && "opacity-50"
+            )}
+          >
+            {isLocked || isCombinedLocked ? <Lock className="mr-2" /> : null}
+            {state.combined.count >= target ? <><CheckCircle2 className="mr-2" /> TUNTAS</> : `TM${id} GABUNGAN: ${state.combined.count} / ${target}`}
+          </Button>
+          {isCombinedLocked && !isLocked && (
+            <p className="text-[9px] text-center text-amber-700 font-bold uppercase tracking-wider animate-pulse">
+              Selesaikan TM{id}a & TM{id}b (min. {passThreshold}x) untuk buka Gabungan
+            </p>
           )}
-        >
-          {isDone ? <><CheckCircle2 className="mr-2" /> TUNTAS</> : `GABUNGAN BLOK ${id}: ${state.combined.count} / ${target}`}
-        </Button>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function CounterBox({ label, count, target, onClick, colorClass }: any) {
-  const isDone = count >= target;
+function CounterBox({ label, count, target, onClick, colorClass, isLocked, passThreshold }: any) {
+  const isTuntas = count >= passThreshold;
   
   const themes = {
-    rose: isDone ? "bg-rose-50 border-rose-500 text-rose-700" : "bg-rose-50/30 border-rose-100 hover:border-rose-300 hover:bg-rose-50/50",
-    emerald: isDone ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-emerald-50/30 border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50/50",
+    rose: isTuntas ? "bg-rose-50 border-rose-500 text-rose-700" : "bg-rose-50/30 border-rose-100 hover:border-rose-300 hover:bg-rose-50/50",
+    emerald: isTuntas ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-emerald-50/30 border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50/50",
   };
 
   const theme = colorClass === "rose" ? themes.rose : themes.emerald;
 
   return (
     <div 
-      onClick={isDone ? undefined : onClick}
+      onClick={isLocked ? undefined : onClick}
       className={cn(
-        "h-24 rounded-2xl border-2 flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 select-none", 
-        theme
+        "h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all select-none relative", 
+        isLocked ? "bg-muted/20 border-muted opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95",
+        !isLocked && theme
       )}
     >
-      <span className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">Bag. {label}</span>
+      <span className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">{label}</span>
       <div className="flex items-baseline gap-1">
         <span className="text-3xl font-black">{count}</span>
         <span className="text-[10px] font-bold opacity-40">/ {target}</span>
       </div>
-      {isDone && <CheckCircle2 className="w-4 h-4 mt-1" />}
+      {isTuntas && <CheckCircle2 className="w-4 h-4 mt-1 text-current" />}
+      {isLocked && <Lock className="absolute top-2 right-2 w-3 h-3 text-muted-foreground" />}
     </div>
   );
 }
