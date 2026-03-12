@@ -45,8 +45,9 @@ service cloud.firestore {
     }
 
     match /donations/{donationId} {
-      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      // Izinkan akses list/get untuk admin bootstrap secara eksplisit untuk menghindari error awal
+      allow list: if isAdmin() || (isSignedIn() && request.auth.token.email == "dewifebriani@gmail.com") || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && request.auth.token.email == "dewifebriani@gmail.com") || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
