@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/supabase/server';
+import { supabase } from '@/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,8 +9,6 @@ export async function POST(request: NextRequest) {
     if (!userId || !quizId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-
-    const supabase = createClient();
 
     // Insert quiz attempt ke tabel quiz_attempts yang sudah ada
     // quizId format: "irab_1:1" untuk membedakan dari quiz tilawah
