@@ -36,12 +36,10 @@ import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user } = useUser();
-  const [tikrarStats, setTikrarStats] = useState<{ day: number, total: number, percent: number } | null>(null);
+  const [streakDays, setStreakDays] = useState(0);
   const [nextPrayer, setNextPrayer] = useState<{ name: string, time: string, location?: string } | null>(null);
 
   const { data: userData } = useDoc("users", user?.id);
-  const isPaid = userData?.isTikrarPaid;
-  const paidJuz = userData?.paidJuz;
   const points = userData?.points || 0;
 
   // Mutaba'ah Progress Calculation
@@ -51,6 +49,15 @@ export default function DashboardPage() {
       { column: 'user_id', operator: '==', value: user?.id },
       { column: 'date', operator: '==', value: todayStr }
     ]
+  });
+
+  // Get quiz attempts for streak and repetisi calculation
+  const { data: quizAttempts } = useCollection("quiz_attempts", {
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'isPassed', operator: '==', value: true }
+    ],
+    orderBy: { column: 'created_at', ascending: false }
   });
 
   // Independent counts
@@ -126,26 +133,54 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Hitung Streak Belajar dan Repetisi dari quiz_attempts
   useEffect(() => {
-    if (isPaid) {
-      const startPage = paidJuz ? (paidJuz === 1 ? 1 : (paidJuz - 1) * 20 + 2) : 1;
-      const saved = localStorage.getItem(`tikrar_progress_p${startPage}`);
-      const savedLevel = localStorage.getItem('tikrar_level');
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.startDate) {
-          const start = new Date(data.startDate);
-          const diff = Math.ceil(Math.abs(new Date().getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-          const totalDays = [0, 7, 14, 21, 28][parseInt(savedLevel || "3")] || 21;
-          let done = 0;
-          if (data.blocks) Object.values(data.blocks).forEach((b: any) => { if (b.combined?.count >= 40) done++; });
-          setTikrarStats({ day: diff, total: totalDays, percent: (done / 4) * 100 });
-        }
+    if (!quizAttempts || quizAttempts.length === 0) {
+      setStreakDays(0);
+      return;
+    }
+
+    // Hitung streak hari berturut-turut dengan aktivitas
+    const streakMap = new Map<string, boolean>();
+    quizAttempts.forEach((attempt: any) => {
+      if (attempt.created_at) {
+        const date = new Date(attempt.created_at).toISOString().split('T')[0];
+        streakMap.set(date, true);
+      }
+    });
+
+    // Hitung streak dari hari ini ke belakang
+    let streak = 0;
+    let checkDate = new Date();
+
+    // Cek apakah hari ini ada aktivitas
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0];
+      if (streakMap.has(dateStr)) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
       } else {
-        setTikrarStats({ day: 1, total: 21, percent: 0 });
+        // Jika hari ini tidak ada aktivitas, cek kemarin (streak bisa continue)
+        if (streak === 0) {
+          checkDate.setDate(checkDate.getDate() - 1);
+          // Coba sampai 7 hari ke belakang
+          if (streak > -7) continue;
+        }
+        break;
       }
     }
-  }, [isPaid, paidJuz]);
+
+    setStreakDays(streak);
+  }, [quizAttempts]);
+
+  // Hitung repetisi hari ini
+  const todayQuizCount = quizAttempts?.filter((a: any) => {
+    if (!a.created_at) return false;
+    const attemptDate = new Date(a.created_at).toISOString().split('T')[0];
+    return attemptDate === todayStr && a.isPassed;
+  }).length || 0;
+
+  const repetisiPercent = Math.min(Math.round((todayQuizCount / 5) * 100), 100);
 
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
@@ -208,7 +243,7 @@ export default function DashboardPage() {
               <Badge variant="outline" className="text-[7px] sm:text-[8px] font-black border-orange-200 text-orange-700 bg-orange-50 px-1 h-3 sm:h-4">ISTIQOMAH</Badge>
             </div>
             <div>
-              <p className="text-xl sm:text-2xl font-black text-black">{tikrarStats?.day || 0} Hari</p>
+              <p className="text-xl sm:text-2xl font-black text-black">{streakDays} Hari</p>
               <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Streak Belajar</p>
             </div>
           </CardContent>
@@ -221,8 +256,8 @@ export default function DashboardPage() {
               <Badge variant="outline" className="text-[7px] sm:text-[8px] font-black border-amber-200 text-amber-700 bg-amber-50 px-1 h-3 sm:h-4">TARGET</Badge>
             </div>
             <div>
-              <p className="text-xl sm:text-2xl font-black text-black">{tikrarStats ? Math.round(tikrarStats.percent) : 0}%</p>
-              <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Repetisi Hari Ini</p>
+              <p className="text-xl sm:text-2xl font-black text-black">{repetisiPercent}%</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Target Hari Ini</p>
             </div>
           </CardContent>
         </Card>

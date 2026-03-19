@@ -182,6 +182,31 @@ export default function NgajiPage() {
         </p>
       </div>
 
+      {/* Asisten Tilawah AI - TERKUNCI (Masih Pengembangan) - DI ATAS CARI PROGRAM */}
+      <div className="px-1">
+        <Card className="overflow-hidden border-2 border-dashed border-[#D4AF37]/30 bg-gradient-to-r from-[#D4AF37]/10 to-transparent">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/10 flex items-center justify-center relative shrink-0">
+                <Bot className="w-6 h-6 text-[#D4AF37]" />
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
+                  <Lock className="w-3 h-3 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-black text-sm uppercase leading-tight text-[#800000]">Asisten Tilawah AI</h4>
+                  <Badge variant="outline" className="text-[7px] font-black border-amber-300 text-amber-600 bg-amber-50 px-1">SEGERA</Badge>
+                </div>
+                <p className="text-[9px] text-muted-foreground">
+                  Uji kelancaran bacaan makhraj dengan bimbingan AI interaktif. Deteksi kesalahan tajwid real-time.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -245,39 +270,6 @@ export default function NgajiPage() {
           )}
         </div>
       </Tabs>
-
-      {/* Asisten Tilawah AI - TERKUNCI (Masih Pengembangan) */}
-      <div className="space-y-4 px-1 mt-4">
-        <h2 className="text-lg font-bold font-headline flex items-center gap-2">
-          <Mic className="w-5 h-5 text-[#800000]" /> Fitur Premium
-        </h2>
-        <Card className="overflow-hidden border-2 border-dashed border-[#D4AF37]/30 bg-muted/30">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/10 flex items-center justify-center relative shrink-0">
-                <Bot className="w-7 h-7 text-[#D4AF37]" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
-                  <Lock className="w-3.5 h-3.5 text-white" />
-                </div>
-              </div>
-              <div className="flex-1 min-w-0 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="font-black text-base sm:text-lg uppercase leading-tight text-[#800000]">Asisten Tilawah AI</h4>
-                  <Badge variant="outline" className="text-[8px] font-black border-amber-300 text-amber-600 bg-amber-50">SEGERA HADIR</Badge>
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Uji kelancaran bacaan makhraj Anda dengan bimbingan AI interaktif. Deteksi kesalahan tajwid secara real-time.
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-dashed border-[#D4AF37]/20">
-              <p className="text-[9px] font-bold text-center text-muted-foreground italic">
-                Fitur ini sedang dalam tahap pengembangan. Nantikan pembaruan selanjutnya!
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

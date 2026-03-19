@@ -25,20 +25,21 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc;
   const points = userData?.points || 0;
 
-  // BottomNav muncul untuk semua user di mobile & tablet (sampai lg breakpoint)
-  // Di desktop (lg+): user biasa pakai bottom nav, admin pakai sidebar saja
+  // Sidebar muncul untuk admin di tablet (md+) ke atas
+  // BottomNav muncul untuk user biasa di semua device
+  // Untuk admin: BottomNav hanya di mobile (sm), sidebar di md+
   const showBottomNav = !hasAdminAccess;
 
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
-        {/* Sidebar hanya muncul untuk admin */}
+        {/* Sidebar hanya muncul untuk admin di md ke atas */}
         {hasAdminAccess && <AppSidebar />}
         <SidebarInset className="w-full flex flex-col">
-          {/* Padding bottom untuk BottomNav (di mobile & tablet) */}
-          <div className="flex flex-col flex-1 w-full pb-20 lg:pb-0">
+          {/* Padding bottom untuk BottomNav */}
+          <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
             <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4">
-              {hasAdminAccess && <SidebarTrigger className="lg:hidden" />}
+              {hasAdminAccess && <SidebarTrigger className="hidden xl:flex text-white hover:bg-white/10" />}
               <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight uppercase text-[#800000]">
                 Hi AQLI
               </div>
@@ -76,11 +77,11 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarInset>
       </div>
-      {/* BottomNav: user biasa di semua device, admin hanya di mobile & tablet */}
+      {/* BottomNav: user biasa di semua device, admin hanya di mobile */}
       {showBottomNav ? (
         <BottomNav />
       ) : (
-        <div className="lg:hidden"><BottomNav /></div>
+        <div className="md:hidden"><BottomNav /></div>
       )}
       <Toaster />
     </SidebarProvider>
