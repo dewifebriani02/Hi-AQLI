@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npm run:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(dir \"D:\\\\Hi-AQLI\\\\public\")",
+      "Bash(find D:/Hi-AQLI -iname *logoaqli* -o -iname *splash*)",
+      "Bash(find D:/Hi-AQLI/src -type f \\\\\\(-name *.png -o -name *.jpg -o -name *.jpeg -o -name *.svg \\\\\\))"
     ]
   }
 }

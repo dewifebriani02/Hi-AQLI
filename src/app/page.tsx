@@ -25,8 +25,12 @@ import {
   Activity,
   Shield,
   Book,
+  BookOpen,
   Lock,
   Mic,
+  PiggyBank,
+  Plane,
+  UtensilsCrossed,
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser } from "@/supabase";
@@ -269,100 +273,143 @@ export default function DashboardPage() {
           <LayoutGrid className="w-5 h-5 text-[#800000]" /> Layanan Utama
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* Hi Mutaba'ah - Large Card */}
-          <Link href="/mutabaah" className="block group col-span-2">
+          {/* Hi Mufradat - Large Card */}
+          <Link href="/mufradat" className="block group col-span-2">
             <Card className="overflow-hidden border-none shadow-md bg-white h-36 sm:h-40 border-l-4 border-amber-500 hover:shadow-lg transition-shadow">
               <CardContent className="p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between w-full">
-                  <div className="p-2 rounded-lg bg-amber-50 w-fit"><Sparkles className="w-5 h-5 text-amber-500 fill-current" /></div>
-                  <Badge className="bg-amber-100 text-amber-700 border-none text-[8px] font-black h-fit">{mutabaahPercent}%</Badge>
+                  <div className="p-2 rounded-lg bg-amber-50 w-fit"><Activity className="w-5 h-5 text-amber-500 fill-current" /></div>
+                  <Badge className="bg-amber-100 text-amber-700 border-none text-[8px] font-black h-fit">POPULER</Badge>
                 </div>
                 <div>
-                  <h4 className="font-black text-sm text-black uppercase">Hi Mutaba'ah</h4>
-                  <p className="text-[9px] text-muted-foreground font-bold italic">Sunnah Harian Tracker</p>
-                  <Progress value={mutabaahPercent} className="h-1 mt-2 bg-amber-100 [&>div]:bg-amber-500" />
+                  <h4 className="font-black text-sm text-black uppercase">Hi Mufradat</h4>
+                  <p className="text-[9px] text-muted-foreground font-bold italic">Mushaf & Terjemahan</p>
+                  <Progress value={75} className="h-1 mt-2 bg-amber-100 [&>div]:bg-amber-500" />
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          {/* Hi Muhasabah - Large Card */}
-          <Link href="/muhasabah" className="block group col-span-2">
-            <Card className="overflow-hidden border-none shadow-md bg-white h-36 sm:h-40 border-l-4 border-[#800000] hover:shadow-lg transition-shadow">
+          {/* Hi Hafal - Large Card */}
+          <Link href="/hafal" className="block group col-span-2">
+            <Card className="overflow-hidden border-none shadow-md bg-white h-36 sm:h-40 border-l-4 border-[#D4AF37] hover:shadow-lg transition-shadow">
               <CardContent className="p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between w-full">
-                  <div className="p-2 rounded-lg bg-[#800000]/5 w-fit"><Shield className="w-5 h-5 text-[#800000]" /></div>
-                  <Badge className="bg-[#800000]/10 text-[#800000] border-none text-[8px] font-black h-fit">{muhasabahPercent}%</Badge>
+                  <div className="p-2 rounded-lg bg-amber-50 w-fit"><Award className="w-5 h-5 text-[#D4AF37]" /></div>
+                  <Badge className="bg-amber-100 text-amber-700 border-none text-[8px] font-black h-fit">FAVORIT</Badge>
                 </div>
                 <div>
-                  <h4 className="font-black text-sm text-[#800000] uppercase">Hi Muhasabah</h4>
-                  <p className="text-[9px] text-muted-foreground font-bold italic">Evaluasi Diri Harian</p>
-                  <Progress value={muhasabahPercent} className="h-1 mt-2 bg-[#800000]/10 [&>div]:bg-[#800000]" />
+                  <h4 className="font-black text-sm text-black uppercase">Hi Hafal</h4>
+                  <p className="text-[9px] text-muted-foreground font-bold italic">Hafalan Ayat & Surat</p>
+                  <Progress value={60} className="h-1 mt-2 bg-amber-100 [&>div]:bg-[#D4AF37]" />
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          {/* Small Cards */}
-          <Link href="/mufradat" className="block group">
+          {/* Hi Ngaji - Warna Menonjol */}
+          <Link href="/ngaji" className="block group col-span-2">
+            <Card className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow h-28">
+              <div className="bg-gradient-to-r from-[#D4AF37] via-amber-400 to-[#D4AF37] p-[1px]">
+                <CardContent className="bg-gradient-to-r from-[#800000] to-[#a32828] p-3 flex items-center justify-between h-full gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[#D4AF37]/20 w-fit"><BookOpen className="w-5 h-5 text-[#D4AF37]" /></div>
+                    <div>
+                      <h4 className="font-black text-sm text-white uppercase">Hi Ngaji</h4>
+                      <p className="text-[9px] text-amber-200 font-bold italic">Belajar Tajwid</p>
+                    </div>
+                  </div>
+                  <Sparkles className="w-5 h-5 text-[#D4AF37] animate-pulse" />
+                </CardContent>
+              </div>
+            </Card>
+          </Link>
+
+          {/* Hi Mutaba'ah */}
+          <Link href="/mutabaah" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-amber-500 hover:shadow-md transition-shadow">
               <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Activity className="w-4 h-4 text-amber-500" /></div>
+                <div className="flex items-center justify-between">
+                  <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Sparkles className="w-4 h-4 text-amber-500 fill-current" /></div>
+                  <Badge className="bg-amber-100 text-amber-700 border-none text-[7px] font-black h-fit">{mutabaahPercent}%</Badge>
+                </div>
                 <div>
-                  <h4 className="font-black text-xs text-black uppercase">Hi Mufradat</h4>
-                  <p className="text-[8px] text-muted-foreground">Mushaf & Terjemahan</p>
+                  <h4 className="font-black text-xs text-black uppercase">Hi Mutaba'ah</h4>
+                  <p className="text-[8px] text-muted-foreground">Sunnah Harian</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link href="/irab" className="block group">
+          {/* Hi Berbagi - Warna Menonjol */}
+          <Link href="/berbagi" className="block group col-span-2">
+            <Card className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow h-28">
+              <div className="bg-gradient-to-r from-[#D4AF37] via-amber-400 to-[#D4AF37] p-[1px]">
+                <CardContent className="bg-gradient-to-r from-[#800000] to-[#a32828] p-3 flex items-center justify-between h-full gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[#D4AF37]/20 w-fit"><HeartHandshake className="w-5 h-5 text-[#D4AF37]" /></div>
+                    <div>
+                      <h4 className="font-black text-sm text-white uppercase">Hi Berbagi</h4>
+                      <p className="text-[9px] text-amber-200 font-bold italic">Donasi & Sedekah</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-[#D4AF37]" />
+                </CardContent>
+              </div>
+            </Card>
+          </Link>
+
+          {/* Hi Muhasabah */}
+          <Link href="/muhasabah" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#800000] hover:shadow-md transition-shadow">
               <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><Book className="w-4 h-4 text-[#800000]" /></div>
+                <div className="flex items-center justify-between">
+                  <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><Shield className="w-4 h-4 text-[#800000]" /></div>
+                  <Badge className="bg-[#800000]/10 text-[#800000] border-none text-[7px] font-black h-fit">{muhasabahPercent}%</Badge>
+                </div>
                 <div>
-                  <h4 className="font-black text-xs text-[#800000] uppercase">Hi I'rab</h4>
-                  <p className="text-[8px] text-muted-foreground">Bedah Nahwu</p>
+                  <h4 className="font-black text-xs text-[#800000] uppercase">Hi Muhasabah</h4>
+                  <p className="text-[8px] text-muted-foreground">Evaluasi Diri</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link href="/hafal" className="block group">
+          {/* Hi Nabung */}
+          <Link href="/nabung" className="block group">
+            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-amber-500 hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex flex-col justify-between h-full">
+                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><PiggyBank className="w-4 h-4 text-amber-500" /></div>
+                <div>
+                  <h4 className="font-black text-xs text-black uppercase">Hi Nabung</h4>
+                  <p className="text-[8px] text-muted-foreground">Tabungan Umroh</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Hi Umroh */}
+          <Link href="/umroh" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#D4AF37] hover:shadow-md transition-shadow">
               <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Award className="w-4 h-4 text-[#D4AF37]" /></div>
+                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Plane className="w-4 h-4 text-[#D4AF37]" /></div>
                 <div>
-                  <h4 className="font-black text-xs text-black uppercase">Hi Hafal</h4>
-                  <p className="text-[8px] text-muted-foreground">Hafalan Ayat</p>
+                  <h4 className="font-black text-xs text-black uppercase">Hi Umroh</h4>
+                  <p className="text-[8px] text-muted-foreground">Persiapan Ibadah</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link href="/ngaji" className="block group">
+          {/* Hi Masak */}
+          <Link href="/masak" className="block group">
             <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#800000] hover:shadow-md transition-shadow">
               <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><LayoutGrid className="w-4 h-4 text-[#800000]" /></div>
+                <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><UtensilsCrossed className="w-4 h-4 text-[#800000]" /></div>
                 <div>
-                  <h4 className="font-black text-xs text-[#800000] uppercase">Hi Ngaji</h4>
-                  <p className="text-[8px] text-muted-foreground">Belajar Tajwid</p>
+                  <h4 className="font-black text-xs text-[#800000] uppercase">Hi Masak</h4>
+                  <p className="text-[8px] text-muted-foreground">Resep & Tips</p>
                 </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/berbagi" className="block group col-span-2">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-24 border-l-4 border-[#D4AF37] hover:shadow-md transition-shadow">
-              <CardContent className="p-3 flex items-center justify-between h-full gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-50 w-fit"><HeartHandshake className="w-5 h-5 text-[#D4AF37]" /></div>
-                  <div>
-                    <h4 className="font-black text-sm text-black uppercase">Hi Berbagi</h4>
-                    <p className="text-[9px] text-muted-foreground">Donasi & Sedekah</p>
-                  </div>
-                </div>
-                <ArrowRight className="w-5 h-5 text-[#D4AF37]" />
               </CardContent>
             </Card>
           </Link>

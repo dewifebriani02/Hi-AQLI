@@ -8,18 +8,25 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Pendamping Anda menuju keunggulan Al-Qur\'an.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
+    background_color: '#800000',
     theme_color: '#800000',
     icons: [
       {
-        src: 'https://picsum.photos/seed/aqli-icon/192/192',
+        src: '/logoaqli.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'maskable',
+        purpose: 'any maskable',
       },
       {
-        src: 'https://picsum.photos/seed/aqli-icon/512/512',
+        src: '/logoaqli.png',
         sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
+    screenshots: [
+      {
+        src: '/splash-screen.png',
+        sizes: '540x720',
         type: 'image/png',
       },
     ],

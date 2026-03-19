@@ -10,10 +10,15 @@ import { BottomNav } from '@/components/bottom-nav';
 import { SupabaseProvider, useUser } from '@/supabase';
 import { useDoc, useCollection } from '@/supabase/db';
 import { Trophy, Zap, Star } from 'lucide-react';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SplashScreen } from '@/components/splash-screen';
+import { Logo } from '@/components/logo';
+
+// Splash screen state management
+let splashShown = false;
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -30,8 +35,31 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // Untuk admin: BottomNav hanya di mobile (sm), sidebar di md+
   const showBottomNav = !hasAdminAccess;
 
+  // Splash screen logic - only show once per session
+  const [showSplash, setShowSplash] = useState(false);
+
+  useEffect(() => {
+    // Check if splash has been shown in this session
+    if (!splashShown && typeof window !== 'undefined') {
+      const sessionKey = 'aqli_splash_shown';
+      const hasShown = sessionStorage.getItem(sessionKey);
+
+      if (!hasShown) {
+        setShowSplash(true);
+        sessionStorage.setItem(sessionKey, 'true');
+        splashShown = true;
+      }
+    }
+  }, []);
+
   return (
-    <SidebarProvider defaultOpen={false}>
+    <>
+      <SplashScreen
+        show={showSplash}
+        onComplete={() => setShowSplash(false)}
+        minDisplayTime={2000}
+      />
+      <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
         {/* Sidebar hanya muncul untuk admin di md ke atas */}
         {hasAdminAccess && <AppSidebar />}
@@ -40,8 +68,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
             <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4">
               {hasAdminAccess && <SidebarTrigger className="md:flex text-white hover:bg-white/10" />}
-              <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight uppercase text-[#800000]">
-                Hi AQLI
+              <div className="flex-1 flex justify-center">
+                <Logo showText={true} className="scale-75" textClassName="text-lg" imageSize={28} />
               </div>
               <div className="flex items-center gap-3">
                 {user && (
@@ -85,6 +113,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       )}
       <Toaster />
     </SidebarProvider>
+    </>
   );
 }
 
