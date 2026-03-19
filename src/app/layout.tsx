@@ -39,7 +39,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           {/* Padding bottom untuk BottomNav */}
           <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
             <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4">
-              {hasAdminAccess && <SidebarTrigger className="hidden xl:flex text-white hover:bg-white/10" />}
+              {hasAdminAccess && <SidebarTrigger className="md:flex text-white hover:bg-white/10" />}
               <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight uppercase text-[#800000]">
                 Hi AQLI
               </div>
