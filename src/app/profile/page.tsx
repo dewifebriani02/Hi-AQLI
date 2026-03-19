@@ -48,8 +48,9 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isBootstrapping, setIsBootstrapping] = useState(false);
 
-  // Check Admin Role
+  // Check Admin Roles
   const { data: adminRole, isLoading: isAdminLoading } = useDoc("roles_admin", user?.id);
+  const { data: superAdminRole } = useDoc("roles_superadmin", user?.id);
 
   // Fetch real donation history
   const donationOptions = useMemo(() => ({
@@ -126,9 +127,14 @@ export default function ProfilePage() {
           </Avatar>
           <div className="pt-14 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-2xl font-bold font-headline">{user.user_metadata?.full_name || 'Sahabat AQLI'}</CardTitle>
-                {adminRole && (
+                {superAdminRole && (
+                  <Badge className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-[10px] gap-1">
+                    <ShieldCheck className="w-3 h-3" /> SUPER ADMIN
+                  </Badge>
+                )}
+                {adminRole && !superAdminRole && (
                   <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] gap-1">
                     <ShieldCheck className="w-3 h-3" /> ADMIN
                   </Badge>
@@ -151,19 +157,34 @@ export default function ProfilePage() {
         </CardHeader>
 
         <CardContent className="px-6 sm:px-8 pt-4">
-          {adminRole && (
-            <Card className="mb-8 border-2 border-amber-200 bg-amber-50 p-4">
+          {(adminRole || superAdminRole) && (
+            <Card className={cn(
+              "mb-8 border-2 p-4",
+              superAdminRole ? "border-[#800000] bg-[#800000]/10" : "border-amber-200 bg-amber-50"
+            )}>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-lg",
+                    superAdminRole ? "bg-[#800000]" : "bg-amber-500"
+                  )}>
                     <ShieldCheck className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-amber-900 uppercase">Panel Admin Aktif</h4>
-                    <p className="text-[10px] text-amber-700 font-medium">Anda memiliki akses ke Dashboard Verifikasi.</p>
+                    <h4 className={cn(
+                      "text-sm font-black uppercase",
+                      superAdminRole ? "text-[#800000]" : "text-amber-900"
+                    )}>{superAdminRole ? "Super Admin" : "Admin"} Aktif</h4>
+                    <p className={cn(
+                      "text-[10px] font-medium",
+                      superAdminRole ? "text-[#800000]/70" : "text-amber-700"
+                    )}>Anda memiliki akses penuh ke Dashboard AQLI.</p>
                   </div>
                 </div>
-                <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold h-8">
+                <Button asChild size="sm" className={cn(
+                  "text-white font-bold h-8",
+                  superAdminRole ? "bg-[#800000] hover:bg-[#800000]/90" : "bg-amber-600 hover:bg-amber-700"
+                )}>
                   <Link href="/admin">BUKA DASHBOARD <ArrowRight className="ml-1 w-3 h-3" /></Link>
                 </Button>
               </div>

@@ -3,17 +3,19 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  ChevronLeft, 
-  Loader2, 
-  Trophy, 
-  Zap, 
-  CalendarDays, 
-  BookOpen, 
-  MessageSquare, 
+import {
+  ChevronLeft,
+  Loader2,
+  Trophy,
+  Zap,
+  CalendarDays,
+  BookOpen,
+  MessageSquare,
   Share2,
   Medal,
-  Target
+  Target,
+  ShieldCheck,
+  Crown
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +30,10 @@ export default function PublicProfilePage() {
   const userId = params.id as string;
 
   const { data: profile, isLoading: isProfileLoading } = useDoc("users", userId);
+
+  // Check roles for this user
+  const { data: isAdmin } = useDoc("roles_admin", userId);
+  const { data: isSuperAdmin } = useDoc("roles_superadmin", userId);
   
   const quizOptions = {
     filters: [{ column: 'user_id', operator: '==', value: userId }],
@@ -92,9 +98,21 @@ export default function PublicProfilePage() {
         </div>
         
         <div className="text-center space-y-1">
-          <h2 className="text-2xl font-bold font-headline">{profile.username || 'Hamba Allah'}</h2>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <h2 className="text-2xl font-bold font-headline">{profile.username || 'Hamba Allah'}</h2>
+            {isSuperAdmin && (
+              <Badge className="bg-[#800000] text-white font-black text-[10px] gap-1">
+                <Crown className="w-3 h-3 fill-current" /> SUPER ADMIN
+              </Badge>
+            )}
+            {isAdmin && !isSuperAdmin && (
+              <Badge className="bg-amber-500 text-white font-black text-[10px] gap-1">
+                <ShieldCheck className="w-3 h-3" /> ADMIN
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-            <CalendarDays className="w-4 h-4" /> 
+            <CalendarDays className="w-4 h-4" />
             Bergabung {new Date(profile.created_at).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
           </p>
         </div>
