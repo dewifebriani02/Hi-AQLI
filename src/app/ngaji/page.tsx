@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Banknote, Calendar, GraduationCap, Award } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Banknote, Calendar, GraduationCap, Award, Bot, Lock, Mic } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
@@ -245,6 +245,39 @@ export default function NgajiPage() {
           )}
         </div>
       </Tabs>
+
+      {/* Asisten Tilawah AI - TERKUNCI (Masih Pengembangan) */}
+      <div className="space-y-4 px-1 mt-4">
+        <h2 className="text-lg font-bold font-headline flex items-center gap-2">
+          <Mic className="w-5 h-5 text-[#800000]" /> Fitur Premium
+        </h2>
+        <Card className="overflow-hidden border-2 border-dashed border-[#D4AF37]/30 bg-muted/30">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/10 flex items-center justify-center relative shrink-0">
+                <Bot className="w-7 h-7 text-[#D4AF37]" />
+                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
+                  <Lock className="w-3.5 h-3.5 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-black text-base sm:text-lg uppercase leading-tight text-[#800000]">Asisten Tilawah AI</h4>
+                  <Badge variant="outline" className="text-[8px] font-black border-amber-300 text-amber-600 bg-amber-50">SEGERA HADIR</Badge>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Uji kelancaran bacaan makhraj Anda dengan bimbingan AI interaktif. Deteksi kesalahan tajwid secara real-time.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-dashed border-[#D4AF37]/20">
+              <p className="text-[9px] font-bold text-center text-muted-foreground italic">
+                Fitur ini sedang dalam tahap pengembangan. Nantikan pembaruan selanjutnya!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

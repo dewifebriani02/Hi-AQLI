@@ -8,14 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
-  Sparkles, 
-  Flame, 
-  Target, 
-  ArrowRight, 
-  Clock, 
-  CheckCircle2, 
-  Trophy, 
-  Zap, 
+  Sparkles,
+  Flame,
+  Target,
+  ArrowRight,
+  Clock,
+  CheckCircle2,
+  Trophy,
+  Zap,
   Star,
   Sun,
   LayoutGrid,
@@ -25,11 +25,14 @@ import {
   Activity,
   Shield,
   Book,
+  Lock,
+  Mic,
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
 import React, { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -55,16 +58,16 @@ export default function DashboardPage() {
   const muhasabahActivitiesCount = 14;
 
   const mutabaahDoneCount = mutabaahLogs?.filter(l => [
-    'bangun', 'siwak', 'tahajjud', 'qabliyah_subuh', 'subuh', 'dzikir_pagi', 'dhuha', 
-    'kajian', 'qabliyah_zhuhur', 'zhuhur', 'badiyah_zhuhur', 'qabliyah_ashar', 'ashar', 
-    'dzikir_petang', 'maghrib', 'badiyah_maghrib', 'isya', 'badiyah_isya', 'witir', 
-    'wudhu_tidur', 'al_mulk', 'ayat_kursi', 'doa_tidur', 'evaluasi', 'quran', 'doa_harian', 
+    'bangun', 'siwak', 'tahajjud', 'qabliyah_subuh', 'subuh', 'dzikir_pagi', 'dhuha',
+    'kajian', 'qabliyah_zhuhur', 'zhuhur', 'badiyah_zhuhur', 'qabliyah_ashar', 'ashar',
+    'dzikir_petang', 'maghrib', 'badiyah_maghrib', 'isya', 'badiyah_isya', 'witir',
+    'wudhu_tidur', 'al_mulk', 'ayat_kursi', 'doa_tidur', 'evaluasi', 'quran', 'doa_harian',
     'tasbih_100', 'istighfar'
   ].includes(l.activity_id) && l.completed).length || 0;
 
   const muhasabahDoneCount = mutabaahLogs?.filter(l => [
-    'm_wanita_shalat', 'm_wanita_puasa', 'm_wanita_kehormatan', 'm_wanita_taat', 
-    'm_dosa_syirik', 'm_dosa_sihir', 'm_dosa_riba', 'm_lisan_ghibah', 'm_lisan_suami', 
+    'm_wanita_shalat', 'm_wanita_puasa', 'm_wanita_kehormatan', 'm_wanita_taat',
+    'm_dosa_syirik', 'm_dosa_sihir', 'm_dosa_riba', 'm_lisan_ghibah', 'm_lisan_suami',
     'm_akhlak_tabarruj', 'm_akhlak_niyahah', 'm_akhlak_sabar', 'm_akhlak_birrul', 'm_akhlak_infaq'
   ].includes(l.activity_id) && l.completed).length || 0;
 
@@ -105,7 +108,7 @@ export default function DashboardPage() {
               break;
             }
           }
-          if (!next) next = { name: "Subuh", time: timings["Fajr"], location: locationName }; 
+          if (!next) next = { name: "Subuh", time: timings["Fajr"], location: locationName };
           setNextPrayer(next);
         }
       } catch (err) {
@@ -116,7 +119,7 @@ export default function DashboardPage() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude),
-        () => fetchPrayerTimes(-6.2088, 106.8456) 
+        () => fetchPrayerTimes(-6.2088, 106.8456)
       );
     } else {
       fetchPrayerTimes(-6.2088, 106.8456);
@@ -169,65 +172,71 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Waktu Shalat - Background Menonjol */}
+      {nextPrayer && (
+        <div className="mx-1">
+          <Card className="border-none shadow-lg overflow-hidden rounded-2xl">
+            <div className="bg-gradient-to-r from-[#800000] via-[#a32828] to-[#800000] p-[1px]">
+              <CardContent className="bg-gradient-to-r from-[#800000] to-[#5a0000] p-4 flex items-center justify-between rounded-2xl">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                    <Sun className="w-6 h-6 text-[#D4AF37] fill-current" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-amber-200 uppercase tracking-wider">Waktu Shalat Berikutnya</p>
+                    <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">{nextPrayer.name}</h3>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="text-2xl sm:text-3xl font-black text-[#D4AF37] tracking-tighter">{nextPrayer.time}</div>
+                  <Badge className="bg-white/20 hover:bg-white/20 backdrop-blur border-none text-[8px] font-black text-white p-0 h-auto gap-1">
+                    <Star className="w-2 h-2 fill-[#D4AF37] text-[#D4AF37]" /> {nextPrayer.location?.toUpperCase()}
+                  </Badge>
+                </div>
+              </CardContent>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4 px-1">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 px-1">
         <Card className="border-none shadow-sm bg-white border-b-4 border-[#800000]">
-          <CardContent className="p-4 flex flex-col gap-3">
+          <CardContent className="p-3 sm:p-4 flex flex-col gap-2 sm:gap-3">
             <div className="flex items-center justify-between">
-              <div className="p-2 rounded-xl bg-orange-50 text-orange-600"><Flame className="w-5 h-5 fill-current" /></div>
-              <Badge variant="outline" className="text-[8px] font-black border-orange-200 text-orange-700 bg-orange-50 px-1.5 h-4">ISTIQOMAH</Badge>
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-orange-50 text-orange-600"><Flame className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /></div>
+              <Badge variant="outline" className="text-[7px] sm:text-[8px] font-black border-orange-200 text-orange-700 bg-orange-50 px-1 h-3 sm:h-4">ISTIQOMAH</Badge>
             </div>
             <div>
-              <p className="text-2xl font-black text-black">{tikrarStats?.day || 0} Hari</p>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase">Streak Belajar</p>
+              <p className="text-xl sm:text-2xl font-black text-black">{tikrarStats?.day || 0} Hari</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Streak Belajar</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-sm bg-white border-b-4 border-[#D4AF37]">
-          <CardContent className="p-4 flex flex-col gap-3">
+          <CardContent className="p-3 sm:p-4 flex flex-col gap-2 sm:gap-3">
             <div className="flex items-center justify-between">
-              <div className="p-2 rounded-xl bg-amber-50 text-[#D4AF37]"><Target className="w-5 h-5" /></div>
-              <Badge variant="outline" className="text-[8px] font-black border-amber-200 text-amber-700 bg-amber-50 px-1.5 h-4">TARGET</Badge>
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50 text-[#D4AF37]"><Target className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+              <Badge variant="outline" className="text-[7px] sm:text-[8px] font-black border-amber-200 text-amber-700 bg-amber-50 px-1 h-3 sm:h-4">TARGET</Badge>
             </div>
             <div>
-              <p className="text-2xl font-black text-black">{tikrarStats ? Math.round(tikrarStats.percent) : 0}%</p>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase">Repetisi Hari Ini</p>
+              <p className="text-xl sm:text-2xl font-black text-black">{tikrarStats ? Math.round(tikrarStats.percent) : 0}%</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Repetisi Hari Ini</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {nextPrayer && (
-        <div className="mx-1">
-          <Card className="border-none shadow-md bg-white border-l-4 border-[#D4AF37]">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-[#D4AF37]"><Clock className="w-5 h-5" /></div>
-                <div>
-                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-tighter">Waktu Shalat</p>
-                  <h3 className="text-lg font-black text-black leading-tight">{nextPrayer.name}</h3>
-                </div>
-              </div>
-              <div className="flex flex-col items-end">
-                <div className="text-xl font-black text-[#800000] tracking-tighter">{nextPrayer.time}</div>
-                <Badge className="bg-transparent hover:bg-transparent border-none text-[8px] font-black text-muted-foreground p-0 h-auto gap-1">
-                  <Star className="w-2 h-2" /> {nextPrayer.location?.toUpperCase()}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Feature Grid */}
+      {/* Feature Grid - Layout Lebih Menarik */}
       <div className="space-y-4 px-1">
         <h2 className="text-lg font-bold font-headline flex items-center gap-2">
           <LayoutGrid className="w-5 h-5 text-[#800000]" /> Layanan Utama
         </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <Link href="/mutabaah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-36 border-l-4 border-amber-500">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Hi Mutaba'ah - Large Card */}
+          <Link href="/mutabaah" className="block group col-span-2">
+            <Card className="overflow-hidden border-none shadow-md bg-white h-36 sm:h-40 border-l-4 border-amber-500 hover:shadow-lg transition-shadow">
               <CardContent className="p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between w-full">
                   <div className="p-2 rounded-lg bg-amber-50 w-fit"><Sparkles className="w-5 h-5 text-amber-500 fill-current" /></div>
@@ -235,14 +244,16 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h4 className="font-black text-sm text-black uppercase">Hi Mutaba'ah</h4>
-                  <p className="text-[9px] text-muted-foreground font-bold italic">Sunnah Tracker</p>
+                  <p className="text-[9px] text-muted-foreground font-bold italic">Sunnah Harian Tracker</p>
+                  <Progress value={mutabaahPercent} className="h-1 mt-2 bg-amber-100 [&>div]:bg-amber-500" />
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link href="/muhasabah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-36 border-l-4 border-[#800000]">
+          {/* Hi Muhasabah - Large Card */}
+          <Link href="/muhasabah" className="block group col-span-2">
+            <Card className="overflow-hidden border-none shadow-md bg-white h-36 sm:h-40 border-l-4 border-[#800000] hover:shadow-lg transition-shadow">
               <CardContent className="p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between w-full">
                   <div className="p-2 rounded-lg bg-[#800000]/5 w-fit"><Shield className="w-5 h-5 text-[#800000]" /></div>
@@ -250,77 +261,103 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h4 className="font-black text-sm text-[#800000] uppercase">Hi Muhasabah</h4>
-                  <p className="text-[9px] text-muted-foreground font-bold italic">Self Evaluation</p>
+                  <p className="text-[9px] text-muted-foreground font-bold italic">Evaluasi Diri Harian</p>
+                  <Progress value={muhasabahPercent} className="h-1 mt-2 bg-[#800000]/10 [&>div]:bg-[#800000]" />
                 </div>
               </CardContent>
             </Card>
           </Link>
 
+          {/* Small Cards */}
           <Link href="/mufradat" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-amber-500">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="p-2 rounded-lg bg-amber-50 w-fit"><Activity className="w-5 h-5 text-amber-500" /></div>
-                <h4 className="font-black text-xs text-black uppercase">Hi Mufradat</h4>
+            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-amber-500 hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex flex-col justify-between h-full">
+                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Activity className="w-4 h-4 text-amber-500" /></div>
+                <div>
+                  <h4 className="font-black text-xs text-black uppercase">Hi Mufradat</h4>
+                  <p className="text-[8px] text-muted-foreground">Mushaf & Terjemahan</p>
+                </div>
               </CardContent>
             </Card>
           </Link>
 
           <Link href="/irab" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#800000]">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="p-2 rounded-lg bg-[#800000]/5 w-fit"><Book className="w-5 h-5 text-[#800000]" /></div>
-                <h4 className="font-black text-xs text-[#800000] uppercase">Hi I'rab</h4>
+            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#800000] hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex flex-col justify-between h-full">
+                <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><Book className="w-4 h-4 text-[#800000]" /></div>
+                <div>
+                  <h4 className="font-black text-xs text-[#800000] uppercase">Hi I'rab</h4>
+                  <p className="text-[8px] text-muted-foreground">Bedah Nahwu</p>
+                </div>
               </CardContent>
             </Card>
           </Link>
 
           <Link href="/hafal" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#D4AF37]">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="p-2 rounded-lg bg-amber-50 w-fit"><Award className="w-5 h-5 text-[#D4AF37]" /></div>
-                <h4 className="font-black text-xs text-black uppercase">Hi Hafal</h4>
+            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#D4AF37] hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex flex-col justify-between h-full">
+                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Award className="w-4 h-4 text-[#D4AF37]" /></div>
+                <div>
+                  <h4 className="font-black text-xs text-black uppercase">Hi Hafal</h4>
+                  <p className="text-[8px] text-muted-foreground">Hafalan Ayat</p>
+                </div>
               </CardContent>
             </Card>
           </Link>
 
           <Link href="/ngaji" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#800000]">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="p-2 rounded-lg bg-[#800000]/5 w-fit"><LayoutGrid className="w-5 h-5 text-[#800000]" /></div>
-                <h4 className="font-black text-xs text-[#800000] uppercase">Hi Ngaji</h4>
+            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#800000] hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex flex-col justify-between h-full">
+                <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><LayoutGrid className="w-4 h-4 text-[#800000]" /></div>
+                <div>
+                  <h4 className="font-black text-xs text-[#800000] uppercase">Hi Ngaji</h4>
+                  <p className="text-[8px] text-muted-foreground">Belajar Tajwid</p>
+                </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link href="/berbagi" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#D4AF37]">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="p-2 rounded-lg bg-amber-50 w-fit"><HeartHandshake className="w-5 h-5 text-[#D4AF37]" /></div>
-                <h4 className="font-black text-xs text-black uppercase">Hi Berbagi</h4>
+          <Link href="/berbagi" className="block group col-span-2">
+            <Card className="overflow-hidden border-none shadow-sm bg-white h-24 border-l-4 border-[#D4AF37] hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex items-center justify-between h-full gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-50 w-fit"><HeartHandshake className="w-5 h-5 text-[#D4AF37]" /></div>
+                  <div>
+                    <h4 className="font-black text-sm text-black uppercase">Hi Berbagi</h4>
+                    <p className="text-[9px] text-muted-foreground">Donasi & Sedekah</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-[#D4AF37]" />
               </CardContent>
             </Card>
           </Link>
         </div>
       </div>
 
+      {/* Asisten AI - DIKUNCI (Masih Pengembangan) */}
       <div className="space-y-4 px-1">
         <h2 className="text-lg font-bold font-headline flex items-center gap-2">
           <Bot className="w-5 h-5 text-[#800000]" /> Asisten Cerdas
         </h2>
-        <Link href="/ai-scholar" className="block group">
-          <Card className="overflow-hidden border-2 border-[#D4AF37]/30 bg-white text-[#800000] h-24 shadow-sm rounded-2xl">
-            <CardContent className="p-4 flex items-center justify-between h-full gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#800000] flex items-center justify-center text-[#D4AF37]"><Bot className="w-6 h-6" /></div>
-                <div className="space-y-0.5">
-                  <h4 className="font-black text-base uppercase leading-tight">Asisten AI</h4>
-                  <p className="text-[10px] text-muted-foreground font-bold">Tanya jawab Tafsir & Tajwid.</p>
+        <Card className="overflow-hidden border-2 border-dashed border-[#D4AF37]/30 bg-muted/30">
+          <CardContent className="p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/20 flex items-center justify-center relative">
+                <Bot className="w-6 h-6 text-[#D4AF37]" />
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#800000] flex items-center justify-center">
+                  <Lock className="w-3 h-3 text-white" />
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-[#800000]" />
-            </CardContent>
-          </Card>
-        </Link>
+              <div className="space-y-0.5">
+                <h4 className="font-black text-base uppercase leading-tight flex items-center gap-2">
+                  Asisten AI
+                  <Badge variant="outline" className="text-[8px] font-black border-amber-300 text-amber-600 bg-amber-50">SEGERA</Badge>
+                </h4>
+                <p className="text-[10px] text-muted-foreground">Tanya jawab Tafsir & Tajwid. Sedang dalam pengembangan.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { SurahList } from "@/components/surah-list";
 import { MushafPage } from "@/components/mushaf-page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, BookOpen, Layers } from "lucide-react";
+import { BookOpen, Layers } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -31,23 +31,6 @@ export default function MufradatPage() {
         </TabsList>
         
         <TabsContent value="surah" className="space-y-6 focus-visible:outline-none">
-          <Card className="bg-[#800000] text-white border-none shadow-lg overflow-hidden relative group">
-            <div className="absolute right-[-10px] top-[-10px] opacity-10 group-hover:scale-110 transition-transform">
-              <Mic className="w-32 h-32 text-[#D4AF37]" />
-            </div>
-            <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-              <div className="space-y-1">
-                <h3 className="font-bold text-xl">Latihan Tilawah AI</h3>
-                <p className="text-sm opacity-90 max-w-xs leading-relaxed">
-                  Uji kelancaran bacaan makhraj Anda dengan asisten AI.
-                </p>
-              </div>
-              <Button asChild size="lg" className="font-black shadow-md w-full sm:w-auto bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90">
-                <Link href="/mufradat/ai-assistant">Buka Asisten AI</Link>
-              </Button>
-            </CardContent>
-          </Card>
-          
           <div className="space-y-4">
             <SurahList />
           </div>
