@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import {
   Tooltip,
@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
 import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Word {
   id: number;
@@ -242,6 +243,29 @@ export default function SurahDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Murajaah Quiz Banner - Access after completing at least 5 verses */}
+      {completedVerseNumbers.size >= 5 && (
+        <Link href={`/tilawah/${id}/murajaah`} className="block">
+          <Card className="mx-4 mt-4 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-white border-none shadow-xl hover:shadow-2xl transition-all cursor-pointer group">
+            <CardContent className="p-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
+                  <Target className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold font-headline">Kuis Murajaah</h3>
+                  <p className="text-sm opacity-90">Uji pemahaman 30 kata paling sulit dalam surah ini</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full">
+                <span className="text-xs font-bold">Mulai</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>

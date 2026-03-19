@@ -17,7 +17,9 @@ import {
   Heart,
   Clock,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Target,
+  BookOpen
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -64,6 +66,22 @@ export default function WordQuizPage() {
   const [totalTime, setTotalTime] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
+  const [optimisticAttempt, setOptimisticAttempt] = useState<any>(null);
+
+  // Fetch user's completed verses count to show murajaah link
+  const userProgressOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'surahId', operator: '==', value: id },
+      { column: 'isPassed', operator: '==', value: true }
+    ]
+  }), [user?.id, id]);
+
+  const { data: userProgress } = useCollection("quiz_attempts", userProgressOptions);
+  const completedVerseCount = useMemo(() => {
+    if (!userProgress) return 0;
+    return new Set(userProgress.map(p => p.verseNumber)).size;
+  }, [userProgress]);
 
   // Menggunakan data kuis untuk memastikan user unik di leaderboard per kuis
   const { data: allAttempts, isLoading: isLeaderboardLoading } = useCollection("quiz_attempts", {
@@ -73,17 +91,30 @@ export default function WordQuizPage() {
     orderBy: { column: 'score', ascending: false }
   });
 
+  // Combine server data with optimistic update for real-time leaderboard
+  const combinedAttempts = useMemo(() => {
+    if (!allAttempts) return [];
+    if (!optimisticAttempt) return allAttempts;
+
+    // Check if optimistic attempt already exists in server data
+    const exists = allAttempts.some(a => a.id === optimisticAttempt.id);
+    if (exists) return allAttempts;
+
+    // Add optimistic attempt to the beginning
+    return [optimisticAttempt, ...allAttempts];
+  }, [allAttempts, optimisticAttempt]);
+
   // Fetch user details for the leaderboard manually to ensure we have names and photos
-  const userIds = useMemo(() => [...new Set(allAttempts?.map(a => a.user_id) || [])], [allAttempts]);
+  const userIds = useMemo(() => [...new Set(combinedAttempts?.map(a => a.user_id) || [])], [combinedAttempts]);
   const { data: leaderboardUsers } = useCollection(userIds.length > 0 ? "users" : null, {
     filters: [{ column: 'id', operator: 'in', value: userIds }]
   });
 
   const uniqueLeaderboard = useMemo(() => {
-    if (!allAttempts) return [];
+    if (!combinedAttempts) return [];
     
     const uniqueMap = new Map();
-    allAttempts.forEach(attempt => {
+    combinedAttempts.forEach(attempt => {
       const existing = uniqueMap.get(attempt.user_id);
       
       // Hitung jumlah percobaan
@@ -106,13 +137,13 @@ export default function WordQuizPage() {
 
     // Update real attempt counts
     const finalCounts = new Map();
-    allAttempts.forEach(a => finalCounts.set(a.user_id, (finalCounts.get(a.user_id) || 0) + 1));
-    
+    combinedAttempts.forEach(a => finalCounts.set(a.user_id, (finalCounts.get(a.user_id) || 0) + 1));
+
     return Array.from(uniqueMap.values())
       .map(item => ({ ...item, attemptCount: finalCounts.get(item.user_id) }))
       .sort((a, b) => b.score - a.score || a.durationSeconds - b.durationSeconds)
       .slice(0, 5);
-  }, [allAttempts, leaderboardUsers]);
+  }, [combinedAttempts, leaderboardUsers]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -168,6 +199,23 @@ export default function WordQuizPage() {
   const saveProgress = useCallback(async (finalScore: number) => {
     if (!user) return;
     const isPerfect = finalScore === words.length;
+
+    // Generate optimistic attempt ID for immediate leaderboard update
+    const optimisticId = `optimistic_${Date.now()}_${user.id}`;
+
+    // Optimistic update: add to leaderboard immediately
+    setOptimisticAttempt({
+      id: optimisticId,
+      user_id: user.id,
+      quizId: `verse_${id}_${verseNumber}`,
+      surahId: id,
+      verseNumber: parseInt(verseNumber),
+      score: finalScore,
+      totalQuestions: words.length,
+      isPassed: isPerfect,
+      durationSeconds: totalTime,
+      created_at: new Date().toISOString(),
+    });
 
     try {
       addDocumentNonBlocking("quiz_attempts", {
@@ -293,11 +341,13 @@ export default function WordQuizPage() {
       const currentWord = words[currentIdx];
       const correct = currentWord.translation.text;
 
+      // Acak jawaban dengan benar
       let wrong = words
         .filter(w => w.translation.text !== correct)
         .map(w => w.translation.text);
 
       wrong = [...new Set(wrong)].sort(() => Math.random() - 0.5).slice(0, 3);
+      // Shuffle semua opsi termas jawaban benar
       const all = [correct, ...wrong].sort(() => Math.random() - 0.5);
       setOptions(all);
     }
@@ -313,6 +363,7 @@ export default function WordQuizPage() {
     setTotalTime(0);
     setTimeLeft(60);
     setSentCongrats([]);
+    setOptimisticAttempt(null); // Clear optimistic attempt on retry
   };
 
   const formatTime = (seconds: number) => {
@@ -410,6 +461,14 @@ export default function WordQuizPage() {
                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-14 rounded-2xl shadow-xl gap-2 uppercase tracking-widest">
                     <Link href={`/tilawah/${id}/${currentVerseNum + 1}`}>
                       LANJUT KE AYAT {currentVerseNum + 1} <ArrowRight className="w-5 h-5" />
+                    </Link>
+                  </Button>
+                )}
+                {/* Murajaah link: show when completed at least 5 verses */}
+                {completedVerseCount >= 5 && (
+                  <Button asChild className="w-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] hover:from-[#C4A030] hover:to-[#A67B00] text-white font-black h-12 rounded-xl shadow-lg gap-2">
+                    <Link href={`/tilawah/${id}/murajaah`}>
+                      <Target className="w-4 h-4" /> KUIS MURAJAAH (30 KATA)
                     </Link>
                   </Button>
                 )}
@@ -539,10 +598,10 @@ export default function WordQuizPage() {
               variant="outline"
               className={cn(
                 "h-auto py-5 text-lg font-bold transition-all border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none shadow-sm rounded-xl",
-                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700",
-                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700",
-                selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
-                !selectedAnswer && "hover:border-[#D4AF37] hover:text-[#B8860B]"
+                selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700 ring-2 ring-green-500/20",
+                selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700 ring-2 ring-red-500/20",
+                selectedAnswer && option === words[currentIdx]?.translation?.text && isCorrect === false && "bg-green-100 border-green-500 text-green-700 ring-2 ring-green-500/20",
+                !selectedAnswer && "hover:border-[#D4AF37] hover:bg-[#D4AF37]/5 hover:text-[#B8860B] focus-visible:border-[#D4AF37] focus-visible:bg-[#D4AF37]/5"
               )}
               onClick={() => handleAnswer(option)}
               disabled={!!selectedAnswer}
