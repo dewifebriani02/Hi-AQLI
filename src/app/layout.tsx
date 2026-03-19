@@ -25,20 +25,26 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc;
   const points = userData?.points || 0;
 
+  // BottomNav muncul untuk semua user di mobile & tablet (sampai lg breakpoint)
+  // Di desktop (lg+): user biasa pakai bottom nav, admin pakai sidebar saja
+  const showBottomNav = !hasAdminAccess;
+
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
+        {/* Sidebar hanya muncul untuk admin */}
         {hasAdminAccess && <AppSidebar />}
         <SidebarInset className="w-full flex flex-col">
-          <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
+          {/* Padding bottom untuk BottomNav (di mobile & tablet) */}
+          <div className="flex flex-col flex-1 w-full pb-20 lg:pb-0">
             <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4">
-              {hasAdminAccess && <SidebarTrigger className="md:hidden" />}
+              {hasAdminAccess && <SidebarTrigger className="lg:hidden" />}
               <div className="flex-1 text-center font-headline font-bold text-lg tracking-tight uppercase text-[#800000]">
                 Hi AQLI
               </div>
               <div className="flex items-center gap-3">
                 {user && (
-                  <Link href="/leaderboard" className="hidden xs:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 shadow-sm hover:bg-amber-100 transition-colors group">
+                  <Link href="/leaderboard" className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 shadow-sm hover:bg-amber-100 transition-colors group">
                     <Trophy className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
                     <span className="text-[11px] font-black text-amber-800 tracking-tight">
                       {points.toLocaleString()}
@@ -70,7 +76,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarInset>
       </div>
-      <BottomNav />
+      {/* BottomNav: user biasa di semua device, admin hanya di mobile & tablet */}
+      {showBottomNav ? (
+        <BottomNav />
+      ) : (
+        <div className="lg:hidden"><BottomNav /></div>
+      )}
       <Toaster />
     </SidebarProvider>
   );

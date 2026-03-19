@@ -26,8 +26,11 @@ export function BottomNav() {
     return null;
   }
 
+  // BottomNav akan dirender secara conditional dari layout.tsx
+  // - Untuk user biasa: muncul di semua device
+  // - Untuk admin: hanya muncul di mobile (di desktop pakai sidebar)
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-end justify-around border-t bg-background/95 backdrop-blur px-1 pb-2 pt-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-end justify-around border-t bg-background/95 backdrop-blur px-1 pb-2 pt-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
       {navItems.map((item) => {
         const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
 

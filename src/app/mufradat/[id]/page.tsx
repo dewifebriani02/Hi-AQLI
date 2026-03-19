@@ -183,16 +183,21 @@ export default function SurahDetailPage() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
       <div className="flex flex-col gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
-        <div className="flex items-center gap-4">
-          <Button asChild variant="ghost" size="icon"><Link href="/mufradat"><ChevronLeft className="h-6 w-6" /></Link></Button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold font-headline">{surah?.id}. {surah?.name_simple}</h1>
-            <p className="text-[10px] uppercase font-semibold text-muted-foreground">{surah?.translated_name.name}</p>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Button asChild variant="outline" size="sm" className="gap-1.5 text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5 shrink-0">
+            <Link href="/mufradat">
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Kembali</span>
+            </Link>
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base sm:text-lg font-bold font-headline truncate">{surah?.id}. {surah?.name_simple}</h1>
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground truncate">{surah?.translated_name.name}</p>
           </div>
           <div className="flex items-center gap-2">
             <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span>Qari</span></Button>
+                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span className="hidden sm:inline">Qari</span></Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
