@@ -1,23 +1,23 @@
 
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  CheckCircle2, 
-  Loader2, 
-  ArrowLeft, 
+import {
+  CheckCircle2,
+  Loader2,
+  ArrowLeft,
   ArrowRight,
   User,
   Phone,
@@ -27,8 +27,8 @@ import {
   BookOpen,
   PlayCircle
 } from "lucide-react";
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc, query, where } from "firebase/firestore";
+import { useUser, supabase } from "@/supabase";
+import { useDoc, useCollection } from "@/supabase/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -40,43 +40,30 @@ const levels = [
 ];
 
 function RegistrationForm() {
-  const { user, isUserLoading } = useUser();
-  const db = useFirestore();
+  const { user, isLoading: isUserLoading } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const halaqahId = searchParams.get('id');
 
-  // Fetch specific halaqah data from Firestore
-  const halaqahDocRef = useMemoFirebase(() => {
-    if (!db || !halaqahId) return null;
-    return doc(db, "halaqahs", halaqahId);
-  }, [db, halaqahId]);
+  // Fetch specific halaqah data from Supabase
+  const { data: circle, isLoading: isHalaqahLoading } = useDoc(halaqahId ? "halaqahs" : null, halaqahId);
 
-  const { data: circle, isLoading: isHalaqahLoading } = useDoc(halaqahDocRef);
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, "users", user.uid);
-  }, [db, user?.uid]);
-
-  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserDocLoading } = useDoc(user ? "users" : null, user?.id);
 
   // Check for ANY existing registration for this halaqah to prevent duplicates
-  const regQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid || !halaqahId) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("userId", "==", user.uid),
-      where("halaqahId", "==", halaqahId),
-      where("status", "in", ["active", "pending_verification"])
-    );
-  }, [db, user?.uid, halaqahId]);
+  const regOptions = useMemo(() => ({
+    filters: [
+      { column: 'userId', operator: '==', value: user?.id },
+      { column: 'halaqahId', operator: '==', value: halaqahId },
+      { column: 'status', operator: 'in', value: ["active", "pending_verification"] }
+    ]
+  }), [user?.id, halaqahId]);
 
-  const { data: existingRegs, isLoading: isRegLoading } = useCollection(regQuery);
-  
+  const { data: existingRegs, isLoading: isRegLoading } = useCollection("halaqah_registrations", regOptions);
+
   const [isProcessingAccess, setIsProcessingAccess] = useState(true);
 
   useEffect(() => {
@@ -108,8 +95,8 @@ function RegistrationForm() {
   const [proofFile, setProofFile] = useState<File | null>(null);
 
   // Calculate Price: If Tikrar special ID, use levels array. Else use basePrice from Firestore circle.
-  const PRICE = halaqahId === 'tikrar-j30-b1' 
-    ? (levels.find(l => l.id === level)?.price || 50000) 
+  const PRICE = halaqahId === 'tikrar-j30-b1'
+    ? (levels.find(l => l.id === level)?.price || 50000)
     : (circle?.basePrice || 0);
 
   useEffect(() => {
@@ -117,7 +104,7 @@ function RegistrationForm() {
       router.push(`/login?redirect=/study-circles/registration?id=${halaqahId}`);
       return;
     }
-    if (user && !name) setName(user.displayName || "");
+    if (user && !name) setName(user.user_metadata?.full_name || "");
   }, [user, isUserLoading, router, name, halaqahId]);
 
   useEffect(() => {
@@ -132,7 +119,7 @@ function RegistrationForm() {
       return;
     }
     if (circle?.isPremium) setStep(2);
-    else setStep(3); 
+    else setStep(3);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,9 +138,9 @@ function RegistrationForm() {
     setLoading(true);
     try {
       const finalAmount = circle?.isPremium ? PRICE + uniqueCode : 0;
-      
-      await addDoc(collection(db, "halaqah_registrations"), {
-        userId: user?.uid,
+
+      const { error } = await supabase.from("halaqah_registrations").insert({
+        userId: user?.id,
         userName: name,
         userEmail: user?.email,
         whatsapp: whatsapp,
@@ -167,8 +154,10 @@ function RegistrationForm() {
         senderName: circle?.isPremium ? senderName : null,
         proofFileName: proofFile?.name || null,
         status: "pending_verification",
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       });
+
+      if (error) throw error;
 
       setSubmitted(true);
       toast({ title: "Pendaftaran Dikirim" });
@@ -201,7 +190,7 @@ function RegistrationForm() {
           <CardContent className="pt-8 pb-10 space-y-6">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive 
+                Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive
                   ? `Pendaftaran Anda untuk ${circle?.title} sudah tuntas. Silakan masuk ke dalam kelas.`
                   : `Pendaftaran Anda untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
               </p>
@@ -248,7 +237,7 @@ function RegistrationForm() {
           <CardTitle className="font-headline text-3xl font-black">Pendaftaran Halaqah</CardTitle>
           <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">{circle?.title}</CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-8 pt-10">
           {step === 1 ? (
             <div className="grid gap-6">
@@ -266,7 +255,7 @@ function RegistrationForm() {
                   <Input placeholder="0812345..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
                 </div>
               </div>
-              
+
               {halaqahId === 'tikrar-j30-b1' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 bg-muted/30 rounded-2xl border-2 border-dashed">
                   <div className="space-y-2">
@@ -283,7 +272,7 @@ function RegistrationForm() {
                     <Select value={targetJuz} onValueChange={setTargetJuz}>
                       <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {Array.from({length: 30}, (_, i) => <SelectItem key={i+1} value={(i+1).toString()}>Juz {i+1}</SelectItem>)}
+                        {Array.from({ length: 30 }, (_, i) => <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -304,7 +293,7 @@ function RegistrationForm() {
                 <p className="text-xs font-black text-[#800000] uppercase tracking-widest">Rekening Tujuan (BSI)</p>
                 <div className="flex items-center justify-between bg-white p-4 rounded-xl border-2 shadow-sm">
                   <span className="font-mono font-black text-xl tracking-wider">7123456789</span>
-                  <Button variant="ghost" size="sm" className="font-black text-[#800000] hover:bg-[#800000]/10" onClick={() => { navigator.clipboard.writeText("7123456789"); toast({description: "Nomor rekening disalin"}) }}>SALIN</Button>
+                  <Button variant="ghost" size="sm" className="font-black text-[#800000] hover:bg-[#800000]/10" onClick={() => { navigator.clipboard.writeText("7123456789"); toast({ description: "Nomor rekening disalin" }) }}>SALIN</Button>
                 </div>
                 <p className="text-[10px] font-bold text-center text-muted-foreground">a.n. Sahabat AQLI Digital</p>
               </div>
@@ -320,7 +309,7 @@ function RegistrationForm() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Unggah Bukti Transfer</Label>
-                    <div 
+                    <div
                       onClick={() => fileInputRef.current?.click()}
                       className={cn("border-2 border-dashed rounded-3xl p-12 flex flex-col items-center gap-4 cursor-pointer transition-all hover:bg-muted/30", proofFile ? "bg-emerald-50 border-emerald-500" : "bg-muted/10 border-muted-foreground/20")}
                     >

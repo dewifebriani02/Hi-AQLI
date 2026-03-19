@@ -1,26 +1,26 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Zap, 
-  CheckCircle2, 
-  Loader2, 
-  Landmark, 
-  QrCode, 
-  Copy, 
-  ArrowLeft, 
+import {
+  Zap,
+  CheckCircle2,
+  Loader2,
+  Landmark,
+  QrCode,
+  Copy,
+  ArrowLeft,
   ArrowRight,
   User,
   Phone,
@@ -29,8 +29,8 @@ import {
   Check,
   Clock
 } from "lucide-react";
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc, query, where, limit } from "firebase/firestore";
+import { useUser, supabase } from "@/supabase";
+import { useDoc, useCollection } from "@/supabase/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -50,31 +50,23 @@ const levels = [
 
 export default function TikrarRegistrationPage() {
   const { user, isUserLoading } = useUser();
-  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Check user profile
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return doc(db, "users", user.uid);
-  }, [db, user?.uid]);
 
-  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  // Check user profile from Supabase
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(user ? "users" : null, user?.id);
 
   // Check if there is an existing pending registration
-  const regQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return query(
-      collection(db, "tikrar_registrations"),
-      where("userId", "==", user.uid),
-      where("status", "==", "pending_verification"),
-      limit(1)
-    );
-  }, [db, user?.uid]);
+  const regOptions = useMemo(() => ({
+    filters: [
+      { column: 'userId', operator: '==', value: user?.id },
+      { column: 'status', operator: '==', value: 'pending_verification' }
+    ],
+    limit: 1
+  }), [user?.id]);
 
-  const { data: existingReg, isLoading: isRegLoading } = useCollection(regQuery);
+  const { data: existingReg, isLoading: isRegLoading } = useCollection("tikrar_registrations", regOptions);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -102,13 +94,13 @@ export default function TikrarRegistrationPage() {
       router.push('/login?redirect=/study-circles/tikrar-registration');
       return;
     }
-    
+
     if (!isUserDataLoading && userData?.isTikrarPaid) {
       router.push('/tajweed');
     }
 
     if (user && !name) {
-      setName(user.displayName || "");
+      setName(user.user_metadata?.full_name || "");
     }
   }, [user, isUserLoading, router, name, userData, isUserDataLoading]);
 
@@ -150,9 +142,9 @@ export default function TikrarRegistrationPage() {
     setLoading(true);
     try {
       const finalAmount = PRICE + uniqueCode;
-      
-      await addDoc(collection(db, "tikrar_registrations"), {
-        userId: user?.uid,
+
+      const { error } = await supabase.from("tikrar_registrations").insert({
+        userId: user?.id,
         userName: name,
         userEmail: user?.email,
         whatsapp: whatsapp,
@@ -164,8 +156,10 @@ export default function TikrarRegistrationPage() {
         senderName: senderName,
         proofFileName: proofFile.name,
         status: "pending_verification",
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       });
+
+      if (error) throw error;
 
       setSubmitted(true);
       toast({
@@ -255,7 +249,7 @@ export default function TikrarRegistrationPage() {
           <CardTitle className="font-headline text-2xl">Tikrar Daily Registration</CardTitle>
           <CardDescription className="text-white/80">Program Itqan Hafalan Bersama Sahabat AQLI</CardDescription>
         </CardHeader>
-        
+
         <div className="flex border-b">
           {[1, 2, 3].map((s) => (
             <div key={s} className={cn(
@@ -292,7 +286,7 @@ export default function TikrarRegistrationPage() {
                     <Input id="wa" placeholder="0812..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="pl-10" />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Pilih Level</Label>
@@ -316,8 +310,8 @@ export default function TikrarRegistrationPage() {
                         <SelectValue placeholder="Pilih Juz" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Array.from({length: 30}, (_, i) => (
-                          <SelectItem key={i+1} value={(i+1).toString()}>Juz {i+1}</SelectItem>
+                        {Array.from({ length: 30 }, (_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -341,7 +335,7 @@ export default function TikrarRegistrationPage() {
               <div className="space-y-4">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Pilih Metode Pembayaran</Label>
                 {paymentMethods.map((pm) => (
-                  <div 
+                  <div
                     key={pm.id}
                     onClick={() => setMethod(pm.id)}
                     className={cn(
@@ -383,25 +377,25 @@ export default function TikrarRegistrationPage() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="sender">Nama Pengirim Sesuai Rekening</Label>
-                <Input 
-                  id="sender" 
-                  placeholder="Contoh: Abdullah Mansur" 
-                  value={senderName} 
-                  onChange={(e) => setSenderName(e.target.value)} 
+                <Input
+                  id="sender"
+                  placeholder="Contoh: Abdullah Mansur"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
                   className="h-12 border-2 focus-visible:ring-[#800000]"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label>Unggah Bukti Transfer</Label>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
                 />
-                <div 
+                <div
                   onClick={() => fileInputRef.current?.click()}
                   className={cn(
                     "border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer",
@@ -431,7 +425,7 @@ export default function TikrarRegistrationPage() {
             </div>
           )}
         </CardContent>
-        
+
         <CardFooter className="p-6 pt-0">
           {step < 3 ? (
             <Button onClick={handleNext} className="w-full h-14 text-lg font-bold bg-[#800000] hover:bg-[#800000]/90 shadow-lg">

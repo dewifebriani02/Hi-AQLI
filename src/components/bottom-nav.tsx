@@ -27,10 +27,10 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[100] flex items-end justify-around border-t bg-background/95 backdrop-blur px-1 pb-2 pt-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-end justify-around border-t bg-background/95 backdrop-blur px-1 pb-2 pt-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
       {navItems.map((item) => {
         const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-        
+
         if (item.isProminent) {
           return (
             <Link
@@ -40,8 +40,8 @@ export function BottomNav() {
             >
               <div className={cn(
                 "flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300",
-                isActive 
-                  ? "bg-[#800000] text-white scale-110" 
+                isActive
+                  ? "bg-[#800000] text-white scale-110"
                   : "bg-white text-[#800000] border-2 border-[#800000]/20 hover:bg-[#800000] hover:text-white"
               )}>
                 <item.icon className="h-7 w-7" />
@@ -62,8 +62,8 @@ export function BottomNav() {
             href={item.href}
             className={cn(
               "flex flex-1 flex-col items-center justify-center gap-1 rounded-md py-2 text-[10px] font-medium transition-colors",
-              isActive 
-                ? "text-[#800000] bg-[#800000]/5" 
+              isActive
+                ? "text-[#800000] bg-[#800000]/5"
                 : "text-muted-foreground hover:text-[#800000]"
             )}
           >

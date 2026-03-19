@@ -2,49 +2,31 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
 import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog, Library, HeartHandshake } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
 
 export default function AdminDashboard() {
-  const db = useFirestore();
   const { user } = useUser();
 
   // Fetch Stats - Only if user is logged in
-  const pendingQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("status", "==", "pending_verification")
-    );
-  }, [db, user?.uid]);
+  const pendingOptions = useMemo(() => ({
+    filters: [{ column: 'status', operator: '==', value: 'pending_verification' }]
+  }), []);
 
-  const halaqahQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return collection(db, "halaqahs");
-  }, [db, user?.uid]);
+  const pendingDonationOptions = useMemo(() => ({
+    filters: [{ column: 'status', operator: '==', value: 'pending_verification' }]
+  }), []);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return collection(db, "users");
-  }, [db, user?.uid]);
-
-  const pendingDonationsQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, "donations"),
-      where("status", "==", "pending_verification")
-    );
-  }, [db, user?.uid]);
-
-  const { data: pending } = useCollection(pendingQuery);
-  const { data: halaqahs } = useCollection(halaqahQuery);
-  const { data: users } = useCollection(usersQuery);
-  const { data: pendingDonations } = useCollection(pendingDonationsQuery);
+  const { data: pending } = useCollection("halaqah_registrations", pendingOptions);
+  const { data: halaqahs } = useCollection("halaqahs");
+  const { data: users } = useCollection("users");
+  const { data: pendingDonations } = useCollection("donations", pendingDonationOptions);
 
   const stats = [
     { label: "Pendaftaran Baru", value: pending?.length || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },

@@ -29,8 +29,8 @@ import {
 } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useMemoFirebase, useDoc } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser } from "@/supabase";
+import { useDoc } from "@/supabase/db";
 
 const adminItems = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
@@ -52,18 +52,12 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
-  const db = useFirestore();
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
 
-  const adminDocRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, "roles_admin", user.uid);
-  }, [db, user?.uid]);
+  const { data: isAdmin } = useDoc(user ? "roles_admin" : null, user?.id);
+  const { data: isSuperAdmin } = useDoc(user ? "roles_superadmin" : null, user?.id);
 
-  const { data: isAdmin } = useDoc(adminDocRef);
-
-  const isEmailAdmin = user?.email === "dewifebriani@gmail.com";
-  const hasAdminAccess = isEmailAdmin || !!isAdmin;
+  const hasAdminAccess = !!isAdmin || !!isSuperAdmin;
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -82,9 +76,9 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-[#D4AF37]/30 py-4 bg-[#800000]">
         <div className="flex items-center justify-between px-2">
           <Link href="/" className="flex items-center gap-2" onClick={handleLinkClick}>
-            <Logo 
-              className="group-data-[collapsible=icon]:hidden scale-90 origin-left" 
-              textClassName="text-white" 
+            <Logo
+              className="group-data-[collapsible=icon]:hidden scale-90 origin-left"
+              textClassName="text-white"
             />
           </Link>
           <SidebarTrigger className="hidden md:flex text-white hover:bg-white/10" />
@@ -119,7 +113,7 @@ export function AppSidebar() {
             })}
           </SidebarMenu>
         </div>
-        
+
         <SidebarSeparator />
 
         <div className="px-3 py-2">
@@ -153,22 +147,22 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-2 border-t border-[#D4AF37]/30 bg-[#800000]">
         <SidebarMenu>
-            <SidebarMenuItem>
-                <SidebarMenuButton 
-                  tooltip="Pengaturan Admin" 
-                  className="text-white hover:bg-white/10"
-                  onClick={handleLinkClick}
-                >
-                    <Settings className="text-white" />
-                    <span className="font-bold">Pengaturan</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Pengaturan Admin"
+              className="text-white hover:bg-white/10"
+              onClick={handleLinkClick}
+            >
+              <Settings className="text-white" />
+              <span className="font-bold">Pengaturan</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
 }
 
-function SidebarSeparator() {
-  return <div className="mx-4 my-4 h-px bg-[#D4AF37]/20 group-data-[collapsible=icon]:hidden" />;
-}
+const SidebarSeparator = () => (
+  <div className="mx-4 my-4 h-px bg-[#D4AF37]/20 group-data-[collapsible=icon]:hidden" />
+);

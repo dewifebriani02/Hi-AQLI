@@ -5,10 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { 
-  RotateCcw, 
-  CheckCircle2, 
-  ChevronLeft, 
+import {
+  RotateCcw,
+  CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Loader2,
   Lock,
@@ -45,15 +45,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useUser, supabase } from "@/supabase";
+import { useDoc, useCollection } from "@/supabase/db";
+import { addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 
 const JUZ_PAGES = [
-  1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 
+  1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282,
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
 ];
 
@@ -67,8 +67,8 @@ const RECITERS = [
 ];
 
 const TARGET_MAX = 40;
-const PASS_THRESHOLD = 40; 
-const META_PASS_THRESHOLD = 10; 
+const PASS_THRESHOLD = 40;
+const META_PASS_THRESHOLD = 10;
 const PREP_LISTEN_THRESHOLD = 5;
 
 interface Word {
@@ -88,48 +88,40 @@ interface Verse {
 
 export function TikrarSystem() {
   const { user } = useUser();
-  const db = useFirestore();
   const { toast } = useToast();
-  
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return doc(db, "users", user.uid);
-  }, [db, user?.uid]);
 
-  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(user ? "users" : null, user?.id);
   const paidJuz = userData?.paidJuz || 1;
 
   const [juz, setJuz] = useState(1);
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fontSize, setFontSize] = useState(18); 
+  const [fontSize, setFontSize] = useState(18);
   const [hasInitializedPage, setHasInitializedPage] = useState(false);
   const [isRequestingExam, setIsRequestingExam] = useState(false);
-  
+
   const [prepListenCount, setPrepListenCount] = useState(0);
   const [prepTranslationDone, setPrepTranslationDone] = useState(false);
 
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
-  const isAutoPlayingRef = useRef(false); 
+  const isAutoPlayingRef = useRef(false);
   const [playingVerseIndex, setPlayingVerseIndex] = useState<number | null>(null);
   const [currentLoop, setCurrentLoop] = useState(0);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
-  
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioUrlRef = useRef<string | null>(null);
 
-  const examQuery = useMemoFirebase(() => {
-    if (!db || !user || !page) return null;
-    return query(
-      collection(db, "page_exams"),
-      where("userId", "==", user.uid),
-      where("page", "==", page)
-    );
-  }, [db, user?.uid, page]);
+  const examOptions = useMemo(() => ({
+    filters: [
+      { column: 'userId', operator: '==', value: user?.id },
+      { column: 'page', operator: '==', value: page }
+    ]
+  }), [user?.id, page]);
 
-  const { data: examRequests } = useCollection(examQuery);
+  const { data: examRequests } = useCollection("page_exams", examOptions);
   const activeExam = examRequests?.find(r => r.status !== 'failed');
 
   const [blocks, setBlocks] = useState<any>({
@@ -161,7 +153,7 @@ export function TikrarSystem() {
       setIsAutoPlaying(false);
       isAutoPlayingRef.current = false;
       setPlayingVerseIndex(null);
-      
+
       try {
         const res = await fetch(
           `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33`
@@ -191,7 +183,7 @@ export function TikrarSystem() {
         setMetaCounts(saved.metaCounts || {
           '1_2': 0, '2_3': 0, '1_2_3': 0, '3_4': 0, '2_3_4': 0, '1_2_3_4': 0,
         });
-      } catch (e) {}
+      } catch (e) { }
     } else {
       setPrepListenCount(0);
       setPrepTranslationDone(false);
@@ -210,7 +202,7 @@ export function TikrarSystem() {
     if (!loading && typeof window !== 'undefined') {
       const existing = localStorage.getItem(`tikrar_progress_p${page}`);
       const parsed = existing ? JSON.parse(existing) : {};
-      localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({ 
+      localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({
         ...parsed,
         prepListenCount,
         prepTranslationDone,
@@ -260,7 +252,7 @@ export function TikrarSystem() {
     if (!isAutoPlayingRef.current) return;
 
     if (vIndex >= verses.length) {
-      if (loopNum < 4) { 
+      if (loopNum < 4) {
         setPrepListenCount(p => Math.min(5, p + 1));
         setCurrentLoop(loopNum + 1);
         playVerse(0, loopNum + 1);
@@ -309,15 +301,15 @@ export function TikrarSystem() {
     if (!user || isRequestingExam) return;
     setIsRequestingExam(true);
     try {
-      await addDocumentNonBlocking(collection(db, "page_exams"), {
-        userId: user.uid,
-        userName: userData?.username || user.displayName || "Thalibah",
+      await addDocumentNonBlocking("page_exams", {
+        userId: user.id,
+        userName: userData?.username || user.user_metadata?.full_name || "Thalibah",
         page: page,
         juz: juz,
         status: "requested",
-        requestedAt: serverTimestamp()
+        requestedAt: new Date().toISOString()
       });
-      const text = `Assalamu'alaikum Admin HI AQLI, saya ${userData?.username || user.displayName} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
+      const text = `Assalamu'alaikum Admin HI AQLI, saya ${userData?.username || user.user_metadata?.full_name} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
       window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(text)}`, '_blank');
       toast({ title: "Permohonan Dikirim", description: "Admin HI AQLI akan segera menjadwalkan ujian lisan Anda." });
     } catch (e) {
@@ -375,11 +367,11 @@ export function TikrarSystem() {
 
       <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md border-[#800000]/10">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(JUZ_PAGES[juz-1]||1, p - 1))} disabled={loading || page <= (JUZ_PAGES[juz-1]||1)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
+          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(JUZ_PAGES[juz - 1] || 1, p - 1))} disabled={loading || page <= (JUZ_PAGES[juz - 1] || 1)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
             <ChevronLeft className="h-5 w-5 text-[#800000]" />
           </Button>
           <span className="text-xl font-black text-[#800000] w-12 text-center">{page}</span>
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(juz < 30 ? (JUZ_PAGES[juz]||605)-1 : 604, p + 1))} disabled={loading || page >= (juz < 30 ? (JUZ_PAGES[juz]||605)-1 : 604)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
+          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(juz < 30 ? (JUZ_PAGES[juz] || 605) - 1 : 604, p + 1))} disabled={loading || page >= (juz < 30 ? (JUZ_PAGES[juz] || 605) - 1 : 604)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
             <ChevronRight className="h-5 w-5 text-[#800000]" />
           </Button>
         </div>
@@ -434,7 +426,7 @@ export function TikrarSystem() {
                 <Button onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay} className={cn("w-full h-14 font-black rounded-2xl border-2 transition-all gap-3 shadow-md uppercase tracking-widest", isAutoPlaying ? "bg-[#800000] text-white border-white" : prepListenCount >= 5 ? "bg-[#D4AF37] border-[#D4AF37] text-black" : "bg-[#800000] text-white border-transparent")}>
                   {isAutoPlaying ? <><Pause className="w-6 h-6 fill-current" /> Berhenti</> : <><Play className="w-6 h-6 fill-current" /> {prepListenCount >= 5 ? 'Ulangi Simak' : 'Mulai Simak'}</>}
                 </Button>
-                
+
                 {playingVerseIndex !== null && verses[playingVerseIndex] && (
                   <div className="mt-6 p-6 sm:p-8 bg-white rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
                     <div className="flex flex-col gap-8">
@@ -499,21 +491,21 @@ export function TikrarSystem() {
             <MaqtaCard id={2} page={page} state={blocks[2]} verses={blockVerses[2]} isLocked={!isTuntasTM(1)} onIncrement={setBlocks} fontSize={fontSize} letter="B" />
           </div>
 
-          <MetaStep label="GABUNG BLOK A & B" count={metaCounts['1_2']} isLocked={!isTuntasTM(1) || !isTuntasTM(2)} onIncrement={() => setMetaCounts(p => ({...p, '1_2': p['1_2'] + 1}))} />
+          <MetaStep label="GABUNG BLOK A & B" count={metaCounts['1_2']} isLocked={!isTuntasTM(1) || !isTuntasTM(2)} onIncrement={() => setMetaCounts(p => ({ ...p, '1_2': p['1_2'] + 1 }))} />
 
           <MaqtaCard id={3} page={page} state={blocks[3]} verses={blockVerses[3]} isLocked={!isMetaTuntas('1_2')} onIncrement={setBlocks} fontSize={fontSize} letter="C" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MetaStep label="GABUNG BLOK B & C" count={metaCounts['2_3']} isLocked={!isTuntasTM(3)} onIncrement={() => setMetaCounts(p => ({...p, '2_3': p['2_3'] + 1}))} />
-            <MetaStep label="GABUNG BLOK A s/d C" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3': p['1_2_3'] + 1}))} />
+            <MetaStep label="GABUNG BLOK B & C" count={metaCounts['2_3']} isLocked={!isTuntasTM(3)} onIncrement={() => setMetaCounts(p => ({ ...p, '2_3': p['2_3'] + 1 }))} />
+            <MetaStep label="GABUNG BLOK A s/d C" count={metaCounts['1_2_3']} isLocked={!isMetaTuntas('2_3')} onIncrement={() => setMetaCounts(p => ({ ...p, '1_2_3': p['1_2_3'] + 1 }))} />
           </div>
 
           <MaqtaCard id={4} page={page} state={blocks[4]} verses={blockVerses[4]} isLocked={!isMetaTuntas('1_2_3')} onIncrement={setBlocks} fontSize={fontSize} letter="D" />
 
           <div className="space-y-4">
-            <MetaStep label="GABUNG BLOK C & D" count={metaCounts['3_4']} isLocked={!isTuntasTM(4)} onIncrement={() => setMetaCounts(p => ({...p, '3_4': p['3_4'] + 1}))} />
-            <MetaStep label="GABUNG BLOK B s/d D" count={metaCounts['2_3_4']} isLocked={!isMetaTuntas('3_4')} onIncrement={() => setMetaCounts(p => ({...p, '2_3_4': p['2_3_4'] + 1}))} />
-            <MetaStep label="GABUNG SELURUH HALAMAN (A - D)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({...p, '1_2_3_4': p['1_2_3_4'] + 1}))} highlight />
+            <MetaStep label="GABUNG BLOK C & D" count={metaCounts['3_4']} isLocked={!isTuntasTM(4)} onIncrement={() => setMetaCounts(p => ({ ...p, '3_4': p['3_4'] + 1 }))} />
+            <MetaStep label="GABUNG BLOK B s/d D" count={metaCounts['2_3_4']} isLocked={!isMetaTuntas('3_4')} onIncrement={() => setMetaCounts(p => ({ ...p, '2_3_4': p['2_3_4'] + 1 }))} />
+            <MetaStep label="GABUNG SELURUH HALAMAN (A - D)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({ ...p, '1_2_3_4': p['1_2_3_4'] + 1 }))} highlight />
           </div>
 
           <div className="flex flex-col gap-6 mt-4">
@@ -603,10 +595,10 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 shrink-0">
-          <CounterBox label={`${page}${letter}-1`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], a: {count: p[id].a.count + 1}}}))} color="maroon" threshold={PASS_THRESHOLD} />
-          <CounterBox label={`${page}${letter}-2`} count={state.b.count} isLocked={isLocked || state.a.count < PASS_THRESHOLD} onInc={() => onIncrement((p:any) => ({...p, [id]: {...p[id], b: {count: p[id].b.count + 1}}}))} color="darkMaroon" threshold={PASS_THRESHOLD} />
+          <CounterBox label={`${page}${letter}-1`} count={state.a.count} isLocked={isLocked} onInc={() => onIncrement((p: any) => ({ ...p, [id]: { ...p[id], a: { count: p[id].a.count + 1 } } }))} color="maroon" threshold={PASS_THRESHOLD} />
+          <CounterBox label={`${page}${letter}-2`} count={state.b.count} isLocked={isLocked || state.a.count < PASS_THRESHOLD} onInc={() => onIncrement((p: any) => ({ ...p, [id]: { ...p[id], b: { count: p[id].b.count + 1 } } }))} color="darkMaroon" threshold={PASS_THRESHOLD} />
         </div>
-        <Button onClick={() => onIncrement((p:any) => ({...p, [id]: {...p[id], combined: {count: p[id].combined.count + 1}}}))} disabled={isLocked || state.b.count < PASS_THRESHOLD} className={cn("w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1 transition-all relative", isDoneG ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg" : "bg-[#800000] text-white hover:bg-[#800000]/90")}>
+        <Button onClick={() => onIncrement((p: any) => ({ ...p, [id]: { ...p[id], combined: { count: p[id].combined.count + 1 } } }))} disabled={isLocked || state.b.count < PASS_THRESHOLD} className={cn("w-full h-12 flex-col rounded-xl font-black uppercase tracking-widest shrink-0 py-1 transition-all relative", isDoneG ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg" : "bg-[#800000] text-white hover:bg-[#800000]/90")}>
           <span className="text-[8px] flex items-center gap-1 leading-none opacity-80 mb-0.5">{isLocked || state.b.count < PASS_THRESHOLD ? <Lock className="w-2 h-2" /> : null} GABUNG {page}{letter}</span>
           <span className="text-sm leading-none">{state.combined.count} / {PASS_THRESHOLD}</span>
           {isDoneG && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-black" /></div>}
@@ -634,7 +626,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
       <div className="flex items-center gap-3 shrink-0">
         <div className="text-right flex flex-col items-end">
           <span className="text-[10px] font-bold text-black uppercase">{count} / {TARGET_MAX_LOCAL}</span>
-          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count/TARGET_MAX_LOCAL)*100}%` }} /></div>
+          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden"><div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${(count / TARGET_MAX_LOCAL) * 100}%` }} /></div>
         </div>
         <Button onClick={onIncrement} disabled={isLocked || isDone} className={cn("h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all shadow-sm", isDone ? "bg-[#D4AF37] text-black border-none" : "bg-[#800000] text-white hover:bg-[#800000]/90")}>{isDone ? <CheckCircle2 className="w-4 h-4" /> : `+1`}</Button>
       </div>

@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Banknote, Calendar, GraduationCap, Award } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { collection, doc, query, where } from "firebase/firestore";
+import { useUser } from "@/supabase";
+import { useDoc, useCollection } from "@/supabase/db";
+import { useMemo } from "react";
 
 // Special ID for Tikrar Premium logic
 const TIKRAR_ID = 'tikrar-j30-b1';
@@ -18,44 +19,29 @@ const TIKRAR_ID = 'tikrar-j30-b1';
 export default function NgajiPage() {
   const [search, setSearch] = useState("");
   const { user } = useUser();
-  const db = useFirestore();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, "users", user.uid);
-  }, [db, user?.uid]);
+  const { data: userData } = useDoc("users", user?.id);
 
-  const { data: userData } = useDoc(userDocRef);
-
-  // Fetch all classes from Firestore
-  const halaqahQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "halaqahs");
-  }, [db]);
-
-  const { data: dbHalaqahs, isLoading: isHalaqahsLoading } = useCollection(halaqahQuery);
+  // Fetch all classes from Supabase
+  const { data: dbHalaqahs, isLoading: isHalaqahsLoading } = useCollection("halaqahs");
 
   // Fetch all registrations global to calculate quota
-  const allRegsGlobalQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("status", "in", ["active", "pending_verification"])
-    );
-  }, [db]);
+  const allRegsOptions = useMemo(() => ({
+    filters: [
+      { column: 'status', operator: 'in', value: ['active', 'pending_verification'] }
+    ]
+  }), []);
 
-  const { data: allRegsGlobal } = useCollection(allRegsGlobalQuery);
+  const { data: allRegsGlobal } = useCollection("halaqah_registrations", allRegsOptions);
 
   // Check current user registrations
-  const userRegQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("userId", "==", user.uid)
-    );
-  }, [db, user?.uid]);
+  const userRegOptions = useMemo(() => ({
+    filters: [
+      { column: 'userId', operator: '==', value: user?.id }
+    ]
+  }), [user?.id]);
 
-  const { data: userRegs } = useCollection(userRegQuery);
+  const { data: userRegs } = useCollection("halaqah_registrations", userRegOptions);
 
   const filteredCircles = dbHalaqahs?.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -69,7 +55,7 @@ export default function NgajiPage() {
       if (userData?.followedHalaqahs?.includes(id)) return 'active';
       return 'none';
     }
-    return reg.status; 
+    return reg.status;
   };
 
   const isHalaqahActive = (id: string) => getHalaqahStatus(id) === 'active';
@@ -86,7 +72,7 @@ export default function NgajiPage() {
     const isPending = status === 'pending_verification';
     const sisaKuota = getSisaKuota(circle);
     const isFull = sisaKuota <= 0 && !isActive && !isPending;
-    
+
     let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
       href = circle.id === TIKRAR_ID ? '/hafal' : `/study-circles/${circle.id}`;
@@ -94,12 +80,12 @@ export default function NgajiPage() {
 
     return (
       <Link key={circle.id} href={(isPending || isFull) ? "#" : href}>
-        <Card 
+        <Card
           className={cn(
             "p-4 hover:bg-accent/5 transition-all cursor-pointer group border-none shadow-sm",
             isActive ? "bg-white border-l-4 border-[#D4AF37]" :
-            isPending ? "bg-white border-l-4 border-amber-500" :
-            circle.isPremium ? "bg-white border-l-4 border-[#800000]" : "bg-card/50",
+              isPending ? "bg-white border-l-4 border-amber-500" :
+                circle.isPremium ? "bg-white border-l-4 border-[#800000]" : "bg-card/50",
             isFull && "opacity-60"
           )}
         >
@@ -108,13 +94,13 @@ export default function NgajiPage() {
               <div className="flex items-center gap-4 flex-1">
                 <div className={cn(
                   "flex items-center justify-center w-12 h-12 rounded-xl font-bold shrink-0",
-                  isActive ? "bg-[#D4AF37] text-black" : 
-                  isPending ? "bg-amber-500 text-white" :
-                  circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+                  isActive ? "bg-[#D4AF37] text-black" :
+                    isPending ? "bg-amber-500 text-white" :
+                      circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
                 )}>
-                  {isActive ? <PlayCircle className="w-6 h-6" /> : 
-                   isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
-                   circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                  {isActive ? <PlayCircle className="w-6 h-6" /> :
+                    isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
+                      circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                 </div>
                 <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -198,9 +184,9 @@ export default function NgajiPage() {
 
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input 
-          placeholder="Cari program atau mu'allimah..." 
-          className="pl-11 h-12 bg-white border-2 border-[#800000]/5 focus-visible:ring-[#800000] text-sm font-medium" 
+        <Input
+          placeholder="Cari program atau mu'allimah..."
+          className="pl-11 h-12 bg-white border-2 border-[#800000]/5 focus-visible:ring-[#800000] text-sm font-medium"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

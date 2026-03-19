@@ -2,25 +2,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth, useFirestore, useUser, initiateEmailSignUp, initiateGoogleSignIn } from '@/firebase';
-import { updateProfile } from 'firebase/auth';
-import { doc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUser, initiateEmailSignUp, initiateGoogleSignIn, supabase } from '@/supabase';
 import { useRouter } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, UserPlus, Mail, Lock, User } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Lock, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 
 export default function RegisterPage() {
-  const auth = useAuth();
-  const db = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,59 +26,75 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      // Sync profile data once user is created.
+    if (user && !isUserLoading) {
       const syncProfile = async () => {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (!userSnap.exists()) {
-          // New user profile
-          if (user.displayName !== username && username) {
-            await updateProfile(user, { displayName: username }).catch(() => {});
-          }
-          
-          setDocumentNonBlocking(userRef, {
-            id: user.uid,
-            username: username || user.displayName || user.email?.split('@')[0],
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (!profile) {
+          await supabase.from('users').insert({
+            id: user.id,
+            username: username || user.user_metadata?.full_name || user.email?.split('@')[0],
             email: user.email,
             roleId: 'learner',
             points: 0,
             followedHalaqahs: [],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
         }
         router.push('/');
       };
-      
+
       syncProfile();
     }
-  }, [user, router, username, db]);
+  }, [user, router, username, isUserLoading]);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    initiateEmailSignUp(auth, email, password);
+    const { data: signUpData, error: signUpError } = await initiateEmailSignUp(email, password, {
+      data: { full_name: username }
+    });
 
-    setTimeout(() => {
-      if (!user) {
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+    } else {
+        // Sign up success! 
+        // If email confirmation is ON, Supabase return user but session is null.
+        // If email confirmation is OFF, session is returned and useUser state will change.
         setLoading(false);
-        setError('Gagal mendaftarkan akun. Silakan periksa kembali data Anda.');
-      }
-    }, 5000);
+        if (signUpData.session) {
+            toast({
+              title: "Selamat Datang!",
+              description: "Pendaftaran berhasil, Anda otomatis masuk.",
+            });
+            router.push('/');
+        } else {
+            setError(null);
+            toast({
+              title: "Cek Email Anda",
+              description: "Masyallah! Pendaftaran berhasil. Silakan verifikasi email Anda sebelum masuk.",
+            });
+            router.push('/login');
+        }
+    }
   };
 
-  const handleGoogleRegister = () => {
+  const handleGoogleRegister = async () => {
     setGoogleLoading(true);
     setError(null);
-    initiateGoogleSignIn(auth);
-    
-    setTimeout(() => {
-      if (!user) setGoogleLoading(false);
-    }, 5000);
+    const { error: googleError } = await initiateGoogleSignIn();
+    if (googleError) {
+      setError(googleError.message);
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -102,12 +115,12 @@ export default function RegisterPage() {
               <AlertDescription className="text-xs font-bold">{error}</AlertDescription>
             </Alert>
           )}
-          
+
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Pengguna</Label>
               <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="username"
                   placeholder="Contoh: hamba_allah"

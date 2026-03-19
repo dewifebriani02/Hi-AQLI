@@ -1,20 +1,20 @@
 
 'use client';
 
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, orderBy, limit } from "firebase/firestore";
+import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Trophy, 
-  Medal, 
-  ChevronRight, 
-  Crown, 
-  Gift, 
-  Award, 
+import {
+  Trophy,
+  Medal,
+  ChevronRight,
+  Crown,
+  Gift,
+  Award,
   Clock,
   Sparkles,
   Zap,
@@ -23,6 +23,7 @@ import {
   Heart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMemo } from "react";
 import Link from "next/link";
 
 const activeChallenges = [
@@ -49,22 +50,17 @@ const activeChallenges = [
 ];
 
 export default function LeaderboardPage() {
-  const db = useFirestore();
   const { user } = useUser();
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(
-      collection(db, "users"),
-      orderBy("points", "desc"),
-      limit(50)
-    );
-  }, [db]);
+  const leaderboardOptions = useMemo(() => ({
+    orderBy: { column: 'points', ascending: false },
+    limit: 50
+  }), []);
 
-  const { data: users, isLoading } = useCollection(usersQuery);
+  const { data: users, isLoading } = useCollection("users", leaderboardOptions);
 
-  const currentUserData = users?.find(u => u.id === user?.uid);
-  const currentUserRank = users?.findIndex(u => u.id === user?.uid) + 1 || 0;
+  const currentUserData = users?.find(u => u.id === user?.id);
+  const currentUserRank = users?.findIndex(u => u.id === user?.id) + 1 || 0;
 
   if (isLoading) {
     return (
@@ -97,7 +93,7 @@ export default function LeaderboardPage() {
         <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-[#800000]">
           <Crown className="w-5 h-5 text-[#D4AF37] fill-current" /> Papan Peringkat Utama
         </h2>
-        
+
         {topThree.length > 0 ? (
           <div className="grid grid-cols-3 gap-2 items-end pt-8 pb-4">
             {/* Rank 2 */}
@@ -205,7 +201,7 @@ export default function LeaderboardPage() {
           </h2>
           <Badge variant="outline" className="text-[10px] font-bold text-[#D4AF37] border-[#D4AF37]">AKTIF</Badge>
         </div>
-        
+
         <div className="grid gap-4">
           {activeChallenges.map((challenge) => (
             <Card key={challenge.id} className="overflow-hidden border-none shadow-md bg-white border-b-4 border-[#D4AF37]">
@@ -267,8 +263,8 @@ export default function LeaderboardPage() {
               </div>
             </div>
             <div className="text-right">
-               <span className="text-sm font-black block text-white">{currentUserData?.points || 0}</span>
-               <span className="text-[10px] text-[#D4AF37] uppercase font-black tracking-widest">Poin</span>
+              <span className="text-sm font-black block text-white">{currentUserData?.points || 0}</span>
+              <span className="text-[10px] text-[#D4AF37] uppercase font-black tracking-widest">Poin</span>
             </div>
           </CardContent>
         </Card>

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@/firebase";
+import { useUser } from "@/supabase";
 import { TilawahClient } from "@/components/tilawah-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export default function AiAssistantPage() {
         </Button>
         <h1 className="text-2xl font-bold font-headline tracking-tight">Asisten Qur'an AI</h1>
       </div>
-      
+
       <p className="text-muted-foreground">
         Rekam tilawah Anda untuk mendapatkan analisis instan mengenai makhraj dan kelancaran dari AI kami.
       </p>

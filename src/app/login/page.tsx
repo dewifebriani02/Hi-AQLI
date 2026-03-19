@@ -2,8 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth, useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/firebase';
+import { useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/supabase';
 import { useRouter } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,9 +15,9 @@ import Link from 'next/link';
 import { Logo } from '@/components/logo';
 
 export default function LoginPage() {
-  const auth = useAuth();
   const { user } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,29 +30,38 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
-    initiateEmailSignIn(auth, email, password);
 
-    setTimeout(() => {
-      if (!user) {
-        setLoading(false);
-        setError('Gagal masuk. Mohon periksa kembali email dan kata sandi Anda.');
-      }
-    }, 3000);
+    const { error } = await initiateEmailSignIn(email, password);
+
+    if (error) {
+      setLoading(false);
+      setError('Gagal masuk. Mohon periksa kembali email dan kata sandi Anda.');
+    } else {
+        toast({
+            title: "Selamat Datang!",
+            description: "Masyallah, Anda telah masuk ke Hi AQLI.",
+        });
+    }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     setError(null);
-    initiateGoogleSignIn(auth);
-    
-    setTimeout(() => {
-      if (!user) setGoogleLoading(false);
-    }, 5000);
+    const { error } = await initiateGoogleSignIn();
+
+    if (error) {
+      setGoogleLoading(false);
+      setError('Gagal masuk dengan Google.');
+      toast({
+        variant: "destructive",
+        title: "Gagal Masuk",
+        description: "Terjadi kesalahan saat mencoba masuk dengan Google.",
+      });
+    }
   };
 
   return (
@@ -59,7 +69,7 @@ export default function LoginPage() {
       <div className="mb-8 scale-125">
         <Logo />
       </div>
-      
+
       <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden bg-white/80 backdrop-blur-sm">
         <div className="h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000]" />
         <CardHeader className="space-y-1 text-center pt-8">
@@ -72,7 +82,7 @@ export default function LoginPage() {
               <AlertDescription className="text-xs font-bold">{error}</AlertDescription>
             </Alert>
           )}
-          
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Alamat Email</Label>

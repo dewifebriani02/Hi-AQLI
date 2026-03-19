@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, serverTimestamp, deleteDoc, query, where, writeBatch, arrayUnion } from "firebase/firestore";
-import { setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useUser, supabase } from "@/supabase";
+import { useCollection, useDoc } from "@/supabase/db";
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users, Timer, GraduationCap, Award, UserPlus, X, Info } from "lucide-react";
 import Link from "next/link";
@@ -33,14 +33,14 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const INITIAL_FORM = {
+  programType: "hi_ngaji",
   title: "",
-  muallimahId: "",
-  musyrifahId: "",
   description: "",
   day: "Senin",
   time: "19:00",
   startDate: "",
   durationWeeks: 4,
+  juz: "1",
   level: "Semua Level",
   isPremium: false,
   hasExam: true,
@@ -53,10 +53,9 @@ const INITIAL_FORM = {
 const DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
 export default function AdminClassesPage() {
-  const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHalaqah, setEditingHalaqah] = useState<any>(null);
   const [form, setForm] = useState(INITIAL_FORM);
@@ -67,43 +66,27 @@ export default function AdminClassesPage() {
   const [newParticipantId, setNewParticipantId] = useState("");
 
   // Fetch Classes
-  const halaqahQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return collection(db, "halaqahs");
-  }, [db, user?.uid]);
-
-  const { data: halaqahs, isLoading } = useCollection(halaqahQuery);
+  const { data: halaqahs, isLoading } = useCollection("halaqahs");
 
   // Fetch ALL registrations to calculate remaining quota for each card
-  const allRegistrationsQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("status", "in", ["active", "pending_verification"])
-    );
-  }, [db, user?.uid]);
+  const allRegOptions = useMemo(() => ({
+    filters: [{ column: 'status', operator: 'in', value: ["active", "pending_verification"] }]
+  }), []);
 
-  const { data: allRegistrations } = useCollection(allRegistrationsQuery);
+  const { data: allRegistrations } = useCollection("halaqah_registrations", allRegOptions);
 
   // Fetch Users for Selection
-  const usersQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return collection(db, "users");
-  }, [db, user?.uid]);
-
-  const { data: allUsers } = useCollection(usersQuery);
+  const { data: allUsers } = useCollection("users");
 
   // Fetch Registrations for Selected Halaqah (Detailed view in Dialog)
-  const participantsQuery = useMemoFirebase(() => {
-    if (!db || !selectedHalaqah?.id) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("halaqahId", "==", selectedHalaqah.id),
-      where("status", "==", "active")
-    );
-  }, [db, selectedHalaqah?.id]);
+  const participantOptions = useMemo(() => ({
+    filters: [
+      { column: 'halaqahId', operator: '==', value: selectedHalaqah?.id },
+      { column: 'status', operator: '==', value: 'active' }
+    ]
+  }), [selectedHalaqah?.id]);
 
-  const { data: participants, isLoading: isParticipantsLoading } = useCollection(participantsQuery);
+  const { data: participants, isLoading: isParticipantsLoading } = useCollection("halaqah_registrations", participantOptions);
 
   // Helper to get sisa kuota for a specific class
   const getSisaKuota = (halaqah: any) => {
@@ -129,14 +112,14 @@ export default function AdminClassesPage() {
     setEditingHalaqah(h);
     const [day, time] = (h.schedule || "Senin, 19:00").split(", ");
     setForm({
+      programType: h.programType || "hi_ngaji",
       title: h.title,
-      muallimahId: h.muallimahId || "",
-      musyrifahId: h.musyrifahId || "",
       description: h.description || "",
       day: day || "Senin",
       time: time || "19:00",
       startDate: h.startDate || "",
       durationWeeks: h.durationWeeks || 4,
+      juz: h.juz || "1",
       level: h.level || "Semua Level",
       isPremium: h.isPremium || false,
       hasExam: h.hasExam ?? true,
@@ -149,25 +132,29 @@ export default function AdminClassesPage() {
   };
 
   const handleSave = async () => {
-    if (!form.title || !form.muallimahId || !form.startDate) {
-      toast({ variant: "destructive", title: "Mohon lengkapi judul, Mu'allimah, dan tanggal mulai." });
+    if (!form.title || !form.startDate) {
+      toast({ variant: "destructive", title: "Mohon lengkapi judul dan tanggal mulai." });
       return;
     }
 
-    const selectedMuallimah = allUsers?.find(u => u.id === form.muallimahId);
-    const selectedMusyrifah = allUsers?.find(u => u.id === form.musyrifahId);
+    let finalSchedule = `${form.day}, ${form.time}`;
+    if (form.programType === 'hi_mufradat' || form.programType === 'tikrar_daily') {
+      finalSchedule = "Senin - Jumat (Toleransi sd Ahad)";
+    }
 
     const finalData = {
+      programType: form.programType,
       title: form.title,
-      muallimah: selectedMuallimah?.username || "Mu'allimah AQLI",
-      muallimahId: form.muallimahId,
-      musyrifah: selectedMusyrifah?.username || "",
-      musyrifahId: form.musyrifahId,
+      muallimah: "Admin / Menunggu Assignment",
+      muallimahId: "",
+      musyrifah: "",
+      musyrifahId: "",
       description: form.description,
-      schedule: `${form.day}, ${form.time}`,
+      schedule: finalSchedule,
       startDate: form.startDate,
       endDate: calculatedEndDate,
       durationWeeks: form.durationWeeks,
+      juz: form.programType === 'hi_ngaji' ? null : form.juz,
       level: form.level,
       isPremium: form.isPremium,
       hasExam: form.hasExam,
@@ -175,19 +162,17 @@ export default function AdminClassesPage() {
       tag: form.tag,
       basePrice: form.basePrice,
       quota: form.quota,
-      updatedAt: serverTimestamp()
+      updatedAt: new Date().toISOString()
     };
 
     try {
       if (editingHalaqah) {
-        const ref = doc(db, "halaqahs", editingHalaqah.id);
-        setDocumentNonBlocking(ref, finalData, { merge: true });
+        updateDocumentNonBlocking("halaqahs", editingHalaqah.id, finalData);
         toast({ title: "Kelas Diperbarui" });
       } else {
-        const col = collection(db, "halaqahs");
-        addDocumentNonBlocking(col, {
+        addDocumentNonBlocking("halaqahs", {
           ...finalData,
-          createdAt: serverTimestamp()
+          createdAt: new Date().toISOString()
         });
         toast({ title: "Kelas Berhasil Ditambahkan" });
       }
@@ -210,12 +195,10 @@ export default function AdminClassesPage() {
     }
 
     try {
-      const batch = writeBatch(db);
-      
-      // 1. Create Registration Record
       const regId = `manual_${selectedHalaqah.id}_${newParticipantId}`;
-      const regRef = doc(db, "halaqah_registrations", regId);
-      batch.set(regRef, {
+
+      // 1. Create Registration Record
+      const { error: regError } = await supabase.from("halaqah_registrations").upsert({
         id: regId,
         userId: newParticipantId,
         userName: userToAdd.username || userToAdd.email,
@@ -223,22 +206,28 @@ export default function AdminClassesPage() {
         halaqahId: selectedHalaqah.id,
         halaqahTitle: selectedHalaqah.title,
         status: "active",
-        isPaid: false, // Manual addition by admin
-        createdAt: serverTimestamp(),
-        verifiedAt: serverTimestamp()
+        isPaid: false,
+        createdAt: new Date().toISOString(),
+        verifiedAt: new Date().toISOString()
       });
+
+      if (regError) throw regError;
 
       // 2. Update User Profile followedHalaqahs
-      const userRef = doc(db, "users", newParticipantId);
-      batch.update(userRef, {
-        followedHalaqahs: arrayUnion(selectedHalaqah.id),
-        updatedAt: serverTimestamp()
-      });
+      const currentFollowed = userToAdd.followedHalaqahs || [];
+      if (!currentFollowed.includes(selectedHalaqah.id)) {
+        const { error: userError } = await supabase.from("users").update({
+          followedHalaqahs: [...currentFollowed, selectedHalaqah.id],
+          updatedAt: new Date().toISOString()
+        }).eq('id', newParticipantId);
 
-      await batch.commit();
+        if (userError) throw userError;
+      }
+
       toast({ title: "Peserta Berhasil Ditambahkan" });
       setNewParticipantId("");
     } catch (e) {
+      console.error(e);
       toast({ variant: "destructive", title: "Gagal menambahkan peserta." });
     }
   };
@@ -246,7 +235,8 @@ export default function AdminClassesPage() {
   const handleRemoveParticipant = async (regId: string, userId: string) => {
     if (!confirm("Hapus akses kelas santri ini?")) return;
     try {
-      await deleteDoc(doc(db, "halaqah_registrations", regId));
+      const { error } = await supabase.from("halaqah_registrations").delete().eq('id', regId);
+      if (error) throw error;
       toast({ title: "Peserta Dihapus dari Kelas" });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal menghapus peserta." });
@@ -256,7 +246,8 @@ export default function AdminClassesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus kelas ini? Tindakan ini tidak dapat dibatalkan.")) return;
     try {
-      await deleteDoc(doc(db, "halaqahs", id));
+      const { error } = await supabase.from("halaqahs").delete().eq('id', id);
+      if (error) throw error;
       toast({ title: "Kelas Dihapus" });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal menghapus kelas." });
@@ -299,12 +290,8 @@ export default function AdminClassesPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-black text-sm uppercase text-[#800000]">{h.title}</h3>
+                        <Badge className="bg-slate-800 text-white text-[7px] font-black h-4 uppercase">{h.programType === 'hi_mufradat' ? 'HI MUFRADAT' : h.programType === 'tikrar_daily' ? 'TIKRAR DAILY' : 'HI NGAJI'}</Badge>
                         {h.isPremium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                          <User className="w-3 h-3 text-[#800000]" /> Mu'allimah: {h.muallimah}
-                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -316,11 +303,11 @@ export default function AdminClassesPage() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 mb-4">
-                    <Button 
-                      variant="secondary" 
-                      size="sm" 
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       className="h-7 text-[9px] font-black uppercase tracking-widest gap-1.5"
                       onClick={() => { setSelectedHalaqah(h); setIsParticipantsOpen(true); }}
                     >
@@ -407,9 +394,9 @@ export default function AdminClassesPage() {
                           <span className="text-[9px] text-muted-foreground">{p.userEmail}</span>
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleRemoveParticipant(p.id, p.userId)}
                       >
@@ -426,98 +413,138 @@ export default function AdminClassesPage() {
 
       {/* Class Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90dvh] md:max-h-[85vh] flex flex-col overflow-hidden p-4 sm:p-6">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Library className="w-5 h-5 text-[#800000]" />
               {editingHalaqah ? "Edit Kelas" : "Tambah Kelas Baru"}
             </DialogTitle>
             <DialogDescription>Lengkapi detail operasional program Sahabat AQLI.</DialogDescription>
           </DialogHeader>
-          
-          <div className="grid gap-6 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Judul Program</Label>
-                <Input value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} placeholder="Contoh: Tahsin Dasar Al-Fatihah" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Pilih Mu'allimah</Label>
-                <Select value={form.muallimahId} onValueChange={(v) => setForm({...form, muallimahId: v})}>
-                  <SelectTrigger><SelectValue placeholder="Pilih mu'allimah" /></SelectTrigger>
-                  <SelectContent>
-                    {allUsers?.filter(u => u.roleId === 'muallimah').map(u => (
-                      <SelectItem key={u.id} value={u.id}>{u.username || u.email}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+
+          <div className="grid gap-6 py-4 overflow-y-auto flex-1 min-h-0 pr-2">
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase text-[#800000]">Pilih Program</Label>
+              <Select value={form.programType} onValueChange={(v) => setForm({ ...form, programType: v, durationWeeks: v === 'hi_mufradat' ? 1 : v === 'tikrar_daily' ? 1 : 4 })}>
+                <SelectTrigger className="bg-muted/30 border-2 font-bold"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hi_ngaji">Hi Ngaji (Reguler)</SelectItem>
+                  <SelectItem value="hi_mufradat">Hi Mufradat (Target Hafalan)</SelectItem>
+                  <SelectItem value="tikrar_daily">Tikrar Daily / Hi Hafal</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Pilih Musyrifah (Pendamping)</Label>
-                <Select value={form.musyrifahId} onValueChange={(v) => setForm({...form, musyrifahId: v})}>
-                  <SelectTrigger><SelectValue placeholder="Pilih musyrifah" /></SelectTrigger>
-                  <SelectContent>
-                    {allUsers?.filter(u => u.roleId === 'musyrifah').map(u => (
-                      <SelectItem key={u.id} value={u.id}>{u.username || u.email}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className={cn("space-y-2", form.programType === 'hi_mufradat' && "sm:col-span-2")}>
+                <Label className="text-xs font-black uppercase">Judul Kelas</Label>
+                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Contoh: Tahsin Dasar Al-Fatihah" />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Level Program</Label>
-                <Select value={form.level} onValueChange={(v) => setForm({...form, level: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Semua Level">Semua Level</SelectItem>
-                    <SelectItem value="Pemula">Pemula</SelectItem>
-                    <SelectItem value="Menengah">Menengah</SelectItem>
-                    <SelectItem value="Lanjutan">Lanjutan</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {form.programType !== 'hi_mufradat' && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase">{form.programType === 'tikrar_daily' ? 'Level Bacaan' : 'Level Program'}</Label>
+                  <Select value={form.level} onValueChange={(v) => setForm({ ...form, level: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {form.programType === 'tikrar_daily' ? (
+                        <>
+                          <SelectItem value="Semua Level">Semua Level</SelectItem>
+                          <SelectItem value="Level Bacaan">Level Bacaan</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="Semua Level">Semua Level</SelectItem>
+                          <SelectItem value="Pemula">Pemula</SelectItem>
+                          <SelectItem value="Menengah">Menengah</SelectItem>
+                          <SelectItem value="Lanjutan">Lanjutan</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase">Deskripsi Singkat</Label>
-              <Textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} className="h-20" placeholder="Jelaskan apa yang akan dipelajari..." />
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="h-20" placeholder="Jelaskan apa yang akan dipelajari..." />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Hari Belajar</Label>
-                <Select value={form.day} onValueChange={(v) => setForm({...form, day: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {DAYS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Jam Belajar</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="time" value={form.time} onChange={(e) => setForm({...form, time: e.target.value})} className="pl-10" />
+            {form.programType === 'hi_ngaji' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase">Hari Belajar</Label>
+                  <Select value={form.day} onValueChange={(v) => setForm({ ...form, day: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {DAYS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase">Jam Belajar</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="pl-10" />
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4 p-4 rounded-xl bg-[#800000]/5 border-2 border-dashed border-[#800000]/20">
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase text-[#800000]/70 flex items-center gap-2 mb-1">
+                    <Clock className="w-3 h-3" /> Jadwal Pengerjaan Fleksibel (Target Based)
+                  </Label>
+                  <p className="text-sm font-black text-[#800000]">Senin - Jumat <span className="text-[10px] font-bold text-muted-foreground ml-1">(Toleransi & Murojaah s/d Ahad)</span></p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase">Target Juz</Label>
+                  <Select value={form.juz} onValueChange={(v) => setForm({ ...form, juz: v })}>
+                    <SelectTrigger className="w-full bg-white"><SelectValue placeholder="Pilih Juz" /></SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {Array.from({ length: 30 }, (_, i) => i + 1).map(juz => (
+                        <SelectItem key={juz} value={juz.toString()}>Juz {juz}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase">Mulai Belajar</Label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="date" value={form.startDate} onChange={(e) => setForm({...form, startDate: e.target.value})} className="pl-10" />
+                  <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="pl-10" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Durasi (Jumlah Pekan)</Label>
-                <div className="relative">
-                  <Timer className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="number" min="1" value={form.durationWeeks} onChange={(e) => setForm({...form, durationWeeks: parseInt(e.target.value) || 1})} className="pl-10" />
-                </div>
+                <Label className="text-xs font-black uppercase">{form.programType === 'hi_ngaji' ? 'Durasi (Pekan)' : 'Target Hafalan satu Halaman'}</Label>
+                {form.programType === 'hi_ngaji' ? (
+                  <div className="relative">
+                    <Timer className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input type="number" min="1" value={form.durationWeeks} onChange={(e) => setForm({ ...form, durationWeeks: parseInt(e.target.value) || 1 })} className="pl-10" />
+                  </div>
+                ) : form.programType === 'hi_mufradat' ? (
+                  <Select value={form.durationWeeks.toString()} onValueChange={(v) => setForm({ ...form, durationWeeks: parseInt(v) })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="20">20 Pekan (5 Bulan - Standar 1 Juz)</SelectItem>
+                      <SelectItem value="24">24 Pekan (6 Bulan - Khusus Juz 30)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={form.durationWeeks.toString()} onValueChange={(v) => setForm({ ...form, durationWeeks: parseInt(v) })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Pekan (Intensif)</SelectItem>
+                      <SelectItem value="2">2 Pekan (Reguler)</SelectItem>
+                      <SelectItem value="3">3 Pekan (Santai)</SelectItem>
+                      <SelectItem value="4">4 Pekan (Pemula)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 {calculatedEndDate && (
                   <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter mt-1">
                     Otomatis berakhir: {new Date(calculatedEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -531,24 +558,24 @@ export default function AdminClassesPage() {
                 <div className="space-y-0.5">
                   <Label className="text-[10px] font-bold uppercase flex items-center gap-1"><GraduationCap className="w-3 h-3" /> Ada Ujian</Label>
                 </div>
-                <Switch checked={form.hasExam} onCheckedChange={(v) => setForm({...form, hasExam: v})} />
+                <Switch checked={form.hasExam} onCheckedChange={(v) => setForm({ ...form, hasExam: v })} />
               </div>
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
                 <div className="space-y-0.5">
                   <Label className="text-[10px] font-bold uppercase flex items-center gap-1"><Award className="w-3 h-3" /> Sertifikat</Label>
                 </div>
-                <Switch checked={form.hasCertificate} onCheckedChange={(v) => setForm({...form, hasCertificate: v})} />
+                <Switch checked={form.hasCertificate} onCheckedChange={(v) => setForm({ ...form, hasCertificate: v })} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase">Kuota Peserta</Label>
-                <Input type="number" value={form.quota} onChange={(e) => setForm({...form, quota: parseInt(e.target.value) || 0})} />
+                <Input type="number" value={form.quota} onChange={(e) => setForm({ ...form, quota: parseInt(e.target.value) || 0 })} />
               </div>
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed h-10 mt-6">
                 <Label className="text-[10px] font-bold uppercase">Berbayar (Premium)</Label>
-                <Switch checked={form.isPremium} onCheckedChange={(v) => setForm({...form, isPremium: v})} />
+                <Switch checked={form.isPremium} onCheckedChange={(v) => setForm({ ...form, isPremium: v })} />
               </div>
             </div>
 
@@ -556,17 +583,17 @@ export default function AdminClassesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border-2 border-[#D4AF37]/20 rounded-2xl bg-[#D4AF37]/5 animate-in slide-in-from-top-2">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase">Infaq Dasar (Rp)</Label>
-                  <Input type="number" value={form.basePrice} onChange={(e) => setForm({...form, basePrice: parseInt(e.target.value) || 0})} />
+                  <Input type="number" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: parseInt(e.target.value) || 0 })} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase">Tag Promosi</Label>
-                  <Input value={form.tag} onChange={(e) => setForm({...form, tag: e.target.value})} placeholder="Contoh: PENDAFTARAN DIBUKA" />
+                  <Input value={form.tag} onChange={(e) => setForm({ ...form, tag: e.target.value })} placeholder="Contoh: PENDAFTARAN DIBUKA" />
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 pt-4">
             <Button onClick={handleSave} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black gap-2 h-12 shadow-xl">
               <CheckCircle2 className="w-5 h-5" /> SIMPAN PROGRAM
             </Button>

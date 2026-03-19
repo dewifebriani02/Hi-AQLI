@@ -17,8 +17,8 @@ import {
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
 
 interface WordData {
   id: number;
@@ -43,8 +43,7 @@ export default function VerseDetailPage() {
   const id = params.id as string;
   const verseNumber = params.verseNumber as string;
   const currentVerseNum = parseInt(verseNumber);
-  
-  const db = useFirestore();
+
   const { user, isUserLoading } = useUser();
 
   const [verse, setVerse] = useState<VerseDetail | null>(null);
@@ -55,19 +54,18 @@ export default function VerseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
-  
+
   const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
 
-  const progressQuery = useMemoFirebase(() => {
-    if (!db || !user || !id) return null;
-    return query(
-      collection(db, "users", user.uid, "quiz_attempts"),
-      where("surahId", "==", id),
-      where("isPassed", "==", true)
-    );
-  }, [db, user?.uid, id]);
+  const progressOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'surahId', operator: '==', value: id },
+      { column: 'isPassed', operator: '==', value: true }
+    ]
+  }), [user?.id, id]);
 
-  const { data: progress } = useCollection(progressQuery);
+  const { data: progress } = useCollection("quiz_attempts", progressOptions);
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
@@ -93,13 +91,32 @@ export default function VerseDetailPage() {
   const fetchOfficialTafsir = useCallback(async (chapterId: string, vNum: string) => {
     setApiTafsir(null);
     try {
-      const res = await fetch(`https://api.quran.com/api/v4/tafsirs/157/by_key/${chapterId}:${vNum}`);
-      if (res.ok) {
-        const data = await res.json();
-        setApiTafsir(data.tafsir?.text || "Tafsir belum tersedia.");
+      // Coba beberapa ID Tafsir populer jika salah satu 404 (131=Muyassar, 157=Jalalayn, 164=Zubdatut)
+      const tafsirIds = [131, 157, 164];
+      let found = false;
+
+      for (const tId of tafsirIds) {
+        const res = await fetch(`https://api.quran.com/api/v4/tafsirs/${tId}/by_key/${chapterId}:${vNum}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.tafsir?.text) {
+            setApiTafsir(data.tafsir.text);
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (!found) {
+        // Fallback terakhir: Ambil terjemahan standar (ID 33)
+        const res2 = await fetch(`https://api.quran.com/api/v4/verses/by_key/${chapterId}:${vNum}?translations=33`);
+        if (res2.ok) {
+          const data2 = await res2.json();
+          setApiTafsir(data2.verse?.translations?.[0]?.text || "Tafsir atau penjelasan belum tersedia untuk ayat ini.");
+        }
       }
     } catch {
-      setApiTafsir("Gagal memuat tafsir resmi.");
+      setApiTafsir("Gagal memuat tafsir resmi karena kendala jaringan.");
     }
   }, []);
 
@@ -117,7 +134,8 @@ export default function VerseDetailPage() {
         const vData = await vRes.json();
         setVerse(vData.verse);
 
-        fetchOfficialTafsir(id, verseNumber);
+        // Tambahkan sedikit delay untuk memastikan status loading terlihat manis
+        setTimeout(() => fetchOfficialTafsir(id, verseNumber), 300);
         if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseNumber), vData.verse.text_uthmani);
       } catch (e) {
         console.error("Fetch Error:", e);
@@ -152,15 +170,15 @@ export default function VerseDetailPage() {
         <div className="flex items-center gap-1">
           <Button asChild variant="ghost" size="icon" className="text-amber-600"><Link href={`/tilawah/${id}/${verseNumber}/quiz`}><GraduationCap className="h-5 w-5" /></Link></Button>
           <Button variant="ghost" size="icon" disabled={currentVerseNum <= 1} onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}><ArrowLeft className="h-5 w-5" /></Button>
-          
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="inline-block">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    disabled={currentVerseNum >= totalVerses || (!isUserLoading && user && !isCurrentVerseCompleted)} 
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={!!(currentVerseNum >= totalVerses || (!isUserLoading && user && !isCurrentVerseCompleted))}
                     onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
                   >
                     {!isUserLoading && user && !isCurrentVerseCompleted ? <Lock className="h-4 w-4 text-muted-foreground" /> : <ArrowRight className="h-5 w-5" />}
@@ -184,7 +202,7 @@ export default function VerseDetailPage() {
               {verse?.words?.filter(w => w.text_uthmani).map((word, wordIdx) => (
                 <Tooltip key={wordIdx} open={activeWordIdx === wordIdx} onOpenChange={(o) => o && setActiveWordIdx(wordIdx)}>
                   <TooltipTrigger asChild>
-                    <span 
+                    <span
                       tabIndex={0} role="button" onPointerEnter={() => setActiveWordIdx(wordIdx)}
                       className="text-2xl md:text-4xl font-arabic leading-[2] text-foreground hover:text-[#800000] focus:text-[#800000] outline-none cursor-help px-0.5 inline-block"
                     >
@@ -228,8 +246,8 @@ export default function VerseDetailPage() {
           <CardContent className="p-0">
             <div className="divide-y" dir="ltr">
               {verse?.words?.filter(w => w.text_uthmani).map((word, idx) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50 transition-all cursor-pointer active:scale-[0.98] select-none"
                   onClick={() => incrementWordCount(idx)}
                 >
@@ -257,7 +275,7 @@ export default function VerseDetailPage() {
           <CardFooter className="pt-6 border-t bg-muted/10 p-4">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 h-14 text-lg">
               <Link href={user ? `/tilawah/${id}/${verseNumber}/quiz` : "/login"}>
-                <GraduationCap className="w-5 h-5" /> 
+                <GraduationCap className="w-5 h-5" />
                 {user ? "MULAI UJI HAFALAN" : "MASUK UNTUK UJI HAFALAN"}
               </Link>
             </Button>

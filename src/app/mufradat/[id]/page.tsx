@@ -20,8 +20,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
 import { cn } from "@/lib/utils";
 
 interface Word {
@@ -62,9 +62,8 @@ export default function SurahDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
-  const db = useFirestore();
   const { user } = useUser();
-  
+
   const [surah, setSurah] = useState<SurahInfo | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,16 +76,15 @@ export default function SurahDetailPage() {
   const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const progressQuery = useMemoFirebase(() => {
-    if (!db || !user || !id) return null;
-    return query(
-      collection(db, "users", user.uid, "quiz_attempts"),
-      where("surahId", "==", id),
-      where("isPassed", "==", true)
-    );
-  }, [db, user?.uid, id]);
+  const progressOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'surahId', operator: '==', value: id },
+      { column: 'isPassed', operator: '==', value: true }
+    ]
+  }), [user?.id, id]);
 
-  const { data: progress, isLoading: isProgressLoading } = useCollection(progressQuery);
+  const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", progressOptions);
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
@@ -223,19 +221,19 @@ export default function SurahDetailPage() {
               <div key={verse.id} className={cn("py-12 px-4 space-y-8 transition-opacity", isLocked && "opacity-60")}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Link 
+                    <Link
                       href={isLocked ? "#" : `/mufradat/${id}/${verse.verse_number}`}
                       className={cn(
                         "flex items-center justify-center w-12 h-10 rounded-full text-xs font-bold border transition-all",
-                        isLocked ? "bg-muted text-muted-foreground cursor-not-allowed" : 
-                        isCompleted ? "bg-[#D4AF37] text-black border-[#800000]" :
-                        "bg-muted text-foreground border-border hover:bg-[#800000] hover:text-white"
+                        isLocked ? "bg-muted text-muted-foreground cursor-not-allowed" :
+                          isCompleted ? "bg-[#D4AF37] text-black border-[#800000]" :
+                            "bg-muted text-foreground border-border hover:bg-[#800000] hover:text-white"
                       )}
                       onClick={(e) => isLocked && e.preventDefault()}
                     >
                       {isLocked ? <Lock className="h-4 w-4" /> : `(${verse.verse_number})`}
                     </Link>
-                    
+
                     <Button asChild={!isLocked} variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] gap-1" disabled={isLocked}>
                       {isLocked ? (
                         <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> TERKUNCI</span>
@@ -243,7 +241,7 @@ export default function SurahDetailPage() {
                         <Link href={`/mufradat/${id}/${verse.verse_number}`}><Info className="h-3 w-3" /> DETAIL</Link>
                       )}
                     </Button>
-                    
+
                     <Button asChild={!isLocked} variant="ghost" size="sm" className={cn("text-[10px] font-bold gap-1", isCompleted ? "text-[#D4AF37]" : "text-amber-600")} disabled={isLocked}>
                       {isLocked ? (
                         <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> TERKUNCI</span>
@@ -266,9 +264,9 @@ export default function SurahDetailPage() {
                     return (
                       <Tooltip key={wordIdx} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
                         <TooltipTrigger asChild>
-                          <span 
-                            tabIndex={isLocked ? -1 : 0} 
-                            role="button" 
+                          <span
+                            tabIndex={isLocked ? -1 : 0}
+                            role="button"
                             onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
                             style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
                             className={cn(

@@ -3,19 +3,19 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  ChevronLeft, 
-  Loader2, 
-  GraduationCap, 
-  CheckCircle2, 
-  XCircle, 
-  RefreshCw, 
-  Trophy, 
-  RotateCcw, 
-  Timer, 
-  Star, 
-  Heart, 
-  Clock, 
+import {
+  ChevronLeft,
+  Loader2,
+  GraduationCap,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Trophy,
+  RotateCcw,
+  Timer,
+  Star,
+  Heart,
+  Clock,
   Zap,
   ArrowRight
 } from "lucide-react";
@@ -27,9 +27,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, query, orderBy, limit } from "firebase/firestore";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { supabase, useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/supabase/non-blocking-updates";
+import { useMemo } from "react";
 
 interface WordData {
   id: number;
@@ -46,14 +47,13 @@ export default function WordQuizPage() {
   const verseNumber = params.verseNumber as string;
   const currentVerseNum = parseInt(verseNumber);
   const { toast } = useToast();
-  const db = useFirestore();
   const { user, isUserLoading } = useUser();
 
   const [words, setWords] = useState<WordData[]>([]);
   const [totalVerses, setTotalVerses] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -62,19 +62,57 @@ export default function WordQuizPage() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [attempts, setAttempts] = useState(1);
   const [totalTime, setTotalTime] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60); 
+  const [timeLeft, setTimeLeft] = useState(60);
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
 
-  const leaderboardQuery = useMemoFirebase(() => {
-    if (!db || !id || !verseNumber) return null;
-    return query(
-      collection(db, "users"),
-      orderBy("points", "desc"),
-      limit(5)
-    );
-  }, [db, id, verseNumber]);
+  // Menggunakan data kuis untuk memastikan user unik di leaderboard per kuis
+  const { data: allAttempts, isLoading: isLeaderboardLoading } = useCollection("quiz_attempts", {
+    filters: [
+      { column: 'quizId', operator: '==', value: `verse_${id}_${verseNumber}` }
+    ],
+    orderBy: { column: 'score', ascending: false }
+  });
 
-  const { data: globalUsers } = useCollection(leaderboardQuery);
+  // Fetch user details for the leaderboard manually to ensure we have names and photos
+  const userIds = useMemo(() => [...new Set(allAttempts?.map(a => a.user_id) || [])], [allAttempts]);
+  const { data: leaderboardUsers } = useCollection(userIds.length > 0 ? "users" : null, {
+    filters: [{ column: 'id', operator: 'in', value: userIds }]
+  });
+
+  const uniqueLeaderboard = useMemo(() => {
+    if (!allAttempts) return [];
+    
+    const uniqueMap = new Map();
+    allAttempts.forEach(attempt => {
+      const existing = uniqueMap.get(attempt.user_id);
+      
+      // Hitung jumlah percobaan
+      const attemptCount = (existing?.attemptCount || 0) + 1;
+      
+      // Update jika ini adalah percobaan terbaik (skor tertinggi, atau skor sama tapi waktu lebih cepat)
+      const isNewBest = !existing || 
+        attempt.score > existing.score || 
+        (attempt.score === existing.score && (attempt.durationSeconds < existing.durationSeconds));
+
+      if (isNewBest) {
+        const userData = leaderboardUsers?.find(u => u.id === attempt.user_id);
+        uniqueMap.set(attempt.user_id, {
+          ...attempt,
+          userData,
+          attemptCount: 1 // Akan diupdate di akhir loop
+        });
+      }
+    });
+
+    // Update real attempt counts
+    const finalCounts = new Map();
+    allAttempts.forEach(a => finalCounts.set(a.user_id, (finalCounts.get(a.user_id) || 0) + 1));
+    
+    return Array.from(uniqueMap.values())
+      .map(item => ({ ...item, attemptCount: finalCounts.get(item.user_id) }))
+      .sort((a, b) => b.score - a.score || a.durationSeconds - b.durationSeconds)
+      .slice(0, 5);
+  }, [allAttempts, leaderboardUsers]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -89,11 +127,11 @@ export default function WordQuizPage() {
       perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
       fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3',
     };
-    
+
     try {
       const audio = new Audio(soundUrls[type]);
       audio.volume = 0.5;
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
     } catch (e) {
       console.error("Audio SFX Error:", e);
     }
@@ -128,12 +166,12 @@ export default function WordQuizPage() {
   }, [fetchWordsAndSurah, user]);
 
   const saveProgress = useCallback(async (finalScore: number) => {
-    if (!user || !db) return;
+    if (!user) return;
     const isPerfect = finalScore === words.length;
-    
+
     try {
-      addDoc(collection(db, "users", user.uid, "quiz_attempts"), {
-        userId: user.uid,
+      addDocumentNonBlocking("quiz_attempts", {
+        user_id: user.id,
         quizId: `verse_${id}_${verseNumber}`,
         surahId: id,
         verseNumber: parseInt(verseNumber),
@@ -141,26 +179,32 @@ export default function WordQuizPage() {
         totalQuestions: words.length,
         isPassed: isPerfect,
         durationSeconds: totalTime,
-        createdAt: serverTimestamp(),
+        created_at: new Date().toISOString(),
       });
 
       if (isPerfect) {
-        const userRef = doc(db, "users", user.uid);
-        updateDoc(userRef, {
-          points: increment(10), 
-          updatedAt: serverTimestamp()
-        }).catch(() => {
-          setDocumentNonBlocking(userRef, { points: increment(10) }, { merge: true });
+        // Gunakan maybeSingle agar tidak 404/406 jika user baru tapi belum ada di tabel public.users
+        const { data: uData } = await supabase
+          .from('users')
+          .select('points')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        const currentPoints = uData?.points || 0;
+
+        updateDocumentNonBlocking("users", user.id, {
+          points: currentPoints + 10,
+          updated_at: new Date().toISOString()
         });
       }
     } catch (e) {
-      console.error("Error saving progress:", e);
+      console.error("Gagal menyimpan progres kuis:", e);
     }
-  }, [user, db, id, verseNumber, words.length, totalTime]);
+  }, [user, id, verseNumber, words.length, totalTime]);
 
   const handleAnswer = useCallback((answer: string) => {
     if (selectedAnswer) return;
-    
+
     if (typeof document !== 'undefined') {
       (document.activeElement as HTMLElement)?.blur();
     }
@@ -170,10 +214,10 @@ export default function WordQuizPage() {
 
     const correct = currentWord.translation.text;
     const isAnsCorrect = answer === correct;
-    
+
     setSelectedAnswer(answer === "" ? "Waktu Habis" : answer);
     setIsCorrect(isAnsCorrect);
-    
+
     let nextScore = score;
     if (isAnsCorrect) {
       playSfx('correct');
@@ -244,15 +288,15 @@ export default function WordQuizPage() {
       // Secondary reset safety check
       setSelectedAnswer(null);
       setIsCorrect(null);
-      setTimeLeft(60); 
+      setTimeLeft(60);
 
       const currentWord = words[currentIdx];
       const correct = currentWord.translation.text;
-      
+
       let wrong = words
         .filter(w => w.translation.text !== correct)
         .map(w => w.translation.text);
-      
+
       wrong = [...new Set(wrong)].sort(() => Math.random() - 0.5).slice(0, 3);
       const all = [correct, ...wrong].sort(() => Math.random() - 0.5);
       setOptions(all);
@@ -312,7 +356,7 @@ export default function WordQuizPage() {
   if (isFinished) {
     const isPerfect = score === words.length;
     const percentage = Math.round((score / words.length) * 100);
-    
+
     return (
       <div className="max-w-md mx-auto py-10 flex flex-col gap-10 pb-32 px-4 sm:px-0">
         <Card className="text-center border-[#D4AF37]/20 shadow-xl overflow-hidden animate-in fade-in zoom-in duration-500">
@@ -337,7 +381,7 @@ export default function WordQuizPage() {
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Waktu</p>
               </div>
             </div>
-            
+
             <div className="bg-muted/30 p-4 rounded-xl space-y-3">
               <p className="text-sm font-medium">Percobaan ke-{attempts}</p>
               {!isPerfect ? (
@@ -374,7 +418,7 @@ export default function WordQuizPage() {
                 </Button>
               </div>
             ) : (
-              <Button 
+              <Button
                 className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold h-12 gap-2 shadow-lg"
                 onClick={handleReset}
               >
@@ -392,48 +436,61 @@ export default function WordQuizPage() {
             </div>
             <Badge variant="outline" className="text-[8px] font-bold border-[#D4AF37]/30 text-[#D4AF37]">TOP 5</Badge>
           </div>
-          
+
           <Card className="border-none shadow-sm bg-muted/20">
             <CardContent className="p-0">
-              <div className="divide-y">
-                {globalUsers && globalUsers.length > 0 ? globalUsers.map((u, idx) => (
-                  <div key={u.id} className="flex items-center justify-between p-3.5 hover:bg-white/50 transition-colors">
-                    <div className="flex items-center gap-3">
+              <div className="divide-y text-left">
+                {uniqueLeaderboard && uniqueLeaderboard.length > 0 ? uniqueLeaderboard.map((item, idx) => (
+                  <div key={item.id} className="flex items-center justify-between p-3.5 hover:bg-white/50 transition-colors">
+                    <Link href={`/profile/${item.user_id}`} className="flex items-center gap-3 flex-1">
                       <span className={cn(
                         "text-[10px] font-bold w-4",
                         idx === 0 ? "text-[#D4AF37]" : "text-muted-foreground"
                       )}>{idx + 1}</span>
                       <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
-                        <AvatarImage src={u.photoURL} />
-                        <AvatarFallback className="bg-[#800000] text-white text-xs font-bold">{u.username?.[0] || u.email?.[0]}</AvatarFallback>
+                        <AvatarImage src={item.userData?.photoURL} />
+                        <AvatarFallback className="bg-[#800000] text-white text-xs font-bold">
+                          {item.userData?.username?.[0] || item.userData?.email?.[0] || 'U'}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold">{u.username || 'Hamba Allah'}</span>
-                        <div className="flex items-center gap-2">
-                           <span className="text-[9px] text-muted-foreground font-medium flex items-center gap-1">
-                             <Zap className="w-2.5 h-2.5 text-[#D4AF37]" /> {u.points || 0} Poin
-                           </span>
+                        <span className="text-xs font-bold hover:text-[#800000] transition-colors">
+                          {item.userData?.username || 'Hamba Allah'}
+                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] text-muted-foreground font-medium flex items-center gap-1">
+                            <Zap className="w-2.5 h-2.5 text-[#D4AF37]" /> {item.score}/{item.totalQuestions} Benar
+                          </span>
+                          <span className="text-[8px] text-muted-foreground italic">
+                            ({formatTime(item.durationSeconds || item.duration_seconds || 0)})
+                          </span>
+                          <Badge variant="outline" className="text-[7px] h-3 px-1 border-[#800000]/20 text-[#800000] font-bold">
+                            {item.attemptCount}x Coba
+                          </Badge>
+                          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[7px] h-3 px-1 font-black">
+                            {item.userData?.points || 0} TOTAL POIN
+                          </Badge>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={() => handleSendCongrats(u.username || 'Thalibah')}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleSendCongrats(item.userData?.username || 'Sahabat')}
                         className={cn(
                           "h-7 px-2 text-[9px] font-bold gap-1 transition-all",
-                          sentCongrats.includes(u.username || 'Thalibah') ? "text-rose-500 bg-rose-50" : "text-muted-foreground hover:text-rose-500 hover:bg-rose-50"
+                          sentCongrats.includes(item.userData?.username || 'Sahabat') ? "text-rose-500 bg-rose-50" : "text-muted-foreground hover:text-rose-500 hover:bg-rose-50"
                         )}
                       >
-                        <Heart className={cn("w-3 h-3", sentCongrats.includes(u.username || 'Thalibah') && "fill-current")} />
-                        {sentCongrats.includes(u.username || 'Thalibah') ? "Terkirim" : "Selamat"}
+                        <Heart className={cn("w-3 h-3", sentCongrats.includes(item.userData?.username || 'Sahabat') && "fill-current")} />
+                        {sentCongrats.includes(item.userData?.username || 'Sahabat') ? "Terkirim" : "Selamat"}
                       </Button>
                       {idx === 0 && <Star className="w-3 h-3 fill-current text-[#D4AF37] shrink-0" />}
                     </div>
                   </div>
                 )) : (
-                  <div className="py-8 text-center text-muted-foreground italic text-xs">Belum ada peringkat tersedia.</div>
+                  <div className="py-8 text-center text-muted-foreground italic text-xs">Belum ada pejuang Itqan di ayat ini.</div>
                 )}
               </div>
             </CardContent>
@@ -457,7 +514,7 @@ export default function WordQuizPage() {
             <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {formatTime(totalTime)}</span>
           </div>
         </div>
-        
+
         <div className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 transition-colors duration-300",
           timeLeft <= 10 ? "border-rose-500 bg-rose-50 text-rose-600 animate-pulse" : "border-muted bg-muted/50 text-muted-foreground"
@@ -500,7 +557,7 @@ export default function WordQuizPage() {
           ))}
         </CardContent>
       </Card>
-      
+
       <p className="text-[10px] text-center text-muted-foreground italic">
         Selesaikan setiap kata dalam kurang dari 60 detik. Fokus pada hubungan makna dan bunyi.
       </p>

@@ -7,18 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { 
-  HeartHandshake, 
-  CheckCircle2, 
-  Loader2, 
-  Landmark, 
-  QrCode, 
-  Copy, 
-  Calendar, 
-  User, 
-  ArrowLeft, 
+import {
+  HeartHandshake,
+  CheckCircle2,
+  Loader2,
+  Landmark,
+  QrCode,
+  Copy,
+  Calendar,
+  User,
+  ArrowLeft,
   ArrowRight,
-  Image as ImageIcon, 
+  Image as ImageIcon,
   ChevronRight,
   Target,
   Users,
@@ -26,9 +26,8 @@ import {
   Zap,
   TrendingUp
 } from "lucide-react";
-import { useFirestore, useUser } from "@/firebase";
-import { collection, serverTimestamp } from "firebase/firestore";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useUser } from "@/supabase";
+import { addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -77,9 +76,8 @@ const paymentMethods = [
 
 export default function BerbagiPage() {
   const { user } = useUser();
-  const db = useFirestore();
   const { toast } = useToast();
-  
+
   const [step, setStep] = useState(1);
   const [selectedCampaign, setSelectedCampaign] = useState<typeof campaigns[0] | null>(null);
   const [amount, setAmount] = useState<number>(0);
@@ -129,8 +127,8 @@ export default function BerbagiPage() {
       const baseAmount = amount || parseInt(customAmount);
       const finalAmount = baseAmount + uniqueCode;
 
-      addDocumentNonBlocking(collection(db, "donations"), {
-        userId: user?.uid || null,
+      addDocumentNonBlocking("donations", {
+        user_id: user?.id || null,
         campaignId: selectedCampaign?.id,
         campaignTitle: selectedCampaign?.title,
         amount: finalAmount,
@@ -139,8 +137,8 @@ export default function BerbagiPage() {
         paymentMethod: method,
         senderName: senderName,
         status: "pending_verification",
-        createdAt: serverTimestamp(),
-        donationDate: serverTimestamp(),
+        created_at: new Date().toISOString(),
+        donationDate: new Date().toISOString(),
       });
 
       setSubmitted(true);
@@ -211,7 +209,7 @@ export default function BerbagiPage() {
                     <h3 className="font-black text-sm uppercase leading-tight text-[#800000] group-hover:underline">{camp.title}</h3>
                     <p className="text-[10px] text-muted-foreground line-clamp-2">{camp.description}</p>
                   </div>
-                  
+
                   <div className="space-y-2 mt-auto">
                     <div className="flex justify-between items-end">
                       <div className="flex flex-col">
@@ -234,7 +232,7 @@ export default function BerbagiPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-0 border-t">
-                  <Button 
+                  <Button
                     onClick={() => handleCampaignSelect(camp)}
                     className="w-full rounded-none h-12 bg-white text-[#800000] hover:bg-[#800000] hover:text-white font-black uppercase text-[10px] tracking-widest transition-colors gap-2 border-t border-[#800000]/10"
                   >
@@ -262,8 +260,8 @@ export default function BerbagiPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pilih Nominal Donasi</Label>
                 <div className="grid grid-cols-2 gap-3">
                   {donationAmounts.map((val) => (
-                    <Button 
-                      key={val} 
+                    <Button
+                      key={val}
                       variant="outline"
                       className={cn(
                         "h-14 text-sm font-black transition-all rounded-xl border-2",
@@ -294,7 +292,7 @@ export default function BerbagiPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Metode Pembayaran</Label>
                 <div className="flex flex-col gap-2">
                   {paymentMethods.map((pm) => (
-                    <div 
+                    <div
                       key={pm.id}
                       onClick={() => setMethod(pm.id)}
                       className={cn(
@@ -380,9 +378,9 @@ export default function BerbagiPage() {
               </div>
             </CardContent>
             <CardFooter className="p-8 pt-0">
-              <Button 
-                onClick={handleConfirmDonation} 
-                disabled={loading} 
+              <Button
+                onClick={handleConfirmDonation}
+                disabled={loading}
                 className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-lg rounded-2xl uppercase tracking-widest shadow-xl"
               >
                 {loading ? <Loader2 className="animate-spin h-6 w-6" /> : "SAYA SUDAH TRANSFER"}

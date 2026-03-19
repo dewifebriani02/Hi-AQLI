@@ -2,9 +2,9 @@
 'use client';
 
 import { useState } from "react";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, serverTimestamp, Timestamp } from "firebase/firestore";
-import { updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
+import { updateDocumentNonBlocking, addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,12 +27,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -60,25 +60,19 @@ const INITIAL_ADD_FORM = {
 };
 
 export default function AdminUsersPage() {
-  const db = useFirestore();
   const { user: currentUser } = useUser();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  
+
   // Add User States
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState(INITIAL_ADD_FORM);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!db || !currentUser?.uid) return null;
-    return collection(db, "users");
-  }, [db, currentUser?.uid]);
+  const { data: users, isLoading } = useCollection("users");
 
-  const { data: users, isLoading } = useCollection(usersQuery);
-
-  const filteredUsers = users?.filter(u => 
+  const filteredUsers = users?.filter(u =>
     u.username?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase())
   );
@@ -86,26 +80,25 @@ export default function AdminUsersPage() {
   const handleUpdateUser = () => {
     if (!editingUser?.id) return;
 
-    const userRef = doc(db, "users", editingUser.id);
-    
     const updateData: any = {
       username: editingUser.username,
       roleId: editingUser.roleId,
       paidJuz: editingUser.paidJuz ? parseInt(editingUser.paidJuz) : null,
       tikrarLevel: editingUser.tikrarLevel ? parseInt(editingUser.tikrarLevel) : null,
       isTikrarPaid: editingUser.isTikrarPaid || false,
-      updatedAt: serverTimestamp(),
+      updatedAt: new Date().toISOString(),
     };
 
     if (editingUser.tempDate) {
-      updateData.tikrarStartDate = Timestamp.fromDate(new Date(editingUser.tempDate));
+      updateData.tikrarStartDate = new Date(editingUser.tempDate).toISOString();
     }
 
-    updateDocumentNonBlocking(userRef, updateData);
+    updateDocumentNonBlocking("users", editingUser.id, updateData);
 
     // If role is admin, ensure they are in roles_admin
     if (editingUser.roleId === 'admin') {
-      setDocumentNonBlocking(doc(db, "roles_admin", editingUser.id), { roleId: editingUser.id }, { merge: true });
+      // roles_admin only has id and created_at, no roleId column
+      addDocumentNonBlocking("roles_admin", { id: editingUser.id });
     }
 
     toast({
@@ -122,20 +115,19 @@ export default function AdminUsersPage() {
     }
 
     const tempId = `user_${Date.now()}`;
-    const userRef = doc(db, "users", tempId);
 
     try {
-      setDocumentNonBlocking(userRef, {
+      addDocumentNonBlocking("users", {
         id: tempId,
         username: addForm.username,
         email: addForm.email,
         roleId: addForm.roleId,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
 
       if (addForm.roleId === 'admin') {
-        setDocumentNonBlocking(doc(db, "roles_admin", tempId), { roleId: tempId }, { merge: true });
+        addDocumentNonBlocking("roles_admin", { id: tempId });
       }
 
       toast({
@@ -163,7 +155,7 @@ export default function AdminUsersPage() {
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-[#800000]">Manajemen User HI AQLI</p>
           </div>
         </div>
-        
+
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
@@ -183,24 +175,24 @@ export default function AdminUsersPage() {
             <div className="grid gap-6 py-4">
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase">Nama Pengguna</Label>
-                <Input 
+                <Input
                   placeholder="Contoh: Mu'allimah Fatimah"
-                  value={addForm.username} 
+                  value={addForm.username}
                   onChange={(e) => setAddForm({ ...addForm, username: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase">Email</Label>
-                <Input 
+                <Input
                   type="email"
                   placeholder="email@contoh.com"
-                  value={addForm.email} 
+                  value={addForm.email}
                   onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase">Peran / Hak Akses</Label>
-                <Select 
+                <Select
                   value={addForm.roleId}
                   onValueChange={(val) => setAddForm({ ...addForm, roleId: val })}
                 >
@@ -224,9 +216,9 @@ export default function AdminUsersPage() {
 
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input 
-          placeholder="Cari nama atau email..." 
-          className="pl-11 h-12 bg-white border-none shadow-sm text-sm" 
+        <Input
+          placeholder="Cari nama atau email..."
+          className="pl-11 h-12 bg-white border-none shadow-sm text-sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -267,9 +259,9 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <Badge variant="outline" className={cn(
                         "text-[9px] font-black uppercase",
-                        u.roleId === 'admin' ? "bg-amber-500 text-white border-none" : 
-                        u.roleId === 'muallimah' ? "bg-blue-600 text-white border-none" :
-                        u.roleId === 'musyrifah' ? "bg-emerald-600 text-white border-none" : ""
+                        u.roleId === 'admin' ? "bg-amber-500 text-white border-none" :
+                          u.roleId === 'muallimah' ? "bg-blue-600 text-white border-none" :
+                            u.roleId === 'musyrifah' ? "bg-emerald-600 text-white border-none" : ""
                       )}>
                         {ROLES.find(r => r.id === u.roleId)?.name || 'Santri'}
                       </Badge>
@@ -280,13 +272,13 @@ export default function AdminUsersPage() {
                         setIsEditDialogOpen(open);
                       }}>
                         <DialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="h-8 w-8 p-0 hover:bg-[#800000]/10 hover:text-[#800000]"
-                            onClick={() => setEditingUser({ 
-                              ...u, 
-                              tempDate: u.tikrarStartDate?.toDate ? u.tikrarStartDate.toDate().toISOString().split('T')[0] : "" 
+                            onClick={() => setEditingUser({
+                              ...u,
+                              tempDate: u.tikrarStartDate?.toDate ? u.tikrarStartDate.toDate().toISOString().split('T')[0] : ""
                             })}
                           >
                             <UserCog className="h-4 w-4" />
@@ -303,15 +295,15 @@ export default function AdminUsersPage() {
                           <div className="grid gap-6 py-4">
                             <div className="space-y-2">
                               <Label className="text-xs font-bold uppercase text-muted-foreground">Nama Pengguna</Label>
-                              <Input 
-                                value={editingUser?.username || ""} 
+                              <Input
+                                value={editingUser?.username || ""}
                                 onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
                               />
                             </div>
 
                             <div className="space-y-2">
                               <Label className="text-xs font-bold uppercase text-muted-foreground">Peran User</Label>
-                              <Select 
+                              <Select
                                 value={editingUser?.roleId || "learner"}
                                 onValueChange={(val) => setEditingUser({ ...editingUser, roleId: val })}
                               >
@@ -323,14 +315,14 @@ export default function AdminUsersPage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            
+
                             {/* Tikrar Section - Only show if relevant or explicitly needed */}
                             <div className="border-t pt-4 space-y-4">
                               <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Detail Khusus Tikrar (Jika Ada)</p>
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label className="text-xs font-bold uppercase text-muted-foreground">Target Juz</Label>
-                                  <Select 
+                                  <Select
                                     value={editingUser?.paidJuz?.toString() || ""}
                                     onValueChange={(val) => setEditingUser({ ...editingUser, paidJuz: val })}
                                   >
@@ -346,7 +338,7 @@ export default function AdminUsersPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label className="text-xs font-bold uppercase text-muted-foreground">Level Tikrar</Label>
-                                  <Select 
+                                  <Select
                                     value={editingUser?.tikrarLevel?.toString() || ""}
                                     onValueChange={(val) => setEditingUser({ ...editingUser, tikrarLevel: val })}
                                   >
@@ -366,7 +358,7 @@ export default function AdminUsersPage() {
                                   <Label className="text-sm font-bold">Status Premium Tikrar</Label>
                                   <p className="text-[10px] text-muted-foreground">Aktifkan akses counter repetisi.</p>
                                 </div>
-                                <Button 
+                                <Button
                                   variant={editingUser?.isTikrarPaid ? "default" : "outline"}
                                   className={cn("font-black text-[10px]", editingUser?.isTikrarPaid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
                                   onClick={() => setEditingUser({ ...editingUser, isTikrarPaid: !editingUser.isTikrarPaid })}

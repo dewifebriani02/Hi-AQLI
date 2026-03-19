@@ -1,34 +1,27 @@
 
 'use client';
 
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, where, doc, serverTimestamp, writeBatch, arrayUnion } from "firebase/firestore";
+import { useUser, supabase } from "@/supabase";
+import { useCollection } from "@/supabase/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckCircle2, Phone, Mail, User, ImageIcon, ArrowLeft, ShieldAlert, BookOpen, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 export default function AdminRegistrationsPage() {
-  const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const regQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("status", "==", "pending_verification")
-    );
-  }, [db, user?.uid]);
+  const regOptions = useMemo(() => ({
+    filters: [{ column: 'status', operator: '==', value: 'pending_verification' }]
+  }), []);
 
-  const { data: registrations, isLoading, error } = useCollection(regQuery);
+  const { data: registrations, isLoading, error } = useCollection("halaqah_registrations", regOptions);
 
   const handleApprove = async (reg: any) => {
     if (!reg?.id || !reg?.userId) {
@@ -37,23 +30,24 @@ export default function AdminRegistrationsPage() {
     }
 
     setProcessingId(reg.id);
-    
-    try {
-      const batch = writeBatch(db);
 
+    try {
       // 1. Update Registration Status with start date
-      const regRef = doc(db, "halaqah_registrations", reg.id);
-      batch.update(regRef, { 
+      const { error: regError } = await supabase.from("halaqah_registrations").update({
         status: "active",
-        verifiedAt: serverTimestamp(),
-        startDate: serverTimestamp()
-      });
+        verifiedAt: new Date().toISOString(),
+        startDate: new Date().toISOString()
+      }).eq('id', reg.id);
+
+      if (regError) throw regError;
 
       // 2. Update User Profile Access
-      const userRef = doc(db, "users", reg.userId);
+      const { data: userData } = await supabase.from("users").select("followedHalaqahs").eq('id', reg.userId).single();
+      const currentFollowed = userData?.followedHalaqahs || [];
+
       const updateData: any = {
-        followedHalaqahs: arrayUnion(reg.halaqahId),
-        updatedAt: serverTimestamp()
+        followedHalaqahs: currentFollowed.includes(reg.halaqahId) ? currentFollowed : [...currentFollowed, reg.halaqahId],
+        updatedAt: new Date().toISOString()
       };
 
       // Special logic for Tikrar Premium Start Date
@@ -61,24 +55,18 @@ export default function AdminRegistrationsPage() {
         updateData.isTikrarPaid = true;
         updateData.paidJuz = reg.targetJuz || 30;
         updateData.tikrarLevel = reg.level || 3;
-        updateData.tikrarStartDate = serverTimestamp(); // Admin sets start date here
+        updateData.tikrarStartDate = new Date().toISOString();
       }
 
-      batch.set(userRef, updateData, { merge: true });
+      const { error: userError } = await supabase.from("users").update(updateData).eq('id', reg.userId);
+      if (userError) throw userError;
 
-      // Execute batch
-      await batch.commit();
-      
       toast({
         title: "Akses Diaktifkan",
         description: `Masyallah, akses ${reg.halaqahTitle} untuk ${reg.userName} telah aktif mulai hari ini.`,
       });
     } catch (err: any) {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `halaqah_registrations/${reg.id} & users/${reg.userId}`,
-        operation: 'write',
-        requestResourceData: { status: 'active', grantAccess: reg.halaqahId }
-      }));
+      console.error(err);
       toast({ variant: "destructive", title: "Gagal memproses verifikasi." });
     } finally {
       setProcessingId(null);
@@ -88,10 +76,12 @@ export default function AdminRegistrationsPage() {
   const handleReject = async (regId: string) => {
     setProcessingId(regId);
     try {
-      const regRef = doc(db, "halaqah_registrations", regId);
-      const batch = writeBatch(db);
-      batch.update(regRef, { status: "rejected", updatedAt: serverTimestamp() });
-      await batch.commit();
+      const { error } = await supabase.from("halaqah_registrations").update({
+        status: "rejected",
+        updatedAt: new Date().toISOString()
+      }).eq('id', regId);
+
+      if (error) throw error;
       toast({ title: "Pendaftaran Ditolak" });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal menolak pendaftaran." });
@@ -145,7 +135,7 @@ export default function AdminRegistrationsPage() {
                     <BookOpen className="w-3 h-3" /> {reg.halaqahTitle}
                   </Badge>
                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">
-                    {reg.createdAt?.toDate?.() ? new Date(reg.createdAt.toDate()).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
                   </span>
                 </div>
                 <Badge className={cn("text-white border-none font-black text-[9px] px-3 py-0.5 tracking-widest", reg.isPaid ? "bg-amber-500 shadow-sm shadow-amber-500/20" : "bg-blue-500 shadow-sm shadow-blue-500/20")}>
@@ -198,7 +188,7 @@ export default function AdminRegistrationsPage() {
                         <span className="truncate">{reg.proofFileName || "Bukti-Transfer.jpg"}</span>
                       </div>
                     )}
-                    <Button 
+                    <Button
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 gap-2 shadow-lg shadow-emerald-600/20 rounded-xl"
                       onClick={() => handleApprove(reg)}
                       disabled={processingId === reg.id}
@@ -206,8 +196,8 @@ export default function AdminRegistrationsPage() {
                       {processingId === reg.id ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
                       KONFIRMASI & TENTUKAN TGL MULAI
                     </Button>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       className="text-destructive hover:bg-destructive/5 font-bold h-10 text-xs gap-2"
                       onClick={() => handleReject(reg.id)}
                       disabled={processingId === reg.id}

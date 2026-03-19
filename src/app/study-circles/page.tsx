@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { collection, doc, query, where } from "firebase/firestore";
+import { useUser } from "@/supabase";
+import { useDoc, useCollection } from "@/supabase/db";
+import { useMemo } from "react";
 
 const studyCircles = [
   {
@@ -55,25 +56,15 @@ const studyCircles = [
 export default function StudyCirclesPage() {
   const [search, setSearch] = useState("");
   const { user } = useUser();
-  const db = useFirestore();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, "users", user.uid);
-  }, [db, user?.uid]);
-
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData } = useDoc(user ? "users" : null, user?.id);
 
   // Check all user registrations to manage UI states
-  const regQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, "halaqah_registrations"),
-      where("userId", "==", user.uid)
-    );
-  }, [db, user?.uid]);
+  const regOptions = useMemo(() => ({
+    filters: [{ column: 'userId', operator: '==', value: user?.id }]
+  }), [user?.id]);
 
-  const { data: allRegs } = useCollection(regQuery);
+  const { data: allRegs } = useCollection("halaqah_registrations", regOptions);
 
   const filteredCircles = studyCircles.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -104,7 +95,7 @@ export default function StudyCirclesPage() {
     const status = getHalaqahStatus(circle.id);
     const isActive = status === 'active';
     const isPending = status === 'pending_verification';
-    
+
     let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
       href = circle.id === 'tikrar-j30-b1' ? '/tajweed' : `/study-circles/${circle.id}`;
@@ -112,25 +103,25 @@ export default function StudyCirclesPage() {
 
     return (
       <Link key={circle.id} href={isPending ? "#" : href}>
-        <Card 
+        <Card
           className={cn(
             "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
             isActive ? "bg-emerald-50 border-l-4 border-emerald-600" :
-            isPending ? "bg-amber-50 border-l-4 border-amber-500" :
-            circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
+              isPending ? "bg-amber-50 border-l-4 border-amber-500" :
+                circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
           )}
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1">
               <div className={cn(
                 "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
-                isActive ? "bg-emerald-600 text-white" : 
-                isPending ? "bg-amber-500 text-white" :
-                circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+                isActive ? "bg-emerald-600 text-white" :
+                  isPending ? "bg-amber-500 text-white" :
+                    circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
               )}>
-                {isActive ? <PlayCircle className="w-6 h-6" /> : 
-                 isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
-                 circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                {isActive ? <PlayCircle className="w-6 h-6" /> :
+                  isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
+                    circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
               </div>
               <div className="flex flex-col gap-0.5 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -171,7 +162,7 @@ export default function StudyCirclesPage() {
               </div>
             </div>
             {!isPending && <ChevronRight className={cn(
-              "w-5 h-5 transition-colors", 
+              "w-5 h-5 transition-colors",
               isActive ? "text-emerald-400" : "text-muted-foreground/30 group-hover:text-[#800000]"
             )} />}
           </div>
@@ -195,9 +186,9 @@ export default function StudyCirclesPage() {
 
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input 
-          placeholder="Cari program atau instruktur..." 
-          className="pl-11 h-12 bg-muted/50 border-none ring-offset-background text-sm" 
+        <Input
+          placeholder="Cari program atau instruktur..."
+          className="pl-11 h-12 bg-muted/50 border-none ring-offset-background text-sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

@@ -1,20 +1,21 @@
 
 'use client';
 
-import { useUser, useAuth, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import { useUser, signOut, supabase } from '@/supabase';
+import { useDoc, useCollection } from '@/supabase/db';
+import { updateDocumentNonBlocking } from '@/supabase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  LogOut, 
-  Mail, 
-  Calendar, 
-  HeartHandshake, 
-  BookOpen, 
-  Trophy, 
+import {
+  LogOut,
+  Mail,
+  Calendar,
+  HeartHandshake,
+  BookOpen,
+  Trophy,
   ChevronRight,
   Clock,
   CheckCircle2,
@@ -27,17 +28,15 @@ import {
   Copy,
   Fingerprint
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { collection, query, where, limit, doc, serverTimestamp, orderBy } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useEffect, useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -45,70 +44,35 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
-  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [isBootstrapping, setIsBootstrapping] = useState(false);
 
   // Check Admin Role
-  const adminDocRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, "roles_admin", user.uid);
-  }, [db, user?.uid]);
-
-  const { data: adminRole, isLoading: isAdminLoading } = useDoc(adminDocRef);
+  const { data: adminRole, isLoading: isAdminLoading } = useDoc("roles_admin", user?.id);
 
   // Fetch real donation history
-  const donationsQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, "donations"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc"),
-      limit(20)
-    );
-  }, [db, user?.uid]);
+  const donationOptions = useMemo(() => ({
+    filters: [{ column: 'userId', operator: '==', value: user?.id }],
+    orderBy: { column: 'createdAt', ascending: false },
+    limit: 20
+  }), [user?.id]);
 
-  const { data: donations } = useCollection(donationsQuery);
+  const { data: donations } = useCollection("donations", donationOptions);
 
   // Fetch user data for payment status and points
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, "users", user.uid);
-  }, [db, user?.uid]);
-
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData } = useDoc("users", user?.id);
   const isPaid = userData?.isTikrarPaid;
   const paidJuz = userData?.paidJuz;
   const points = userData?.points || 0;
 
   // Fetch all users to calculate rank
-  const allUsersQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(collection(db, "users"), orderBy("points", "desc"));
-  }, [db, user?.uid]);
+  const rankOptions = useMemo(() => ({
+    orderBy: { column: 'points', ascending: false }
+  }), []);
 
-  const { data: allUsers } = useCollection(allUsersQuery);
-  const rank = allUsers?.findIndex(u => u.id === user?.uid) + 1 || '-';
-
-  // AUTO-BOOTSTRAP ADMIN for dewifebriani@gmail.com
-  useEffect(() => {
-    if (user?.email === "dewifebriani@gmail.com" && !adminRole && !isAdminLoading && !isBootstrapping) {
-      setIsBootstrapping(true);
-      const bootstrapRef = doc(db, "roles_admin", user.uid);
-      setDocumentNonBlocking(bootstrapRef, {
-        email: user.email,
-        role: "admin",
-        createdAt: serverTimestamp()
-      }, { merge: true });
-      
-      toast({
-        title: "Akses Admin Aktif",
-        description: "Masyallah, akun Anda telah otomatis ditingkatkan menjadi Admin.",
-      });
-    }
-  }, [user, adminRole, isAdminLoading, db, toast, isBootstrapping]);
+  const { data: allUsers } = useCollection("users", rankOptions);
+  const rank = allUsers?.findIndex(u => u.id === user?.id) + 1 || '-';
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -117,13 +81,13 @@ export default function ProfilePage() {
   }, [user, isUserLoading, router]);
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    await signOut();
     router.push('/');
   };
 
   const copyUid = () => {
-    if (user?.uid) {
-      navigator.clipboard.writeText(user.uid);
+    if (user?.id) {
+      navigator.clipboard.writeText(user.id);
       toast({
         title: "UID Berhasil Disalin",
         description: "UID Anda diperlukan untuk pengaturan peran manual.",
@@ -155,15 +119,15 @@ export default function ProfilePage() {
         </div>
         <CardHeader className="relative pb-0 px-6 sm:px-8">
           <Avatar className="w-24 h-24 border-4 border-background absolute -top-12 shadow-lg">
-            <AvatarImage src={user.photoURL || undefined} />
+            <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
             <AvatarFallback className="bg-primary/5 text-[#800000] text-2xl font-bold">
-              {user.displayName?.[0] || user.email?.[0] || '?'}
+              {user.user_metadata?.full_name?.[0] || user.email?.[0] || '?'}
             </AvatarFallback>
           </Avatar>
           <div className="pt-14 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <CardTitle className="text-2xl font-bold font-headline">{user.displayName || 'Sahabat AQLI'}</CardTitle>
+                <CardTitle className="text-2xl font-bold font-headline">{user.user_metadata?.full_name || 'Sahabat AQLI'}</CardTitle>
                 {adminRole && (
                   <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] gap-1">
                     <ShieldCheck className="w-3 h-3" /> ADMIN
@@ -172,7 +136,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground font-medium">
                 <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-[#800000]" /> {user.email}</span>
-                <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-[#800000]" /> Sejak {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : '-'}</span>
+                <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-[#800000]" /> Sejak {user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : '-'}</span>
               </div>
             </div>
             <div className="flex gap-2">
@@ -214,7 +178,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID Anda (UID)</p>
-                  <p className="text-xs font-mono font-bold truncate max-w-[150px] sm:max-w-none">{user.uid}</p>
+                  <p className="text-xs font-mono font-bold truncate max-w-[150px] sm:max-w-none">{user.id}</p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" className="h-8 gap-2 text-[#800000] font-bold" onClick={copyUid}>
@@ -251,18 +215,18 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-3">
-                 <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground px-1">Lencana</h3>
-                 <div className="flex flex-wrap gap-4 px-1">
-                   {[
-                     { name: points > 100 ? "Hafiz Pro" : "Hafiz Pemula", icon: Star, color: "text-[#D4AF37]" },
-                     { name: points > 0 ? "Santri Aktif" : "Santri Baru", icon: CheckCircle2, color: "text-emerald-600" }
-                   ].map((badge, idx) => (
-                     <div key={idx} className="flex flex-col items-center gap-1.5 p-3 border rounded-2xl bg-white w-24 text-center group hover:border-[#800000] transition-colors">
-                        <badge.icon className={cn("w-8 h-8", badge.color)} />
-                        <span className="text-[9px] font-bold leading-tight">{badge.name}</span>
-                     </div>
-                   ))}
-                 </div>
+                <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground px-1">Lencana</h3>
+                <div className="flex flex-wrap gap-4 px-1">
+                  {[
+                    { name: points > 100 ? "Hafiz Pro" : "Hafiz Pemula", icon: Star, color: "text-[#D4AF37]" },
+                    { name: points > 0 ? "Santri Aktif" : "Santri Baru", icon: CheckCircle2, color: "text-emerald-600" }
+                  ].map((badge, idx) => (
+                    <div key={idx} className="flex flex-col items-center gap-1.5 p-3 border rounded-2xl bg-white w-24 text-center group hover:border-[#800000] transition-colors">
+                      <badge.icon className={cn("w-8 h-8", badge.color)} />
+                      <span className="text-[9px] font-bold leading-tight">{badge.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </TabsContent>
 
@@ -317,7 +281,7 @@ export default function ProfilePage() {
                   <Link href="/berbagi"><History className="w-3 h-3" /> Tambah Donasi</Link>
                 </Button>
               </div>
-              
+
               <div className="rounded-xl border overflow-hidden bg-white shadow-sm">
                 <Table>
                   <TableHeader className="bg-muted/50">
@@ -332,7 +296,7 @@ export default function ProfilePage() {
                       donations.map((d) => (
                         <TableRow key={d.id}>
                           <TableCell className="text-[11px] font-medium">
-                            {d.createdAt?.toDate ? d.createdAt.toDate().toLocaleDateString('id-ID') : '-'}
+                            {d.createdAt ? new Date(d.createdAt).toLocaleDateString('id-ID') : '-'}
                           </TableCell>
                           <TableCell className="text-[11px] font-bold text-[#800000]">
                             Rp {d.amount?.toLocaleString('id-ID')}

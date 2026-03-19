@@ -1,15 +1,14 @@
-
 "use client";
 
 import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
-import { 
-  CheckCircle2, 
-  CalendarDays, 
-  GraduationCap, 
+import { useUser } from "@/supabase";
+import { useDoc } from "@/supabase/db";
+import {
+  CheckCircle2,
+  CalendarDays,
+  GraduationCap,
   Lock,
   ChevronDown,
   ChevronUp,
@@ -24,7 +23,7 @@ import { Button } from "@/components/ui/button";
 
 // Mapping Standard Madani Mushaf (15 lines) Juz to Start Page
 const JUZ_PAGES = [
-  1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 
+  1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282,
   302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582
 ];
 
@@ -35,8 +34,8 @@ const LEVELS = [
   { id: 4, name: "Pemula", days: 28 },
 ];
 
-const PASS_THRESHOLD = 40; 
-const META_PASS_THRESHOLD = 10; 
+const PASS_THRESHOLD = 40;
+const META_PASS_THRESHOLD = 10;
 const PREP_LISTEN_THRESHOLD = 5;
 
 function addWorkDays(startDate: Date, days: number): Date {
@@ -45,7 +44,7 @@ function addWorkDays(startDate: Date, days: number): Date {
   while (added < Math.floor(days)) {
     result.setDate(result.getDate() + 1);
     const day = result.getDay();
-    if (day !== 0 && day !== 6) { 
+    if (day !== 0 && day !== 6) {
       added++;
     }
   }
@@ -54,15 +53,9 @@ function addWorkDays(startDate: Date, days: number): Date {
 
 export function TikrarSchedule() {
   const { user } = useUser();
-  const db = useFirestore();
   const [expandedPage, setExpandedPage] = useState<number | null>(null);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return doc(db, "users", user.uid);
-  }, [db, user?.uid]);
-
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData } = useDoc(user ? "users" : null, user?.id);
 
   const isPaid = userData?.isTikrarPaid || false;
   const juz = userData?.paidJuz || 1;
@@ -73,13 +66,13 @@ export function TikrarSchedule() {
     const startPage = JUZ_PAGES[juz - 1] || 1;
     const endPage = juz < 30 ? (JUZ_PAGES[juz] || 604) - 1 : 604;
     const items = [];
-    
-    const adminStartDate = userData?.tikrarStartDate?.toDate?.() || 
-                          userData?.createdAt?.toDate?.() || 
-                          new Date();
-    
+
+    const adminStartDate = userData?.tikrarStartDate ? new Date(userData.tikrarStartDate) :
+      userData?.created_at ? new Date(userData.created_at) :
+        new Date();
+
     let currentDate = new Date(adminStartDate);
-    const dayAllocation = [0.05, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.15]; 
+    const dayAllocation = [0.05, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.15];
 
     for (let p = startPage; p <= endPage; p++) {
       const pageStart = new Date(currentDate);
@@ -95,7 +88,7 @@ export function TikrarSchedule() {
       }
 
       const pageEnd = new Date(stepCurrentDate);
-      
+
       let isPrepDone = false;
       let tmProgress: Record<string, boolean> = {};
       let metaProgress: Record<string, boolean> = {};
@@ -108,17 +101,17 @@ export function TikrarSchedule() {
             const data = JSON.parse(saved);
             const b = data.blocks || {};
             const m = data.metaCounts || {};
-            
+
             isPrepDone = (data.prepListenCount || 0) >= PREP_LISTEN_THRESHOLD && (data.prepTranslationDone || false);
 
             const letters = ["A", "B", "C", "D"];
             for (let i = 0; i < 4; i++) {
               const l = letters[i];
-              tmProgress[l] = (b[i+1]?.a?.count || 0) >= PASS_THRESHOLD && 
-                              (b[i+1]?.b?.count || 0) >= PASS_THRESHOLD && 
-                              (b[i+1]?.combined?.count || 0) >= PASS_THRESHOLD;
+              tmProgress[l] = (b[i + 1]?.a?.count || 0) >= PASS_THRESHOLD &&
+                (b[i + 1]?.b?.count || 0) >= PASS_THRESHOLD &&
+                (b[i + 1]?.combined?.count || 0) >= PASS_THRESHOLD;
             }
-            
+
             metaProgress['1_2'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
             metaProgress['2_3'] = (m['2_3'] || 0) >= META_PASS_THRESHOLD;
             metaProgress['1_2_3'] = (m['1_2_3'] || 0) >= META_PASS_THRESHOLD;
@@ -127,7 +120,7 @@ export function TikrarSchedule() {
             metaProgress['1_2_3_4'] = (m['1_2_3_4'] || 0) >= META_PASS_THRESHOLD;
 
             isAllDone = metaProgress['1_2_3_4'];
-          } catch (e) {}
+          } catch (e) { }
         }
       }
 
@@ -198,22 +191,22 @@ export function TikrarSchedule() {
         {scheduleData.map((item, idx) => {
           const isActive = !item.isDone && (idx === 0 || scheduleData[idx - 1].isDone);
           const isExpanded = expandedPage === item.page;
-          
+
           return (
             <div key={item.page} className="relative">
               <div className={cn(
                 "absolute -left-[25px] top-6 w-5 h-5 rounded-full border-4 bg-white z-10 transition-all duration-500",
-                item.isDone ? "border-emerald-500 shadow-lg shadow-emerald-500/20 scale-110" : 
-                isActive ? "border-[#800000] animate-pulse" : "border-muted"
+                item.isDone ? "border-emerald-500 shadow-lg shadow-emerald-500/20 scale-110" :
+                  isActive ? "border-[#800000] animate-pulse" : "border-muted"
               )}>
                 {item.isDone && <CheckCircle2 className="w-full h-full text-emerald-500 p-0.5" />}
               </div>
 
-              <Card 
+              <Card
                 className={cn(
                   "border-none shadow-sm transition-all cursor-pointer hover:shadow-md",
-                  item.isDone ? "bg-emerald-50/20" : 
-                  isActive ? "bg-white ring-2 ring-[#800000]/10" : "bg-card",
+                  item.isDone ? "bg-emerald-50/20" :
+                    isActive ? "bg-white ring-2 ring-[#800000]/10" : "bg-card",
                   isExpanded && "ring-2 ring-[#800000]"
                 )}
                 onClick={() => setExpandedPage(isExpanded ? null : item.page)}
@@ -233,7 +226,7 @@ export function TikrarSchedule() {
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       {item.isDone && <Badge className="bg-emerald-500 text-white font-black text-[8px] tracking-widest">DONE</Badge>}
                       {isActive && <Badge className="bg-amber-500 text-white font-black text-[8px] tracking-widest">AKTIF</Badge>}
@@ -247,20 +240,20 @@ export function TikrarSchedule() {
                         <Layers className="w-4 h-4 text-[#800000]" />
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]">Urutan Manhaj Tikrar</h4>
                       </div>
-                      
+
                       <div className="flex flex-col gap-2">
                         {/* Preparation Step */}
                         <StepRow icon={BookOpen} label="TAHAP PERSIAPAN (Simak 5x & Paham Arti)" isDone={item.isPrepDone} date={item.steps[0].end} threshold={5} />
-                        
+
                         {/* 10 Memorization Steps */}
                         <StepRow label={`BLOK A (${item.page}A-1, A-2, G)`} isDone={item.tmProgress['A']} date={item.steps[1].end} threshold={40} />
                         <StepRow label={`BLOK B (${item.page}B-1, B-2, G)`} isDone={item.tmProgress['B']} date={item.steps[2].end} threshold={40} />
                         <StepRow label="GABUNG BLOK A & B" isDone={item.metaProgress['1_2']} date={item.steps[3].end} isMeta threshold={10} />
-                        
+
                         <StepRow label={`BLOK C (${item.page}C-1, C-2, G)`} isDone={item.tmProgress['C']} date={item.steps[4].end} threshold={40} />
                         <StepRow label="GABUNG BLOK B & C" isDone={item.metaProgress['2_3']} date={item.steps[5].end} isMeta threshold={10} />
                         <StepRow label="GABUNG BLOK A s/d C" isDone={item.metaProgress['1_2_3']} date={item.steps[6].end} isMeta threshold={10} />
-                        
+
                         <StepRow label={`BLOK D (${item.page}D-1, D-2, G)`} isDone={item.tmProgress['D']} date={item.steps[7].end} threshold={40} />
                         <StepRow label="GABUNG BLOK C & D" isDone={item.metaProgress['3_4']} date={item.steps[8].end} isMeta threshold={10} />
                         <StepRow label="GABUNG BLOK B s/d D" isDone={item.metaProgress['2_3_4']} date={item.steps[9].end} isMeta threshold={10} />

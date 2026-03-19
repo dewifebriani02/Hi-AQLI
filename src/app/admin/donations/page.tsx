@@ -2,27 +2,27 @@
 'use client';
 
 import { useState } from "react";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, orderBy, doc, updateDoc, serverTimestamp, where } from "firebase/firestore";
+import { useUser, supabase } from "@/supabase";
+import { useCollection } from "@/supabase/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  HeartHandshake, 
-  Search, 
-  CheckCircle2, 
-  Clock, 
-  ArrowLeft, 
-  Loader2, 
+import {
+  HeartHandshake,
+  Search,
+  CheckCircle2,
+  Clock,
+  ArrowLeft,
+  Loader2,
   TrendingUp,
   Filter,
   ArrowUpRight,
@@ -32,22 +32,21 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useMemo } from "react";
 
 export default function AdminDonationsPage() {
-  const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const donationsQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return query(collection(db, "donations"), orderBy("createdAt", "desc"));
-  }, [db, user?.uid]);
+  const donationOptions = useMemo(() => ({
+    orderBy: { column: 'createdAt', ascending: false }
+  }), []);
 
-  const { data: donations, isLoading } = useCollection(donationsQuery);
+  const { data: donations, isLoading } = useCollection("donations", donationOptions);
 
-  const filteredDonations = donations?.filter(d => 
+  const filteredDonations = donations?.filter(d =>
     d.senderName?.toLowerCase().includes(search.toLowerCase()) ||
     d.campaignTitle?.toLowerCase().includes(search.toLowerCase())
   );
@@ -55,12 +54,14 @@ export default function AdminDonationsPage() {
   const handleVerify = async (donationId: string) => {
     setProcessingId(donationId);
     try {
-      const donationRef = doc(db, "donations", donationId);
-      await updateDoc(donationRef, {
+      const { error } = await supabase.from("donations").update({
         status: "verified",
-        verifiedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+        verifiedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }).eq('id', donationId);
+
+      if (error) throw error;
+
       toast({
         title: "Infaq Terverifikasi",
         description: "Status donasi telah diperbarui menjadi berhasil.",
@@ -126,9 +127,9 @@ export default function AdminDonationsPage() {
 
       <div className="relative px-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input 
-          placeholder="Cari nama pengirim atau kampanye..." 
-          className="pl-11 h-12 bg-white border-none shadow-sm text-sm font-medium" 
+        <Input
+          placeholder="Cari nama pengirim atau kampanye..."
+          className="pl-11 h-12 bg-white border-none shadow-sm text-sm font-medium"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -167,7 +168,7 @@ export default function AdminDonationsPage() {
                       <TableCell className="py-4">
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-muted-foreground">
-                            {d.createdAt?.toDate ? d.createdAt.toDate().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
+                            {d.createdAt ? new Date(d.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
                           </span>
                           <span className="text-xs font-black text-[#800000] uppercase mt-0.5">{d.campaignTitle}</span>
                         </div>
@@ -204,8 +205,8 @@ export default function AdminDonationsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         {d.status === 'pending_verification' ? (
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             className="bg-emerald-600 hover:bg-emerald-700 h-8 font-black text-[9px] gap-1.5"
                             onClick={() => handleVerify(d.id)}
                             disabled={processingId === d.id}
