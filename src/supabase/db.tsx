@@ -85,6 +85,13 @@ export function useCollection<T = any>(
 
     const fetchData = useCallback(async () => {
         if (!table) return;
+        // Skip fetch if options is undefined (used for conditional fetching)
+        if (options === undefined) {
+            setData([]);
+            setIsLoading(false);
+            setError(null);
+            return;
+        }
         setIsLoading(true);
         setError(null);
 

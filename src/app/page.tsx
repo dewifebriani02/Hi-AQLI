@@ -39,30 +39,37 @@ import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const [streakDays, setStreakDays] = useState(0);
   const [nextPrayer, setNextPrayer] = useState<{ name: string, time: string, location?: string } | null>(null);
 
+  // Only fetch data if user is logged in
   const { data: userData } = useDoc("users", user?.id);
   const points = userData?.points || 0;
 
-  // Mutaba'ah Progress Calculation
+  // Mutaba'ah Progress Calculation - only fetch if user is logged in
   const todayStr = new Date().toISOString().split('T')[0];
-  const { data: mutabaahLogs } = useCollection("mutabaah_logs", {
-    filters: [
-      { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'date', operator: '==', value: todayStr }
-    ]
-  });
+  const { data: mutabaahLogs } = useCollection(
+    "mutabaah_logs",
+    user?.id ? {
+      filters: [
+        { column: 'user_id', operator: '==', value: user.id },
+        { column: 'date', operator: '==', value: todayStr }
+      ]
+    } : undefined
+  );
 
-  // Get quiz attempts for streak and repetisi calculation
-  const { data: quizAttempts } = useCollection("quiz_attempts", {
-    filters: [
-      { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'isPassed', operator: '==', value: true }
-    ],
-    orderBy: { column: 'created_at', ascending: false }
-  });
+  // Get quiz attempts for streak and repetisi calculation - only fetch if user is logged in
+  const { data: quizAttempts } = useCollection(
+    "quiz_attempts",
+    user?.id ? {
+      filters: [
+        { column: 'user_id', operator: '==', value: user.id },
+        { column: 'isPassed', operator: '==', value: true }
+      ],
+      orderBy: { column: 'created_at', ascending: false }
+    } : undefined
+  );
 
   // Independent counts
   const mutabaahActivitiesCount = 28;
@@ -388,18 +395,25 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {/* Hi Umroh */}
-          <Link href="/umroh" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#D4AF37] hover:shadow-md transition-shadow">
+          {/* Hi Umroh - Locked */}
+          <div className="block group">
+            <Card className="overflow-hidden border-2 border-dashed border-[#D4AF37]/30 bg-muted/30 h-28">
               <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Plane className="w-4 h-4 text-[#D4AF37]" /></div>
+                <div className="flex items-center justify-between">
+                  <div className="p-1.5 rounded-lg bg-[#D4AF37]/20 relative">
+                    <Plane className="w-4 h-4 text-[#D4AF37]" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#800000] flex items-center justify-center">
+                      <Lock className="w-2 h-2 text-white" />
+                    </div>
+                  </div>
+                </div>
                 <div>
-                  <h4 className="font-black text-xs text-black uppercase">Hi Umroh</h4>
-                  <p className="text-[8px] text-muted-foreground">Persiapan Ibadah</p>
+                  <h4 className="font-black text-xs text-muted-foreground uppercase">Hi Umroh</h4>
+                  <p className="text-[8px] text-muted-foreground italic">Segera Hadir</p>
                 </div>
               </CardContent>
             </Card>
-          </Link>
+          </div>
 
           {/* Hi Masak */}
           <Link href="/masak" className="block group">

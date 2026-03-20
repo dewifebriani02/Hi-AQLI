@@ -25,10 +25,13 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      router.push('/');
+    if (user && !loading) {
+      // Use window.location for hard redirect as fallback
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     }
-  }, [user, router]);
+  }, [user, loading]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,10 +44,13 @@ export default function LoginPage() {
       setLoading(false);
       setError('Gagal masuk. Mohon periksa kembali email dan kata sandi Anda.');
     } else {
-        toast({
-            title: "Selamat Datang!",
-            description: "Masyallah, Anda telah masuk ke Hi AQLI.",
-        });
+      // Login successful - auth state change will trigger redirect
+      toast({
+        title: "Selamat Datang!",
+        description: "Masyallah, Anda telah masuk ke Hi AQLI.",
+      });
+      // Reset loading after short delay for auth state to update
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
