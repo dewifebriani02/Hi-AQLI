@@ -71,7 +71,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           <h1 className="text-5xl font-black tracking-tight text-white drop-shadow-lg">
             HI AQLI
           </h1>
-          <p className="text-[10px] font-bold text-[#D4AF37] tracking-[0.2em] uppercase">
+          <p className="text-[10px] font-bold text-white tracking-[0.2em] uppercase">
             Berhijrah dengan Ilmu, Beramal dengan Itqan
           </p>
         </div>
