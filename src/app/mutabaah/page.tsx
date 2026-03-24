@@ -32,9 +32,11 @@ import { useUser, supabase } from "@/supabase";
 import { useCollection } from "@/supabase/db";
 import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function MutabaahPage() {
   const { user } = useUser();
+  const router = useRouter();
 
   const mutabaahActivities = useMemo(() => [
     { id: 'bangun', label: 'Bangun Tidur', category: 'Malam & Bangun', dalil: 'HR. Bukhari: Mengidupkan hati setelah mati', icon: 'Sun' },
@@ -76,7 +78,10 @@ export default function MutabaahPage() {
   });
 
   const toggleMutabaah = async (activityId: string) => {
-    if (!user) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     const existing = mutabaahLogs?.find(l => l.activity_id === activityId);
     const completed = !existing?.completed;
 

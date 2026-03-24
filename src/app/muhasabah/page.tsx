@@ -22,9 +22,11 @@ import { useUser, supabase } from "@/supabase";
 import { useCollection } from "@/supabase/db";
 import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function MuhasabahPage() {
   const { user } = useUser();
+  const router = useRouter();
 
   const muhasabahItems = useMemo(() => [
     { id: 'm_wanita_shalat', label: 'Menjaga Shalat 5 Waktu', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
@@ -52,7 +54,10 @@ export default function MuhasabahPage() {
   });
 
   const toggleMutabaah = async (activityId: string) => {
-    if (!user) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     const existing = mutabaahLogs?.find(l => l.activity_id === activityId);
     const completed = !existing?.completed;
 
