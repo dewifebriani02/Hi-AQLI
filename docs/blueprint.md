@@ -16,9 +16,9 @@
 ### Color Palette
 | Category | Hex Color | Visual | Usage |
 | :--- | :--- | :--- | :--- |
-| **Primary** | `#800000` | ![#800000](https://placehold.co/15x15/800000/800000.png) | Deep Maroon - Elegance & Solemnity |
-| **Accent** | `#D4AF37` | ![#D4AF37](https://placehold.co/15x15/D4AF37/D4AF37.png) | Classic Gold - Knowledge & Value |
-| **Background** | `#FFFFFF` | ![#FFFFFF](https://placehold.co/15x15/FFFFFF/FFFFFF.png) | Pure White - Cleanliness |
+| **Primary** | `#800000` | ![#800000](https://placehold.co/15x15/800000/800000.png) | Deep Maroon - Pure #800000 |
+| **Accent** | `#D4AF37` | ![#D4AF37](https://placehold.co/15x15/D4AF37/D4AF37.png) | Classic Gold - #D4AF37 |
+| **Background** | `#FFFFFF` | ![#FFFFFF](https://placehold.co/15x15/FFFFFF/FFFFFF.png) | Pure White - #FFFFFF |
 | **Secondary BG** | `#F9FAFB` | ![#F9FAFB](https://placehold.co/15x15/F9FAFB/F9FAFB.png) | Soft Gray - Subtle Contrast |
 | **Highlight** | `#FFBF00` | ![#FFBF00](https://placehold.co/15x15/FFBF00/FFBF00.png) | Amber Gold - Hero Elements |
 
