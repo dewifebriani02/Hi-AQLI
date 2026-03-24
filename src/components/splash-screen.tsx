@@ -59,7 +59,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-transparent blur-xl"></div>
           <Image
             src="/app-logo.png"
-            alt="AQLI Logo"
+            alt="Hi AQLI Logo"
             fill
             className="object-contain relative z-10 drop-shadow-2xl"
             priority
