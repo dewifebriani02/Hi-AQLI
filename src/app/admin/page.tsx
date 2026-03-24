@@ -30,8 +30,8 @@ export default function AdminDashboard() {
 
   const stats = [
     { label: "Pendaftaran Baru", value: pending?.length || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "Donasi Menunggu", value: pendingDonations?.length || 0, icon: HeartHandshake, color: "text-[#800000]", bg: "bg-red-50" },
-    { label: "Santri Terdaftar", value: users?.length || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Infaq Menunggu", value: pendingDonations?.length || 0, icon: HeartHandshake, color: "text-[#800000]", bg: "bg-red-50" },
+    { label: "Thalibah Terdaftar", value: users?.length || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
   ];
 
   return (
@@ -71,7 +71,7 @@ export default function AdminDashboard() {
             <CardDescription>Tinjau bukti pembayaran dan aktifkan akses kelas.</CardDescription>
           </CardHeader>
           <CardContent className="p-6 flex-1 flex flex-col justify-between">
-            <p className="text-sm text-muted-foreground mb-4">Aktifkan akun santri setelah validasi infaq atau pendaftaran gratis.</p>
+            <p className="text-sm text-muted-foreground mb-4">Aktifkan akun Thalibah setelah validasi infaq atau pendaftaran gratis.</p>
             <Link href="/admin/registrations" className="w-full">
               <Button className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold gap-2">
                 Buka Antrean <ArrowUpRight className="w-4 h-4" />
@@ -104,13 +104,13 @@ export default function AdminDashboard() {
               Manajemen Peserta
               <UserCog className="w-5 h-5 text-[#800000]" />
             </CardTitle>
-            <CardDescription>Edit data santri, target Juz, atau level.</CardDescription>
+            <CardDescription>Edit data Thalibah, target Juz, atau level.</CardDescription>
           </CardHeader>
           <CardContent className="p-6 flex-1 flex flex-col justify-between">
-            <p className="text-sm text-muted-foreground mb-4">Kelola hak akses dan profil santri yang sudah aktif dalam program.</p>
+            <p className="text-sm text-muted-foreground mb-4">Kelola hak akses dan profil Thalibah yang sudah aktif dalam program.</p>
             <Link href="/admin/users" className="w-full">
               <Button variant="outline" className="w-full font-bold gap-2 border-[#800000] text-[#800000] hover:bg-[#800000]/5">
-                Kelola Santri <Users className="w-4 h-4" />
+                Kelola Thalibah <Users className="w-4 h-4" />
               </Button>
             </Link>
           </CardContent>

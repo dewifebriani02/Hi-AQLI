@@ -53,7 +53,7 @@ export default function HafalPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Metode Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Perkuat hafalan Anda dengan metode repetisi 40x terstruktur untuk hasil Itqan.
+          Perkuat hafalan Ukhti dengan metode repetisi 40x terstruktur untuk hasil Itqan.
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export default function HafalPage() {
                   <CardTitle className="text-lg font-headline">Uji Teori Tajwid</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground leading-relaxed">Periksa pemahaman teori Anda sebelum praktek ujian lisan.</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Periksa pemahaman teori Ukhti sebelum praktek ujian lisan.</p>
                 </CardContent>
                 <CardFooter>
                   <Button asChild className="w-full bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 font-bold h-12">

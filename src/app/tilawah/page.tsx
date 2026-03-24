@@ -14,7 +14,7 @@ export default function QuranPage() {
     <div className="flex flex-col gap-6 pb-24 max-w-4xl mx-auto">
       <div className="flex flex-col gap-2 mt-4 px-1">
         <h1 className="text-3xl font-bold font-headline tracking-tight">Al-Qur'an</h1>
-        <p className="text-muted-foreground text-sm">Baca, pelajari, dan latih tilawah Anda dengan bantuan AI.</p>
+        <p className="text-muted-foreground text-sm">Baca, pelajari, dan latih tilawah Ukhti dengan bantuan AI.</p>
       </div>
 
       <Tabs defaultValue="surah" className="w-full">
@@ -37,7 +37,7 @@ export default function QuranPage() {
               <div className="space-y-1">
                 <h3 className="font-bold text-xl">Asisten AI Tilawah</h3>
                 <p className="text-sm opacity-90 max-w-xs leading-relaxed">
-                  Dapatkan umpan balik langsung untuk akurasi dan kelancaran bacaan Anda.
+                  Dapatkan umpan balik langsung untuk akurasi dan kelancaran bacaan Ukhti.
                 </p>
               </div>
               <Button asChild variant="secondary" size="lg" className="font-bold shadow-md w-full sm:w-auto text-[#800000] bg-white hover:bg-white/90">

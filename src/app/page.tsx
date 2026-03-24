@@ -30,7 +30,8 @@ import {
   Mic,
   PiggyBank,
   Plane,
-  UtensilsCrossed,
+  Utensils,
+  HeartPulse,
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser } from "@/supabase";
@@ -99,7 +100,7 @@ export default function DashboardPage() {
         try {
           const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
           const geoData = await geoRes.json();
-          locationName = geoData.city || geoData.locality || geoData.principalSubdivision || "Lokasi Anda";
+          locationName = geoData.city || geoData.locality || geoData.principalSubdivision || "Lokasi Ukhti";
         } catch (e) {
           console.error("Geocoding failed", e);
         }
@@ -193,6 +194,34 @@ export default function DashboardPage() {
 
   const repetisiPercent = Math.min(Math.round((todayQuizCount / 5) * 100), 100);
 
+  // Date Formatting
+  const gregorianDate = new Intl.DateTimeFormat('id-ID', { 
+    weekday: 'long', 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  }).format(new Date());
+
+  const [hijriDate, setHijriDate] = useState<string>("");
+
+  useEffect(() => {
+    const fetchHijri = async () => {
+      try {
+        const today = new Date();
+        const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+        const res = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}`);
+        const result = await res.json();
+        if (result.data && result.data.hijri) {
+          const h = result.data.hijri;
+          setHijriDate(`${h.day} ${h.month.en} ${h.year} H`);
+        }
+      } catch (e) {
+        console.error("Failed to fetch Hijri date", e);
+      }
+    };
+    fetchHijri();
+  }, []);
+
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
       {/* Header: Greeting & Points */}
@@ -200,12 +229,18 @@ export default function DashboardPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
             <Sparkles className="w-4 h-4 fill-current animate-pulse text-[#D4AF37]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">HI AQLI SQUAD</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">HI AQLI Sahabat</span>
           </div>
           <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight text-black">
             Assalamu'alaikum,<br />
-            {user?.user_metadata?.full_name?.split(' ')[0] || 'Squad'}!
+            {user?.user_metadata?.full_name?.split(' ')[0] || 'Sahabat'}!
           </h1>
+          <div className="flex flex-col gap-0.5 mt-1">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{gregorianDate}</p>
+            {hijriDate && (
+              <p className="text-[10px] font-black text-[#800000] uppercase tracking-wider">{hijriDate}</p>
+            )}
+          </div>
         </div>
         <div className="flex flex-col items-end gap-2">
           <Badge className="bg-[#800000] text-white gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider shadow-xl shadow-[#800000]/20 rounded-xl border-b-2 border-[#D4AF37]">
@@ -213,7 +248,7 @@ export default function DashboardPage() {
             {points.toLocaleString()} POIN
           </Badge>
           <Badge variant="outline" className="text-[9px] font-bold border-amber-200 text-amber-700 bg-amber-50 gap-1 uppercase tracking-tighter">
-            <Trophy className="w-2.5 h-2.5" /> Peringkat SQUAD
+            <Trophy className="w-2.5 h-2.5" /> Peringkat Sahabat
           </Badge>
         </div>
       </div>
@@ -274,155 +309,91 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Feature Grid - Layout Lebih Menarik */}
+      {/* Feature Grid - Layout Dua Kolom Baru */}
       <div className="space-y-4 px-1">
-        <h2 className="text-lg font-bold font-headline flex items-center gap-2">
+        <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-black">
           <LayoutGrid className="w-5 h-5 text-[#800000]" /> Layanan Utama
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* Hi Mufradat - Large Card */}
-          <Link href="/mufradat" className="block group col-span-2">
-            <Card className="overflow-hidden border-none shadow-md bg-white h-36 sm:h-40 border-l-4 border-amber-500 hover:shadow-lg transition-shadow">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between w-full">
-                  <div className="p-2 rounded-lg bg-amber-50 w-fit"><Activity className="w-5 h-5 text-amber-500 fill-current" /></div>
-                  <Badge className="bg-amber-100 text-amber-700 border-none text-[8px] font-black h-fit">POPULER</Badge>
+        <div className="grid grid-cols-2 gap-3">
+          {/* Baris 1: Mufradat & Hafal (PREMIUM REDESIGN) */}
+          <Link href="/mufradat" className="block group">
+            <Card className="overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all h-28 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 relative">
+              <CardContent className="p-4 flex flex-col justify-between h-full relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                  <Activity className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h4 className="font-black text-sm text-black uppercase">Hi Mufradat</h4>
-                  <p className="text-[9px] text-muted-foreground font-bold italic">Mushaf & Terjemahan</p>
-                  <Progress value={75} className="h-1 mt-2 bg-amber-100 [&>div]:bg-amber-500" />
+                  <h4 className="font-black text-xs text-white uppercase tracking-widest leading-tight">Hi Mufradat</h4>
+                  <p className="text-[8px] text-white/70 font-bold uppercase mt-0.5">Dalami Kata Al-Qur'an Fun</p>
                 </div>
               </CardContent>
+              <Activity className="absolute -bottom-2 -right-2 w-20 h-20 text-white/10 rotate-12" />
             </Card>
           </Link>
-
-          {/* Hi Hafal - Large Card */}
-          <Link href="/hafal" className="block group col-span-2">
-            <Card className="overflow-hidden border-none shadow-md bg-white h-36 sm:h-40 border-l-4 border-[#D4AF37] hover:shadow-lg transition-shadow">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between w-full">
-                  <div className="p-2 rounded-lg bg-amber-50 w-fit"><Award className="w-5 h-5 text-[#D4AF37]" /></div>
-                  <Badge className="bg-amber-100 text-amber-700 border-none text-[8px] font-black h-fit">FAVORIT</Badge>
+          <Link href="/hafal" className="block group">
+            <Card className="overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all h-28 rounded-3xl bg-gradient-to-br from-[#D4AF37] to-yellow-600 relative">
+              <CardContent className="p-4 flex flex-col justify-between h-full relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                  <Award className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h4 className="font-black text-sm text-black uppercase">Hi Hafal</h4>
-                  <p className="text-[9px] text-muted-foreground font-bold italic">Hafalan Ayat & Surat</p>
-                  <Progress value={60} className="h-1 mt-2 bg-amber-100 [&>div]:bg-[#D4AF37]" />
+                  <h4 className="font-black text-xs text-white uppercase tracking-widest leading-tight">Hi Hafal</h4>
+                  <p className="text-[8px] text-white/70 font-bold uppercase mt-0.5">Hafal Metode Tikrar 40x</p>
                 </div>
               </CardContent>
+              <Award className="absolute -bottom-2 -right-2 w-20 h-20 text-white/10 -rotate-12" />
             </Card>
           </Link>
 
-          {/* Hi Ngaji - Warna Menonjol */}
-          <Link href="/ngaji" className="block group col-span-2">
-            <Card className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow h-28">
-              <div className="bg-gradient-to-r from-[#D4AF37] via-amber-400 to-[#D4AF37] p-[1px]">
-                <CardContent className="bg-gradient-to-r from-[#800000] to-[#a32828] p-3 flex items-center justify-between h-full gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#D4AF37]/20 w-fit"><BookOpen className="w-5 h-5 text-[#D4AF37]" /></div>
-                    <div>
-                      <h4 className="font-black text-sm text-white uppercase">Hi Ngaji</h4>
-                      <p className="text-[9px] text-amber-200 font-bold italic">Belajar Tajwid</p>
-                    </div>
-                  </div>
-                  <Sparkles className="w-5 h-5 text-[#D4AF37] animate-pulse" />
-                </CardContent>
-              </div>
+          {/* Baris 2: Ngaji & Berbagi (PREMIUM REDESIGN) */}
+          <Link href="/ngaji" className="block group">
+            <Card className="overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all h-28 rounded-3xl bg-gradient-to-br from-[#800000] to-[#5a0000] relative">
+              <CardContent className="p-4 flex flex-col justify-between h-full relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                  <BookOpen className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-black text-xs text-white uppercase tracking-widest leading-tight">Hi Ngaji</h4>
+                  <p className="text-[8px] text-white/70 font-bold uppercase mt-0.5">Perbaiki Tajwid & Tahsin</p>
+                </div>
+              </CardContent>
+              <BookOpen className="absolute -bottom-2 -right-2 w-20 h-20 text-white/10 rotate-12" />
+            </Card>
+          </Link>
+          <Link href="/berbagi" className="block group">
+            <Card className="overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all h-28 rounded-3xl bg-gradient-to-br from-rose-500 to-amber-500 relative">
+              <CardContent className="p-4 flex flex-col justify-between h-full relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                  <HeartHandshake className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-black text-xs text-white uppercase tracking-widest leading-tight">Hi Berbagi</h4>
+                  <p className="text-[8px] text-white/70 font-bold uppercase mt-0.5">Salurkan Infaq</p>
+                </div>
+              </CardContent>
+              <HeartHandshake className="absolute -bottom-2 -right-2 w-20 h-20 text-white/10 -rotate-12" />
             </Card>
           </Link>
 
-          {/* Hi Mutaba'ah */}
+          {/* Baris 3: Mutaba'ah & Muhasabah (Tetap Muncul) */}
           <Link href="/mutabaah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-amber-500 hover:shadow-md transition-shadow">
+            <Card className="overflow-hidden border-none shadow-sm bg-white h-24 border-l-4 border-[#800000] rounded-2xl hover:shadow-md transition-all">
               <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between">
-                  <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Sparkles className="w-4 h-4 text-amber-500 fill-current" /></div>
-                  <Badge className="bg-amber-100 text-amber-700 border-none text-[7px] font-black h-fit">{mutabaahPercent}%</Badge>
-                </div>
-                <div>
-                  <h4 className="font-black text-xs text-black uppercase">Hi Mutaba'ah</h4>
-                  <p className="text-[8px] text-muted-foreground">Sunnah Harian</p>
+                <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><Target className="w-4 h-4 text-[#800000]" /></div>
+                <div className="flex justify-between items-end">
+                  <h4 className="font-black text-[10px] text-[#800000] uppercase tracking-wider leading-tight">Hi Mutaba'ah</h4>
+                  <span className="text-[10px] font-black text-[#800000]">{mutabaahPercent}%</span>
                 </div>
               </CardContent>
             </Card>
           </Link>
-
-          {/* Hi Berbagi - Warna Menonjol */}
-          <Link href="/berbagi" className="block group col-span-2">
-            <Card className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow h-28">
-              <div className="bg-gradient-to-r from-[#D4AF37] via-amber-400 to-[#D4AF37] p-[1px]">
-                <CardContent className="bg-gradient-to-r from-[#800000] to-[#a32828] p-3 flex items-center justify-between h-full gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#D4AF37]/20 w-fit"><HeartHandshake className="w-5 h-5 text-[#D4AF37]" /></div>
-                    <div>
-                      <h4 className="font-black text-sm text-white uppercase">Hi Berbagi</h4>
-                      <p className="text-[9px] text-amber-200 font-bold italic">Donasi & Sedekah</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-[#D4AF37]" />
-                </CardContent>
-              </div>
-            </Card>
-          </Link>
-
-          {/* Hi Muhasabah */}
           <Link href="/muhasabah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#800000] hover:shadow-md transition-shadow">
+            <Card className="overflow-hidden border-none shadow-sm bg-white h-24 border-l-4 border-[#D4AF37] rounded-2xl hover:shadow-md transition-all">
               <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between">
-                  <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><Shield className="w-4 h-4 text-[#800000]" /></div>
-                  <Badge className="bg-[#800000]/10 text-[#800000] border-none text-[7px] font-black h-fit">{muhasabahPercent}%</Badge>
-                </div>
-                <div>
-                  <h4 className="font-black text-xs text-[#800000] uppercase">Hi Muhasabah</h4>
-                  <p className="text-[8px] text-muted-foreground">Evaluasi Diri</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Hi Nabung */}
-          <Link href="/nabung" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-amber-500 hover:shadow-md transition-shadow">
-              <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><PiggyBank className="w-4 h-4 text-amber-500" /></div>
-                <div>
-                  <h4 className="font-black text-xs text-black uppercase">Hi Nabung</h4>
-                  <p className="text-[8px] text-muted-foreground">Tabungan Umroh</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Hi Umroh - Locked */}
-          <div className="block group">
-            <Card className="overflow-hidden border-2 border-dashed border-[#D4AF37]/30 bg-muted/30 h-28">
-              <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between">
-                  <div className="p-1.5 rounded-lg bg-[#D4AF37]/20 relative">
-                    <Plane className="w-4 h-4 text-[#D4AF37]" />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#800000] flex items-center justify-center">
-                      <Lock className="w-2 h-2 text-white" />
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-black text-xs text-muted-foreground uppercase">Hi Umroh</h4>
-                  <p className="text-[8px] text-muted-foreground italic">Segera Hadir</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Hi Masak */}
-          <Link href="/masak" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-28 border-l-4 border-[#800000] hover:shadow-md transition-shadow">
-              <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><UtensilsCrossed className="w-4 h-4 text-[#800000]" /></div>
-                <div>
-                  <h4 className="font-black text-xs text-[#800000] uppercase">Hi Masak</h4>
-                  <p className="text-[8px] text-muted-foreground">Resep & Tips</p>
+                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Shield className="w-4 h-4 text-[#D4AF37]" /></div>
+                <div className="flex justify-between items-end">
+                  <h4 className="font-black text-[10px] text-black uppercase tracking-wider leading-tight">Hi Muhasabah</h4>
+                  <span className="text-[10px] font-black text-[#D4AF37]">{muhasabahPercent}%</span>
                 </div>
               </CardContent>
             </Card>

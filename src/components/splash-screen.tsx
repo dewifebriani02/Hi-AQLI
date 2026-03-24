@@ -58,7 +58,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         <div className="relative w-48 h-48 mb-6">
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-transparent blur-xl"></div>
           <Image
-            src="/logoaqli.png"
+            src="/app-logo.png"
             alt="AQLI Logo"
             fill
             className="object-contain relative z-10 drop-shadow-2xl"
@@ -71,8 +71,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           <h1 className="text-5xl font-black tracking-tight text-white drop-shadow-lg">
             HI AQLI
           </h1>
-          <p className="text-sm font-medium text-[#D4AF37] tracking-widest uppercase">
-            Menuju Keunggulan Al-Qur'an
+          <p className="text-[10px] font-bold text-[#D4AF37] tracking-[0.2em] uppercase">
+            Berhijrah dengan Ilmu, Beramal dengan Itqan
           </p>
         </div>
 

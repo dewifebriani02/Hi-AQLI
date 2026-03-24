@@ -25,12 +25,23 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
         const initializeAuth = async () => {
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
+                
                 if (error) {
-                    if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid_grant')) {
-                        console.warn('Session expired or invalid, signing out...');
+                    const errorMsg = error.message.toLowerCase();
+                    if (
+                        errorMsg.includes('refresh token not found') || 
+                        errorMsg.includes('invalid_grant') ||
+                        errorMsg.includes('refresh_token_not_found')
+                    ) {
+                        console.warn('Session expired or invalid, cleaning up...');
                         await supabase.auth.signOut();
+                        // Force refresh to clear any lingering states and redirect to login if not already there
+                        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+                          window.location.href = '/login';
+                        }
                     }
                 }
+
                 setState(prev => ({
                     ...prev,
                     user: session?.user ?? null,

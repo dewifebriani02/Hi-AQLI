@@ -172,7 +172,7 @@ function RegistrationForm() {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
         <Loader2 className="animate-spin text-[#800000] h-10 w-10" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memvalidasi Akses Anda...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memvalidasi Akses Ukhti...</p>
       </div>
     );
   }
@@ -191,8 +191,8 @@ function RegistrationForm() {
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive
-                  ? `Pendaftaran Anda untuk ${circle?.title} sudah tuntas. Silakan masuk ke dalam kelas.`
-                  : `Pendaftaran Anda untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
+                  ? `Pendaftaran Ukhti untuk ${circle?.title} sudah tuntas. Silakan masuk ke dalam kelas.`
+                  : `Pendaftaran Ukhti untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
               </p>
               {isActuallyPending && (
                 <div className="p-4 bg-muted/50 rounded-xl text-[10px] font-bold text-amber-700 italic border border-amber-200">
@@ -220,7 +220,7 @@ function RegistrationForm() {
               <CheckCircle2 className="h-12 w-12" />
             </div>
             <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">Jazakallahu Khairan, pendaftaran Anda sedang kami proses. Cek status di menu Hi Ngaji secara berkala.</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">Jazakallahu Khairan, pendaftaran Ukhti sedang kami proses. Cek status di menu Hi Ngaji secara berkala.</p>
             <Button onClick={() => router.push('/')} className="w-full bg-[#800000] font-bold h-12">Kembali ke Beranda</Button>
           </CardContent>
         </Card>
@@ -321,7 +321,7 @@ function RegistrationForm() {
               ) : (
                 <div className="p-8 bg-emerald-50 rounded-3xl border-2 border-emerald-100 text-center space-y-4">
                   <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto" />
-                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk Anda. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
+                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk Ukhti. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
                 </div>
               )}
               <Button onClick={handleConfirm} disabled={loading} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-2xl">

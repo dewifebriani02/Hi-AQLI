@@ -174,7 +174,7 @@ export default function UmrohPage() {
           Paket Umrah & Persiapan Ibadah
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Pilih paket umrah terbaik dan lengkapi persiapan ibadah Anda
+          Pilih paket umrah terbaik dan lengkapi persiapan ibadah Ukhti
         </p>
       </div>
 
@@ -338,7 +338,7 @@ export default function UmrohPage() {
                 <div className="flex-1">
                   <h4 className="font-bold text-sm text-[#800000] mb-1">Tips Penting</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Pastikan Anda memilih paket yang sesuai dengan budget dan kebutuhan. Perhatikan jarak hotel
+                    Pastikan Ukhti memilih paket yang sesuai dengan budget dan kebutuhan. Perhatikan jarak hotel
                     dengan Masjidil Haram, fasilitas yang disediakan, dan reputasi travel. Selalu berkoordinasi
                     dengan mutawwif selama di Tanah Suci.
                   </p>
@@ -352,7 +352,7 @@ export default function UmrohPage() {
             <CardContent className="p-4 flex items-center justify-between gap-4">
               <div>
                 <h4 className="font-bold text-white text-sm">Siap Berangkat?</h4>
-                <p className="text-amber-200 text-xs">Pilih paket umrah impian Anda sekarang</p>
+                <p className="text-amber-200 text-xs">Pilih paket umrah impian Ukhti sekarang</p>
               </div>
               <Link href="?tab=packages">
                 <Button className="bg-[#D4AF37] hover:bg-amber-400 text-[#800000] font-bold">

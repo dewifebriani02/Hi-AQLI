@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,59 +27,74 @@ import {
   TrendingUp
 } from "lucide-react";
 import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
 import { addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 
-const campaigns = [
-  {
-    id: "wakaf-server-ai",
-    title: "Wakaf Server AI HI AQLI",
-    description: "Dukung penyediaan infrastruktur GPU untuk asisten tilawah AI yang lebih cepat dan akurat bagi seluruh thalibah.",
-    goal: 50000000,
-    current: 12450000,
-    donors: 142,
-    daysLeft: 12,
-    image: "https://picsum.photos/seed/server/600/400",
-    category: "WAKAF"
-  },
-  {
-    id: "beasiswa-itqan",
-    title: "Beasiswa Itqan Thalibah",
-    description: "Bantu santriwati kurang mampu untuk mendapatkan akses premium program Tikrar Daily dan bimbingan asatizah.",
-    goal: 25000000,
-    current: 18750000,
-    donors: 89,
-    daysLeft: 45,
-    image: "https://picsum.photos/seed/learn/600/400",
-    category: "BEASISWA"
-  },
-  {
-    id: "dakwah-digital",
-    title: "Operasional Dakwah Digital",
-    description: "Infaq rutin untuk biaya pemeliharaan sistem, hosting, dan pengembangan fitur baru aplikasi HI AQLI.",
-    goal: 15000000,
-    current: 5400000,
-    donors: 215,
-    daysLeft: 0,
-    image: "https://picsum.photos/seed/tech/600/400",
-    category: "INFAQ"
-  }
-];
+type Campaign = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  goal: number;
+  current: number;
+  donors: number;
+  days_left: number;
+  image_url: string | null;
+  is_active: boolean;
+};
 
 const paymentMethods = [
   { id: 'transfer', label: 'Transfer Bank (BSI)', icon: Landmark, detail: 'Bank Syariah Indonesia - 7123456789 a.n. HI AQLI' },
-  { id: 'qris', label: 'QRIS / E-Wallet', icon: QrCode, detail: 'Pindai otomatis via Dana, OVO, Gopay' },
 ];
 
 export default function BerbagiPage() {
   const { user } = useUser();
   const { toast } = useToast();
 
+  // Fetch campaigns from Supabase
+  const campaignOptions = useMemo(() => ({
+    filters: [{ column: 'is_active', operator: '==', value: true }],
+    orderBy: { column: 'created_at', ascending: false }
+  }), []);
+  const { data: campaignsRaw, isLoading: isCampaignsLoading } = useCollection("campaigns", campaignOptions);
+  const campaigns = campaignsRaw as Campaign[];
+
+  // Fetch donations for stats
+  const donationOptions = useMemo(() => ({
+    filters: [{ column: 'status', operator: '==', value: 'verified' }]
+  }), []);
+  const { data: verifiedDonations } = useCollection("donations", donationOptions);
+
+  const totalDonated = verifiedDonations?.reduce((acc, d: any) => acc + (d.amount || 0), 0) || 0;
+  const totalDonors = verifiedDonations?.length || 0;
+
+  // Aggregate donations per campaign title
+  const donationStats = useMemo(() => {
+    const stats: Record<string, { total: number; count: number }> = {};
+    verifiedDonations?.forEach((d: any) => {
+      const key = d.campaignTitle || '';
+      if (!stats[key]) stats[key] = { total: 0, count: 0 };
+      stats[key].total += d.amount || 0;
+      stats[key].count += 1;
+    });
+    return stats;
+  }, [verifiedDonations]);
+
+  // Enrich campaigns with real donation data
+  const enrichedCampaigns = useMemo(() => {
+    return campaigns?.map(camp => ({
+      ...camp,
+      current: donationStats[camp.title]?.total || 0,
+      donors: donationStats[camp.title]?.count || 0,
+    })) || [];
+  }, [campaigns, donationStats]);
+
   const [step, setStep] = useState(1);
-  const [selectedCampaign, setSelectedCampaign] = useState<typeof campaigns[0] | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [amount, setAmount] = useState<number>(0);
   const [customAmount, setCustomAmount] = useState<string>("");
   const [method, setMethod] = useState<string>("transfer");
@@ -87,6 +102,8 @@ export default function BerbagiPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [senderName, setSenderName] = useState("");
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   const donationAmounts = [25000, 50000, 100000, 250000];
 
@@ -96,7 +113,7 @@ export default function BerbagiPage() {
     }
   }, [step]);
 
-  const handleCampaignSelect = (campaign: typeof campaigns[0]) => {
+  const handleCampaignSelect = (campaign: Campaign) => {
     setSelectedCampaign(campaign);
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -110,7 +127,7 @@ export default function BerbagiPage() {
   const goToPayment = () => {
     const baseAmount = amount || parseInt(customAmount);
     if (!baseAmount || baseAmount < 10000) {
-      toast({ variant: "destructive", title: "Minimal donasi Rp 10.000." });
+      toast({ variant: "destructive", title: "Minimal Infaq Rp 10.000." });
       return;
     }
     setStep(3);
@@ -124,21 +141,40 @@ export default function BerbagiPage() {
 
     setLoading(true);
     try {
+      let uploadedFilePath = null;
+
+      if (proofFile) {
+        const fileExt = proofFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        // Important: Needs standard supabase client to use storage, assuming it's exported from @/supabase
+        const { supabase } = await import('@/supabase');
+        
+        const { error: uploadError, data } = await supabase.storage
+          .from('bukti_transfer')
+          .upload(`donations/${fileName}`, proofFile);
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          toast({ variant: "destructive", title: "Gagal mengupload bukti transfer. Melanjutkan tanpa bukti." });
+        } else {
+          uploadedFilePath = data?.path;
+        }
+      }
+
       const baseAmount = amount || parseInt(customAmount);
       const finalAmount = baseAmount + uniqueCode;
 
       addDocumentNonBlocking("donations", {
-        user_id: user?.id || null,
-        campaignId: selectedCampaign?.id,
+        userId: user?.id || null,
         campaignTitle: selectedCampaign?.title,
         amount: finalAmount,
-        baseAmount: baseAmount,
         uniqueCode: uniqueCode,
         paymentMethod: method,
         senderName: senderName,
+        transferDate: transferDate,
         status: "pending_verification",
-        created_at: new Date().toISOString(),
-        donationDate: new Date().toISOString(),
+        proofFileName: uploadedFilePath,
       });
 
       setSubmitted(true);
@@ -166,7 +202,7 @@ export default function BerbagiPage() {
           <CardContent className="pt-10 pb-10 space-y-6">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Terima kasih, <strong>{senderName}</strong>. Donasi Anda untuk <strong>{selectedCampaign?.title}</strong> sedang dalam proses verifikasi.
+                Terima kasih, <strong>{senderName}</strong>. Infaq Ukhti untuk <strong>{selectedCampaign?.title}</strong> sedang dalam proses verifikasi.
               </p>
               <p className="text-xs italic bg-[#800000]/5 p-4 rounded-xl text-[#800000]">"Harta tidak akan berkurang karena sedekah." (HR. Muslim)</p>
             </div>
@@ -186,20 +222,36 @@ export default function BerbagiPage() {
           <HeartHandshake className="w-5 h-5" />
           <span className="text-xs font-black uppercase tracking-widest text-[#800000]">Hi Berbagi • Infaq Digital</span>
         </div>
-        <h1 className="text-3xl font-black font-headline tracking-tight uppercase text-[#800000]">Jembatan Kebaikan</h1>
+        <h1 className="text-3xl font-black font-headline tracking-tight uppercase text-[#800000]">Tabungan Akhirat</h1>
         <p className="text-muted-foreground text-sm font-medium">
-          Salurkan infaq dan wakaf terbaik Anda untuk mendukung keberlangsungan infrastruktur AI penghafal Qur'an.
+          Salurkan infaq terbaik Ukhti untuk mendukung operasional dakwah dan fasilitas hafalan Qur'an para thalibah. Semoga menjadi pemberat timbangan amal di hari akhir.
         </p>
       </div>
 
       {step === 1 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-1">
-          {campaigns.map((camp) => {
-            const progress = (camp.current / camp.goal) * 100;
+          {isCampaignsLoading ? (
+            <div className="col-span-full flex flex-col items-center py-20 gap-3">
+              <Loader2 className="animate-spin h-8 w-8 text-[#800000]" />
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Memuat Kampanye...</p>
+            </div>
+          ) : enrichedCampaigns.length === 0 ? (
+            <div className="col-span-full text-center py-20">
+              <HeartHandshake className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground italic">Belum ada kampanye aktif saat ini.</p>
+            </div>
+          ) : enrichedCampaigns.map((camp) => {
+            const progress = camp.goal > 0 ? (camp.current / camp.goal) * 100 : 0;
             return (
               <Card key={camp.id} className="overflow-hidden border-none shadow-lg bg-white flex flex-col group hover:scale-[1.02] transition-transform">
-                <div className="relative h-48 w-full">
-                  <Image src={camp.image} alt={camp.title} fill className="object-cover" data-ai-hint="charity campaign" />
+                <div className="relative h-48 w-full bg-gradient-to-br from-[#800000] to-[#5a0000]">
+                  {camp.image_url ? (
+                    <Image src={camp.image_url} alt={camp.title} fill className="object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <HeartHandshake className="w-16 h-16 text-white/20" />
+                    </div>
+                  )}
                   <Badge className="absolute top-3 left-3 bg-[#800000] text-white font-black text-[9px] px-2 py-0.5 tracking-widest border-none">
                     {camp.category}
                   </Badge>
@@ -214,7 +266,7 @@ export default function BerbagiPage() {
                     <div className="flex justify-between items-end">
                       <div className="flex flex-col">
                         <span className="text-[9px] font-bold text-muted-foreground uppercase">Terkumpul</span>
-                        <span className="text-sm font-black text-[#800000]">Rp {camp.current.toLocaleString('id-ID')}</span>
+                        <span className="text-sm font-black text-[#800000]">Rp {(camp.current || 0).toLocaleString('id-ID')}</span>
                       </div>
                       <span className="text-[10px] font-black text-[#D4AF37]">{Math.round(progress)}%</span>
                     </div>
@@ -222,11 +274,11 @@ export default function BerbagiPage() {
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground">
                         <Users className="w-3 h-3 text-[#800000]" />
-                        <span>{camp.donors} Donatur</span>
+                        <span>{camp.donors || 0} Donatur</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground">
                         <Clock className="w-3 h-3 text-[#800000]" />
-                        <span>{camp.daysLeft > 0 ? `${camp.daysLeft} Hari Lagi` : 'Ongoing'}</span>
+                        <span>{camp.days_left > 0 ? `${camp.days_left} Hari Lagi` : 'Ongoing'}</span>
                       </div>
                     </div>
                   </div>
@@ -236,7 +288,7 @@ export default function BerbagiPage() {
                     onClick={() => handleCampaignSelect(camp)}
                     className="w-full rounded-none h-12 bg-white text-[#800000] hover:bg-[#800000] hover:text-white font-black uppercase text-[10px] tracking-widest transition-colors gap-2 border-t border-[#800000]/10"
                   >
-                    Donasi Sekarang <ChevronRight className="w-4 h-4" />
+                    Infaq Sekarang <ChevronRight className="w-4 h-4" />
                   </Button>
                 </CardFooter>
               </Card>
@@ -257,7 +309,7 @@ export default function BerbagiPage() {
             </CardHeader>
             <CardContent className="p-8 space-y-8">
               <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pilih Nominal Donasi</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pilih Nominal Infaq</Label>
                 <div className="grid grid-cols-2 gap-3">
                   {donationAmounts.map((val) => (
                     <Button
@@ -285,7 +337,7 @@ export default function BerbagiPage() {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#800000] font-black">Rp</span>
                   <Input type="number" placeholder="Contoh: 150000" className="pl-11 h-14 text-lg font-black border-2 border-[#800000]/10 focus-visible:ring-[#800000] rounded-xl" value={customAmount} onChange={(e) => setCustomAmount(e.target.value)} />
                 </div>
-                <p className="text-[9px] text-muted-foreground font-bold italic">*Minimal donasi Rp 10.000</p>
+                <p className="text-[9px] text-muted-foreground font-bold italic">*Minimal Infaq Rp 10.000</p>
               </div>
 
               <div className="space-y-4">
@@ -315,7 +367,7 @@ export default function BerbagiPage() {
             </CardContent>
             <CardFooter className="p-8 pt-0">
               <Button onClick={goToPayment} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-lg rounded-2xl uppercase tracking-widest shadow-xl">
-                Lanjut Donasi <ArrowRight className="ml-2 w-5 h-5" />
+                Lanjut Infaq <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </CardFooter>
           </Card>
@@ -334,7 +386,7 @@ export default function BerbagiPage() {
               <div className="bg-[#800000] text-white p-8 rounded-[2rem] border-b-8 border-[#D4AF37] space-y-6 relative overflow-hidden">
                 <div className="absolute right-[-20px] top-[-20px] opacity-10"><Landmark className="w-32 h-32 text-[#D4AF37]" /></div>
                 <div className="text-center space-y-2 relative z-10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">Total Donasi</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">Total Infaq</p>
                   <div className="text-4xl font-black flex items-center justify-center gap-2">
                     Rp {((amount || parseInt(customAmount) || 0) + uniqueCode).toLocaleString('id-ID')}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-[#D4AF37]" onClick={() => copyToClipboard(((amount || parseInt(customAmount) || 0) + uniqueCode).toString())}><Copy className="h-4 w-4" /></Button>
@@ -369,10 +421,27 @@ export default function BerbagiPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Konfirmasi Pengirim</Label>
                 <div className="grid gap-4">
                   <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Atas Nama Rekening</Label>
                     <div className="relative">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]" />
-                      <Input placeholder="Nama Sesuai Rekening / Nama Anda" className="pl-11 h-12 font-bold border-2 rounded-xl focus-visible:ring-[#800000]" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
+                      <Input placeholder="Contoh: Fulanah binti Fulan" className="pl-11 h-12 font-bold border-2 rounded-xl focus-visible:ring-[#800000]" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Tanggal Transfer</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]" />
+                      <Input type="date" className="pl-11 h-12 font-bold border-2 rounded-xl focus-visible:ring-[#800000]" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Upload Bukti Transfer (Opsional)</Label>
+                    <Input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                      className="h-12 border-2 rounded-xl text-xs py-3 cursor-pointer file:bg-[#800000] file:text-white file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:font-bold file:-mt-1 hover:file:bg-[#800000]/90"
+                    />
                   </div>
                 </div>
               </div>
@@ -392,9 +461,9 @@ export default function BerbagiPage() {
 
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 px-1">
         {[
-          { label: "Donasi Terkumpul", value: "Rp 36.6M", icon: TrendingUp },
-          { label: "Total Donatur", value: "446", icon: Users },
-          { label: "Kampanye Aktif", value: "3", icon: Target },
+          { label: "Infaq Terkumpul", value: totalDonated > 0 ? `Rp ${(totalDonated / 1000000).toFixed(1)}M` : 'Rp 0', icon: TrendingUp },
+          { label: "Total Donatur", value: totalDonors.toString(), icon: Users },
+          { label: "Kampanye Aktif", value: (enrichedCampaigns?.length || 0).toString(), icon: Target },
           { label: "Pemanfaat AI", value: "1.2K", icon: Zap },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-[#800000]/10 flex flex-col items-center text-center gap-1">

@@ -311,7 +311,7 @@ export function TikrarSystem() {
       });
       const text = `Assalamu'alaikum Admin HI AQLI, saya ${userData?.username || user.user_metadata?.full_name} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
       window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(text)}`, '_blank');
-      toast({ title: "Permohonan Dikirim", description: "Admin HI AQLI akan segera menjadwalkan ujian lisan Anda." });
+      toast({ title: "Permohonan Dikirim", description: "Admin HI AQLI akan segera menjadwalkan ujian lisan Ukhti." });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal mengajukan ujian" });
     } finally {

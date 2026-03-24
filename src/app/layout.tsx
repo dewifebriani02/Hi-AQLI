@@ -15,7 +15,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SplashScreen } from '@/components/splash-screen';
-import { Logo } from '@/components/logo';
+import dynamic from 'next/dynamic';
+
+const Logo = dynamic(() => import('@/components/logo').then(mod => mod.Logo), { 
+  ssr: false,
+  loading: () => <div className="w-[100px] h-[28px]" /> // Placeholder with similar dimensions
+});
 
 // Splash screen state management
 let splashShown = false;
@@ -27,7 +32,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { data: isSuperAdminDoc } = useDoc("roles_superadmin", user?.id);
   const { data: userData } = useDoc("users", user?.id);
 
-  const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc;
+  const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc || userData?.roleId === 'admin' || userData?.roleId === 'superadmin';
   const points = userData?.points || 0;
 
   // Sidebar muncul untuk admin di tablet (md+) ke atas
@@ -67,7 +72,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           {/* Padding bottom untuk BottomNav */}
           <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
             <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4">
-              {hasAdminAccess && <SidebarTrigger className="md:flex text-white hover:bg-white/10" />}
+              {hasAdminAccess && <SidebarTrigger className="flex text-[#800000] hover:bg-[#800000]/10" />}
               <div className="flex-1 flex justify-center">
                 <Logo showText={true} className="scale-75" textClassName="text-lg" imageSize={28} />
               </div>
@@ -126,7 +131,24 @@ export default function RootLayout({
     <html lang="id">
       <head>
         <title>Hi AQLI</title>
-        <meta name="description" content="Pendamping Anda menuju keunggulan Al-Qur'an." />
+        <meta name="description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://hiaqli.vercel.app/" />
+        <meta property="og:title" content="Hi AQLI" />
+        <meta property="og:description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
+        <meta property="og:image" content="https://hiaqli.vercel.app/app-splash.jpg" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://hiaqli.vercel.app/" />
+        <meta name="twitter:title" content="Hi AQLI" />
+        <meta name="twitter:description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
+        <meta name="twitter:image" content="https://hiaqli.vercel.app/app-splash.jpg" />
+
+        <link rel="icon" href="/icon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />

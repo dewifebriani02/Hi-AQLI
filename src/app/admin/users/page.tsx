@@ -40,9 +40,9 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
 const ROLES = [
-  { id: "learner", name: "Santri (Thalibah)" },
-  { id: "muallimah", name: "Mu'allimah (Guru)" },
-  { id: "musyrifah", name: "Musyrifah (Pembimbing)" },
+  { id: "learner", name: "Thalibah" },
+  { id: "muallimah", name: "Mu'allimah" },
+  { id: "musyrifah", name: "Musyrifah" },
   { id: "admin", name: "Administrator" },
 ];
 
@@ -169,7 +169,7 @@ export default function AdminUsersPage() {
                 Tambah User Baru
               </DialogTitle>
               <DialogDescription>
-                Daftarkan profil umum ke database (Admin, Mu'allimah, atau Santri).
+                Daftarkan profil umum ke database (Admin, Mu'allimah, atau Thalibah).
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
@@ -263,7 +263,7 @@ export default function AdminUsersPage() {
                           u.roleId === 'muallimah' ? "bg-blue-600 text-white border-none" :
                             u.roleId === 'musyrifah' ? "bg-emerald-600 text-white border-none" : ""
                       )}>
-                        {ROLES.find(r => r.id === u.roleId)?.name || 'Santri'}
+                        {ROLES.find(r => r.id === u.roleId)?.name || 'Thalibah'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

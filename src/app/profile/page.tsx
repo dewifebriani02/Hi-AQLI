@@ -55,7 +55,7 @@ export default function ProfilePage() {
   // Fetch real donation history
   const donationOptions = useMemo(() => ({
     filters: [{ column: 'userId', operator: '==', value: user?.id }],
-    orderBy: { column: 'createdAt', ascending: false },
+    orderBy: { column: 'created_at', ascending: false },
     limit: 20
   }), [user?.id]);
 
@@ -91,7 +91,7 @@ export default function ProfilePage() {
       navigator.clipboard.writeText(user.id);
       toast({
         title: "UID Berhasil Disalin",
-        description: "UID Anda diperlukan untuk pengaturan peran manual.",
+        description: "UID Ukhti diperlukan untuk pengaturan peran manual.",
       });
     }
   };
@@ -100,7 +100,7 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#800000]"></div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Menyiapkan Berkas Anda...</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Menyiapkan Berkas Ukhti...</p>
       </div>
     );
   }
@@ -109,7 +109,7 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto py-6 space-y-8 pb-32">
       <div className="flex flex-col gap-2 px-1">
         <h1 className="text-3xl font-bold font-headline tracking-tight">Profil & Aktivitas</h1>
-        <p className="text-muted-foreground text-sm">Pusat kendali pembelajaran dan kontribusi Anda.</p>
+        <p className="text-muted-foreground text-sm">Pusat kendali pembelajaran dan kontribusi Ukhti.</p>
       </div>
 
       <Card className="border-none shadow-xl overflow-hidden bg-card/50 backdrop-blur-sm">
@@ -178,7 +178,7 @@ export default function ProfilePage() {
                     <p className={cn(
                       "text-[10px] font-medium",
                       superAdminRole ? "text-[#800000]/70" : "text-amber-700"
-                    )}>Anda memiliki akses penuh ke Dashboard AQLI.</p>
+                    )}>Ukhti memiliki akses penuh ke Dashboard AQLI.</p>
                   </div>
                 </div>
                 <Button asChild size="sm" className={cn(
@@ -198,7 +198,7 @@ export default function ProfilePage() {
                   <Fingerprint className="w-5 h-5 text-[#800000]" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID Anda (UID)</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID Ukhti (UID)</p>
                   <p className="text-xs font-mono font-bold truncate max-w-[150px] sm:max-w-none">{user.id}</p>
                 </div>
               </div>
@@ -216,8 +216,8 @@ export default function ProfilePage() {
               <TabsTrigger value="halaqah" className="font-bold gap-2 rounded-lg data-[state=active]:text-[#800000]">
                 <BookOpen className="w-4 h-4 hidden sm:block" /> Halaqah
               </TabsTrigger>
-              <TabsTrigger value="donasi" className="font-bold gap-2 rounded-lg data-[state=active]:text-[#800000]">
-                <HeartHandshake className="w-4 h-4 hidden sm:block" /> Donasi
+              <TabsTrigger value="Infaq" className="font-bold gap-2 rounded-lg data-[state=active]:text-[#800000]">
+                <HeartHandshake className="w-4 h-4 hidden sm:block" /> Infaq
               </TabsTrigger>
             </TabsList>
 
@@ -240,7 +240,7 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap gap-4 px-1">
                   {[
                     { name: points > 100 ? "Hafiz Pro" : "Hafiz Pemula", icon: Star, color: "text-[#D4AF37]" },
-                    { name: points > 0 ? "Santri Aktif" : "Santri Baru", icon: CheckCircle2, color: "text-emerald-600" }
+                    { name: points > 0 ? "Thalibah Aktif" : "Thalibah Baru", icon: CheckCircle2, color: "text-emerald-600" }
                   ].map((badge, idx) => (
                     <div key={idx} className="flex flex-col items-center gap-1.5 p-3 border rounded-2xl bg-white w-24 text-center group hover:border-[#800000] transition-colors">
                       <badge.icon className={cn("w-8 h-8", badge.color)} />
@@ -295,11 +295,11 @@ export default function ProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="donasi" className="space-y-4">
+            <TabsContent value="Infaq" className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Riwayat Infaq</h3>
                 <Button variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] gap-1" asChild>
-                  <Link href="/berbagi"><History className="w-3 h-3" /> Tambah Donasi</Link>
+                  <Link href="/berbagi"><History className="w-3 h-3" /> Tambah Infaq</Link>
                 </Button>
               </div>
 
@@ -335,7 +335,7 @@ export default function ProfilePage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-xs italic">
-                          Belum ada riwayat donasi yang tercatat.
+                          Belum ada riwayat Infaq yang tercatat.
                         </TableCell>
                       </TableRow>
                     )}

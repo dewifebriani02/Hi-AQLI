@@ -256,9 +256,9 @@ export default function LeaderboardPage() {
                 {currentUserRank || '-'}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat Anda</span>
+                <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat Ukhti</span>
                 <span className="text-[9px] text-white/60 font-bold uppercase">
-                  {currentUserRank === 1 ? 'Pertahankan tahta Anda!' : 'Teruslah ber-Itqan!'}
+                  {currentUserRank === 1 ? 'Pertahankan tahta Ukhti!' : 'Teruslah ber-Itqan!'}
                 </span>
               </div>
             </div>

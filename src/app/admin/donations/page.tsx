@@ -41,7 +41,7 @@ export default function AdminDonationsPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const donationOptions = useMemo(() => ({
-    orderBy: { column: 'createdAt', ascending: false }
+    orderBy: { column: 'created_at', ascending: false }
   }), []);
 
   const { data: donations, isLoading } = useCollection("donations", donationOptions);
@@ -56,15 +56,13 @@ export default function AdminDonationsPage() {
     try {
       const { error } = await supabase.from("donations").update({
         status: "verified",
-        verifiedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
       }).eq('id', donationId);
 
       if (error) throw error;
 
       toast({
         title: "Infaq Terverifikasi",
-        description: "Status donasi telah diperbarui menjadi berhasil.",
+        description: "Status Infaq telah diperbarui menjadi berhasil.",
       });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal memproses verifikasi." });
@@ -168,7 +166,7 @@ export default function AdminDonationsPage() {
                       <TableCell className="py-4">
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-muted-foreground">
-                            {d.createdAt ? new Date(d.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
+                            {d.created_at ? new Date(d.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
                           </span>
                           <span className="text-xs font-black text-[#800000] uppercase mt-0.5">{d.campaignTitle}</span>
                         </div>
@@ -176,7 +174,9 @@ export default function AdminDonationsPage() {
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="text-xs font-bold">{d.senderName || 'Hamba Allah'}</span>
-                          <span className="text-[9px] text-muted-foreground">ID: {d.userId?.slice(0, 8) || 'Anonim'}</span>
+                          <span className="text-[9px] text-muted-foreground">
+                            {d.created_at ? new Date(d.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'} • Rp {d.amount?.toLocaleString('id-ID') || '0'}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -204,21 +204,35 @@ export default function AdminDonationsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {d.status === 'pending_verification' ? (
-                          <Button
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 h-8 font-black text-[9px] gap-1.5"
-                            onClick={() => handleVerify(d.id)}
-                            disabled={processingId === d.id}
-                          >
-                            {processingId === d.id ? <Loader2 className="animate-spin w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
-                            VERIFIKASI
-                          </Button>
-                        ) : (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/30 pointer-events-none">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {d.proofFileName && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 font-bold text-[9px] gap-1.5"
+                              asChild
+                            >
+                              <a href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/bukti_transfer/${d.proofFileName}`} target="_blank" rel="noopener noreferrer">
+                                <ArrowUpRight className="w-3 h-3" /> BUKTI
+                              </a>
+                            </Button>
+                          )}
+                          {d.status === 'pending_verification' ? (
+                            <Button
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-700 h-8 font-black text-[9px] gap-1.5"
+                              onClick={() => handleVerify(d.id)}
+                              disabled={processingId === d.id}
+                            >
+                              {processingId === d.id ? <Loader2 className="animate-spin w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                              VERIFIKASI
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/30 pointer-events-none">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

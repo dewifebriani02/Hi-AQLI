@@ -33,7 +33,7 @@ export default function TajweedQuizPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold font-headline tracking-tight">Kuis Tajwid</h1>
         <p className="text-muted-foreground">
-          Uji pemahaman Anda tentang aturan Tajwid.
+          Uji pemahaman Ukhti tentang aturan Tajwid.
         </p>
       </div>
       <Card>

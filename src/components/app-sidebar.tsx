@@ -27,7 +27,8 @@ import {
   LayoutGrid,
   Library,
 } from "lucide-react";
-import { Logo } from "./logo";
+import dynamic from 'next/dynamic';
+const Logo = dynamic(() => import('./logo').then(mod => mod.Logo), { ssr: false });
 import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
 import { useDoc } from "@/supabase/db";
@@ -35,7 +36,8 @@ import { useDoc } from "@/supabase/db";
 const adminItems = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
   { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
-  { href: "/admin/donations", label: "Manajemen Donasi", icon: HeartHandshake },
+  { href: "/admin/donations", label: "Manajemen Infaq", icon: HeartHandshake },
+  { href: "/admin/campaigns", label: "Manajemen Kampanye", icon: LayoutGrid },
   { href: "/admin/users", label: "Manajemen Peserta", icon: UserCog },
   { href: "/admin/classes", label: "Manajemen Kelas", icon: Library },
 ];
@@ -56,8 +58,9 @@ export function AppSidebar() {
 
   const { data: isAdmin } = useDoc(user ? "roles_admin" : null, user?.id);
   const { data: isSuperAdmin } = useDoc(user ? "roles_superadmin" : null, user?.id);
+  const { data: userData } = useDoc(user ? "users" : null, user?.id);
 
-  const hasAdminAccess = !!isAdmin || !!isSuperAdmin;
+  const hasAdminAccess = !!isAdmin || !!isSuperAdmin || userData?.roleId === 'admin' || userData?.roleId === 'superadmin';
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -72,7 +75,7 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar collapsible="icon" className="border-r-[#D4AF37]/30 md:block">
+    <Sidebar collapsible="icon" className="border-r-[#D4AF37]/30">
       <SidebarHeader className="border-b border-[#D4AF37]/30 py-4 bg-[#800000]">
         <div className="flex items-center justify-between px-2">
           <Link href="/" className="flex items-center gap-2" onClick={handleLinkClick}>

@@ -178,7 +178,7 @@ export default function NgajiPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
-          Pilih program sesuai level Anda. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
+          Pilih program sesuai level Ukhti. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
         </p>
       </div>
 

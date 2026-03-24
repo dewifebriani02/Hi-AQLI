@@ -42,7 +42,7 @@ export default function AiAssistantPage() {
       </div>
 
       <p className="text-muted-foreground">
-        Rekam tilawah Anda untuk mendapatkan analisis instan mengenai makhraj dan kelancaran dari AI kami.
+        Rekam tilawah Ukhti untuk mendapatkan analisis instan mengenai makhraj dan kelancaran dari AI kami.
       </p>
 
       <Card className="flex-1 shadow-md border-muted">

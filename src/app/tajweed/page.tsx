@@ -59,7 +59,7 @@ export default function HafalanPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Hafalan & Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Perkuat hafalan Anda dengan metode repetisi terstruktur dan pantau jadwal personal Anda secara real-time.
+          Perkuat hafalan Ukhti dengan metode repetisi terstruktur dan pantau jadwal personal Ukhti secara real-time.
         </p>
       </div>
 
@@ -97,7 +97,7 @@ export default function HafalanPage() {
                     <Trophy className="w-5 h-5 text-[#D4AF37]" />
                     <CardTitle className="text-lg font-headline">Pencapaian Hafalan 30 Juz</CardTitle>
                   </div>
-                  <CardDescription>Visualisasi perkembangan hafalan Anda dari Juz 1 hingga 30.</CardDescription>
+                  <CardDescription>Visualisasi perkembangan hafalan Ukhti dari Juz 1 hingga 30.</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-8">
                   <HifzProgressChart />
@@ -144,7 +144,7 @@ export default function HafalanPage() {
               <Card className="border-[#800000]/10 shadow-lg sticky top-24">
                 <CardHeader className="bg-[#800000]/5">
                   <CardTitle className="text-lg font-headline text-[#800000]">Uji Pengetahuan</CardTitle>
-                  <CardDescription>Ikuti kuis untuk memeriksa pemahaman Anda tentang aturan Tajwid.</CardDescription>
+                  <CardDescription>Ikuti kuis untuk memeriksa pemahaman Ukhti tentang aturan Tajwid.</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
                   <p className="text-sm text-muted-foreground leading-relaxed">Kuis adalah cara yang bagus untuk memperkuat hafalan teori sebelum praktek ujian lisan dengan Tutor.</p>

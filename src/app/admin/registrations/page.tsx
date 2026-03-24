@@ -97,7 +97,7 @@ export default function AdminRegistrationsPage() {
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
         <ShieldAlert className="w-12 h-12 text-destructive" />
         <h2 className="text-xl font-bold">Akses Terbatas</h2>
-        <p className="text-muted-foreground max-w-md px-4">Hanya administrator terverifikasi yang dapat mengelola pendaftaran santri.</p>
+        <p className="text-muted-foreground max-w-md px-4">Hanya administrator terverifikasi yang dapat mengelola pendaftaran Thalibah.</p>
         <Button asChild variant="outline" className="mt-4"><Link href="/">Kembali ke Beranda</Link></Button>
       </div>
     );
@@ -110,7 +110,7 @@ export default function AdminRegistrationsPage() {
           <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold font-headline tracking-tight">Verifikasi Santri</h1>
+          <h1 className="text-2xl font-bold font-headline tracking-tight">Verifikasi Thalibah</h1>
           <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-[#800000]">Antrean Pendaftaran Halaqah</p>
         </div>
       </div>

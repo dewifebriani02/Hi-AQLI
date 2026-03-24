@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
       setSuccess(true);
     } catch (err: any) {
       console.error(err);
-      setError('Gagal mengirim email pemulihan. Pastikan email Anda benar.');
+      setError('Gagal mengirim email pemulihan. Pastikan email Ukhti benar.');
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
             <KeyRound className="w-6 h-6 text-[#800000]" />
           </div>
           <CardTitle className="text-2xl font-bold font-headline">Lupa Kata Sandi</CardTitle>
-          <CardDescription>Kami akan mengirimkan instruksi pemulihan ke email Anda</CardDescription>
+          <CardDescription>Kami akan mengirimkan instruksi pemulihan ke email Ukhti</CardDescription>
         </CardHeader>
         {success ? (
           <CardContent className="space-y-6 pt-4 text-center">
@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
               <p className="font-bold text-lg text-green-600">Email Terkirim!</p>
             </div>
             <p className="text-sm text-muted-foreground">
-              Silakan periksa kotak masuk email Anda (dan folder spam) untuk tautan pengaturan ulang kata sandi.
+              Silakan periksa kotak masuk email Ukhti (dan folder spam) untuk tautan pengaturan ulang kata sandi.
             </p>
             <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90">
               <Link href="/login">Kembali ke Login</Link>

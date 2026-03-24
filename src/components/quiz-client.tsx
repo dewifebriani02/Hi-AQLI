@@ -57,11 +57,11 @@ export function QuizClient() {
       {results ? (
         <Card className="bg-muted">
           <CardHeader>
-            <CardTitle>Hasil Kuis Anda</CardTitle>
+            <CardTitle>Hasil Kuis Ukhti</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              Skor Anda: {score} / {total}
+              Skor Ukhti: {score} / {total}
             </p>
           </CardContent>
           <CardFooter>

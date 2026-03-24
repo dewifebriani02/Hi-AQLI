@@ -219,7 +219,7 @@ export default function StudyCirclesPage() {
             {getFollowingCount() === 0 && (
               <div className="py-20 text-center space-y-4">
                 <Users className="w-12 h-12 mx-auto text-muted-foreground/20" />
-                <p className="text-sm text-muted-foreground italic">Anda belum memiliki pendaftaran aktif.</p>
+                <p className="text-sm text-muted-foreground italic">Ukhti belum memiliki pendaftaran aktif.</p>
               </div>
             )}
           </TabsContent>

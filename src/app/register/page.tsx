@@ -73,14 +73,14 @@ export default function RegisterPage() {
         if (signUpData.session) {
             toast({
               title: "Selamat Datang!",
-              description: "Pendaftaran berhasil, Anda otomatis masuk.",
+              description: "Pendaftaran berhasil, Ukhti otomatis masuk.",
             });
             router.push('/');
         } else {
             setError(null);
             toast({
-              title: "Cek Email Anda",
-              description: "Masyallah! Pendaftaran berhasil. Silakan verifikasi email Anda sebelum masuk.",
+              title: "Cek Email Ukhti",
+              description: "Masyallah! Pendaftaran berhasil. Silakan verifikasi email Ukhti sebelum masuk.",
             });
             router.push('/login');
         }

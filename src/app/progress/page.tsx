@@ -12,9 +12,9 @@ import {
     return (
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Progres Anda</h1>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Progres Ukhti</h1>
           <p className="text-muted-foreground">
-            Lacak perjalanan belajar Anda, tinjau akurasi tilawah Anda, dan tetap termotivasi.
+            Lacak perjalanan belajar Ukhti, tinjau akurasi tilawah Ukhti, dan tetap termotivasi.
           </p>
         </div>
   
@@ -61,7 +61,7 @@ import {
           <CardHeader>
             <CardTitle>Akurasi Tilawah dari Waktu ke Waktu</CardTitle>
             <CardDescription>
-              Grafik ini menunjukkan skor akurasi dari sesi Asisten Tilawah AI Anda.
+              Grafik ini menunjukkan skor akurasi dari sesi Asisten Tilawah AI Ukhti.
             </CardDescription>
           </CardHeader>
           <CardContent>

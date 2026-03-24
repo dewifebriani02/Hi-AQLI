@@ -233,7 +233,7 @@ export default function AdminClassesPage() {
   };
 
   const handleRemoveParticipant = async (regId: string, userId: string) => {
-    if (!confirm("Hapus akses kelas santri ini?")) return;
+    if (!confirm("Hapus akses kelas Thalibah ini?")) return;
     try {
       const { error } = await supabase.from("halaqah_registrations").delete().eq('id', regId);
       if (error) throw error;
@@ -350,7 +350,7 @@ export default function AdminClassesPage() {
               <Users className="w-5 h-5 text-[#800000]" />
               Peserta: {selectedHalaqah?.title}
             </DialogTitle>
-            <DialogDescription>Kelola santri yang terdaftar secara aktif di kelas ini.</DialogDescription>
+            <DialogDescription>Kelola Thalibah yang terdaftar secara aktif di kelas ini.</DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-4 space-y-6">

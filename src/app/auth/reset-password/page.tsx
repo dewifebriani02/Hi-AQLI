@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
 
             toast({
                 title: "Berhasil!",
-                description: "Kata sandi Anda telah diperbarui. Silakan masuk kembali.",
+                description: "Kata sandi Ukhti telah diperbarui. Silakan masuk kembali.",
             });
 
             router.push('/login');
@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
                         <Lock className="w-6 h-6 text-[#800000]" />
                     </div>
                     <CardTitle className="text-2xl font-bold font-headline">Atur Ulang Kata Sandi</CardTitle>
-                    <CardDescription>Masukkan kata sandi baru Anda di bawah ini</CardDescription>
+                    <CardDescription>Masukkan kata sandi baru Ukhti di bawah ini</CardDescription>
                 </CardHeader>
                 <form onSubmit={handleUpdate}>
                     <CardContent className="space-y-4">

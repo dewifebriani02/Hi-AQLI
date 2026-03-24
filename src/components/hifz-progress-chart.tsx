@@ -6,20 +6,31 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const juzStatus = Array.from({ length: 30 }, (_, i) => ({
-  number: i + 1,
-  completed: [1, 2, 29, 30].includes(i + 1),
-}));
-
-const chartData = juzStatus.map((j) => ({
-  name: `Juz ${j.number}`,
-  value: 1,
-  completed: j.completed,
-}));
+import { useUser } from "@/supabase";
+import { useDoc } from "@/supabase/db";
 
 export function HifzProgressChart() {
+  const { user } = useUser();
+  const { data: userData } = useDoc(user ? "users" : null, user?.id);
+
+  // Consider juz strictly less than paidJuz as fully completed.
+  const paidJuz = userData?.paidJuz || 1;
+  const completedJuzList = Array.from({ length: Math.max(0, paidJuz - 1) }, (_, i) => i + 1);
+
+  const juzStatus = Array.from({ length: 30 }, (_, i) => ({
+    number: i + 1,
+    completed: completedJuzList.includes(i + 1),
+  }));
+
+  const chartData = juzStatus.map((j) => ({
+    name: `Juz ${j.number}`,
+    value: 1,
+    completed: j.completed,
+  }));
+
   const completedCount = juzStatus.filter((j) => j.completed).length;
   const percentage = Math.round((completedCount / 30) * 100);
+
 
   return (
     <div className="flex flex-col gap-10">
@@ -96,7 +107,7 @@ export function HifzProgressChart() {
               <CheckCircle2 className="w-4 h-4 text-[#D4AF37]" /> Ringkasan
             </h4>
             <p className="text-sm text-black/70 leading-relaxed font-medium">
-              Masyallah, Anda telah mencapai kualitas Itqan pada {completedCount} Juz. Teruslah istiqomah menambah perbendaharaan hafalan baru.
+              Masyallah, Ukhti telah mencapai kualitas Itqan pada {completedCount} Juz. Teruslah istiqomah menambah perbendaharaan hafalan baru.
             </p>
           </div>
         </div>

@@ -5,29 +5,29 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Hi AQLI',
     short_name: 'Hi AQLI',
-    description: 'Pendamping Anda menuju keunggulan Al-Qur\'an.',
+    description: 'Berhijrah dengan Ilmu, Beramal dengan Itqan.',
     start_url: '/',
     display: 'standalone',
     background_color: '#800000',
     theme_color: '#800000',
     icons: [
       {
-        src: '/logoaqli.png',
+        src: '/app-logo.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any maskable',
+        purpose: 'any',
       },
       {
-        src: '/logoaqli.png',
+        src: '/app-logo.png',
         sizes: '512x512',
         type: 'image/png',
       },
     ],
     screenshots: [
       {
-        src: '/splash-screen.png',
+        src: '/app-splash.jpg',
         sizes: '540x720',
-        type: 'image/png',
+        type: 'image/jpeg',
       },
     ],
   }

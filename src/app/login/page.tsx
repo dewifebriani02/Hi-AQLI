@@ -42,12 +42,12 @@ export default function LoginPage() {
 
     if (error) {
       setLoading(false);
-      setError('Gagal masuk. Mohon periksa kembali email dan kata sandi Anda.');
+      setError('Gagal masuk. Mohon periksa kembali email dan kata sandi Ukhti.');
     } else {
       // Login successful - auth state change will trigger redirect
       toast({
         title: "Selamat Datang!",
-        description: "Masyallah, Anda telah masuk ke Hi AQLI.",
+        description: "Masyallah, Ukhti telah masuk ke Hi AQLI.",
       });
       // Reset loading after short delay for auth state to update
       setTimeout(() => setLoading(false), 500);

@@ -16,7 +16,7 @@ export const Logo = ({ className, textClassName, showText = true, imageSize = 40
   <div className={cn("flex items-center gap-3", className)}>
     <div className="relative flex items-center justify-center" style={{ width: imageSize, height: imageSize }}>
       <Image
-        src="/logoaqli.png"
+        src="/app-logo.png"
         alt="AQLI Logo"
         width={imageSize}
         height={imageSize}

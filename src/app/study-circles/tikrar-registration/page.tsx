@@ -193,7 +193,7 @@ export default function TikrarRegistrationPage() {
           <CardContent className="pt-8 pb-10 space-y-6">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Assalamu'alaikum, <strong>{name}</strong>. Kami telah menerima bukti pendaftaran Anda untuk <strong>Juz {existingReg[0].targetJuz}</strong>.
+                Assalamu'alaikum, <strong>{name}</strong>. Kami telah menerima bukti pendaftaran Ukhti untuk <strong>Juz {existingReg[0].targetJuz}</strong>.
               </p>
               <p className="text-xs bg-muted p-4 rounded-lg font-medium italic">
                 Saat ini tim admin sedang melakukan verifikasi manual. Akses "Masuk Kelas" akan terbuka secara otomatis maksimal dalam 1x24 jam.
@@ -222,7 +222,7 @@ export default function TikrarRegistrationPage() {
             <div className="space-y-2">
               <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Diterima!</h2>
               <p className="text-muted-foreground text-sm">
-                Terima kasih, <strong>{name}</strong>. Tim kami sedang memverifikasi pembayaran Anda untuk <strong>Juz {targetJuz}</strong>. Akses counter akan terbuka otomatis segera setelah verifikasi selesai.
+                Terima kasih, <strong>{name}</strong>. Tim kami sedang memverifikasi pembayaran Ukhti untuk <strong>Juz {targetJuz}</strong>. Akses counter akan terbuka otomatis segera setelah verifikasi selesai.
               </p>
             </div>
             <Button onClick={() => router.push('/')} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-bold">

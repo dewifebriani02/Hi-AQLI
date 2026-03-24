@@ -13,7 +13,7 @@ export default function AiScholarPage() {
       <Card className="flex-1">
         <CardHeader>
           <CardTitle>Ajukan Pertanyaan</CardTitle>
-          <CardDescription>Ketik pertanyaan Anda di bawah ini dan dapatkan jawaban dari Cendekiawan AI kami.</CardDescription>
+          <CardDescription>Ketik pertanyaan Ukhti di bawah ini dan dapatkan jawaban dari Cendekiawan AI kami.</CardDescription>
         </CardHeader>
         <CardContent>
           <AiScholarClient />

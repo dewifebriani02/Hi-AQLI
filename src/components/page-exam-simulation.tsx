@@ -181,7 +181,7 @@ export function PageExamSimulation({ page }: { page: number }) {
                     {finalScore > 90 ? "1" : "12"}
                   </div>
                   <div className="flex flex-col text-left">
-                    <span className="text-sm font-black text-[#800000] uppercase">Peringkat Anda</span>
+                    <span className="text-sm font-black text-[#800000] uppercase">Peringkat Ukhti</span>
                     <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Halaman {page} • Percobaan {attempts}</span>
                   </div>
                 </div>

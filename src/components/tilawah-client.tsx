@@ -58,7 +58,7 @@ export function TilawahClient() {
       mediaRecorderRef.current.start();
     } catch (err) {
       console.error("Error accessing microphone:", err);
-      setError("Tidak dapat mengakses mikrofon. Mohon izinkan akses mikrofon di pengaturan browser Anda.");
+      setError("Tidak dapat mengakses mikrofon. Mohon izinkan akses mikrofon di pengaturan browser Ukhti.");
     }
   };
 
@@ -116,7 +116,7 @@ export function TilawahClient() {
       {audioURL && (
         <div className="w-full max-w-lg flex flex-col items-center gap-4">
           <div className="w-full">
-            <h3 className="font-semibold mb-2">Tilawah Anda:</h3>
+            <h3 className="font-semibold mb-2">Tilawah Ukhti:</h3>
             <audio controls src={audioURL} className="w-full" />
           </div>
           <Button onClick={handleGetFeedback} disabled={isLoading || !audioDataUri}>
