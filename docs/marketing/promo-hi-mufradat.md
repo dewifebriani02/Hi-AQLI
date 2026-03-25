@@ -12,7 +12,7 @@
 Kami menyediakan 3 variasi poster untuk kebutuhan promosi Ukhti:
 - **Versi 1 (Elegant)**: Fokus pada nilai spiritual dengan desain Al-Qur'an bercahaya. Cocok untuk broadcast utama.
 - **Versi 2 (Lifestyle)**: Fokus pada kenyamanan belajar di mana saja (mobile-first). Cocok untuk media sosial.
-- **Versi 3 (Value)**: Fokus pada proposisi nilai "Seharga Semangkok Bakso". Sangat menarik perhatian untuk promosi singkat.
+- **Versi 3 (Value - TERBARU)**: Fokus pada proposisi nilai "Seharga Semangkok Bakso" dengan branding *"Hi Mufradat di Hi AQLI"* dan link akses `hiaqli.pro`. Sangat menarik perhatian untuk promosi singkat.
 
 ## Strategi Penggunaan
 Ukhti dapat menggunakan poster ini untuk:
