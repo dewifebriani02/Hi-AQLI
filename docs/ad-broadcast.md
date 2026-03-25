@@ -30,7 +30,7 @@ Kini, belajar Tajwid, memahami kosakata Al-Qur'an, dan menghafal harian menjadi 
 📞 **Admin (CP)**: [Masukkan Nomor WA di Sini]
 
 **Akses Aplikasi di Sini:**
-👉 [https://hiaqli.vercel.app/](https://hiaqli.vercel.app/)
+👉 [https://hiaqli.pro/](https://hiaqli.pro/)
 
 📱 **Cara Install di HP (PWA):**
 1. Buka link di atas melalui Browser (Chrome/Safari).
@@ -64,7 +64,7 @@ Gunakan **Hi AQLI**!
 📞 **CP**: [Masukkan Nomor WA di Sini]
 
 🔗 **Akses & Install (Gratis):**
-[https://hiaqli.vercel.app/](https://hiaqli.vercel.app/)
+[https://hiaqli.pro/](https://hiaqli.pro/)
 
 *(Buka link, lalu pilih **'Tambah ke Layar Utama'** di menu browser Ukhti agar aplikasi muncul di Homescreen!)* 📲
 
@@ -88,7 +88,7 @@ Salurkan infaq terbaik Ukhti untuk mendukung operasional dakwah dan fasilitas ha
 ✅ Transparansi Infaq via BSI
 
 👉 **Berinfaq Sekarang:**
-[https://hiaqli.vercel.app/berbagi](https://hiaqli.vercel.app/berbagi)
+[https://hiaqli.pro/berbagi](https://hiaqli.pro/berbagi)
 
 *(Jangan lupa **'Install'** aplikasinya melalui menu browser agar lebih mudah diakses kapan saja!)* 📲
 

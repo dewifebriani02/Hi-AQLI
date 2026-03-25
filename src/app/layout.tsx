@@ -135,17 +135,17 @@ export default function RootLayout({
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://hiaqli.vercel.app/" />
+        <meta property="og:url" content="https://hiaqli.pro/" />
         <meta property="og:title" content="Hi AQLI" />
         <meta property="og:description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
-        <meta property="og:image" content="https://hiaqli.vercel.app/app-splash.jpg" />
+        <meta property="og:image" content="https://hiaqli.pro/app-splash.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://hiaqli.vercel.app/" />
+        <meta name="twitter:url" content="https://hiaqli.pro/" />
         <meta name="twitter:title" content="Hi AQLI" />
         <meta name="twitter:description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
-        <meta name="twitter:image" content="https://hiaqli.vercel.app/app-splash.jpg" />
+        <meta name="twitter:image" content="https://hiaqli.pro/app-splash.jpg" />
 
         <link rel="icon" href="/icon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

@@ -46,7 +46,7 @@ Hanya dengan *Rp 20.000 / bulan*, Ukhti sudah bisa:
 
 ### *📲 Cara Akses & Install Hi AQLI:*
 
-1. *Akses Aplikasi*: Buka [https://hiaqli.vercel.app/] di browser HP.
+1. *Akses Aplikasi*: Buka [https://hiaqli.pro/] di browser HP.
 2. *Pilih Menu*: Klik ikon *Hi Mufradat* di halaman utama atau menu navigasi.
 3. *Install PWA (Agar Muncul di Layar HP)*:
    - *Android (Chrome)*: Klik titik tiga di kanan atas -> Pilih *Install Aplikasi* atau *Tambahkan ke Layar Utama*.
