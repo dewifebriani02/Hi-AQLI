@@ -148,7 +148,7 @@ export default function MutabaahPage() {
     Sun, Moon, BookOpen, Clock, Star, Droplets, Shield, Activity, Book, MessageSquare, RotateCcw, Sparkles, Home, CheckSquare, Zap
   };
 
-  if (isSetupMode) {
+  if (isSetupMode && user) {
     return (
       <div className="flex flex-col min-h-screen bg-white">
         <div className="p-6 space-y-6 max-w-2xl mx-auto w-full">
@@ -209,6 +209,26 @@ export default function MutabaahPage() {
             Mulai Konsisten Sekarang <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-orange-50/30 items-center justify-center p-6 text-center space-y-8">
+        <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center relative">
+          <Trophy className="w-12 h-12 text-[#D4AF37]" />
+          <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white p-2 rounded-full shadow-lg">
+            <Star className="w-4 h-4 fill-current" />
+          </div>
+        </div>
+        <div className="space-y-3 max-w-xs">
+          <h2 className="text-2xl font-black text-[#800000] uppercase leading-tight">Siapkan Target Amalan Jariyahmu</h2>
+          <p className="text-sm font-bold text-muted-foreground">Silakan masuk untuk mulai mengatur target amalan harianmu agar selalu terlampaui dengan istiqomah.</p>
+        </div>
+        <Button asChild className="w-full max-w-xs bg-[#800000] hover:bg-[#800000]/90 h-14 text-lg font-black uppercase rounded-2xl shadow-xl">
+          <Link href="/login">Masuk Sekarang <ArrowRight className="ml-2 w-5 h-5" /></Link>
+        </Button>
       </div>
     );
   }
