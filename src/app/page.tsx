@@ -351,122 +351,79 @@ export default function DashboardPage() {
         </Link>
       </section>
 
-      {/* Feature Grid - Layout Dua Kolom Baru */}
+      {/* Layanan Utama - 4-Column Icon Grid */}
       <div className="space-y-4 px-1">
         <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-black">
           <LayoutGrid className="w-5 h-5 text-[#800000]" /> Layanan Utama
         </h2>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Baris 1: Mufradat & Hafal (PREMIUM REDESIGN) */}
-          <Link href="/mufradat" className="block group">
-            <Card className="overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all h-28 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 relative">
-              <CardContent className="p-4 flex flex-col justify-between h-full relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                  <Activity className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-black text-xs text-white uppercase tracking-widest leading-tight">Hi Mufradat</h4>
-                  <p className="text-[8px] text-white/70 font-bold uppercase mt-0.5">Dalami Kata Al-Qur'an Fun</p>
-                </div>
-              </CardContent>
-              <Activity className="absolute -bottom-2 -right-2 w-20 h-20 text-white/10 rotate-12" />
-            </Card>
-          </Link>
-          <Link href="/hafal" className="block group">
-            <Card className="overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all h-28 rounded-3xl bg-gradient-to-br from-[#D4AF37] to-yellow-600 relative">
-              <CardContent className="p-4 flex flex-col justify-between h-full relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                  <Award className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-black text-xs text-white uppercase tracking-widest leading-tight">Hi Hafal</h4>
-                  <p className="text-[8px] text-white/70 font-bold uppercase mt-0.5">Hafal Metode Tikrar 40x</p>
-                </div>
-              </CardContent>
-              <Award className="absolute -bottom-2 -right-2 w-20 h-20 text-white/10 -rotate-12" />
-            </Card>
-          </Link>
-
-          {/* Baris 2: Ngaji & Berbagi (PREMIUM REDESIGN) */}
-          <Link href="/ngaji" className="block group">
-            <Card className="overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all h-28 rounded-3xl bg-gradient-to-br from-[#800000] to-[#5a0000] relative">
-              <CardContent className="p-4 flex flex-col justify-between h-full relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                  <BookOpen className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-black text-xs text-white uppercase tracking-widest leading-tight">Hi Ngaji</h4>
-                  <p className="text-[8px] text-white/70 font-bold uppercase mt-0.5">Perbaiki Tajwid & Tahsin</p>
-                </div>
-              </CardContent>
-              <BookOpen className="absolute -bottom-2 -right-2 w-20 h-20 text-white/10 rotate-12" />
-            </Card>
-          </Link>
-          <Link href="/berbagi" className="block group">
-            <Card className="overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all h-28 rounded-3xl bg-gradient-to-br from-rose-500 to-amber-500 relative">
-              <CardContent className="p-4 flex flex-col justify-between h-full relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                  <HeartHandshake className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-black text-xs text-white uppercase tracking-widest leading-tight">Hi Berbagi</h4>
-                  <p className="text-[8px] text-white/70 font-bold uppercase mt-0.5">Salurkan Infaq</p>
-                </div>
-              </CardContent>
-              <HeartHandshake className="absolute -bottom-2 -right-2 w-20 h-20 text-white/10 -rotate-12" />
-            </Card>
-          </Link>
-
-          {/* Baris 3: Mutaba'ah & Muhasabah (Tetap Muncul) */}
-          <Link href="/mutabaah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-24 border-l-4 border-[#800000] rounded-2xl hover:shadow-md transition-all">
-              <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-[#800000]/5 w-fit"><Target className="w-4 h-4 text-[#800000]" /></div>
-                <div className="flex justify-between items-end">
-                  <h4 className="font-black text-[10px] text-[#800000] uppercase tracking-wider leading-tight">Hi Mutaba'ah</h4>
-                  <span className="text-[10px] font-black text-[#800000]">{mutabaahPercent}%</span>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/muhasabah" className="block group">
-            <Card className="overflow-hidden border-none shadow-sm bg-white h-24 border-l-4 border-[#D4AF37] rounded-2xl hover:shadow-md transition-all">
-              <CardContent className="p-3 flex flex-col justify-between h-full">
-                <div className="p-1.5 rounded-lg bg-amber-50 w-fit"><Shield className="w-4 h-4 text-[#D4AF37]" /></div>
-                <div className="flex justify-between items-end">
-                  <h4 className="font-black text-[10px] text-black uppercase tracking-wider leading-tight">Hi Muhasabah</h4>
-                  <span className="text-[10px] font-black text-[#D4AF37]">{muhasabahPercent}%</span>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      </div>
-
-      {/* Asisten AI - DIKUNCI (Masih Pengembangan) */}
-      <div className="space-y-4 px-1">
-        <h2 className="text-lg font-bold font-headline flex items-center gap-2">
-          <Bot className="w-5 h-5 text-[#800000]" /> Asisten Cerdas
-        </h2>
-        <Card className="overflow-hidden border-2 border-dashed border-[#D4AF37]/30 bg-muted/30">
-          <CardContent className="p-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/20 flex items-center justify-center relative">
-                <Bot className="w-6 h-6 text-[#D4AF37]" />
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#800000] flex items-center justify-center">
-                  <Lock className="w-3 h-3 text-white" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <h4 className="font-black text-base uppercase leading-tight flex items-center gap-2">
-                  Asisten AI
-                  <Badge variant="outline" className="text-[8px] font-black border-amber-300 text-amber-600 bg-amber-50">SEGERA</Badge>
-                </h4>
-                <p className="text-[10px] text-muted-foreground">Tanya jawab Tafsir & Tajwid. Sedang dalam pengembangan.</p>
-              </div>
+        <div className="grid grid-cols-4 gap-y-6 gap-x-2 pb-4">
+          {/* Hi Mufradat */}
+          <Link href="/mufradat" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Activity className="w-7 h-7 text-white" />
             </div>
-          </CardContent>
-        </Card>
+            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Mufradat</span>
+          </Link>
+
+          {/* Hi Hafal */}
+          <Link href="/hafal" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4AF37] to-yellow-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Award className="w-7 h-7 text-white" />
+            </div>
+            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Hafal</span>
+          </Link>
+
+          {/* Hi Ngaji */}
+          <Link href="/ngaji" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#800000] to-[#5a0000] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <BookOpen className="w-7 h-7 text-white" />
+            </div>
+            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Ngaji</span>
+          </Link>
+
+          {/* Hi Berbagi */}
+          <Link href="/berbagi" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <HeartHandshake className="w-7 h-7 text-white" />
+            </div>
+            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Berbagi</span>
+          </Link>
+
+          {/* Hi Mutaba'ah */}
+          <Link href="/mutabaah" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all relative">
+              <Target className="w-7 h-7 text-[#800000]" />
+              {mutabaahPercent > 0 && (
+                <div className="absolute -top-1 -right-1 bg-[#800000] text-white text-[7px] font-black px-1 rounded-full border border-white">
+                  {mutabaahPercent}%
+                </div>
+              )}
+            </div>
+            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Mutaba'ah</span>
+          </Link>
+
+          {/* Hi Muhasabah */}
+          <Link href="/muhasabah" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all relative">
+              <Shield className="w-7 h-7 text-[#D4AF37]" />
+              {muhasabahPercent > 0 && (
+                <div className="absolute -top-1 -right-1 bg-[#D4AF37] text-[#800000] text-[7px] font-black px-1 rounded-full border border-white">
+                  {muhasabahPercent}%
+                </div>
+              )}
+            </div>
+            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Muhasabah</span>
+          </Link>
+
+          {/* AI (Locked) */}
+          <div className="flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
+              <Bot className="w-7 h-7 text-slate-400" />
+              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
+            </div>
+            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-400 leading-tight">Asisten AI</span>
+          </div>
+        </div>
       </div>
     </div>
   );
