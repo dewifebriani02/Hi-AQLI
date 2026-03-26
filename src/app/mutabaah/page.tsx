@@ -3,6 +3,8 @@
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,17 +28,25 @@ import {
   BookOpen,
   Zap,
   ArrowRight,
+  Settings2,
+  Trophy,
+  Quote as QuoteIcon,
+  Flame,
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser, supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
-import React, { useMemo } from "react";
+import { useDoc, useCollection } from "@/supabase/db";
+import React, { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { getRandomQuote } from "@/lib/mutabaah-quotes";
 
 export default function MutabaahPage() {
   const { user } = useUser();
   const router = useRouter();
+  const [isSetupMode, setIsSetupMode] = useState(false);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [quote, setQuote] = useState(() => getRandomQuote());
 
   const mutabaahActivities = useMemo(() => [
     { id: 'bangun', label: 'Bangun Tidur', category: 'Malam & Bangun', dalil: 'HR. Bukhari: Mengidupkan hati setelah mati', icon: 'Sun' },
@@ -69,6 +79,18 @@ export default function MutabaahPage() {
     { id: 'istighfar', label: 'Istighfar (70-100x)', category: 'Umum', dalil: 'HR. Bukhari: Rasulullah >70x', icon: 'RotateCcw' },
   ], []);
 
+  const { data: userData, refresh: reloadUser } = useDoc("users", user?.id);
+
+  useEffect(() => {
+    if (userData) {
+      const goals = userData.mutabaah_goals || [];
+      setSelectedGoals(goals);
+      if (goals.length === 0) {
+        setIsSetupMode(true);
+      }
+    }
+  }, [userData]);
+
   const todayStr = new Date().toISOString().split('T')[0];
   const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection("mutabaah_logs", {
     filters: [
@@ -76,6 +98,19 @@ export default function MutabaahPage() {
       { column: 'date', operator: '==', value: todayStr }
     ]
   });
+
+  const saveGoals = async () => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("users")
+      .update({ mutabaah_goals: selectedGoals })
+      .eq('id', user.id);
+    
+    if (!error) {
+      setIsSetupMode(false);
+      reloadUser();
+    }
+  };
 
   const toggleMutabaah = async (activityId: string) => {
     if (!user) {
@@ -94,15 +129,109 @@ export default function MutabaahPage() {
         completed
       }, { onConflict: 'user_id,activity_id,date' });
 
-    if (!error) reloadMutabaah();
+    if (!error) {
+      reloadMutabaah();
+      // Update points if completed
+      if (completed) {
+        const currentPoints = userData?.points || 0;
+        await supabase.from("users").update({ points: currentPoints + 5 }).eq('id', user.id);
+        reloadUser();
+      }
+    }
   };
 
-  const progressCount = mutabaahLogs?.filter(l => l.completed).length || 0;
-  const progressPercent = Math.round((progressCount / mutabaahActivities.length) * 100);
+  const activeActivities = mutabaahActivities.filter(a => selectedGoals.includes(a.id));
+  const progressCount = mutabaahLogs?.filter(l => l.completed && selectedGoals.includes(l.activity_id)).length || 0;
+  const progressPercent = activeActivities.length > 0 ? Math.round((progressCount / activeActivities.length) * 100) : 0;
 
   const IconMap: Record<string, any> = {
     Sun, Moon, BookOpen, Clock, Star, Droplets, Shield, Activity, Book, MessageSquare, RotateCcw, Sparkles, Home, CheckSquare, Zap
   };
+
+  if (isSetupMode && user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-white">
+        <div className="p-6 space-y-6 max-w-2xl mx-auto w-full">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-black text-[#800000] uppercase italic">Pilih Targetmu</h1>
+            <p className="text-sm font-bold text-muted-foreground">"Sedikit tapi konsisten lebih dicintai Allah daripada banyak tapi terputus."</p>
+          </div>
+
+          <div className="space-y-6 pb-32">
+            {Array.from(new Set(mutabaahActivities.map(a => a.category))).map(category => (
+              <div key={category} className="space-y-3">
+                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">{category}</h3>
+                <div className="grid grid-cols-1 gap-2">
+                  {mutabaahActivities.filter(a => a.category === category).map(activity => {
+                    const isSelected = selectedGoals.includes(activity.id);
+                    return (
+                      <Card 
+                        key={activity.id}
+                        className={cn(
+                          "border-2 transition-all cursor-pointer",
+                          isSelected ? "border-[#800000] bg-[#800000]/5" : "border-slate-100 hover:border-orange-100"
+                        )}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedGoals(prev => prev.filter(id => id !== activity.id));
+                          } else {
+                            setSelectedGoals(prev => [...prev, activity.id]);
+                          }
+                        }}
+                      >
+                        <CardContent className="p-4 flex items-center gap-4">
+                          <div className={cn(
+                            "w-6 h-6 rounded border-2 flex items-center justify-center",
+                            isSelected ? "bg-[#800000] border-[#800000]" : "border-slate-300"
+                          )}>
+                            {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-black">{activity.label}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase">{activity.dalil}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-slate-100 flex justify-center">
+          <Button 
+            className="w-full max-w-md bg-[#800000] hover:bg-[#800000]/90 h-14 text-lg font-black uppercase rounded-2xl shadow-xl shadow-[#800000]/20"
+            disabled={selectedGoals.length === 0}
+            onClick={saveGoals}
+          >
+            Mulai Konsisten Sekarang <ArrowRight className="ml-2 w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-orange-50/30 items-center justify-center p-6 text-center space-y-8">
+        <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center relative">
+          <Trophy className="w-12 h-12 text-[#D4AF37]" />
+          <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white p-2 rounded-full shadow-lg">
+            <Star className="w-4 h-4 fill-current" />
+          </div>
+        </div>
+        <div className="space-y-3 max-w-xs">
+          <h2 className="text-2xl font-black text-[#800000] uppercase leading-tight">Siapkan Target Amalan Jariyahmu</h2>
+          <p className="text-sm font-bold text-muted-foreground">Silakan masuk untuk mulai mengatur target amalan harianmu agar selalu terlampaui dengan istiqomah.</p>
+        </div>
+        <Button asChild className="w-full max-w-xs bg-[#800000] hover:bg-[#800000]/90 h-14 text-lg font-black uppercase rounded-2xl shadow-xl">
+          <Link href="/login">Masuk Sekarang <ArrowRight className="ml-2 w-5 h-5" /></Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-orange-50/30 pb-20">
@@ -113,44 +242,83 @@ export default function MutabaahPage() {
             <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
           <div>
-            <h1 className="text-lg font-black text-[#800000] leading-none uppercase">Hi Mutaba'ah</h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Tracker Sunnah Harian</p>
+            <h1 className="text-lg font-black text-[#800000] leading-none uppercase">Mutaba'ah</h1>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1 tracking-tighter">My Consistency Journey</p>
           </div>
         </div>
-        <Badge className="bg-[#800000] text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase">
-          {progressPercent}% PROGRES
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="rounded-full text-[#D4AF37]" onClick={() => setIsSetupMode(true)}>
+            <Settings2 className="w-5 h-5" />
+          </Button>
+          <Badge className="bg-[#800000] text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase">
+            {progressPercent}%
+          </Badge>
+        </div>
       </div>
 
       <div className="p-4 max-w-2xl mx-auto w-full space-y-6">
+        {/* Quote Card */}
+        <Card className="border-none shadow-sm bg-gradient-to-br from-[#800000] to-red-900 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-2 opacity-10">
+            <QuoteIcon className="w-20 h-20 rotate-12" />
+          </div>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex gap-4 items-start">
+              <div className="bg-white/20 p-2 rounded-xl">
+                <Sparkles className="w-5 h-5 text-amber-300" />
+              </div>
+              <div className="space-y-3">
+                <p className="text-sm font-medium italic leading-relaxed">"{quote.text}"</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-200">{quote.source}</p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 text-[9px] font-black uppercase hover:bg-white/10 p-0 text-white/70"
+                    onClick={() => setQuote(getRandomQuote())}
+                  >
+                    Ganti Motivasi
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Progress Card */}
         <Card className="border-none shadow-xl bg-white overflow-hidden relative border-b-4 border-[#D4AF37]">
           <CardContent className="p-6">
             <div className="flex justify-between items-end mb-4">
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Target Hari Ini</p>
-                <h2 className="text-3xl font-black text-black leading-none">{progressCount} <span className="text-sm font-bold text-muted-foreground">/ {mutabaahActivities.length} Amalan</span></h2>
+                <div className="flex items-end gap-2">
+                  <h2 className="text-4xl font-black text-black leading-none">{progressCount}</h2>
+                  <p className="text-sm font-bold text-muted-foreground uppercase pb-1">/ {activeActivities.length} Amalan</p>
+                </div>
               </div>
-              <div className="text-right">
+              <div className="text-right flex flex-col items-end gap-1">
+                <div className="bg-amber-100 text-[#800000] px-2 py-1 rounded-lg flex items-center gap-1">
+                  <Flame className="w-3 h-3 fill-current" />
+                  <span className="text-[10px] font-black">STREAK: 5 HARI</span>
+                </div>
                 <p className="text-2xl font-black text-[#800000]">{progressPercent}%</p>
-                <p className="text-[9px] font-bold text-muted-foreground uppercase">Tuntas</p>
               </div>
             </div>
-            <Progress value={progressPercent} className="h-3 bg-amber-50 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-[#800000] [&>div]:to-[#D4AF37]" />
+            <Progress value={progressPercent} className="h-4 bg-amber-50 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-[#800000] [&>div]:to-[#D4AF37]" />
           </CardContent>
         </Card>
 
         {/* Checklist Groups */}
-        <div className="space-y-4">
-          {Array.from(new Set(mutabaahActivities.map(a => a.category))).map(category => (
-            <div key={category} className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <h3 className="text-[11px] font-black text-[#800000] uppercase tracking-[0.2em]">{category}</h3>
-                <div className="h-[1px] flex-1 bg-orange-100" />
+        <div className="space-y-8">
+          {Array.from(new Set(activeActivities.map(a => a.category))).map(category => (
+            <div key={category} className="space-y-4">
+              <div className="flex items-center gap-3 px-1">
+                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.2em]">{category}</h3>
+                <div className="h-[1px] flex-1 bg-slate-200" />
               </div>
               
-              <div className="grid grid-cols-1 gap-2">
-                {mutabaahActivities.filter(a => a.category === category).map(activity => {
+              <div className="grid grid-cols-1 gap-3">
+                {activeActivities.filter(a => a.category === category).map(activity => {
                   const isDone = mutabaahLogs?.find(l => l.activity_id === activity.id)?.completed;
                   const IconComponent = IconMap[activity.icon] || Sparkles;
 
@@ -158,38 +326,49 @@ export default function MutabaahPage() {
                     <Card 
                       key={activity.id}
                       className={cn(
-                        "border-none shadow-sm transition-all cursor-pointer active:scale-[0.98]",
-                        isDone ? "bg-amber-50/50" : "bg-white hover:bg-white/80"
+                        "border-none shadow-sm transition-all cursor-pointer active:scale-[0.98] group overflow-hidden relative",
+                        isDone ? "bg-emerald-50/50" : "bg-white hover:shadow-md"
                       )}
                       onClick={() => toggleMutabaah(activity.id)}
                     >
-                      <CardContent className="p-3 flex items-center justify-between gap-4">
+                      {isDone && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />}
+                      <CardContent className="p-4 flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                            isDone ? "bg-amber-100 text-[#D4AF37] shadow-inner scale-110" : "bg-orange-50/50 text-orange-400"
+                            "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm",
+                            isDone ? "bg-emerald-100 text-emerald-600 scale-105" : "bg-slate-50 text-slate-400 group-hover:bg-[#800000]/5"
                           )}>
                             {isDone ? (
-                              <CheckCircle2 className="w-5 h-5 fill-current" />
+                              <CheckCircle2 className="w-6 h-6 fill-current" />
                             ) : (
-                              <IconComponent className="w-5 h-5" />
+                              <IconComponent className="w-6 h-6" />
                             )}
                           </div>
                           <div>
-                            <p className={cn("text-xs font-bold transition-all", isDone ? "text-muted-foreground line-through" : "text-black")}>
+                            <p className={cn("text-sm font-black transition-all", isDone ? "text-emerald-900" : "text-black")}>
                               {activity.label}
                             </p>
-                            <p className="text-[9px] text-muted-foreground font-medium uppercase mt-0.5 line-clamp-1">
-                              {activity.dalil}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-[9px] text-muted-foreground font-bold uppercase line-clamp-1">
+                                {activity.dalil}
+                              </p>
+                              {isDone && (
+                                <Badge variant="outline" className="text-[7px] h-3 px-1 border-emerald-200 text-emerald-600 bg-emerald-50">
+                                  LULUS
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        {activity.id === 'evaluasi' && (
-                          <Button asChild size="sm" variant="ghost" className="text-amber-600 hover:text-amber-700 font-black gap-1 text-[10px]">
-                            <Link href="/muhasabah">DETAIL <ArrowRight className="w-3 h-3" /></Link>
-                          </Button>
-                        )}
+                        <div className="flex flex-col items-end gap-1">
+                           <p className="text-[8px] font-bold text-muted-foreground uppercase">7-D Progress</p>
+                           <div className="flex gap-0.5">
+                              {[1,1,1,1,0,1,1].map((d, i) => (
+                                <div key={i} className={cn("w-1.5 h-1.5 rounded-full", d ? "bg-emerald-500" : "bg-slate-200")} />
+                              ))}
+                           </div>
+                        </div>
                       </CardContent>
                     </Card>
                   );
@@ -198,6 +377,20 @@ export default function MutabaahPage() {
             </div>
           ))}
         </div>
+
+        {activeActivities.length === 0 && (
+          <div className="py-20 text-center space-y-4">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+              <Settings2 className="w-10 h-10 text-slate-300" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-lg font-black text-slate-400 uppercase">Belum ada target</p>
+              <Button onClick={() => setIsSetupMode(true)} variant="link" className="text-[#800000] font-bold">
+                Mulai Atur Sekarang
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
