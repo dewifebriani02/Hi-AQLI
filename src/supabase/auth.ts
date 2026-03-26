@@ -30,3 +30,10 @@ export async function initiateEmailSignUp(email: string, password: string, optio
 export async function signOut() {
     return supabase.auth.signOut();
 }
+
+/** Initiate password reset. */
+export async function initiatePasswordReset(email: string, redirectTo?: string) {
+    return supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectTo || `${window.location.origin}/auth/reset-password`,
+    });
+}
