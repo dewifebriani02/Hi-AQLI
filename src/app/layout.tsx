@@ -71,16 +71,16 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <SidebarInset className="w-full flex flex-col">
           {/* Padding bottom untuk BottomNav */}
           <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
-            <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4">
-              {hasAdminAccess && <SidebarTrigger className="flex text-[#800000] hover:bg-[#800000]/10" />}
+            <header className="sticky top-0 z-40 flex h-16 items-center gap-4 bg-[#800000] border-b border-[#D4AF37]/30 shadow-lg px-4 transition-all">
+              {hasAdminAccess && <SidebarTrigger className="flex text-[#D4AF37] hover:bg-white/10" />}
               <div className="flex-1 flex justify-center">
-                <Logo showText={true} className="scale-75" textClassName="text-lg" imageSize={28} />
+                <Logo variant="gold" showText={true} className="scale-75" textClassName="text-lg" imageSize={32} />
               </div>
               <div className="flex items-center gap-3">
                 {user && (
-                  <Link href="/leaderboard" className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 shadow-sm hover:bg-amber-100 transition-colors group">
+                  <Link href="/leaderboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-[#D4AF37]/30 shadow-sm hover:bg-white/20 transition-all group backdrop-blur-sm">
                     <Trophy className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-                    <span className="text-[11px] font-black text-amber-800 tracking-tight">
+                    <span className="text-[11px] font-black text-white tracking-tight">
                       {points.toLocaleString()}
                     </span>
                     <Zap className="w-3 h-3 text-[#D4AF37] fill-[#D4AF37] animate-pulse" />
@@ -89,15 +89,15 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 {!isUserLoading && (
                   user ? (
                     <Link href="/profile">
-                      <Avatar className="h-8 w-8 border-2 border-[#800000]/20">
+                      <Avatar className="h-9 w-9 border-2 border-[#D4AF37]/50 shadow-md transform hover:scale-105 transition-transform">
                         <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
-                        <AvatarFallback className="bg-primary/5 text-[#800000] text-xs font-bold uppercase">
+                        <AvatarFallback className="bg-white/10 text-[#D4AF37] text-xs font-black uppercase">
                           {user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U'}
                         </AvatarFallback>
                       </Avatar>
                     </Link>
                   ) : (
-                    <Button asChild size="sm" variant="ghost" className="text-[#800000] font-bold">
+                    <Button asChild size="sm" className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#800000] font-black uppercase rounded-xl px-5 shadow-lg shadow-[#000]/20 transition-all active:scale-95 text-[10px]">
                       <Link href="/login">Masuk</Link>
                     </Button>
                   )

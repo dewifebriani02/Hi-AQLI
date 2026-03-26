@@ -10,13 +10,20 @@ interface LogoProps {
   textClassName?: string;
   showText?: boolean;
   imageSize?: number;
+  variant?: 'default' | 'gold';
 }
 
-export const Logo = ({ className, textClassName, showText = true, imageSize = 40 }: LogoProps) => (
+export const Logo = ({ 
+  className, 
+  textClassName, 
+  showText = true, 
+  imageSize = 40,
+  variant = 'default'
+}: LogoProps) => (
   <div className={cn("flex items-center gap-3", className)}>
     <div className="relative flex items-center justify-center" style={{ width: imageSize, height: imageSize }}>
       <Image
-        src="/app-logo.png"
+        src={variant === 'gold' ? "/app-logo-gold.png" : "/app-logo.png"}
         alt="AQLI Logo"
         width={imageSize}
         height={imageSize}
@@ -25,7 +32,11 @@ export const Logo = ({ className, textClassName, showText = true, imageSize = 40
       />
     </div>
     {showText && (
-      <span className={cn("font-headline text-2xl font-black tracking-tight text-[#800000]", textClassName)}>
+      <span className={cn(
+        "font-headline text-2xl font-black tracking-tight",
+        variant === 'gold' ? "text-[#D4AF37]" : "text-[#800000]",
+        textClassName
+      )}>
         HI AQLI
       </span>
     )}
