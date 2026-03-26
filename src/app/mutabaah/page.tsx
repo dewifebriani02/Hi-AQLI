@@ -40,10 +40,12 @@ import React, { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { getRandomQuote } from "@/lib/mutabaah-quotes";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MutabaahPage() {
   const { user } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [quote, setQuote] = useState(() => getRandomQuote());
@@ -114,6 +116,10 @@ export default function MutabaahPage() {
 
   const toggleMutabaah = async (activityId: string) => {
     if (!user) {
+      toast({
+        title: "Pendaftaran Diperlukan",
+        description: "Masyallah, silakan masuk untuk mulai mencatat amalan Ukhti secara istiqomah.",
+      });
       router.push('/login');
       return;
     }
@@ -140,8 +146,16 @@ export default function MutabaahPage() {
     }
   };
 
-  const activeActivities = mutabaahActivities.filter(a => selectedGoals.includes(a.id));
-  const progressCount = mutabaahLogs?.filter(l => l.completed && selectedGoals.includes(l.activity_id)).length || 0;
+  const activeActivities = useMemo(() => {
+    if (!user) return mutabaahActivities; // Spill all for guests
+    return mutabaahActivities.filter(a => selectedGoals.includes(a.id));
+  }, [user, mutabaahActivities, selectedGoals]);
+
+  const progressCount = useMemo(() => {
+    if (!user) return 0;
+    return mutabaahLogs?.filter(l => l.completed && selectedGoals.includes(l.activity_id)).length || 0;
+  }, [user, mutabaahLogs, selectedGoals]);
+
   const progressPercent = activeActivities.length > 0 ? Math.round((progressCount / activeActivities.length) * 100) : 0;
 
   const IconMap: Record<string, any> = {
@@ -213,28 +227,21 @@ export default function MutabaahPage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex flex-col min-h-screen bg-orange-50/30 items-center justify-center p-6 text-center space-y-8">
-        <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center relative">
-          <Trophy className="w-12 h-12 text-[#D4AF37]" />
-          <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white p-2 rounded-full shadow-lg">
-            <Star className="w-4 h-4 fill-current" />
-          </div>
-        </div>
-        <div className="space-y-3 max-w-xs">
-          <h2 className="text-2xl font-black text-[#800000] uppercase leading-tight">Siapkan Target Amalan Jariyahmu</h2>
-          <p className="text-sm font-bold text-muted-foreground">Silakan masuk untuk mulai mengatur target amalan harianmu agar selalu terlampaui dengan istiqomah.</p>
-        </div>
-        <Button asChild className="w-full max-w-xs bg-[#800000] hover:bg-[#800000]/90 h-14 text-lg font-black uppercase rounded-2xl shadow-xl">
-          <Link href="/login">Masuk Sekarang <ArrowRight className="ml-2 w-5 h-5" /></Link>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col min-h-screen bg-orange-50/30 pb-20">
+      {/* Guest Preview Banner */}
+      {!user && (
+        <div className="bg-gradient-to-r from-amber-500 to-[#800000] p-4 text-white text-center animate-in slide-in-from-top-2 duration-500 sticky top-[72px] z-40 shadow-lg">
+          <p className="text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+            <Sparkles className="w-4 h-4 animate-pulse" /> 
+            Masuk untuk mencatat amalan harian Ukhti
+            <Sparkles className="w-4 h-4 animate-pulse" />
+          </p>
+          <Button asChild variant="link" className="text-white font-bold p-0 h-auto text-[10px] uppercase underline mt-0.5">
+            <Link href="/login">Klik di sini untuk login</Link>
+          </Button>
+        </div>
+      )}
       {/* Sticky Header */}
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -247,11 +254,13 @@ export default function MutabaahPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="rounded-full text-[#D4AF37]" onClick={() => setIsSetupMode(true)}>
-            <Settings2 className="w-5 h-5" />
-          </Button>
+          {user && (
+            <Button variant="ghost" size="icon" className="rounded-full text-[#D4AF37]" onClick={() => setIsSetupMode(true)}>
+              <Settings2 className="w-5 h-5" />
+            </Button>
+          )}
           <Badge className="bg-[#800000] text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase">
-            {progressPercent}%
+            {user ? `${progressPercent}%` : 'PREVIEW'}
           </Badge>
         </div>
       </div>

@@ -23,10 +23,12 @@ import { useCollection } from "@/supabase/db";
 import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MuhasabahPage() {
   const { user } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   const muhasabahItems = useMemo(() => [
     { id: 'm_wanita_shalat', label: 'Menjaga Shalat 5 Waktu', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
@@ -55,6 +57,10 @@ export default function MuhasabahPage() {
 
   const toggleMutabaah = async (activityId: string) => {
     if (!user) {
+      toast({
+        title: "Pendaftaran Diperlukan",
+        description: "Masyallah, silakan masuk untuk mulai mencatat amalan harian Ukhti secara istiqomah.",
+      });
       router.push('/login');
       return;
     }
@@ -78,6 +84,19 @@ export default function MuhasabahPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-orange-50/30 pb-20">
+      {/* Guest Preview Banner */}
+      {!user && (
+        <div className="bg-gradient-to-r from-amber-500 to-[#800000] p-4 text-white text-center animate-in slide-in-from-top-2 duration-500 sticky top-[72px] z-40 shadow-lg">
+          <p className="text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+            <Sparkles className="w-4 h-4 animate-pulse" /> 
+            Masuk untuk mencatat evaluasi diri Ukhti
+            <Sparkles className="w-4 h-4 animate-pulse" />
+          </p>
+          <Button asChild variant="link" className="text-white font-bold p-0 h-auto text-[10px] uppercase underline mt-0.5">
+            <Link href="/login">Klik di sini untuk login</Link>
+          </Button>
+        </div>
+      )}
       {/* Sticky Header */}
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -90,7 +109,7 @@ export default function MuhasabahPage() {
           </div>
         </div>
         <Badge className="bg-[#800000] text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase">
-          {progressPercent}% TUNTAS
+          {user ? `${progressPercent}% TUNTAS` : 'PREVIEW'}
         </Badge>
       </div>
 
