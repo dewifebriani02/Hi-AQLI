@@ -18,7 +18,7 @@ interface Surah {
   };
 }
 
-export function SurahList() {
+export function SurahList({ baseUrl = "/tilawah" }: { baseUrl?: string }) {
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ export function SurahList() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
         {filteredSurahs.map((surah) => (
-          <Link key={surah.id} href={`/tilawah/${surah.id}`}>
+          <Link key={surah.id} href={`${baseUrl}/${surah.id}`}>
             <Card 
               className="p-4 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group border-none shadow-sm bg-card/50"
             >

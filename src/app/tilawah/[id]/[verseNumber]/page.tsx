@@ -65,7 +65,7 @@ export default function VerseDetailPage() {
     ]
   }), [user?.id, id]);
 
-  const { data: progress } = useCollection("quiz_attempts", progressOptions);
+  const { data: progress } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
@@ -91,32 +91,23 @@ export default function VerseDetailPage() {
   const fetchOfficialTafsir = useCallback(async (chapterId: string, vNum: string) => {
     setApiTafsir(null);
     try {
-      // Coba beberapa ID Tafsir populer jika salah satu 404 (131=Muyassar, 157=Jalalayn, 164=Zubdatut)
-      const tafsirIds = [131, 157, 164];
-      let found = false;
-
-      for (const tId of tafsirIds) {
-        const res = await fetch(`https://api.quran.com/api/v4/tafsirs/${tId}/by_key/${chapterId}:${vNum}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.tafsir?.text) {
-            setApiTafsir(data.tafsir.text);
-            found = true;
-            break;
-          }
+      // Fetch Indonesian Translation (33) which acts as Tafsir Ringkas Kemenag
+      const res = await fetch(`https://api.quran.com/api/v4/verses/by_key/${chapterId}:${vNum}?language=id&translations=33`);
+      
+      if (res.ok) {
+        const data = await res.json();
+        const tafsirText = data.verse?.translations?.[0]?.text;
+        if (tafsirText) {
+          setApiTafsir(tafsirText);
+        } else {
+          setApiTafsir("Penjelasan atau tafsir belum tersedia untuk ayat ini.");
         }
+      } else {
+        setApiTafsir("Gagal memuat penjelasan dari API Quran.");
       }
-
-      if (!found) {
-        // Fallback terakhir: Ambil terjemahan standar (ID 33)
-        const res2 = await fetch(`https://api.quran.com/api/v4/verses/by_key/${chapterId}:${vNum}?translations=33`);
-        if (res2.ok) {
-          const data2 = await res2.json();
-          setApiTafsir(data2.verse?.translations?.[0]?.text || "Tafsir atau penjelasan belum tersedia untuk ayat ini.");
-        }
-      }
-    } catch {
-      setApiTafsir("Gagal memuat tafsir resmi karena kendala jaringan.");
+    } catch (err) {
+      console.error("Tafsir Fetch Error:", err);
+      setApiTafsir(null);
     }
   }, []);
 

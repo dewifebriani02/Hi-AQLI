@@ -32,7 +32,7 @@ export default function MufradatPage() {
         
         <TabsContent value="surah" className="space-y-6 focus-visible:outline-none">
           <div className="space-y-4">
-            <SurahList />
+            <SurahList baseUrl="/mufradat" />
           </div>
         </TabsContent>
         

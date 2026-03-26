@@ -51,7 +51,7 @@ export default function QuranPage() {
               <h2 className="text-xl font-bold font-headline">Daftar Surat</h2>
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">114 Surat</span>
             </div>
-            <SurahList />
+            <SurahList baseUrl="/tilawah" />
           </div>
         </TabsContent>
         

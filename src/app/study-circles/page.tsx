@@ -25,6 +25,16 @@ const studyCircles = [
     tag: "PENDAFTARAN DIBUKA"
   },
   {
+    id: "mufradat-premium",
+    title: "Hi Mufradat Premium",
+    instructor: "Tim Asatizah AQLI",
+    description: "Pahami kosakata Al-Qur'an dengan bimbingan intensif & monitoring harian. Cukup 1 halaman per pekan untuk konsistensi tingkat tinggi.",
+    schedule: "Senin - Jumat (Fleksibel)",
+    level: "Semua Level",
+    isPremium: true,
+    tag: "OPEN ENROLLMENT"
+  },
+  {
     id: "tafsir-j30",
     title: "Tafsir Juz' Amma",
     instructor: "Dr. Fatima Ahmed",

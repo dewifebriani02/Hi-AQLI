@@ -86,7 +86,7 @@ export default function SurahDetailPage() {
     ]
   }), [user?.id, id]);
 
-  const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", progressOptions);
+  const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
@@ -244,9 +244,9 @@ export default function SurahDetailPage() {
         </div>
       </div>
 
-      {/* Murajaah Quiz Banner - Access after completing at least 5 verses */}
-      {completedVerseNumbers.size >= 5 && (
-        <Link href={`/tilawah/${id}/murajaah`} className="block">
+      {/* Murajaah Quiz Banner - Access after completing enough verses */}
+      {completedVerseNumbers.size >= Math.min(verses.length, 5) && (
+        <Link href={`/mufradat/${id}/murajaah`} className="block">
           <Card className="mx-4 mt-4 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-white border-none shadow-xl hover:shadow-2xl transition-all cursor-pointer group">
             <CardContent className="p-6 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">

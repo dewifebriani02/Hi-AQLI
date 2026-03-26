@@ -32,6 +32,7 @@ import { useDoc, useCollection } from "@/supabase/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { ShieldCheck, AlertCircle, Info } from "lucide-react";
 
 const levels = [
   { id: "1", name: "Intensif", price: 100000 },
@@ -40,7 +41,7 @@ const levels = [
 ];
 
 function RegistrationForm() {
-  const { user, isLoading: isUserLoading } = useUser();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -48,33 +49,42 @@ function RegistrationForm() {
 
   const halaqahId = searchParams.get('id');
 
-  // Fetch specific halaqah data from Supabase
-  const { data: circle, isLoading: isHalaqahLoading } = useDoc(halaqahId ? "halaqahs" : null, halaqahId);
+  // Fetch ALL available halaqahs for selection
+  const { data: allHalaqahs, isLoading: isHalaqahsLoading } = useCollection("halaqahs", {
+    orderBy: { column: 'createdAt', ascending: false }
+  });
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(user ? "users" : null, user?.id);
+
+  const [selectedHalaqahId, setSelectedHalaqahId] = useState<string | null>(halaqahId);
+
+  // Auto-find the circle if ID is in params
+  const circle = useMemo(() => {
+    if (!selectedHalaqahId || !allHalaqahs) return null;
+    return allHalaqahs.find(h => h.id === selectedHalaqahId);
+  }, [selectedHalaqahId, allHalaqahs]);
 
   // Check for ANY existing registration for this halaqah to prevent duplicates
   const regOptions = useMemo(() => ({
     filters: [
       { column: 'userId', operator: '==', value: user?.id },
-      { column: 'halaqahId', operator: '==', value: halaqahId },
+      { column: 'halaqahId', operator: '==', value: selectedHalaqahId },
       { column: 'status', operator: 'in', value: ["active", "pending_verification"] }
     ]
-  }), [user?.id, halaqahId]);
+  }), [user?.id, selectedHalaqahId]);
 
   const { data: existingRegs, isLoading: isRegLoading } = useCollection("halaqah_registrations", regOptions);
 
   const [isProcessingAccess, setIsProcessingAccess] = useState(true);
 
   useEffect(() => {
-    if (!isUserLoading && !isUserDocLoading && !isRegLoading && !isHalaqahLoading) {
+    if (!isUserLoading && !isUserDocLoading && !isRegLoading && !isHalaqahsLoading) {
       setIsProcessingAccess(false);
     }
-  }, [isUserLoading, isUserDocLoading, isRegLoading, isHalaqahLoading]);
+  }, [isUserLoading, isUserDocLoading, isRegLoading, isHalaqahsLoading]);
 
   const isProfileActive = (
-    (halaqahId === 'tikrar-j30-b1' && userData?.isTikrarPaid) ||
-    (userData?.followedHalaqahs?.includes(halaqahId || ''))
+    (selectedHalaqahId && userData?.followedHalaqahs?.includes(selectedHalaqahId))
   );
 
   const existingReg = existingRegs?.[0];
@@ -94,31 +104,68 @@ function RegistrationForm() {
   const [senderName, setSenderName] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
 
-  // Calculate Price: If Tikrar special ID, use levels array. Else use basePrice from Firestore circle.
-  const PRICE = halaqahId === 'tikrar-j30-b1'
-    ? (levels.find(l => l.id === level)?.price || 50000)
-    : (circle?.basePrice || 0);
+  // Hi Mufradat specific states
+  const [durationMonths, setDurationMonths] = useState("1");
+  const [mufradatTarget, setMufradatTarget] = useState("page"); // 'page' or 'juz'
+  const [infaqAmount, setInfaqAmount] = useState<number>(0);
+  const [akadAccepted, setAkadAccepted] = useState(false);
+
+  // Program Detection
+  const isMufradat = circle?.programType === 'hi_mufradat' || halaqahId === 'mufradat-premium';
+  const isTikrar = circle?.programType === 'tikrar_daily' || halaqahId === 'tikrar-j30-b1';
+
+  const isPremiumProgram = useMemo(() => {
+    return circle?.isPremium === true || isMufradat || isTikrar;
+  }, [circle?.isPremium, isMufradat, isTikrar]);
+
+  // Minimum Infaq Calculation
+  const minInfaq = useMemo(() => {
+    if (isMufradat) {
+      const rate = mufradatTarget === 'page' ? 20000 : 50000;
+      return rate * parseInt(durationMonths);
+    }
+    return circle?.basePrice || 0;
+  }, [isMufradat, mufradatTarget, durationMonths, circle?.basePrice]);
+
+  useEffect(() => {
+    // Ensure infaqAmount is at least the minimum
+    if (infaqAmount < minInfaq) {
+      setInfaqAmount(minInfaq);
+    }
+  }, [minInfaq, infaqAmount]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.push(`/login?redirect=/study-circles/registration?id=${halaqahId}`);
+      router.push(`/login?redirect=/study-circles/registration?id=${halaqahId || ''}`);
       return;
     }
     if (user && !name) setName(user.user_metadata?.full_name || "");
   }, [user, isUserLoading, router, name, halaqahId]);
 
   useEffect(() => {
-    if (step === 2 && circle?.isPremium) {
+    if (step === 2 && isPremiumProgram) {
       setUniqueCode(Math.floor(100 + Math.random() * 899));
     }
-  }, [step, circle?.isPremium]);
+  }, [step, isPremiumProgram]);
 
   const handleNext = () => {
+    if (!selectedHalaqahId) {
+      toast({ variant: "destructive", title: "Mohon pilih program terlebih dahulu" });
+      return;
+    }
     if (!whatsapp || whatsapp.length < 10) {
       toast({ variant: "destructive", title: "Nomor WhatsApp tidak valid" });
       return;
     }
-    if (circle?.isPremium) setStep(2);
+    if (isMufradat && !akadAccepted) {
+      toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Commitment" });
+      return;
+    }
+    if (isPremiumProgram && infaqAmount < minInfaq) {
+      toast({ variant: "destructive", title: `Minimal infaq untuk target ini adalah Rp ${minInfaq.toLocaleString('id-ID')}` });
+      return;
+    }
+    if (isPremiumProgram) setStep(2);
     else setStep(3);
   };
 
@@ -130,31 +177,37 @@ function RegistrationForm() {
   };
 
   const handleConfirm = async () => {
-    if (circle?.isPremium && (!senderName || !proofFile)) {
+    if (isPremiumProgram && (!senderName || !proofFile)) {
       toast({ variant: "destructive", title: "Lengkapi data pembayaran" });
       return;
     }
 
     setLoading(true);
     try {
-      const finalAmount = circle?.isPremium ? PRICE + uniqueCode : 0;
-
       const { error } = await supabase.from("halaqah_registrations").insert({
         userId: user?.id,
         userName: name,
         userEmail: user?.email,
         whatsapp: whatsapp,
-        halaqahId: circle?.id,
-        halaqahTitle: circle?.title,
-        isPaid: circle?.isPremium || false,
-        level: halaqahId === 'tikrar-j30-b1' ? parseInt(level) : null,
-        targetJuz: halaqahId === 'tikrar-j30-b1' ? parseInt(targetJuz) : null,
-        amount: finalAmount,
-        paymentMethod: circle?.isPremium ? "transfer" : "free",
-        senderName: circle?.isPremium ? senderName : null,
+        halaqahId: selectedHalaqahId,
+        halaqahTitle: circle?.title || (isMufradat ? 'Hi Mufradat Premium' : 'Halaqah'),
+        isPaid: isPremiumProgram,
+        level: isTikrar ? parseInt(level) : null,
+        targetJuz: isTikrar ? parseInt(targetJuz) : null,
+        amount: isPremiumProgram ? infaqAmount + uniqueCode : 0,
+        paymentMethod: isPremiumProgram ? "transfer" : "free",
+        senderName: isPremiumProgram ? senderName : null,
         proofFileName: proofFile?.name || null,
         status: "pending_verification",
         createdAt: new Date().toISOString(),
+        // Extra metadata for Hi Mufradat
+        metadata: isMufradat ? {
+          months: parseInt(durationMonths),
+          target: mufradatTarget,
+          akadAccepted: true,
+          unitPrice: mufradatTarget === 'page' ? 20000 : 50000,
+          infaqBase: infaqAmount
+        } : null
       });
 
       if (error) throw error;
@@ -235,31 +288,54 @@ function RegistrationForm() {
           {step > 1 && <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white hover:bg-white/10" onClick={() => setStep(step - 1)}><ArrowLeft className="h-5 w-5" /></Button>}
           <div className="mx-auto bg-white/20 rounded-full p-4 w-fit mb-4 border-2 border-white/10"><BookOpen className="h-8 w-8 text-amber-300" /></div>
           <CardTitle className="font-headline text-3xl font-black">Pendaftaran Halaqah</CardTitle>
-          <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">{circle?.title}</CardDescription>
+          <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">
+            {circle?.title || (isMufradat ? 'Hi Mufradat Premium' : (isTikrar ? 'Tikrar J30' : 'Pendaftaran')) || (selectedHalaqahId ? 'Program Terpilih' : 'Silakan Pilih Program')}
+          </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-8 pt-10">
           {step === 1 ? (
             <div className="grid gap-6">
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nama Lengkap Sesuai Identitas</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-[#800000]" />
-                  <Input value={name} onChange={(e) => setName(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
-                </div>
+                <Label className="text-xs font-black uppercase text-[#800000] tracking-widest">Pilih Program</Label>
+                <Select value={selectedHalaqahId || ""} onValueChange={setSelectedHalaqahId}>
+                  <SelectTrigger className="h-14 border-2 font-black text-sm">
+                    <SelectValue placeholder="-- Pilih Program Halaqah --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(allHalaqahs || []).map(h => (
+                      <SelectItem key={h.id} value={h.id} className="font-bold py-3 text-xs">
+                        {h.title} {h.isPremium ? '(Premium)' : '(Gratis)'}
+                      </SelectItem>
+                    ))}
+                    {!allHalaqahs?.length && (
+                      <SelectItem value="mufradat-premium" className="font-bold">Hi Mufradat Premium</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nomor WhatsApp Aktif</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-[#800000]" />
-                  <Input placeholder="0812345..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nama Peserta</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-[#800000]" />
+                    <Input value={name} onChange={(e) => setName(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nomor WhatsApp</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-[#800000]" />
+                    <Input placeholder="0812345..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
+                  </div>
                 </div>
               </div>
 
-              {halaqahId === 'tikrar-j30-b1' && (
+              {isTikrar && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 bg-muted/30 rounded-2xl border-2 border-dashed">
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest">Pilih Level</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest">Level</Label>
                     <Select value={level} onValueChange={setLevel}>
                       <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -278,15 +354,92 @@ function RegistrationForm() {
                   </div>
                 </div>
               )}
+
+              {isMufradat && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 bg-[#800000]/5 rounded-2xl border-2 border-[#800000]/10">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Pilihan Target</Label>
+                      <Select value={mufradatTarget} onValueChange={setMufradatTarget}>
+                        <SelectTrigger className="h-12 border-2 font-bold bg-white"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="page">Min. 1 Halaman / Pekan (Rp 20rb)</SelectItem>
+                          <SelectItem value="juz">Min. 1 Juz / Bulan (Rp 50rb)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Durasi Belajar</Label>
+                      <Select value={durationMonths} onValueChange={setDurationMonths}>
+                        <SelectTrigger className="h-12 border-2 font-bold bg-white"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 Bulan</SelectItem>
+                          <SelectItem value="3">3 Bulan</SelectItem>
+                          <SelectItem value="6">6 Bulan</SelectItem>
+                          <SelectItem value="12">12 Bulan</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Nominal Infaq</Label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-3.5 text-xs font-black text-muted-foreground">Rp</div>
+                      <Input
+                        type="number"
+                        value={infaqAmount}
+                        onChange={(e) => setInfaqAmount(parseInt(e.target.value) || 0)}
+                        className="pl-10 h-14 border-2 text-xl font-black text-[#800000] focus-visible:ring-[#800000]"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
+                      <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')}
+                    </p>
+                  </div>
+
+                  {/* Akad Section */}
+                  <div className="p-6 bg-amber-50 rounded-2xl border-2 border-amber-200 space-y-4 animate-in fade-in zoom-in">
+                    <div className="flex items-center gap-2 text-[#800000]">
+                      <ShieldCheck className="w-5 h-5" />
+                      <h4 className="font-black text-sm uppercase tracking-widest">Akad & Komitmen Peserta</h4>
+                    </div>
+                    <div className="space-y-3 text-[11px] text-amber-900 leading-relaxed font-medium">
+                      <p>Dengan mendaftar Hi Mufradat Premium, saya berjanji untuk:</p>
+                      <ul className="list-disc pl-4 space-y-1">
+                        <li><strong>Disiplin</strong>: Mengikuti target hafalan sesuai pilihan (min. 1 halaman/pekan).</li>
+                        <li><strong>Aktif</strong>: Berpartisipasi dalam Monitoring Group WhatsApp yang telah ditentukan.</li>
+                        <li><strong>Konsekuensi</strong>: Jika dalam 2 pekan berturut-turut tidak ada progres tanpa udzur syar'i, saya bersedia menerima teguran atau dikeluarkan dari group sementara demi menjaga semangat belajar thalibah lain.</li>
+                        <li><strong>Ikhlas</strong>: Niat semata-mata karena Allah untuk memahami kalam-Nya.</li>
+                      </ul>
+                    </div>
+                    <div className="flex items-start gap-3 pt-2">
+                       <div 
+                        onClick={() => setAkadAccepted(!akadAccepted)}
+                        className={cn(
+                          "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 mt-0.5",
+                          akadAccepted ? "bg-[#800000] border-[#800000]" : "bg-white border-amber-300"
+                        )}
+                      >
+                        {akadAccepted && <Check className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <Label className="text-[10px] font-bold text-amber-900 leading-tight cursor-pointer" onClick={() => setAkadAccepted(!akadAccepted)}>
+                        Saya setuju dengan Akad & Ketentuan di atas (Ittafaqna).
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <Button onClick={handleNext} className="w-full h-16 text-lg font-black bg-[#800000] hover:bg-[#800000]/90 rounded-xl shadow-lg shadow-[#800000]/20 mt-4 uppercase tracking-widest">
-                {circle?.isPremium ? "Lanjut Pembayaran" : "Konfirmasi Daftar"} <ArrowRight className="ml-2 h-6 w-6" />
+                {isPremiumProgram ? "Lanjut Pembayaran" : "Konfirmasi Daftar"} <ArrowRight className="ml-2 h-6 w-6" />
               </Button>
             </div>
           ) : step === 2 ? (
             <div className="space-y-8">
               <div className="text-center space-y-2 bg-muted/30 p-8 rounded-3xl border-2 border-dashed border-[#800000]/20 animate-in fade-in slide-in-from-bottom-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Infaq Pendaftaran</p>
-                <div className="text-4xl font-black text-[#800000]">Rp {(PRICE + uniqueCode).toLocaleString('id-ID')}</div>
+                <div className="text-4xl font-black text-[#800000]">Rp {(infaqAmount + uniqueCode).toLocaleString('id-ID')}</div>
                 <p className="text-[10px] text-amber-700 font-bold italic bg-amber-50 py-1 px-3 rounded-full inline-block mt-2 border border-amber-100">*Termasuk kode unik verifikasi {uniqueCode}</p>
               </div>
               <div className="bg-[#800000]/5 p-6 rounded-2xl border-2 border-[#800000]/10 space-y-4">
@@ -301,7 +454,7 @@ function RegistrationForm() {
             </div>
           ) : (
             <div className="space-y-8 animate-in fade-in duration-500">
-              {circle?.isPremium ? (
+              {isPremiumProgram ? (
                 <div className="grid gap-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nama Pengirim Sesuai Rekening</Label>

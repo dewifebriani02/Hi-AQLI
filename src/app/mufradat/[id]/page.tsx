@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Trophy, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import {
   Tooltip,
@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
 import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Word {
   id: number;
@@ -84,7 +85,7 @@ export default function SurahDetailPage() {
     ]
   }), [user?.id, id]);
 
-  const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", progressOptions);
+  const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
@@ -213,6 +214,29 @@ export default function SurahDetailPage() {
           </div>
         </div>
       </div>
+      
+      {/* Murajaah Quiz Banner - Access after completing enough verses */}
+      {completedVerseNumbers.size >= Math.min(verses.length, 3) && (
+        <Link href={`/mufradat/${id}/murajaah`} className="block">
+          <Card className="mx-4 mt-4 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-white border-none shadow-xl hover:shadow-2xl transition-all cursor-pointer group">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-white animate-bounce" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 text-white/90">Satu Surah Selesai?</span>
+                  </div>
+                  <h3 className="text-xl font-bold font-headline group-hover:translate-x-1 transition-transform">MURAJAAH KOSAKATA</h3>
+                  <p className="text-xs font-medium text-white/80 max-w-[240px]">Uji hafalan seluruh kosakata tersulit dalam {surah?.name_simple}.</p>
+                </div>
+                <div className="bg-white/20 p-3 rounded-full group-hover:scale-110 transition-transform">
+                  <ArrowRight className="w-6 h-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>

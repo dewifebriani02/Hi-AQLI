@@ -24,6 +24,7 @@ import {
   Award,
   Activity,
   Shield,
+  ShieldCheck,
   Book,
   BookOpen,
   Lock,
@@ -308,6 +309,47 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Hi Mufradat Registration Banner - Prominent CTA */}
+      <section className="px-1 mb-6">
+        <Link href="/study-circles/registration?id=mufradat-premium" className="block group">
+          <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#800000] to-[#5a0000] p-6 shadow-xl border-2 border-[#D4AF37]/30 group-hover:shadow-2xl transition-all duration-300">
+            {/* Decorative Gold Elements */}
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            
+            <div className="relative flex flex-col sm:flex-row items-center gap-5">
+              <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 group-hover:rotate-6 transition-transform">
+                <BookOpen className="w-8 h-8 text-[#D4AF37]" />
+              </div>
+              
+              <div className="flex-1 text-center sm:text-left space-y-1">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <h3 className="text-lg font-black text-white font-headline tracking-tight uppercase">Mufradat Premium</h3>
+                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[7px] h-3.5 font-black px-1.5 uppercase tracking-widest">OPEN</Badge>
+                </div>
+                <p className="text-white/80 text-[10px] sm:text-xs font-medium leading-relaxed max-w-md">
+                  Pahami 1 hal Al-Qur'an per pekan dengan bimbingan & monitoring intensif. Mulai Rp 20rb/bln!
+                </p>
+                <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-bold text-white uppercase tracking-wider">
+                    <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> TERSTRUKTUR
+                  </div>
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-bold text-white uppercase tracking-wider">
+                    <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" /> MONITORING
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex-shrink-0 w-full sm:w-auto">
+                <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-5 py-2.5 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-transform">
+                  DAFTAR <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Link>
+      </section>
 
       {/* Feature Grid - Layout Dua Kolom Baru */}
       <div className="space-y-4 px-1">
