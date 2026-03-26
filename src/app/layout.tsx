@@ -71,10 +71,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <SidebarInset className="w-full flex flex-col">
           {/* Padding bottom untuk BottomNav */}
           <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
-            <header className="sticky top-0 z-40 flex h-16 items-center gap-4 bg-[#800000] border-b border-[#D4AF37]/30 shadow-lg px-4 transition-all">
+            <header className="sticky top-0 z-40 flex h-20 items-center gap-4 bg-gradient-to-b from-[#800000] to-[#4a0000] border-b border-[#D4AF37]/20 shadow-[0_10px_40px_rgba(0,0,0,0.4)] px-6 transition-all backdrop-blur-xl bg-opacity-95 rounded-b-[40px]">
               {hasAdminAccess && <SidebarTrigger className="flex text-[#D4AF37] hover:bg-white/10" />}
               <div className="flex-1 flex justify-center">
-                <Logo variant="gold" showText={true} className="scale-75" textClassName="text-lg" imageSize={32} />
+                <Logo variant="gold" showText={true} className="scale-75" textClassName="text-lg" imageSize={36} />
               </div>
               <div className="flex items-center gap-3">
                 {user && (
@@ -89,7 +89,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 {!isUserLoading && (
                   user ? (
                     <Link href="/profile">
-                      <Avatar className="h-9 w-9 border-2 border-[#D4AF37]/50 shadow-md transform hover:scale-105 transition-transform">
+                      <Avatar className="h-10 w-10 border-2 border-[#D4AF37]/50 shadow-md transform hover:scale-105 transition-transform">
                         <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
                         <AvatarFallback className="bg-white/10 text-[#D4AF37] text-xs font-black uppercase">
                           {user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U'}
@@ -97,7 +97,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                       </Avatar>
                     </Link>
                   ) : (
-                    <Button asChild size="sm" className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#800000] font-black uppercase rounded-xl px-5 shadow-lg shadow-[#000]/20 transition-all active:scale-95 text-[10px]">
+                    <Button asChild size="sm" className="bg-white hover:bg-white/90 text-[#800000] font-black uppercase rounded-xl px-6 shadow-lg shadow-[#000]/30 transition-all active:scale-95 text-[10px]">
                       <Link href="/login">Masuk</Link>
                     </Button>
                   )
