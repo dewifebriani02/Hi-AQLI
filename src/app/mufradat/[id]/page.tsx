@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Trophy, ArrowRight } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import {
   Tooltip,
@@ -59,7 +59,7 @@ const RECITERS = [
   { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
 ];
 
-export default function SurahDetailPage() {
+export default function MufradatSurahDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -77,6 +77,7 @@ export default function SurahDetailPage() {
   const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Fetch progress for the current surah to handle locking
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
@@ -101,8 +102,10 @@ export default function SurahDetailPage() {
 
     async function fetchData() {
       if (!id) return;
+
       try {
         setLoading(true);
+
         const infoRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
@@ -111,7 +114,10 @@ export default function SurahDetailPage() {
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani&per_page=300`
         );
         const verseData = await verseRes.json();
-        if (verseData && verseData.verses) setVerses(verseData.verses);
+
+        if (verseData && verseData.verses) {
+          setVerses(verseData.verses);
+        }
       } catch (err: any) {
         console.error("Quran API Fetch Error:", err);
       } finally {
@@ -145,26 +151,34 @@ export default function SurahDetailPage() {
       setShowReciterDialog(true);
       return;
     }
+
     if (playingKey === verseKey) {
       audioRef.current?.pause();
       setPlayingKey(null);
       return;
     }
+
     setLoadingAudioKey(verseKey);
+
     try {
       const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
       const data = await res.json();
       const audioUrl = data.audio_files[0]?.url;
+
       let fullUrl = audioUrl;
       if (audioUrl.startsWith('//')) fullUrl = `https:${audioUrl}`;
       else if (!audioUrl.startsWith('http')) fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
+
       if (audioRef.current) audioRef.current.pause();
+
       const audio = new Audio(fullUrl);
       audioRef.current = audio;
+
       audio.onplay = () => {
         setPlayingKey(verseKey);
         setLoadingAudioKey(null);
       };
+
       audio.onended = () => {
         setPlayingKey(null);
         const currentIndex = verses.findIndex(v => v.verse_key === verseKey);
@@ -172,6 +186,7 @@ export default function SurahDetailPage() {
           setTimeout(() => toggleAudio(verses[currentIndex + 1].verse_key), 300);
         }
       };
+
       await audio.play();
     } catch (err) {
       setLoadingAudioKey(null);
@@ -184,21 +199,25 @@ export default function SurahDetailPage() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
       <div className="flex flex-col gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Button asChild variant="outline" size="sm" className="gap-1.5 text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5 shrink-0">
-            <Link href="/mufradat">
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Kembali</span>
-            </Link>
-          </Button>
+        <div className="flex items-center gap-4">
+          <Button asChild variant="ghost" size="icon"><Link href="/mufradat"><ChevronLeft className="h-6 w-6 text-[#800000]" /></Link></Button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-base sm:text-lg font-bold font-headline truncate">{surah?.id}. {surah?.name_simple}</h1>
-            <p className="text-[10px] uppercase font-semibold text-muted-foreground truncate">{surah?.translated_name.name}</p>
+            <h1 className="text-lg font-bold font-headline truncate">{surah?.id}. {surah?.name_simple}</h1>
+            <p className="text-[10px] uppercase font-black tracking-widest text-[#800000]">Hi Mufradat • Tadabbur Surah</p>
           </div>
           <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1 bg-muted/30 p-1 rounded-lg border mr-2">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(-4)}>
+                <Minus className="h-3 w-3" />
+              </Button>
+              <Type className="h-3 w-3 text-muted-foreground mx-1" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(4)}>
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
             <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span className="hidden sm:inline">Qari</span></Button>
+                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span>Qari</span></Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
@@ -213,25 +232,35 @@ export default function SurahDetailPage() {
             </Dialog>
           </div>
         </div>
+        <div className="sm:hidden flex justify-center">
+          <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border w-full justify-between px-4">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ukuran Teks</span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => adjustFontSize(-4)}><Minus className="h-4 w-4" /></Button>
+              <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => adjustFontSize(4)}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        </div>
       </div>
-      
+
       {/* Murajaah Quiz Banner - Access after completing enough verses */}
       {completedVerseNumbers.size >= Math.min(verses.length, 3) && (
         <Link href={`/mufradat/${id}/murajaah`} className="block">
-          <Card className="mx-4 mt-4 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-white border-none shadow-xl hover:shadow-2xl transition-all cursor-pointer group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-white animate-bounce" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 text-white/90">Satu Surah Selesai?</span>
-                  </div>
-                  <h3 className="text-xl font-bold font-headline group-hover:translate-x-1 transition-transform">MURAJAAH KOSAKATA</h3>
-                  <p className="text-xs font-medium text-white/80 max-w-[240px]">Uji hafalan seluruh kosakata tersulit dalam {surah?.name_simple}.</p>
+          <Card className="mx-4 mt-4 bg-gradient-to-r from-[#800000] to-[#b91c1c] text-white border-none shadow-xl hover:shadow-2xl transition-all cursor-pointer group">
+            <CardContent className="p-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-xl group-hover:bg-white/20 transition-colors">
+                  <Target className="w-8 h-8 text-[#D4AF37]" />
                 </div>
-                <div className="bg-white/20 p-3 rounded-full group-hover:scale-110 transition-transform">
-                  <ArrowRight className="w-6 h-6" />
+                <div>
+                  <h3 className="text-lg font-bold font-headline">MURAJAAH KOSAKATA</h3>
+                  <p className="text-sm opacity-90 text-white/80">Uji hafalan kosakata tersulit dalam surah ini</p>
                 </div>
+              </div>
+              <div className="flex items-center gap-2 bg-[#D4AF37] text-black px-4 py-2 rounded-full shadow-lg group-hover:scale-105 transition-transform">
+                <span className="text-xs font-black uppercase">Mulai</span>
+                <ArrowRight className="w-4 h-4" />
               </div>
             </CardContent>
           </Card>
@@ -282,7 +311,7 @@ export default function SurahDetailPage() {
                       )}
                     </Button>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => toggleAudio(verse.verse_key)} disabled={isLocked}>
+                  <Button variant="ghost" size="icon" onClick={() => toggleAudio(verse.verse_key)} disabled={isLocked} className="text-[#800000]">
                     {loadingAudioKey === verse.verse_key ? <Loader2 className="animate-spin h-4 w-4" /> : playingKey === verse.verse_key ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -320,9 +349,9 @@ export default function SurahDetailPage() {
 
                 <div className={cn("text-left bg-[#800000]/5 p-5 rounded-xl border-l-4", isLocked ? "border-muted" : "border-[#800000]")}>
                   <p className={cn("text-[10px] font-bold mb-2 uppercase tracking-widest", isLocked ? "text-muted-foreground" : "text-[#800000]")}>
-                    Terjemahan Kemenag RI
+                    Terjemahan Ayat
                   </p>
-                  <div className={cn("text-base leading-relaxed", isLocked ? "text-muted-foreground italic" : "text-foreground/90")}>
+                  <div className={cn("text-base leading-relaxed text-slate-700", isLocked ? "text-muted-foreground italic" : "text-foreground/90")}>
                     {isLocked ? "Selesaikan kuis ayat sebelumnya untuk membaca terjemahan ini." : <div dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }} />}
                   </div>
                 </div>

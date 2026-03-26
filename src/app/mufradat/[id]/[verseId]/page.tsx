@@ -1,222 +1,328 @@
-'use client';
+"use client";
 
-import { useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  ChevronLeft, 
-  Play, 
-  Pause, 
-  Loader2, 
-  BookOpen, 
-  GraduationCap, 
-  Volume2,
-  Info,
-  Sparkles
-} from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipPortal,
+} from "@/components/ui/tooltip";
+import { getVerseAnalysis } from "@/app/actions";
+import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
 
-interface Word {
+interface WordData {
   id: number;
   text_uthmani: string;
-  translation?: {
+  translation: {
     text: string;
   };
 }
 
-interface Verse {
+interface VerseDetail {
   id: number;
   verse_number: number;
   verse_key: string;
-  text_uthmani?: string;
-  words: Word[];
+  text_uthmani: string;
   translations: { text: string }[];
-}
-
-interface SurahInfo {
-  id: number;
-  name_simple: string;
-  name_arabic: string;
-  translated_name: { name: string };
+  words: WordData[];
 }
 
 export default function MufradatVerseDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const verseId = params.verseId as string;
-  const { toast } = useToast();
+  const currentVerseNum = parseInt(verseId);
 
-  const [surah, setSurah] = useState<SurahInfo | null>(null);
-  const [verse, setVerse] = useState<Verse | null>(null);
+  const { user, isUserLoading } = useUser();
+
+  const [verse, setVerse] = useState<VerseDetail | null>(null);
+  const [surahName, setSurahName] = useState("");
+  const [totalVerses, setTotalVerses] = useState(0);
+  const [apiTafsir, setApiTafsir] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
-  const [playing, setPlaying] = useState(false);
-  const [loadingAudio, setLoadingAudio] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
+
+  const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
+
+  const progressOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'surahId', operator: '==', value: id },
+      { column: 'isPassed', operator: '==', value: true }
+    ]
+  }), [user?.id, id]);
+
+  const { data: progress } = useCollection("quiz_attempts", user ? progressOptions : undefined);
+
+  const completedVerseNumbers = useMemo(() => {
+    if (!progress) return new Set<number>();
+    return new Set(progress.map(p => p.verseNumber));
+  }, [progress]);
+
+  const isCurrentVerseCompleted = completedVerseNumbers.has(currentVerseNum);
+
+  const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
+    setAnalysisLoading(true);
+    try {
+      const result = await getVerseAnalysis({ surahName: name, verseNumber: num, verseText: text });
+      if (result) {
+        setAnalysis(result);
+      }
+    } catch (e) {
+      console.error("AI Analysis Error:", e);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  }, []);
+
+  const fetchOfficialTafsir = useCallback(async (chapterId: string, vNum: string) => {
+    setApiTafsir(null);
+    try {
+      const res = await fetch(`https://api.quran.com/api/v4/verses/by_key/${chapterId}:${vNum}?language=id&translations=33`);
+      
+      if (res.ok) {
+        const data = await res.json();
+        const tafsirText = data.verse?.translations?.[0]?.text;
+        if (tafsirText) {
+          setApiTafsir(tafsirText);
+        } else {
+          setApiTafsir("Penjelasan atau tafsir belum tersedia untuk ayat ini.");
+        }
+      } else {
+        setApiTafsir("Gagal memuat penjelasan dari API Quran.");
+      }
+    } catch (err) {
+      console.error("Tafsir Fetch Error:", err);
+      setApiTafsir(null);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchAll() {
       if (!id || !verseId) return;
       try {
         setLoading(true);
-        // Fetch Surah Info
-        const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        const surahData = await surahRes.json();
-        setSurah(surahData.chapter);
+        const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
+        const sData = await sRes.json();
+        setSurahName(sData.chapter.name_simple);
+        setTotalVerses(sData.chapter.verses_count);
 
-        // Fetch Verse Details (with words and translations)
-        const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`
-        );
-        const verseData = await verseRes.json();
-        if (verseData && verseData.verse) {
-          setVerse(verseData.verse);
-        }
-      } catch (err) {
-        console.error("Fetch Error:", err);
+        const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`);
+        const vData = await vRes.json();
+        setVerse(vData.verse);
+
+        setTimeout(() => fetchOfficialTafsir(id, verseId), 300);
+        if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseId), vData.verse.text_uthmani);
+      } catch (e) {
+        console.error("Fetch Error:", e);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    fetchAll();
+  }, [id, verseId, fetchAiAnalysis, fetchOfficialTafsir]);
 
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, [id, verseId]);
-
-  const toggleAudio = async () => {
-    if (!verse) return;
-    if (playing) {
-      audioRef.current?.pause();
-      setPlaying(false);
-      return;
-    }
-    
-    setLoadingAudio(true);
-    try {
-      // Using default reciter (Mishary Rashid Alafasy - ID 7) for simplicity in Mufradat
-      const res = await fetch(`https://api.quran.com/api/v4/recitations/7/by_ayah/${verse.verse_key}`);
-      const data = await res.json();
-      const audioUrl = data.audio_files[0]?.url;
-      let fullUrl = audioUrl;
-      if (audioUrl.startsWith('//')) fullUrl = `https:${audioUrl}`;
-      else if (!audioUrl.startsWith('http')) fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
-      
-      if (audioRef.current) audioRef.current.pause();
-      const audio = new Audio(fullUrl);
-      audioRef.current = audio;
-      audio.onplay = () => {
-        setPlaying(true);
-        setLoadingAudio(false);
-      };
-      audio.onended = () => setPlaying(false);
-      await audio.play();
-    } catch (err) {
-      setLoadingAudio(false);
-      toast({ variant: "destructive", title: "Audio Error", description: "Gagal memutar audio ayat." });
-    }
+  const incrementWordCount = (idx: number) => {
+    setWordCounts(prev => ({
+      ...prev,
+      [idx]: (prev[idx] || 0) + 1
+    }));
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
-        <p className="text-muted-foreground font-medium">Memuat Ayat...</p>
-      </div>
-    );
-  }
+  const resetWordCounts = () => {
+    setWordCounts({});
+  };
 
-  if (!verse) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Info className="w-12 h-12 text-muted-foreground" />
-        <p className="text-muted-foreground font-medium">Ayat tidak ditemukan.</p>
-        <Button asChild variant="outline">
-          <Link href={`/mufradat/${id}`}>Kembali ke Surah</Link>
-        </Button>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex flex-col items-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-sm">Menyiapkan Penjabaran...</p></div>;
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl mx-auto pb-24 px-4">
-      {/* Header */}
-      <div className="flex items-center gap-4 py-4 sticky top-0 bg-background/95 backdrop-blur z-30">
-        <Button asChild variant="outline" size="sm" className="gap-1.5 text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5 shrink-0">
-          <Link href={`/mufradat/${id}`}>
-            <ChevronLeft className="h-4 w-4" />
-            <span>Kembali</span>
-          </Link>
-        </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold font-headline truncate text-[#800000]">
-            {surah?.name_simple} Ayat {verse.verse_number}
-          </h1>
-          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Hi Mufradat • Tadabbur Kata</p>
+    <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32 px-4 sm:px-0">
+      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
+        <Button asChild variant="ghost" size="icon" className="text-[#800000]"><Link href={`/mufradat/${id}`}><ChevronLeft className="h-6 w-6" /></Link></Button>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold font-headline">{surahName} : ({verseId})</h1>
+          <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Hi Mufradat • Tadabbur Ayat</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={toggleAudio} disabled={loadingAudio} className="text-[#800000]">
-          {loadingAudio ? <Loader2 className="animate-spin h-5 w-5" /> : playing ? <Pause className="h-5 w-5 fill-current" /> : <Volume2 className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="icon" className="text-[#D4AF37]"><Link href={`/mufradat/${id}/${verseId}/quiz`}><GraduationCap className="h-5 w-5" /></Link></Button>
+          <Button variant="ghost" size="icon" disabled={currentVerseNum <= 1} onClick={() => router.push(`/mufradat/${id}/${currentVerseNum - 1}`)}><ArrowLeft className="h-5 w-5" /></Button>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-block">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={!!(currentVerseNum >= totalVerses || (!isUserLoading && user && !isCurrentVerseCompleted))}
+                    onClick={() => router.push(`/mufradat/${id}/${currentVerseNum + 1}`)}
+                  >
+                    {!isUserLoading && user && !isCurrentVerseCompleted ? <Lock className="h-4 w-4 text-muted-foreground" /> : <ArrowRight className="h-5 w-5" />}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!isUserLoading && user && !isCurrentVerseCompleted && (
+                <TooltipContent>
+                  <p className="text-[10px]">Selesaikan kuis ayat ini (100%) untuk lanjut</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
-      {/* Mushaf View */}
-      <Card className="border-none shadow-xl bg-white overflow-hidden rounded-3xl border-b-4 border-[#800000]">
-        <CardContent className="p-8 sm:p-12 text-center space-y-8">
-          <div className="flex flex-row-reverse flex-wrap justify-center gap-x-4 gap-y-8" dir="rtl">
-            {verse.words?.map((word, wordIdx) => (
-              <div key={wordIdx} className="flex flex-col items-center gap-2 group cursor-help transition-all hover:scale-110">
-                <span className="text-4xl sm:text-5xl font-arabic text-slate-800 group-hover:text-[#800000] transition-colors">
-                  {word.text_uthmani}
-                </span>
-                <span className="text-[10px] font-bold text-slate-400 group-hover:text-[#800000] uppercase tracking-tighter">
-                  {word.translation?.text || "..."}
-                </span>
-              </div>
-            ))}
-          </div>
-          
-          <div className="pt-8 border-t border-slate-100 text-left">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-3 h-3 text-[#D4AF37] fill-current" />
-              <p className="text-[10px] font-black text-[#800000] uppercase tracking-widest">Terjemahan Ayat</p>
+      <Card className="border-none bg-muted/20">
+        <CardContent className="pt-8 pb-10 px-6 text-right" dir="rtl">
+          <TooltipProvider delayDuration={0}>
+            <div className="flex flex-wrap justify-end gap-x-2 gap-y-4 w-full">
+              {verse?.words?.filter(w => w.text_uthmani).map((word, wordIdx) => (
+                <Tooltip key={wordIdx} open={activeWordIdx === wordIdx} onOpenChange={(o) => o && setActiveWordIdx(wordIdx)}>
+                  <TooltipTrigger asChild>
+                    <span
+                      tabIndex={0} role="button" onPointerEnter={() => setActiveWordIdx(wordIdx)}
+                      className="text-2xl md:text-3xl font-arabic leading-[2] text-foreground hover:text-[#800000] focus:text-[#800000] outline-none cursor-help px-0.5 inline-block"
+                    >
+                      {word.text_uthmani}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                      <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
+                    </TooltipContent>
+                  </TooltipPortal>
+                </Tooltip>
+              ))}
             </div>
-            <div 
-              className="text-base sm:text-lg leading-relaxed text-slate-700 italic font-medium"
-              dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }}
-            />
+          </TooltipProvider>
+          <div className="max-w-2xl ml-auto text-left mt-8" dir="ltr">
+            <Badge variant="outline" className="mb-4 text-[#800000] border-[#800000]/20 text-[10px] font-bold uppercase">Terjemahan Ayat</Badge>
+            <div className="text-lg text-muted-foreground leading-relaxed italic" dangerouslySetInnerHTML={{ __html: verse?.translations[0]?.text || "" }} />
           </div>
         </CardContent>
       </Card>
 
-      {/* Study Actions */}
-      <div className="grid grid-cols-1 gap-4">
-        <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black py-8 h-auto text-lg rounded-2xl shadow-lg border-b-4 border-[#800000]/20">
-          <Link href={`/mufradat/${id}/${verseId}/quiz`} className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="w-6 h-6" />
-              <span>Mulai Uji Hafalan</span>
+      <div className="grid grid-cols-1 gap-6">
+        <Card className="border-[#800000]/10 shadow-sm overflow-hidden">
+          <CardHeader className="border-b bg-[#800000]/5 py-4 flex flex-row items-start justify-between">
+            <div className="flex flex-col gap-1.5">
+              <CardTitle className="text-base flex items-center gap-2 font-headline">
+                <ListTree className="w-4 h-4 text-[#800000]" />
+                Penjelasan Kata
+              </CardTitle>
+              <p className="text-[11px] text-amber-900 font-medium leading-snug">
+                <strong>Repetisi</strong>: Ulangi setiap kata sebanyak minimal 5 kali dengan mengetuk baris kata pada daftar di bawah.
+              </p>
             </div>
-            <span className="text-[10px] opacity-70 uppercase tracking-widest">Latih Ingatan Mufradat</span>
-          </Link>
-        </Button>
+            {Object.keys(wordCounts).length > 0 && (
+              <Button variant="ghost" size="sm" onClick={resetWordCounts} className="text-[10px] font-bold text-muted-foreground uppercase gap-1 mt-1">
+                <RotateCcw className="w-3 h-3" /> Reset
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y" dir="ltr">
+              {verse?.words?.filter(w => w.text_uthmani).map((word, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50 transition-all cursor-pointer active:scale-[0.98] select-none"
+                  onClick={() => incrementWordCount(idx)}
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-bold text-muted-foreground w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border/50">
+                      {idx + 1}
+                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="text-2xl font-arabic text-[#800000] text-right" dir="rtl">{word.text_uthmani}</span>
+                      {wordCounts[idx] > 0 && (
+                        <Badge className="bg-[#D4AF37] hover:bg-[#D4AF37] text-black text-[9px] font-bold h-4 px-1 animate-in zoom-in-50 duration-200">
+                          x{wordCounts[idx]}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right flex-1">
+                    <p className="text-sm font-medium">{word.translation.text}</p>
+                    <p className="text-[10px] text-muted-foreground italic text-amber-700/60">Ketuk untuk repetisi hafalan</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+          <CardFooter className="pt-6 border-t bg-muted/10 p-4">
+            <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black gap-2 py-6 h-14 text-lg rounded-xl shadow-lg border-b-4 border-[#800000]/20">
+              <Link href={user ? `/mufradat/${id}/${verseId}/quiz` : "/login"}>
+                <GraduationCap className="w-5 h-5" />
+                {user ? "MULAI UJI HAFALAN" : "MASUK UNTUK UJI HAFALAN"}
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
 
-        <Card className="bg-[#800000]/5 border-none rounded-2xl p-6 flex items-start gap-4">
-          <div className="p-3 bg-white rounded-xl shadow-sm text-[#800000] shrink-0">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="font-bold text-[#800000] mb-1">Tips Tadabbur</h4>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Fokuslah pada perubahan kata yang berwarna. Pelajari bagaimana satu akar kata bisa memiliki berbagai makna dalam konteks yang berbeda.
-            </p>
-          </div>
+        <Card className="border-amber-200 bg-amber-50 shadow-sm border-l-4">
+          <CardHeader className="py-4 border-b border-amber-100 flex flex-row items-center gap-2">
+            <Lightbulb className="w-5 h-5 text-amber-600" />
+            <CardTitle className="text-base font-bold font-headline text-amber-900">Tips Hafal Kosakata</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <ul className="space-y-4">
+              <li className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">1</div>
+                <p className="text-sm text-amber-900 leading-relaxed">
+                  <strong>Pahami Akar Kata</strong>: Setiap kata memiliki akar yang memberikan gambaran makna dasar yang kuat.
+                </p>
+              </li>
+              <li className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold">2</div>
+                <p className="text-sm text-amber-900 leading-relaxed">
+                  <strong>Koneksi Makna</strong>: Hubungkan antara kosa kata Arab dan terjemahannya dengan membayangkan maksud ayat tersebut.
+                </p>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card className="border-[#800000]/10 shadow-sm overflow-hidden border-l-4 border-l-[#800000]">
+          <CardHeader className="bg-[#800000] text-white py-4">
+            <CardTitle className="text-sm flex items-center gap-2 font-headline"><BookOpen className="w-4 h-4" /> Kemenag RI • Penjelasan Ringkas</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 bg-white">
+            <div className="text-slate-700 leading-relaxed text-base" dangerouslySetInnerHTML={{ __html: apiTafsir || "Memuat penjelasan..." }} />
+          </CardContent>
+        </Card>
+
+        <Card className="border-indigo-100 bg-indigo-50/30 border-l-4 border-l-indigo-500 overflow-hidden">
+          <CardHeader className="py-4 border-b border-indigo-50 bg-indigo-50/50">
+            <CardTitle className="text-base flex items-center gap-2 font-headline text-indigo-900">
+              <BrainCircuit className="w-5 h-5" /> Bimbingan AI • Hikmah & Konteks
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {analysisLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            ) : (
+              <div className="prose prose-sm max-w-none text-indigo-950">
+                <p className="leading-relaxed whitespace-pre-wrap italic font-medium">
+                  {analysis?.hikmah || "AI sedang merumuskan hikmah yang tepat untuk ayat ini..."}
+                </p>
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
     </div>
