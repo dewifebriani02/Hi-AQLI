@@ -85,7 +85,7 @@ export default function MurajaahQuizPage() {
   // Murajaah quiz uses separate quizId format
   const { data: allAttempts, isLoading: isLeaderboardLoading } = useCollection("quiz_attempts", {
     filters: [
-      { column: 'quizId', operator: '==', value: `murajaah_${id}` }
+      { column: 'quiz_id', operator: '==', value: `murajaah_${id}` }
     ],
     orderBy: { column: 'score', ascending: false }
   });
@@ -113,7 +113,7 @@ export default function MurajaahQuizPage() {
       const attemptCount = (existing?.attemptCount || 0) + 1;
       const isNewBest = !existing ||
         attempt.score > existing.score ||
-        (attempt.score === existing.score && (attempt.durationSeconds < existing.durationSeconds));
+        (attempt.score === existing.score && (attempt.duration_seconds < existing.duration_seconds));
 
       if (isNewBest) {
         const userData = leaderboardUsers?.find((u: any) => u.id === attempt.user_id);
@@ -130,7 +130,7 @@ export default function MurajaahQuizPage() {
 
     return Array.from(uniqueMap.values())
       .map((item: any) => ({ ...item, attemptCount: finalCounts.get(item.user_id) }))
-      .sort((a: any, b: any) => b.score - a.score || a.durationSeconds - b.durationSeconds)
+      .sort((a: any, b: any) => b.score - a.score || a.duration_seconds - b.duration_seconds)
       .slice(0, 10);
   }, [combinedAttempts, leaderboardUsers]);
 
@@ -221,26 +221,26 @@ export default function MurajaahQuizPage() {
     setOptimisticAttempt({
       id: optimisticId,
       user_id: user.id,
-      quizId: `murajaah_${id}`,
-      surahId: id,
-      verseNumber: 0, // 0 indicates murajaah (full surah)
+      quiz_id: `murajaah_${id}`,
+      surah_id: id,
+      verse_id: "0", // 0 indicates murajaah (full surah)
       score: finalScore,
-      totalQuestions: quizWords.length,
-      isPassed: isPerfect,
-      durationSeconds: totalTime,
+      total_questions: quizWords.length,
+      is_passed: isPerfect,
+      duration_seconds: totalTime,
       created_at: new Date().toISOString(),
     });
 
     try {
       addDocumentNonBlocking("quiz_attempts", {
         user_id: user.id,
-        quizId: `murajaah_${id}`,
-        surahId: id,
-        verseNumber: 0,
+        quiz_id: `murajaah_${id}`,
+        surah_id: id,
+        verse_id: "0",
         score: finalScore,
-        totalQuestions: quizWords.length,
-        isPassed: isPerfect,
-        durationSeconds: totalTime,
+        total_questions: quizWords.length,
+        is_passed: isPerfect,
+        duration_seconds: totalTime,
         created_at: new Date().toISOString(),
       });
 
@@ -511,10 +511,10 @@ export default function MurajaahQuizPage() {
                           </span>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[9px] text-muted-foreground font-medium flex items-center gap-1">
-                              <Zap className="w-2.5 h-2.5 text-[#D4AF37]" /> {item.score}/{item.totalQuestions} Benar
+                              <Zap className="w-2.5 h-2.5 text-[#D4AF37]" /> {item.score}/{item.total_questions} Benar
                             </span>
                             <span className="text-[8px] text-muted-foreground italic">
-                              ({formatTime(item.durationSeconds || item.duration_seconds || 0)})
+                              ({formatTime(item.duration_seconds || 0)})
                             </span>
                             <Badge variant="outline" className="text-[7px] h-3 px-1 border-[#800000]/20 text-[#800000] font-bold">
                               {item.attemptCount}x Coba

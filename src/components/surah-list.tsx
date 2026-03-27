@@ -50,18 +50,18 @@ export function SurahList({ baseUrl = "/tilawah", userProgress = [] }: SurahList
     if (!userProgress) return map;
 
     userProgress.forEach(attempt => {
-      if (attempt.isPassed) {
-        const sId = Number(attempt.surahId);
-        const vNum = Number(attempt.verseNumber);
+      if (attempt.is_passed) {
+        const sId = Number(attempt.surah_id);
+        const vId = Number(attempt.verse_id);
         
         // We use a Set-like string key to ignore duplicate passed attempts for same verse
-        const key = `${sId}:${vNum}`;
+        const key = `${sId}:${vId}`;
         // Store unique verse counts per surah
         // Actually, just store all passed verse numbers in a Set per surah
         if (!map.has(sId)) {
           (map as any).set(sId, new Set());
         }
-        (map.get(sId) as any).add(vNum);
+        (map.get(sId) as any).add(vId);
       }
     });
 

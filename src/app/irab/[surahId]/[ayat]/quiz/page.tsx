@@ -142,7 +142,7 @@ export default function IrabQuizPage() {
   // Fetch leaderboard data
   const { data: allAttempts } = useCollection("quiz_attempts", {
     filters: [
-      { column: 'quizId', operator: '==', value: `irab_${currentAyatKey}` }
+      { column: 'quiz_id', operator: '==', value: `irab_${currentAyatKey}` }
     ],
     orderBy: { column: 'score', ascending: false }
   });
@@ -160,7 +160,7 @@ export default function IrabQuizPage() {
       const existing = uniqueMap.get(attempt.user_id);
       const isNewBest = !existing ||
         attempt.score > existing.score ||
-        (attempt.score === existing.score && (attempt.durationSeconds < existing.durationSeconds));
+        (attempt.score === existing.score && (attempt.duration_seconds < existing.duration_seconds));
 
       if (isNewBest) {
         const userData = leaderboardUsers?.find(u => u.id === attempt.user_id);
@@ -176,7 +176,7 @@ export default function IrabQuizPage() {
 
     return Array.from(uniqueMap.values())
       .map(item => ({ ...item, attemptCount: finalCounts.get(item.user_id) }))
-      .sort((a, b) => b.score - a.score || a.durationSeconds - b.durationSeconds)
+      .sort((a, b) => b.score - a.score || a.duration_seconds - b.duration_seconds)
       .slice(0, 5);
   }, [allAttempts, leaderboardUsers]);
 
@@ -216,13 +216,13 @@ export default function IrabQuizPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
-          quizId: `irab_${currentAyatKey}`,
-          surahId: surahId,
+          user_id: user.id,
+          quiz_id: `irab_${currentAyatKey}`,
+          surah_id: surahId,
           ayat: ayat,
           score: finalScore,
-          totalQuestions: quizData.questions.length,
-          durationSeconds: totalTime,
+          total_questions: quizData.questions.length,
+          duration_seconds: totalTime,
         })
       });
     } catch (e) {
@@ -435,10 +435,10 @@ export default function IrabQuizPage() {
                         </span>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[9px] text-muted-foreground font-medium flex items-center gap-1">
-                            <Zap className="w-2.5 h-2.5 text-[#D4AF37]" /> {item.score}/{item.totalQuestions} Benar
+                            <Zap className="w-2.5 h-2.5 text-[#D4AF37]" /> {item.score}/{item.total_questions} Benar
                           </span>
                           <span className="text-[8px] text-muted-foreground italic">
-                            ({formatTime(item.durationSeconds || 0)})
+                            ({formatTime(item.duration_seconds || 0)})
                           </span>
                           <Badge variant="outline" className="text-[7px] h-3 px-1 border-[#800000]/20 text-[#800000] font-bold">
                             {item.attemptCount}x Coba

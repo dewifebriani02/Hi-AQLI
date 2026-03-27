@@ -55,8 +55,8 @@ export default function MufradatVerseDetailPage() {
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'surahId', operator: '==', value: id },
-      { column: 'isPassed', operator: '==', value: true }
+      { column: 'surah_id', operator: '==', value: id },
+      { column: 'is_passed', operator: '==', value: true }
     ]
   }), [user?.id, id]);
 
@@ -64,7 +64,7 @@ export default function MufradatVerseDetailPage() {
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
-    return new Set(progress.map(p => p.verseNumber));
+    return new Set(progress.map(p => Number(p.verse_id)));
   }, [progress]);
 
   const isCurrentVerseCompleted = completedVerseNumbers.has(currentVerseNum);
@@ -242,13 +242,22 @@ export default function MufradatVerseDetailPage() {
               ))}
             </div>
           </CardContent>
-          <CardFooter className="pt-6 border-t bg-muted/10 p-4">
+          <CardFooter className="pt-6 border-t bg-muted/10 p-4 flex flex-col gap-3">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black gap-2 py-6 h-14 text-lg rounded-xl shadow-lg border-b-4 border-[#800000]/20">
               <Link href={user ? `/mufradat/${id}/${verseId}/quiz` : `/login?redirectTo=/mufradat/${id}/${verseId}`}>
                 <GraduationCap className="w-5 h-5" />
-                {user ? "MULAI UJI HAFALAN" : "MASUK UNTUK UJI HAFALAN"}
+                {user ? (isCurrentVerseCompleted ? "ULANGI UJI HAFALAN" : "MULAI UJI HAFALAN") : "MASUK UNTUK UJI HAFALAN"}
               </Link>
             </Button>
+
+            {isCurrentVerseCompleted && currentVerseNum < totalVerses && (
+              <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 hover:bg-[#800000]/5 text-[#800000] font-black gap-2 py-6 h-14 text-lg rounded-xl transition-all">
+                <Link href={`/mufradat/${id}/${currentVerseNum + 1}`}>
+                  LANJUT KE AYAT {currentVerseNum + 1}
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+              </Button>
+            )}
           </CardFooter>
         </Card>
 

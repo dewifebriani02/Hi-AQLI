@@ -4,24 +4,24 @@ import { supabase } from '@/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, quizId, surahId, verseId, score, totalQuestions, durationSeconds, isPassed } = body;
+    const { user_id, quiz_id, surah_id, verse_id, score, total_questions, duration_seconds, is_passed } = body;
 
-    console.log('Mufradat Quiz Save Attempt:', { userId, quizId, surahId, verseId });
+    console.log('Mufradat Quiz Save Attempt:', { user_id, quiz_id, surah_id, verse_id });
 
-    if (!userId || !quizId) {
+    if (!user_id || !quiz_id) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Try to insert with standardized snake_case naming
     const insertData: any = {
-      user_id: userId,
-      quiz_id: quizId,
-      surah_id: surahId,
-      verse_id: verseId,
-      score: score,
-      total_questions: totalQuestions,
-      is_passed: !!isPassed,
-      duration_seconds: durationSeconds,
+      user_id,
+      quiz_id,
+      surah_id,
+      verse_id,
+      score,
+      total_questions,
+      is_passed: !!is_passed,
+      duration_seconds,
       created_at: new Date().toISOString(),
     };
 
@@ -39,12 +39,12 @@ export async function POST(request: NextRequest) {
     }
 
     // If perfect score, add points to user
-    if (isPassed) {
+    if (is_passed) {
       try {
         const { data: userData, error: userFetchError } = await supabase
           .from('users')
           .select('points')
-          .eq('id', userId)
+          .eq('id', user_id)
           .maybeSingle();
 
         if (userFetchError) {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
               points: currentPoints + 10,
               updated_at: new Date().toISOString(),
             } as any)
-            .eq('id', userId);
+            .eq('id', user_id);
           
           if (updateError) {
             console.error('Error updating user points:', updateError);

@@ -60,8 +60,8 @@ export default function VerseDetailPage() {
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'surahId', operator: '==', value: id },
-      { column: 'isPassed', operator: '==', value: true }
+      { column: 'surah_id', operator: '==', value: id },
+      { column: 'is_passed', operator: '==', value: true }
     ]
   }), [user?.id, id]);
 
@@ -69,7 +69,7 @@ export default function VerseDetailPage() {
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
-    return new Set(progress.map(p => p.verseNumber));
+    return new Set(progress.map(p => Number(p.verse_id)));
   }, [progress]);
 
   const isCurrentVerseCompleted = completedVerseNumbers.has(currentVerseNum);

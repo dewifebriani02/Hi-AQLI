@@ -73,7 +73,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // Gate content until mounted to prevent hydration mismatch
   const showAdminUI = mounted && hasAdminAccess;
   const showUserUI = mounted && !isUserLoading;
-  const showBottomNav = mounted && !hasAdminAccess && !isAuthPage;
+  const showBottomNav = mounted;
 
   return (
     <>
@@ -82,8 +82,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         {/* Sidebar hanya muncul untuk admin di md ke atas */}
         {showAdminUI && <AppSidebar />}
         <SidebarInset className="w-full flex flex-col">
-          {/* Padding bottom untuk BottomNav */}
-          <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
+          {/* Padding bottom untuk BottomNav (selalu ada) */}
+          <div className="flex flex-col flex-1 w-full pb-20">
             <header className="sticky top-0 z-40 flex h-24 items-center justify-between px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
               <div className="flex items-center gap-4">
                 {showAdminUI && <SidebarTrigger className="text-[#800000] hover:bg-[#800000]/5 mr-2" />}
@@ -126,12 +126,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarInset>
       </div>
-      {/* BottomNav: user biasa di semua device, admin hanya di mobile */}
-      {showBottomNav ? (
-        <BottomNav />
-      ) : (
-        <div className="md:hidden"><BottomNav /></div>
-      )}
+      {showBottomNav && <BottomNav />}
       <Toaster />
     </SidebarProvider>
     </>

@@ -4,9 +4,9 @@ import { supabase } from '@/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, quizId, surahId, ayat, score, totalQuestions, durationSeconds } = body;
+    const { user_id, quiz_id, surah_id, ayat, score, total_questions, duration_seconds } = body;
 
-    if (!userId || !quizId) {
+    if (!user_id || !quiz_id) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -15,14 +15,14 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase
       .from('quiz_attempts')
       .insert({
-        user_id: userId,
-        quizId: quizId,
-        surahId: surahId,
-        verseNumber: ayat,
+        user_id: user_id,
+        quiz_id: quiz_id,
+        surah_id: surah_id,
+        verse_id: ayat,
         score: score,
-        totalQuestions: totalQuestions,
-        isPassed: score === totalQuestions,
-        durationSeconds: durationSeconds,
+        total_questions: total_questions,
+        is_passed: score === total_questions,
+        duration_seconds: duration_seconds,
         created_at: new Date().toISOString(),
       });
 
@@ -32,11 +32,11 @@ export async function POST(request: NextRequest) {
     }
 
     // If perfect score, add points to user
-    if (score === totalQuestions) {
+    if (score === total_questions) {
       const { data: userData } = await supabase
         .from('users')
         .select('points')
-        .eq('id', userId)
+        .eq('id', user_id)
         .maybeSingle();
 
       const currentPoints = userData?.points || 0;
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
           points: currentPoints + 10,
           updated_at: new Date().toISOString()
         })
-        .eq('id', userId);
+        .eq('id', user_id);
     }
 
     return NextResponse.json({ success: true });

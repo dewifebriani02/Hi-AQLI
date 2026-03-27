@@ -66,6 +66,7 @@ export default function MufradatSurahDetailPage() {
   const { user } = useUser();
 
   const [surah, setSurah] = useState<SurahInfo | null>(null);
+  const [nextSurah, setNextSurah] = useState<SurahInfo | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(32);
@@ -80,8 +81,8 @@ export default function MufradatSurahDetailPage() {
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'surahId', operator: '==', value: id },
-      { column: 'isPassed', operator: '==', value: true }
+      { column: 'surah_id', operator: '==', value: id },
+      { column: 'is_passed', operator: '==', value: true }
     ]
   }), [user?.id, id]);
 
@@ -89,8 +90,8 @@ export default function MufradatSurahDetailPage() {
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
-    // Ensure all verse numbers are treated as numbers, regardless of DB type (Text vs Int)
-    return new Set(progress.map(p => Number(p.verseNumber)));
+    // Ensure all verse IDs are treated as numbers, regardless of DB type (Text vs Int)
+    return new Set(progress.map(p => Number(p.verse_id)));
   }, [progress]);
 
   useEffect(() => {
@@ -110,6 +111,14 @@ export default function MufradatSurahDetailPage() {
         const infoData = await infoRes.json();
         setSurah(infoData.chapter);
 
+        // Fetch next surah info if available
+        const nextId = Number(id) + 1;
+        if (nextId <= 114) {
+          const nextRes = await fetch(`https://api.quran.com/api/v4/chapters/${nextId}?language=id`);
+          const nextData = await nextRes.json();
+          setNextSurah(nextData.chapter);
+        }
+
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani&per_page=300`
         );
@@ -125,7 +134,28 @@ export default function MufradatSurahDetailPage() {
       }
     }
     fetchData();
+  }, [id, toast]);
 
+  // Auto-scroll to last completed verse
+  useEffect(() => {
+    if (!loading && !isProgressLoading && verses.length > 0 && completedVerseNumbers.size > 0) {
+      // Find the highest completed verse number
+      const lastCompleted = Math.max(...Array.from(completedVerseNumbers));
+      
+      if (lastCompleted > 0) {
+        // Delay slightly to ensure DOM is ready
+        const timer = setTimeout(() => {
+          const element = document.getElementById(`verse-${lastCompleted}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, isProgressLoading, verses.length, completedVerseNumbers]);
+
+  useEffect(() => {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -260,37 +290,25 @@ export default function MufradatSurahDetailPage() {
             const isCompleted = completedVerseNumbers.has(verse.verse_number);
 
             return (
-              <div key={verse.id} className={cn("py-12 px-4 space-y-8 transition-opacity", isLocked && "opacity-60")}>
+              <div 
+                key={verse.id} 
+                id={`verse-${verse.verse_number}`}
+                className={cn("py-12 px-4 space-y-8 transition-opacity", isLocked && "opacity-60")}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Link
-                      href={isLocked ? "#" : `/mufradat/${id}/${verse.verse_number}`}
-                      className={cn(
-                        "flex items-center justify-center w-12 h-10 rounded-full text-xs font-bold border transition-all",
-                        isLocked ? "bg-muted text-muted-foreground cursor-not-allowed" :
-                          isCompleted ? "bg-[#D4AF37] text-black border-[#800000]" :
-                            "bg-muted text-foreground border-border hover:bg-[#800000] hover:text-white"
-                      )}
-                      onClick={(e) => isLocked && e.preventDefault()}
-                    >
-                      {isLocked ? <Lock className="h-4 w-4" /> : `(${verse.verse_number})`}
-                    </Link>
-
-                    <Button asChild={!isLocked} variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] gap-1" disabled={isLocked}>
+                    <Button asChild={!isLocked} variant="outline" className={cn(
+                      "w-48 h-10 gap-2 font-black text-[10px] rounded-full transition-all active:scale-[0.95] shadow-sm uppercase tracking-widest",
+                      isLocked ? "bg-muted text-muted-foreground border-muted cursor-not-allowed" :
+                        isCompleted ? "bg-[#D4AF37] text-black border-[#800000]/20 hover:bg-[#D4AF37]/90" :
+                          "bg-white text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5"
+                    )} disabled={isLocked}>
                       {isLocked ? (
-                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> TERKUNCI</span>
+                        <span className="flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> TERKUNCI</span>
                       ) : (
-                        <Link href={`/mufradat/${id}/${verse.verse_number}`}><Info className="h-3 w-3" /> DETAIL</Link>
-                      )}
-                    </Button>
-
-                    <Button asChild={!isLocked} variant="ghost" size="sm" className={cn("text-[10px] font-bold gap-1", isCompleted ? "text-[#D4AF37]" : "text-amber-600")} disabled={isLocked}>
-                      {isLocked ? (
-                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> TERKUNCI</span>
-                      ) : (
-                        <Link href={`/mufradat/${id}/${verse.verse_number}/quiz`}>
-                          {isCompleted ? <Check className="h-3 w-3" /> : <GraduationCap className="h-3 w-3" />}
-                          {isCompleted ? "SUDAH HAFAL" : "UJI HAFALAN"}
+                        <Link href={`/mufradat/${id}/${verse.verse_number}`}>
+                          {isCompleted ? <Check className="w-3.5 h-3.5" /> : <GraduationCap className="w-3.5 h-3.5" />}
+                          {isCompleted ? "PELAJARI LAGI" : "Mulai Uji Hafalan Kata"}
                         </Link>
                       )}
                     </Button>
@@ -344,6 +362,31 @@ export default function MufradatSurahDetailPage() {
           })}
         </TooltipProvider>
       </div>
+
+      {/* Next Surah Button */}
+      {nextSurah && (
+        <div className="px-4 pb-12 pt-8">
+          <Link href={`/mufradat/${nextSurah.id}`}>
+            <Card className="bg-white border-2 border-dashed border-[#800000]/20 hover:border-[#800000]/40 hover:bg-[#800000]/5 transition-all cursor-pointer group rounded-2xl overflow-hidden shadow-md">
+              <CardContent className="p-8 flex flex-col items-center text-center gap-4">
+                <div className="p-3 bg-muted/50 rounded-full group-hover:scale-110 transition-transform">
+                  <ArrowRight className="w-6 h-6 text-[#800000]" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Surah Selanjutnya</p>
+                  <h3 className="text-2xl font-black font-headline text-[#800000]">
+                    {nextSurah.id}. {nextSurah.name_simple}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-2 font-medium">Lanjut pelajari tadabbur kosa kata berikutnya</p>
+                </div>
+                <Button className="mt-4 bg-[#800000] hover:bg-[#800000]/90 text-white font-bold rounded-full px-8 h-12 shadow-lg group-hover:px-10 transition-all">
+                  MULAI SEKARANG
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

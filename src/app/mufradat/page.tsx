@@ -16,7 +16,7 @@ export default function MufradatPage() {
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'isPassed', operator: '==', value: true }
+      { column: 'is_passed', operator: '==', value: true }
     ]
   }), [user?.id]);
 

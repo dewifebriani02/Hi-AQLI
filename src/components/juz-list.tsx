@@ -96,10 +96,10 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "m
       const passedInJuz = new Set<string>();
 
       userProgress.forEach(attempt => {
-        if (!attempt.isPassed) return;
+        if (!attempt.is_passed) return;
         
-        const sId = attempt.surahId.toString();
-        const vNum = Number(attempt.verseNumber);
+        const sId = attempt.surah_id.toString();
+        const vNum = Number(attempt.verse_id);
         
         if (data.mapping[sId]) {
           const [start, end] = data.mapping[sId].split('-').map(Number);

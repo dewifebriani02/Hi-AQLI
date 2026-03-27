@@ -48,7 +48,7 @@ export default function AdminMufradatPage() {
   // Fetch users and their quiz attempts
   const { data: users, isLoading: isUsersLoading, error: usersError } = useCollection("users", {});
   const { data: attempts, isLoading: isAttemptsLoading, error: attemptsError } = useCollection("quiz_attempts", {
-    filters: [{ column: 'isPassed', operator: '==', value: true }]
+    filters: [{ column: 'is_passed', operator: '==', value: true }]
   });
 
   // Process data to get per-user stats
@@ -76,7 +76,7 @@ export default function AdminMufradatPage() {
       });
       
       const uniqueVersesWeekly = new Set(
-        weeklyPassedAttempts.map(a => `${a.surahId || a.surahId}:${a.verseNumber || a.verseNumber}`)
+        weeklyPassedAttempts.map(a => `${a.surah_id || a.surah_id}:${a.verse_id || a.verse_id}`)
       );
       
       const weeklyCount = uniqueVersesWeekly.size;
@@ -84,7 +84,7 @@ export default function AdminMufradatPage() {
 
       // Overall progress
       const uniqueVerses = new Set(
-        userPassedAttempts.map(a => `${a.surahId || a.surahId}:${a.verseNumber || a.verseNumber}`)
+        userPassedAttempts.map(a => `${a.surah_id || a.surah_id}:${a.verse_id || a.verse_id}`)
       );
       
       const passedCount = uniqueVerses.size;

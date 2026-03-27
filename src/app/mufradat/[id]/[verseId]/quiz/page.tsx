@@ -155,6 +155,22 @@ export default function MufradatQuizPage() {
     return () => clearInterval(interval);
   }, [isFinished, loading, user]);
 
+  // Handle Back Button behavior when finished
+  useEffect(() => {
+    if (isFinished) {
+      // Push a dummy state to history so the next 'back' can be intercepted
+      window.history.pushState({ isResult: true }, "");
+      
+      const handlePopState = (e: PopStateEvent) => {
+        // When popping, go to the Surah List
+        router.push("/mufradat");
+      };
+
+      window.addEventListener("popstate", handlePopState);
+      return () => window.removeEventListener("popstate", handlePopState);
+    }
+  }, [isFinished, router]);
+
   const handleAnswer = (answer: string) => {
     if (selectedAnswer || isFinished) return;
     
@@ -193,14 +209,14 @@ export default function MufradatQuizPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
-          quizId: `mufradat_${verseKey}`,
-          surahId: id,
-          verseId: verseId,
+          user_id: user.id,
+          quiz_id: `mufradat_${verseKey}`,
+          surah_id: id,
+          verse_id: verseId,
           score: finalScore,
-          totalQuestions: questions.length,
-          durationSeconds: totalTime,
-          isPassed: finalScore === questions.length
+          total_questions: questions.length,
+          duration_seconds: totalTime,
+          is_passed: finalScore === questions.length
         })
       });
       // Refresh leaderboard after save
@@ -238,7 +254,7 @@ export default function MufradatQuizPage() {
   if (isFinished) {
     const isPerfect = score === questions.length;
     return (
-      <div className="max-w-md mx-auto py-12 px-4 flex flex-col gap-6">
+      <div className="max-w-md mx-auto py-12 px-4 pb-32 flex flex-col gap-6">
         <Card className="text-center border-none shadow-2xl overflow-hidden rounded-3xl bg-white">
           <div className={cn(
             "p-10 flex flex-col items-center gap-4 text-white relative overflow-hidden",
@@ -284,7 +300,7 @@ export default function MufradatQuizPage() {
                   </Button>
                 )}
                 <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
-                  <Link href={`/mufradat/${id}`}>KEMBALI KE DAFTAR AYAT</Link>
+                  <Link href="/mufradat">KEMBALI KE DAFTAR SURAT</Link>
                 </Button>
               </>
             ) : (
@@ -293,7 +309,7 @@ export default function MufradatQuizPage() {
                    <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
                 </Button>
                 <Button asChild variant="ghost" className="w-full font-bold text-slate-500">
-                  <Link href={`/mufradat/${id}`}>KEMBALI KE SURAH</Link>
+                  <Link href="/mufradat">KEMBALI KE DAFTAR SURAT</Link>
                 </Button>
               </>
             )}

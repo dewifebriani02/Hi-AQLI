@@ -132,7 +132,7 @@ export default function PublicProfilePage() {
           </Card>
           <Card className="border-none bg-muted/30 shadow-sm">
             <CardContent className="p-4 flex flex-col items-center justify-center gap-1">
-              <span className="text-xl font-black text-[#D4AF37]">{recentQuizzes?.filter(q => q.isPassed).length || 0}</span>
+              <span className="text-xl font-black text-[#D4AF37]">{recentQuizzes?.filter(q => q.is_passed).length || 0}</span>
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Itqan</span>
             </CardContent>
           </Card>
@@ -157,18 +157,18 @@ export default function PublicProfilePage() {
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center",
-                      quiz.isPassed ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                      quiz.is_passed ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
                     )}>
-                      {quiz.isPassed ? <Trophy className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+                      {quiz.is_passed ? <Trophy className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold">Surah {quiz.surahId} : Ayat {quiz.verseNumber}</span>
+                      <span className="text-sm font-bold">Surah {quiz.surah_id} : Ayat {quiz.verse_id}</span>
                       <span className="text-[10px] text-muted-foreground">
-                        Skor {quiz.score}/{quiz.totalQuestions} • {new Date(quiz.created_at).toLocaleDateString('id-ID')}
+                        Skor {quiz.score}/{quiz.total_questions} • {new Date(quiz.created_at).toLocaleDateString('id-ID')}
                       </span>
                     </div>
                   </div>
-                  {quiz.isPassed && <Badge className="bg-[#D4AF37] text-black text-[9px] font-bold">ITQAN</Badge>}
+                  {quiz.is_passed && <Badge className="bg-[#D4AF37] text-black text-[9px] font-bold">ITQAN</Badge>}
                 </CardContent>
               </Card>
             ))}
