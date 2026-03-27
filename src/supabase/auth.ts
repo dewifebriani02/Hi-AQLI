@@ -18,7 +18,7 @@ export async function initiateGoogleSignIn() {
 }
 
 /** Initiate email/password sign-up. */
-export async function initiateEmailSignUp(email: string, password: string, options?: { data?: any }) {
+export async function initiateEmailSignUp(email: string, password: string, options?: { data?: any, emailRedirectTo?: string }) {
     return supabase.auth.signUp({
         email,
         password,

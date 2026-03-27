@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, UserPlus, Mail, Lock, User as UserIcon } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 
@@ -21,9 +21,23 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Bot Protection
+  const [hasMounted, setHasMounted] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
+  const [userCaptcha, setUserCaptcha] = useState('');
+  const [captchaChallenge, setCaptchaChallenge] = useState<{a: number, b: number, result: number} | null>(null);
+
+  useEffect(() => {
+    setHasMounted(true);
+    const a = Math.floor(Math.random() * 9) + 1;
+    const b = Math.floor(Math.random() * 9) + 1;
+    setCaptchaChallenge({ a, b, result: a + b });
+  }, []);
 
   useEffect(() => {
     if (user && !isUserLoading) {
@@ -58,6 +72,19 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
+    // Bot Check
+    if (honeypot) {
+      // Bot filled the hidden field
+      setLoading(false);
+      return; 
+    }
+
+    if (!captchaChallenge || parseInt(userCaptcha) !== captchaChallenge.result) {
+      setError(`Jawaban keamanan salah. ${captchaChallenge?.a} + ${captchaChallenge?.b} = ?`);
+      setLoading(false);
+      return;
+    }
+
     const { data: signUpData, error: signUpError } = await initiateEmailSignUp(email, password, {
       data: { full_name: username }
     });
@@ -70,18 +97,15 @@ export default function RegisterPage() {
         // If email confirmation is ON, Supabase return user but session is null.
         // If email confirmation is OFF, session is returned and useUser state will change.
         setLoading(false);
-        if (signUpData.session) {
+        if (signUpData.user) {
             toast({
-              title: "Selamat Datang!",
-              description: "Pendaftaran berhasil, Ukhti otomatis masuk.",
+              title: "Masyallah, Pendaftaran Berhasil!",
+              description: "Selamat datang di Hi AQLI, Ukhti otomatis masuk.",
             });
-            router.push('/');
+            // Give a tiny delay for toast
+            setTimeout(() => router.push('/'), 100);
         } else {
-            setError(null);
-            toast({
-              title: "Cek Email Ukhti",
-              description: "Masyallah! Pendaftaran berhasil. Silakan verifikasi email Ukhti sebelum masuk.",
-            });
+            // This case is unlikely if error is null but no user
             router.push('/login');
         }
     }
@@ -97,11 +121,9 @@ export default function RegisterPage() {
     }
   };
 
+
   return (
     <div className="flex flex-col justify-center items-center min-h-[85vh] px-4 py-8">
-      <div className="mb-8 scale-125">
-        <Logo />
-      </div>
 
       <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden bg-white/80 backdrop-blur-sm">
         <div className="h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000]" />
@@ -152,16 +174,60 @@ export default function RegisterPage() {
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Minimal 6 karakter"
-                  className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
+                  className="pl-10 pr-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-[#800000] focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
+
+            {/* Bot Protection UI */}
+            {hasMounted && captchaChallenge && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-black text-[#800000] min-w-[60px]">{captchaChallenge.a} + {captchaChallenge.b} = </span>
+                  <Input
+                    type="number"
+                    placeholder="?"
+                    className="h-10 w-20 border-2 rounded-xl text-center font-bold focus-visible:ring-[#800000]"
+                    value={userCaptcha}
+                    onChange={(e) => setUserCaptcha(e.target.value)}
+                    required
+                  />
+                  <span className="text-[9px] font-medium text-muted-foreground leading-tight">
+                    Verifikasi keamanan: Selesaikan hitungan di atas.
+                  </span>
+                </div>
+                
+                {/* Honeypot field - Hidden from users */}
+                <div className="absolute opacity-0 -z-50 pointer-events-none left-[-9999px]">
+                  <Input
+                    type="text"
+                    name="website_url"
+                    tabIndex={-1}
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            )}
+
             <Button
               type="submit"
               className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-14 rounded-xl shadow-lg transition-all active:scale-[0.98] uppercase tracking-widest"

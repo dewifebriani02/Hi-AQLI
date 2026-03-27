@@ -11,6 +11,7 @@ interface LogoProps {
   showText?: boolean;
   imageSize?: number;
   variant?: 'default' | 'gold';
+  whiteText?: boolean;
 }
 
 export const Logo = ({ 
@@ -18,7 +19,8 @@ export const Logo = ({
   textClassName, 
   showText = true, 
   imageSize = 40,
-  variant = 'default'
+  variant = 'default',
+  whiteText = false
 }: LogoProps) => (
   <div className={cn("flex items-center gap-3", className)}>
     <div className="relative flex items-center justify-center" style={{ width: imageSize, height: imageSize }}>
@@ -34,7 +36,7 @@ export const Logo = ({
     {showText && (
       <span className={cn(
         "font-headline text-2xl font-black tracking-tight",
-        variant === 'gold' ? "text-[#D4AF37]" : "text-[#800000]",
+        whiteText ? "text-white" : (variant === 'gold' ? "text-[#D4AF37]" : "text-[#800000]"),
         textClassName
       )}>
         HI AQLI

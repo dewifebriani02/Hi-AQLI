@@ -190,7 +190,7 @@ function RegistrationForm() {
         userEmail: user?.email,
         whatsapp: whatsapp,
         halaqahId: selectedHalaqahId,
-        halaqahTitle: circle?.title || (isMufradat ? 'Hi Mufradat Premium' : 'Halaqah'),
+        halaqahTitle: circle?.title || (isMufradat ? 'Hi Mufradat' : 'Halaqah'),
         isPaid: isPremiumProgram,
         level: isTikrar ? parseInt(level) : null,
         targetJuz: isTikrar ? parseInt(targetJuz) : null,
@@ -289,7 +289,7 @@ function RegistrationForm() {
           <div className="mx-auto bg-white/20 rounded-full p-4 w-fit mb-4 border-2 border-white/10"><BookOpen className="h-8 w-8 text-amber-300" /></div>
           <CardTitle className="font-headline text-3xl font-black">Pendaftaran Halaqah</CardTitle>
           <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">
-            {circle?.title || (isMufradat ? 'Hi Mufradat Premium' : (isTikrar ? 'Tikrar J30' : 'Pendaftaran')) || (selectedHalaqahId ? 'Program Terpilih' : 'Silakan Pilih Program')}
+            {circle?.title || (isMufradat ? 'Hi Mufradat' : (isTikrar ? 'Hi Hafal' : 'Pendaftaran')) || (selectedHalaqahId ? 'Program Terpilih' : 'Silakan Pilih Program')}
           </CardDescription>
         </CardHeader>
 
@@ -309,7 +309,7 @@ function RegistrationForm() {
                       </SelectItem>
                     ))}
                     {!allHalaqahs?.length && (
-                      <SelectItem value="mufradat-premium" className="font-bold">Hi Mufradat Premium</SelectItem>
+                      <SelectItem value="mufradat-premium" className="font-bold">Hi Mufradat</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -405,7 +405,7 @@ function RegistrationForm() {
                       <h4 className="font-black text-sm uppercase tracking-widest">Akad & Komitmen Peserta</h4>
                     </div>
                     <div className="space-y-3 text-[11px] text-amber-900 leading-relaxed font-medium">
-                      <p>Dengan mendaftar Hi Mufradat Premium, saya berjanji untuk:</p>
+                      <p>Dengan mendaftar Hi Mufradat, saya berjanji untuk:</p>
                       <ul className="list-disc pl-4 space-y-1">
                         <li><strong>Disiplin</strong>: Mengikuti target hafalan sesuai pilihan (min. 1 halaman/pekan).</li>
                         <li><strong>Aktif</strong>: Berpartisipasi dalam Monitoring Group WhatsApp yang telah ditentukan.</li>

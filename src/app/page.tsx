@@ -230,7 +230,7 @@ export default function DashboardPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
             <Sparkles className="w-4 h-4 fill-current animate-pulse text-[#D4AF37]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">HI AQLI Sahabat</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Hi Sahabat AQLI</span>
           </div>
           <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight text-black">
             Assalamu'alaikum,<br />
@@ -325,17 +325,17 @@ export default function DashboardPage() {
               
               <div className="flex-1 text-center sm:text-left space-y-1">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <h3 className="text-lg font-black text-white font-headline tracking-tight uppercase">Mufradat Premium</h3>
+                  <h3 className="text-lg font-black text-white font-headline tracking-tight">Hi Mufradat</h3>
                   <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[7px] h-3.5 font-black px-1.5 uppercase tracking-widest">OPEN</Badge>
                 </div>
-                <p className="text-white/80 text-[10px] sm:text-xs font-medium leading-relaxed max-w-md">
+                <p className="text-white/80 text-[10px] sm:text-xs font-bold leading-relaxed max-w-md">
                   Pahami 1 hal Al-Qur'an per pekan dengan bimbingan & monitoring intensif. Mulai Rp 20rb/bln!
                 </p>
                 <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-bold text-white uppercase tracking-wider">
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-black text-white uppercase tracking-wider">
                     <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> TERSTRUKTUR
                   </div>
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-bold text-white uppercase tracking-wider">
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-black text-white uppercase tracking-wider">
                     <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" /> MONITORING
                   </div>
                 </div>
@@ -362,7 +362,7 @@ export default function DashboardPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Activity className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Mufradat</span>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Mufradat</span>
           </Link>
 
           {/* Hi Hafal */}
@@ -370,7 +370,7 @@ export default function DashboardPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4AF37] to-yellow-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Award className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Hafal</span>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Hafal</span>
           </Link>
 
           {/* Hi Ngaji */}
@@ -378,7 +378,7 @@ export default function DashboardPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#800000] to-[#5a0000] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               <BookOpen className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Ngaji</span>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Ngaji</span>
           </Link>
 
           {/* Hi Berbagi */}
@@ -386,7 +386,7 @@ export default function DashboardPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               <HeartHandshake className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Berbagi</span>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Berbagi</span>
           </Link>
 
           {/* Hi Mutaba'ah */}
@@ -399,7 +399,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Mutaba'ah</span>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Mutaba'ah</span>
           </Link>
 
           {/* Hi Muhasabah */}
@@ -412,7 +412,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-700 leading-tight">Muhasabah</span>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Muhasabah</span>
           </Link>
 
           {/* AI (Locked) */}
@@ -421,7 +421,7 @@ export default function DashboardPage() {
               <Bot className="w-7 h-7 text-slate-400" />
               <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
             </div>
-            <span className="text-[10px] font-black text-center uppercase tracking-tighter text-slate-400 leading-tight">Asisten AI</span>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Asisten AI</span>
           </div>
         </div>
       </div>

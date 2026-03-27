@@ -27,6 +27,11 @@ let splashShown = false;
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data: isAdminDoc } = useDoc("roles_admin", user?.id);
   const { data: isSuperAdminDoc } = useDoc("roles_superadmin", user?.id);
@@ -35,17 +40,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc || userData?.roleId === 'admin' || userData?.roleId === 'superadmin';
   const points = userData?.points || 0;
 
-  // Sidebar muncul untuk admin di tablet (md+) ke atas
-  // BottomNav muncul untuk user biasa di semua device
-  // Untuk admin: BottomNav hanya di mobile (sm), sidebar di md+
-  const showBottomNav = !hasAdminAccess;
-
   // Splash screen logic - only show once per session
   const [showSplash, setShowSplash] = useState(false);
 
   useEffect(() => {
     // Check if splash has been shown in this session
-    if (!splashShown && typeof window !== 'undefined') {
+    if (!splashShown && typeof window !== 'undefined' && mounted) {
       const sessionKey = 'aqli_splash_shown';
       const hasShown = sessionStorage.getItem(sessionKey);
 
@@ -55,7 +55,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         splashShown = true;
       }
     }
-  }, []);
+  }, [mounted]);
+
+  // Gate content until mounted to prevent hydration mismatch
+  const showAdminUI = mounted && hasAdminAccess;
+  const showUserUI = mounted && !isUserLoading;
+  const showBottomNav = mounted && !hasAdminAccess;
 
   return (
     <>
@@ -67,37 +72,41 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
         {/* Sidebar hanya muncul untuk admin di md ke atas */}
-        {hasAdminAccess && <AppSidebar />}
+        {showAdminUI && <AppSidebar />}
         <SidebarInset className="w-full flex flex-col">
           {/* Padding bottom untuk BottomNav */}
           <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
-            <header className="sticky top-0 z-40 flex h-20 items-center gap-4 bg-gradient-to-b from-[#800000] to-[#4a0000] border-b border-[#D4AF37]/20 shadow-[0_10px_40px_rgba(0,0,0,0.4)] px-6 transition-all backdrop-blur-xl bg-opacity-95 rounded-b-[40px]">
-              {hasAdminAccess && <SidebarTrigger className="flex text-[#D4AF37] hover:bg-white/10" />}
-              <div className="flex-1 flex justify-center">
-                <Logo variant="gold" showText={true} className="scale-75" textClassName="text-lg" imageSize={36} />
+            <header className="sticky top-0 z-40 flex h-20 items-center justify-between px-6 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
+              <div className="flex items-center gap-4">
+                {showAdminUI && <SidebarTrigger className="flex text-[#800000] hover:bg-[#800000]/5" />}
               </div>
+              
+              <div className="flex-1 flex justify-center">
+                <Logo variant="default" showText={true} className="scale-110" textClassName="text-xl" imageSize={42} />
+              </div>
+
               <div className="flex items-center gap-3">
-                {user && (
-                  <Link href="/leaderboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-[#D4AF37]/30 shadow-sm hover:bg-white/20 transition-all group backdrop-blur-sm">
+                {mounted && user && (
+                  <Link href="/leaderboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 shadow-sm hover:bg-slate-100 transition-all group backdrop-blur-sm">
                     <Trophy className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-                    <span className="text-[11px] font-black text-white tracking-tight">
+                    <span className="text-[11px] font-black text-slate-700 tracking-tight">
                       {points.toLocaleString()}
                     </span>
                     <Zap className="w-3 h-3 text-[#D4AF37] fill-[#D4AF37] animate-pulse" />
                   </Link>
                 )}
-                {!isUserLoading && (
+                {showUserUI && (
                   user ? (
                     <Link href="/profile">
-                      <Avatar className="h-10 w-10 border-2 border-[#D4AF37]/50 shadow-md transform hover:scale-105 transition-transform">
+                      <Avatar className="h-10 w-10 border-2 border-slate-100 shadow-sm transform hover:scale-105 transition-transform">
                         <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
-                        <AvatarFallback className="bg-white/10 text-[#D4AF37] text-xs font-black uppercase">
+                        <AvatarFallback className="bg-slate-100 text-[#800000] text-xs font-black uppercase">
                           {user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U'}
                         </AvatarFallback>
                       </Avatar>
                     </Link>
                   ) : (
-                    <Button asChild size="sm" className="bg-white hover:bg-white/90 text-[#800000] font-black uppercase rounded-xl px-6 shadow-lg shadow-[#000]/30 transition-all active:scale-95 text-[10px]">
+                    <Button asChild size="sm" className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase rounded-xl px-6 shadow-md transition-all active:scale-95 text-[10px]">
                       <Link href="/login">Masuk</Link>
                     </Button>
                   )

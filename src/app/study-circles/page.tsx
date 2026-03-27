@@ -16,7 +16,7 @@ import { useMemo } from "react";
 const studyCircles = [
   {
     id: "tikrar-j30-b1",
-    title: "TIKRAR DAILY JUZ 30 - BATCH 1",
+    title: "Hi Hafal (Tikrar Daily)",
     instructor: "Tim Asatizah AQLI",
     description: "Program hafalan terstruktur dengan metode Tikrar 40x. Infaq pendaftaran sudah termasuk bimbingan & ujian.",
     schedule: "Setiap Hari (Mandiri)",
@@ -26,7 +26,7 @@ const studyCircles = [
   },
   {
     id: "mufradat-premium",
-    title: "Hi Mufradat Premium",
+    title: "Hi Mufradat",
     instructor: "Tim Asatizah AQLI",
     description: "Pahami kosakata Al-Qur'an dengan bimbingan intensif & monitoring harian. Cukup 1 halaman per pekan untuk konsistensi tingkat tinggi.",
     schedule: "Senin - Jumat (Fleksibel)",

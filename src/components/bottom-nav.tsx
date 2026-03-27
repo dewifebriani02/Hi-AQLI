@@ -43,9 +43,8 @@ export function BottomNav() {
             >
               <div className={cn(
                 "flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300",
-                isActive
-                  ? "bg-[#800000] text-white scale-110"
-                  : "bg-white text-[#800000] border-2 border-[#800000]/20 hover:bg-[#800000] hover:text-white"
+                "bg-[#800000] text-white",
+                isActive ? "scale-110 shadow-[#800000]/40" : "hover:scale-105"
               )}>
                 <item.icon className="h-7 w-7" />
               </div>
