@@ -89,7 +89,8 @@ export default function MufradatSurahDetailPage() {
 
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
-    return new Set(progress.map(p => p.verseNumber));
+    // Ensure all verse numbers are treated as numbers, regardless of DB type (Text vs Int)
+    return new Set(progress.map(p => Number(p.verseNumber)));
   }, [progress]);
 
   useEffect(() => {
