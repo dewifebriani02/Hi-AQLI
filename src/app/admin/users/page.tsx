@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle } from "lucide-react";
+import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +56,7 @@ const TIKRAR_LEVELS = [
 const INITIAL_ADD_FORM = {
   username: "",
   email: "",
+  phone: "",
   roleId: "learner",
 };
 
@@ -83,6 +84,7 @@ export default function AdminUsersPage() {
     const updateData: any = {
       username: editingUser.username,
       roleId: editingUser.roleId,
+      phone: editingUser.phone || "",
       paidJuz: editingUser.paidJuz ? parseInt(editingUser.paidJuz) : null,
       tikrarLevel: editingUser.tikrarLevel ? parseInt(editingUser.tikrarLevel) : null,
       isTikrarPaid: editingUser.isTikrarPaid || false,
@@ -121,6 +123,7 @@ export default function AdminUsersPage() {
         id: tempId,
         username: addForm.username,
         email: addForm.email,
+        phone: addForm.phone,
         roleId: addForm.roleId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -191,6 +194,14 @@ export default function AdminUsersPage() {
                 />
               </div>
               <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase">Nomor WhatsApp</Label>
+                <Input
+                  placeholder="Contoh: 62812345678"
+                  value={addForm.phone}
+                  onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase">Peran / Hak Akses</Label>
                 <Select
                   value={addForm.roleId}
@@ -253,7 +264,10 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-foreground">{u.username || 'Tanpa Nama'}</span>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" /> {u.email}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" /> {u.email}</span>
+                          {u.phone && <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><Phone className="w-3 h-3" /> {u.phone}</span>}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -298,6 +312,15 @@ export default function AdminUsersPage() {
                               <Input
                                 value={editingUser?.username || ""}
                                 onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase text-muted-foreground">Nomor WhatsApp</Label>
+                              <Input
+                                placeholder="Contoh: 62812345678"
+                                value={editingUser?.phone || ""}
+                                onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
                               />
                             </div>
 

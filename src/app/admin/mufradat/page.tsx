@@ -1,0 +1,284 @@
+'use client';
+
+import { useCollection } from "@/supabase/db";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { 
+  Loader2, 
+  Search, 
+  BookOpen, 
+  TrendingUp, 
+  Users, 
+  Award, 
+  Star, 
+  MessageCircle, 
+  AlertCircle,
+  CheckCircle,
+  Phone
+} from "lucide-react";
+import { useState, useMemo } from "react";
+import { Input } from "@/components/ui/input";
+import { formatDistanceToNow, subDays } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const TOTAL_QURAN_VERSES = 6236;
+const WEEKLY_TARGET_VERSES = 15; // Roughly 1 page
+
+export default function AdminMufradatPage() {
+  const [search, setSearch] = useState("");
+  
+  // Fetch users and their quiz attempts
+  const { data: users, isLoading: isUsersLoading } = useCollection("users");
+  const { data: attempts, isLoading: isAttemptsLoading } = useCollection("quiz_attempts", {
+    filters: [{ column: 'isPassed', operator: '==', value: true }]
+  });
+
+  // Process data to get per-user stats
+  const userStats = useMemo(() => {
+    if (!users || !attempts) return [];
+
+    const sevenDaysAgo = subDays(new Date(), 7);
+
+    return users.map(user => {
+      // Filter unique passed verses for this user
+      const userPassedAttempts = attempts.filter(a => a.user_id === user.id);
+      
+      // Weekly progress (last 7 days)
+      const weeklyPassedAttempts = userPassedAttempts.filter(a => 
+        new Date(a.created_at) > sevenDaysAgo
+      );
+      
+      const uniqueVersesWeekly = new Set(
+        weeklyPassedAttempts.map(a => `${a.surahId}:${a.verseNumber}`)
+      );
+      
+      const weeklyCount = uniqueVersesWeekly.size;
+      const reachedWeeklyTarget = weeklyCount >= WEEKLY_TARGET_VERSES;
+
+      // Overall progress
+      const uniqueVerses = new Set(
+        userPassedAttempts.map(a => `${a.surahId}:${a.verseNumber}`)
+      );
+      
+      const passedCount = uniqueVerses.size;
+      const progressPercent = (passedCount / TOTAL_QURAN_VERSES) * 100;
+      
+      // Get last activity date
+      const lastAttempt = userPassedAttempts.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )[0];
+
+      return {
+        ...user,
+        passedCount,
+        weeklyCount,
+        reachedWeeklyTarget,
+        progressPercent,
+        lastActivity: lastAttempt ? new Date(lastAttempt.created_at) : null,
+        totalPoints: user.points || 0
+      };
+    }).sort((a, b) => b.passedCount - a.passedCount); // Sort by highest progress
+  }, [users, attempts]);
+
+  const filteredStats = userStats.filter(u => 
+    u.username?.toLowerCase().includes(search.toLowerCase()) ||
+    u.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const sendWhatsAppReminder = (u: any) => {
+    if (!u.phone) {
+      alert(`Nomor WhatsApp ${u.username} belum terdaftar di database. Silakan isi di Manajemen Peserta.`);
+      return;
+    }
+
+    const message = `Assalamualaikum Ukhti ${u.username}, ini dari Admin Hi AQLI. Kami melihat progres Mufradat pekan ini (${u.weeklyCount} ayat) belum mencapai target minimal 1 halaman (15 ayat). Semangat ya, yuk dicicil lagi hafalan kosa-katanya agar istiqomah! Jzk.`;
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${u.phone.replace(/[^0-9]/g, '')}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  if (isUsersLoading || isAttemptsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Memuat Data Progress...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-[#800000]">
+          <TrendingUp className="w-5 h-5" />
+          <span className="text-xs font-black uppercase tracking-widest">Admin Monitoring</span>
+        </div>
+        <h1 className="text-4xl font-black font-headline tracking-tighter text-[#800000]">PROGRESS & REMINDER</h1>
+        <p className="text-muted-foreground">Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden group">
+          <div className="h-1.5 bg-[#800000]" />
+          <CardHeader className="pb-2">
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest">Total Peserta Aktif</CardDescription>
+            <CardTitle className="text-3xl font-black flex items-center justify-between">
+              {users?.length || 0}
+              <Users className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
+
+        <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden group">
+          <div className="h-1.5 bg-[#D4AF37]" />
+          <CardHeader className="pb-2">
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest">Di Bawah Target Pekanan</CardDescription>
+            <CardTitle className="text-3xl font-black flex items-center justify-between text-rose-600">
+              {userStats.filter(u => !u.reachedWeeklyTarget && u.lastActivity && u.lastActivity > subDays(new Date(), 30)).length}
+              <AlertCircle className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
+
+        <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden group">
+          <div className="h-1.5 bg-emerald-500" />
+          <CardHeader className="pb-2">
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest">Total Progress Global</CardDescription>
+            <CardTitle className="text-3xl font-black flex items-center justify-between">
+              {Math.round((userStats.reduce((acc, curr) => acc + curr.progressPercent, 0) / (users?.length || 1)) * 10) / 10}%
+              <Award className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      {/* Main Monitoring Table */}
+      <Card className="border-none shadow-2xl overflow-hidden bg-white/90 backdrop-blur-md">
+        <CardHeader className="border-b bg-muted/30">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-xl font-black font-headline text-[#800000]">DAFTAR PROGRESS & JAPRI WA</CardTitle>
+              <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-70">Target: Minimal {WEEKLY_TARGET_VERSES} ayat / pekan</CardDescription>
+            </div>
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Cari Peserta..." 
+                className="pl-10 h-10 border-none bg-muted/50 rounded-lg text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/10">
+              <TableRow className="hover:bg-transparent border-none">
+                <TableHead className="w-[280px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Peserta</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest">Status Pekanan</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest">Ayat Lulus</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest w-[160px]">Progres (%)</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">Aksi Reminder</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStats.map((u) => (
+                <TableRow key={u.id} className="hover:bg-[#800000]/5 transition-colors group">
+                  <TableCell className="py-4 pl-6">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border-2 border-[#D4AF37]/30 group-hover:border-[#800000]/30 transition-colors">
+                        <AvatarImage src={u.photo_url || u.photoURL} />
+                        <AvatarFallback className="bg-[#800000] text-white font-bold">{u.username?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-[#800000] group-hover:underline cursor-pointer">{u.username || 'Hamba Allah'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground lowercase">{u.email}</span>
+                          {u.phone && <span className="text-[9px] font-bold text-emerald-600 flex items-center gap-0.5"><Phone className="w-2 h-2" /> WA Aktif</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {u.reachedWeeklyTarget ? (
+                      <Badge className="bg-emerald-500 hover:bg-emerald-600 font-black text-[9px] gap-1 px-2">
+                        <CheckCircle className="w-3 h-3" /> AMAN (TARGET)
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="bg-rose-500 hover:bg-rose-600 font-black text-[9px] gap-1 px-2">
+                        <AlertCircle className="w-3 h-3" /> DI BAWAH TARGET
+                      </Badge>
+                    )}
+                    <div className="text-[8px] mt-1 font-bold text-muted-foreground uppercase">+ {u.weeklyCount} ayat pekan ini</div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-black text-xs border-[#800000]/20 text-[#800000]">
+                      {u.passedCount} / {TOTAL_QURAN_VERSES}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1.5">
+                      <Progress value={u.progressPercent} className="h-2 bg-muted transition-all" />
+                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{u.progressPercent.toFixed(2)}% Hafal</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
+                    <Button 
+                      size="sm" 
+                      className={cn(
+                        "h-9 gap-2 font-black text-[10px] rounded-full transition-all active:scale-[0.9] shadow-md",
+                        u.reachedWeeklyTarget 
+                          ? "bg-muted text-muted-foreground" 
+                          : "bg-[#25D366] hover:bg-[#128C7E] text-white"
+                      )}
+                      onClick={() => sendWhatsAppReminder(u)}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      REMINDER WA
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredStats.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground font-medium italic">
+                    Tidak ada data peserta ditemukan...
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      
+      <div className="bg-[#800000]/5 p-6 rounded-2xl border-2 border-dashed border-[#800000]/20 max-w-2xl">
+        <h4 className="flex items-center gap-2 font-black text-[#800000] mb-2 uppercase tracking-tight">
+          <MessageCircle className="w-5 h-5" /> Isi Pesan Reminder:
+        </h4>
+        <p className="text-sm italic text-muted-foreground leading-relaxed">
+          "Assalamualaikum Ukhti [Nama], ini dari Admin Hi AQLI. Kami melihat progres Mufradat pekan ini ([Jumlah] ayat) belum mencapai target minimal 1 halaman (15 ayat). Semangat ya, yuk dicicil lagi hafalan kosa-katanya agar istiqomah! Jzk."
+        </p>
+      </div>
+    </div>
+  );
+}

@@ -40,6 +40,7 @@ const adminItems = [
   { href: "/admin/campaigns", label: "Manajemen Kampanye", icon: LayoutGrid },
   { href: "/admin/users", label: "Manajemen Peserta", icon: UserCog },
   { href: "/admin/classes", label: "Manajemen Kelas", icon: Library },
+  { href: "/admin/mufradat", label: "Progres Mufradat", icon: GraduationCap },
 ];
 
 const navItems = [

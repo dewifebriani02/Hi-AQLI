@@ -1,17 +1,41 @@
 'use client';
 
 import { SurahList } from "@/components/surah-list";
-import { MushafPage } from "@/components/mushaf-page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, Layers } from "lucide-react";
-import Link from "next/link";
+import { BookOpen, Layers, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/juz-list";
+import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
+import { useMemo } from "react";
 
 export default function MufradatPage() {
+  const { user, isUserLoading } = useUser();
+
+  // Fetch all passed attempts for the current user
+  const progressOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'isPassed', operator: '==', value: true }
+    ]
+  }), [user?.id]);
+
+  const { data: progress, isLoading: isProgressLoading } = useCollection(
+    "quiz_attempts", 
+    user ? progressOptions : undefined
+  );
+
+  if (isUserLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Menyiapkan Kurikulum...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6 pb-24 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-6 pb-24 max-w-4xl mx-auto px-4 sm:px-0">
       <div className="flex flex-col gap-2 mt-4 px-1">
         <div className="flex items-center gap-2 text-[#800000] mb-1">
           <BookOpen className="w-5 h-5" />
@@ -33,12 +57,12 @@ export default function MufradatPage() {
         
         <TabsContent value="surah" className="space-y-6 focus-visible:outline-none">
           <div className="space-y-4">
-            <SurahList baseUrl="/mufradat" />
+            <SurahList baseUrl="/mufradat" userProgress={progress} />
           </div>
         </TabsContent>
         
         <TabsContent value="juz" className="focus-visible:outline-none">
-          <JuzList />
+          <JuzList userProgress={progress} />
         </TabsContent>
       </Tabs>
     </div>
