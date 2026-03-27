@@ -54,7 +54,7 @@ export default function ProfilePage() {
 
   // Fetch real donation history
   const donationOptions = useMemo(() => ({
-    filters: [{ column: 'userId', operator: '==', value: user?.id }],
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }],
     orderBy: { column: 'created_at', ascending: false },
     limit: 20
   }), [user?.id]);
@@ -63,8 +63,8 @@ export default function ProfilePage() {
 
   // Fetch user data for payment status and points
   const { data: userData } = useDoc("users", user?.id);
-  const isPaid = userData?.isTikrarPaid;
-  const paidJuz = userData?.paidJuz;
+  const isPaid = userData?.is_tikrar_paid;
+  const paidJuz = userData?.paid_juz;
   const points = userData?.points || 0;
 
   // Fetch all users to calculate rank
@@ -254,7 +254,7 @@ export default function ProfilePage() {
             <TabsContent value="halaqah" className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Materi Diikuti</h3>
-                <Badge variant="outline" className="text-[10px] font-bold">{userData?.followedHalaqahs?.length || 0} Aktif</Badge>
+                <Badge variant="outline" className="text-[10px] font-bold">{userData?.followed_halaqahs?.length || 0} Aktif</Badge>
               </div>
               <div className="grid gap-3">
                 {isPaid && (
@@ -272,11 +272,11 @@ export default function ProfilePage() {
                           <p className="text-[10px] text-blue-700 font-medium">Metode 40x Repetisi</p>
                         </div>
                       </div>
-                      <Link href="/hafal"><ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600" /></Link>
+                      <Link href="/tikrar"><ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600" /></Link>
                     </CardContent>
                   </Card>
                 )}
-                {userData?.followedHalaqahs?.map((hid: string) => (
+                {userData?.followed_halaqahs?.map((hid: string) => (
                   <Card key={hid} className="border shadow-none hover:bg-muted/30 transition-all cursor-pointer group">
                     <CardContent className="p-4 flex items-center justify-between gap-4">
                       <div className="flex items-center gap-4 flex-1">
@@ -317,7 +317,7 @@ export default function ProfilePage() {
                       donations.map((d) => (
                         <TableRow key={d.id}>
                           <TableCell className="text-[11px] font-medium">
-                            {d.createdAt ? new Date(d.createdAt).toLocaleDateString('id-ID') : '-'}
+                            {d.created_at ? new Date(d.created_at).toLocaleDateString('id-ID') : '-'}
                           </TableCell>
                           <TableCell className="text-[11px] font-bold text-[#800000]">
                             Rp {d.amount?.toLocaleString('id-ID')}

@@ -15,14 +15,11 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  BookOpen,
   GraduationCap,
-  LayoutDashboard,
   HeartHandshake,
   Settings,
   ShieldCheck,
   Lock,
-  Trophy,
   UserCog,
   LayoutGrid,
   Library,
@@ -43,14 +40,6 @@ const adminItems = [
   { href: "/admin/mufradat", label: "Progres Mufradat", icon: GraduationCap },
 ];
 
-const navItems = [
-  { href: "/", label: "Dasbor", icon: LayoutDashboard },
-  { href: "/mufradat", label: "Hi Mufradat", icon: BookOpen },
-  { href: "/ngaji", label: "Hi Ngaji", icon: LayoutGrid },
-  { href: "/hafal", label: "Hi Hafal", icon: GraduationCap },
-  { href: "/berbagi", label: "Hi Berbagi", icon: HeartHandshake },
-  { href: "/leaderboard", label: "Papan Juara", icon: Trophy },
-];
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -61,7 +50,7 @@ export function AppSidebar() {
   const { data: isSuperAdmin } = useDoc(user ? "roles_superadmin" : null, user?.id);
   const { data: userData } = useDoc(user ? "users" : null, user?.id);
 
-  const hasAdminAccess = !!isAdmin || !!isSuperAdmin || userData?.roleId === 'admin' || userData?.roleId === 'superadmin';
+  const hasAdminAccess = !!isAdmin || !!isSuperAdmin || userData?.role_id === 'admin' || userData?.role_id === 'superadmin';
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -85,7 +74,7 @@ export function AppSidebar() {
               textClassName="text-white"
             />
           </Link>
-          <SidebarTrigger className="hidden md:flex text-white hover:bg-white/10" />
+          <SidebarTrigger className="flex text-white hover:bg-white/10" />
         </div>
       </SidebarHeader>
       <SidebarContent className="p-2 pt-4 bg-[#800000]">
@@ -118,36 +107,6 @@ export function AppSidebar() {
           </SidebarMenu>
         </div>
 
-        <SidebarSeparator />
-
-        <div className="px-3 py-2">
-          <h2 className="mb-2 px-4 text-[10px] font-black uppercase tracking-widest text-white/50 group-data-[collapsible=icon]:hidden">
-            Navigasi Utama
-          </h2>
-          <SidebarMenu>
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-              return (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive}
-                    tooltip={item.label}
-                    className={cn(
-                      "transition-all duration-300",
-                      isActive ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90" : "text-white hover:bg-white/10"
-                    )}
-                  >
-                    <Link href={item.href} onClick={handleLinkClick}>
-                      <item.icon className={cn("shrink-0", isActive ? "text-black" : "text-white")} />
-                      <span className="font-bold">{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </div>
       </SidebarContent>
       <SidebarFooter className="p-2 border-t border-[#D4AF37]/30 bg-[#800000]">
         <SidebarMenu>

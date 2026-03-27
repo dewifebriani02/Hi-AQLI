@@ -16,7 +16,7 @@ import { useMemo } from "react";
 const studyCircles = [
   {
     id: "tikrar-j30-b1",
-    title: "Hi Hafal (Tikrar Daily)",
+    title: "Hi Tikrar (Tikrar Daily)",
     instructor: "Tim Asatizah AQLI",
     description: "Program hafalan terstruktur dengan metode Tikrar 40x. Infaq pendaftaran sudah termasuk bimbingan & ujian.",
     schedule: "Setiap Hari (Mandiri)",
@@ -108,7 +108,7 @@ export default function StudyCirclesPage() {
 
     let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
-      href = circle.id === 'tikrar-j30-b1' ? '/tajweed' : `/study-circles/${circle.id}`;
+      href = circle.id === 'tikrar-j30-b1' ? '/tikrar' : `/study-circles/${circle.id}`;
     }
 
     return (

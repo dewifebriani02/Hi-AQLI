@@ -148,7 +148,7 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "m
                   isCompleted 
                     ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80 shadow-md" 
                     : variant === 'tilawah'
-                      ? "bg-white hover:bg-emerald-50 hover:shadow-md border border-slate-100"
+                      ? "bg-white hover:bg-[#800000]/5 hover:shadow-md border border-slate-100"
                       : "bg-card/50 hover:bg-accent hover:text-accent-foreground hover:shadow-md"
                 )}
               >
@@ -164,7 +164,7 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "m
                       isCompleted 
                         ? "bg-emerald-500 text-white" 
                         : variant === 'tilawah'
-                          ? "bg-emerald-100 text-emerald-700 group-hover:bg-emerald-500 group-hover:text-white"
+                          ? "bg-[#800000]/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
                           : "bg-primary/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
                     )}>
                       {j}
@@ -177,7 +177,7 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "m
                       )}>Juz {j}</h4>
                       <p className={cn(
                         "text-[10px] font-bold uppercase tracking-widest opacity-70",
-                        isCompleted ? "text-emerald-700" : variant === 'tilawah' ? "text-emerald-600" : "text-[#800000]"
+                        isCompleted ? "text-emerald-700" : variant === 'tilawah' ? "text-[#800000]" : "text-[#800000]"
                       )}>
                         Dimulai: {mapping.name}
                       </p>
@@ -192,7 +192,7 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "m
                       <div className={cn(
                         "px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors",
                         variant === 'tilawah'
-                          ? "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white"
+                          ? "bg-[#800000]/5 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
                           : "bg-muted/30 text-muted-foreground group-hover:bg-[#800000]/10 group-hover:text-[#800000]"
                       )}>
                         {variant === 'tilawah' ? 'BACA JUZ' : 'BELAJAR JUZ'}

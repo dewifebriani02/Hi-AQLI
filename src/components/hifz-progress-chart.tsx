@@ -115,7 +115,7 @@ export function HifzProgressChart() {
 
       <div className="space-y-5">
         <div className="flex items-center justify-between px-1">
-          <h4 className="text-sm font-black font-headline uppercase text-[#800000]">Matriks Hafalan</h4>
+          <h4 className="text-sm font-black font-headline uppercase text-[#800000]">Matriks Tikrar</h4>
           <Badge className="bg-[#800000] text-white text-[9px] font-black tracking-widest">30 JUZ</Badge>
         </div>
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-3">

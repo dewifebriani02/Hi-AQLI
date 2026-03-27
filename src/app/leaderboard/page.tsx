@@ -176,7 +176,7 @@ export default function LeaderboardPage() {
                     <span className="text-sm font-black text-black uppercase">{u.username || 'Hamba Allah'}</span>
                     <div className="flex items-center gap-1.5">
                       <Badge className="bg-[#800000] text-white text-[8px] font-black uppercase px-1.5 py-0">
-                        {u.roleId === 'learner' ? 'THALIBAH' : u.roleId?.toUpperCase() || 'SANTRI'}
+                        {u.role_id === 'learner' ? 'THALIBAH' : u.role_id?.toUpperCase() || 'SANTRI'}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground font-bold uppercase">{(u.points || 0).toLocaleString()} Poin</span>
                     </div>

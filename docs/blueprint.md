@@ -34,7 +34,7 @@
 ### Core Modules (Active)
 - **Hi Ngaji**: Interactive Tajwid & Tahsin learning.
 - **Hi Mufradat**: Mastery of Qur'anic vocabulary and translations.
-- **Hi Hafal (Tikrar)**: Memorization management using the Tikrar method.
+- **Hi Tikrar**: Memorization management using the Tikrar method.
 - **Hi Berbagi (Infaq Digital)**: Seamless Infaq flow via BSI with unique codes and proof submission.
 - **Hi Mutaba'ah**: Daily target checklist for 'Adab' and 'Ibadah'.
 - **Hi Muhasabah**: Self-evaluation and spiritual reflection tools.

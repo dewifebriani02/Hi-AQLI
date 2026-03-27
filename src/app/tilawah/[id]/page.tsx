@@ -258,7 +258,7 @@ export default function SurahDetailPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-12 h-10 rounded-full text-xs font-bold border transition-all bg-emerald-50 text-emerald-700 border-emerald-100 italic">
+                  <div className="flex items-center justify-center w-12 h-10 rounded-full text-xs font-bold border transition-all bg-[#800000]/5 text-[#800000] border-[#800000]/10 italic">
                     ({verse.verse_number})
                   </div>
                 </div>

@@ -81,16 +81,19 @@ export default function AdminClassesPage() {
   // Fetch Registrations for Selected Halaqah (Detailed view in Dialog)
   const participantOptions = useMemo(() => ({
     filters: [
-      { column: 'halaqahId', operator: '==', value: selectedHalaqah?.id },
+      { column: 'halaqah_id', operator: '==', value: selectedHalaqah?.id },
       { column: 'status', operator: '==', value: 'active' }
     ]
   }), [selectedHalaqah?.id]);
 
-  const { data: participants, isLoading: isParticipantsLoading } = useCollection("halaqah_registrations", participantOptions);
+  const { data: participants, isLoading: isParticipantsLoading } = useCollection(
+    selectedHalaqah?.id ? "halaqah_registrations" : null, 
+    participantOptions
+  );
 
   // Helper to get sisa kuota for a specific class
   const getSisaKuota = (halaqah: any) => {
-    const totalReg = allRegistrations?.filter(r => r.halaqahId === halaqah.id).length || 0;
+    const totalReg = allRegistrations?.filter(r => r.halaqah_id === halaqah.id).length || 0;
     return Math.max(0, (halaqah.quota || 0) - totalReg);
   };
 
@@ -112,20 +115,20 @@ export default function AdminClassesPage() {
     setEditingHalaqah(h);
     const [day, time] = (h.schedule || "Senin, 19:00").split(", ");
     setForm({
-      programType: h.programType || "hi_ngaji",
+      programType: h.program_type || "hi_ngaji",
       title: h.title,
       description: h.description || "",
       day: day || "Senin",
       time: time || "19:00",
-      startDate: h.startDate || "",
-      durationWeeks: h.durationWeeks || 4,
+      startDate: h.start_date || "",
+      durationWeeks: h.duration_weeks || 4,
       juz: h.juz || "1",
       level: h.level || "Semua Level",
-      isPremium: h.isPremium || false,
-      hasExam: h.hasExam ?? true,
-      hasCertificate: h.hasCertificate ?? true,
+      isPremium: h.is_premium || false,
+      hasExam: h.has_exam ?? true,
+      hasCertificate: h.has_certificate ?? true,
       tag: h.tag || "",
-      basePrice: h.basePrice || 0,
+      basePrice: h.base_price || 0,
       quota: h.quota || 20,
     });
     setIsDialogOpen(true);
@@ -143,26 +146,26 @@ export default function AdminClassesPage() {
     }
 
     const finalData = {
-      programType: form.programType,
+      program_type: form.programType,
       title: form.title,
       muallimah: "Admin / Menunggu Assignment",
-      muallimahId: "",
+      muallimah_id: "",
       musyrifah: "",
-      musyrifahId: "",
+      musyrifah_id: "",
       description: form.description,
       schedule: finalSchedule,
-      startDate: form.startDate,
-      endDate: calculatedEndDate,
-      durationWeeks: form.durationWeeks,
+      start_date: form.startDate,
+      end_date: calculatedEndDate,
+      duration_weeks: form.durationWeeks,
       juz: form.programType === 'hi_ngaji' ? null : form.juz,
       level: form.level,
-      isPremium: form.isPremium,
-      hasExam: form.hasExam,
-      hasCertificate: form.hasCertificate,
+      is_premium: form.isPremium,
+      has_exam: form.hasExam,
+      has_certificate: form.hasCertificate,
       tag: form.tag,
-      basePrice: form.basePrice,
+      base_price: form.basePrice,
       quota: form.quota,
-      updatedAt: new Date().toISOString()
+      updated_at: new Date().toISOString()
     };
 
     try {
@@ -172,7 +175,7 @@ export default function AdminClassesPage() {
       } else {
         addDocumentNonBlocking("halaqahs", {
           ...finalData,
-          createdAt: new Date().toISOString()
+          created_at: new Date().toISOString()
         });
         toast({ title: "Kelas Berhasil Ditambahkan" });
       }
@@ -189,7 +192,7 @@ export default function AdminClassesPage() {
     if (!userToAdd) return;
 
     // Check if already in class
-    if (participants?.find(p => p.userId === newParticipantId)) {
+    if (participants?.find(p => p.user_id === newParticipantId)) {
       toast({ variant: "destructive", title: "User sudah ada di kelas ini." });
       return;
     }
@@ -200,25 +203,25 @@ export default function AdminClassesPage() {
       // 1. Create Registration Record
       const { error: regError } = await supabase.from("halaqah_registrations").upsert({
         id: regId,
-        userId: newParticipantId,
-        userName: userToAdd.username || userToAdd.email,
-        userEmail: userToAdd.email,
-        halaqahId: selectedHalaqah.id,
-        halaqahTitle: selectedHalaqah.title,
+        user_id: newParticipantId,
+        user_name: userToAdd.username || userToAdd.email,
+        user_email: userToAdd.email,
+        halaqah_id: selectedHalaqah.id,
+        halaqah_title: selectedHalaqah.title,
         status: "active",
-        isPaid: false,
-        createdAt: new Date().toISOString(),
-        verifiedAt: new Date().toISOString()
+        is_paid: false,
+        created_at: new Date().toISOString(),
+        verified_at: new Date().toISOString()
       });
 
       if (regError) throw regError;
 
-      // 2. Update User Profile followedHalaqahs
-      const currentFollowed = userToAdd.followedHalaqahs || [];
+      // 2. Update User Profile followed_halaqahs
+      const currentFollowed = userToAdd.followed_halaqahs || [];
       if (!currentFollowed.includes(selectedHalaqah.id)) {
         const { error: userError } = await supabase.from("users").update({
-          followedHalaqahs: [...currentFollowed, selectedHalaqah.id],
-          updatedAt: new Date().toISOString()
+          followed_halaqahs: [...currentFollowed, selectedHalaqah.id],
+          updated_at: new Date().toISOString()
         }).eq('id', newParticipantId);
 
         if (userError) throw userError;
@@ -290,8 +293,8 @@ export default function AdminClassesPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-black text-sm uppercase text-[#800000]">{h.title}</h3>
-                        <Badge className="bg-slate-800 text-white text-[7px] font-black h-4 uppercase">{h.programType === 'hi_mufradat' ? 'HI MUFRADAT' : h.programType === 'tikrar_daily' ? 'TIKRAR DAILY' : 'HI NGAJI'}</Badge>
-                        {h.isPremium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
+                        <Badge className="bg-slate-800 text-white text-[7px] font-black h-4 uppercase">{h.program_type === 'hi_mufradat' ? 'HI MUFRADAT' : h.program_type === 'tikrar_daily' ? 'TIKRAR DAILY' : 'HI NGAJI'}</Badge>
+                        {h.is_premium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -316,7 +319,7 @@ export default function AdminClassesPage() {
                     <Badge variant="secondary" className={cn("text-[8px] font-black h-4 border uppercase gap-1", sisa === 0 ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
                       <Info className="w-2.5 h-2.5" /> Sisa Kuota: {sisa} / {total}
                     </Badge>
-                    {h.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4">UJIAN</Badge>}
+                    {h.has_exam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4">UJIAN</Badge>}
                   </div>
 
                   <div className="flex items-center justify-between border-t pt-3 mt-auto">
@@ -327,7 +330,7 @@ export default function AdminClassesPage() {
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
                         <Calendar className="w-3 h-3 text-[#800000]" />
-                        {h.startDate ? new Date(h.startDate).toLocaleDateString('id-ID') : '-'} s/d {h.endDate ? new Date(h.endDate).toLocaleDateString('id-ID') : '-'}
+                        {h.start_date ? new Date(h.start_date).toLocaleDateString('id-ID') : '-'} s/d {h.end_date ? new Date(h.end_date).toLocaleDateString('id-ID') : '-'}
                       </div>
                       <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground uppercase">
                         <Clock className="w-3 h-3 text-[#800000]" />
@@ -363,7 +366,7 @@ export default function AdminClassesPage() {
                     <SelectValue placeholder="Pilih thalibah..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {allUsers?.filter(u => u.roleId === 'learner').map(u => (
+                    {allUsers?.filter(u => u.role_id === 'learner').map(u => (
                       <SelectItem key={u.id} value={u.id}>{u.username || u.email}</SelectItem>
                     ))}
                   </SelectContent>
@@ -387,11 +390,11 @@ export default function AdminClassesPage() {
                     <div key={p.id} className="p-3 flex items-center justify-between group">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold">
-                          {p.userName?.[0] || 'U'}
+                          {p.user_name?.[0] || 'U'}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold">{p.userName}</span>
-                          <span className="text-[9px] text-muted-foreground">{p.userEmail}</span>
+                          <span className="text-xs font-bold">{p.user_name}</span>
+                          <span className="text-[9px] text-muted-foreground">{p.user_email}</span>
                         </div>
                       </div>
                       <Button
@@ -430,7 +433,7 @@ export default function AdminClassesPage() {
                 <SelectContent>
                   <SelectItem value="hi_ngaji">Hi Ngaji (Reguler)</SelectItem>
                   <SelectItem value="hi_mufradat">Hi Mufradat (Target Hafalan)</SelectItem>
-                  <SelectItem value="tikrar_daily">Tikrar Daily / Hi Hafal</SelectItem>
+                  <SelectItem value="tikrar_daily">Tikrar Daily / Hi Tikrar</SelectItem>
                 </SelectContent>
               </Select>
             </div>

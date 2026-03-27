@@ -51,13 +51,11 @@ export default function AuthCallbackPage() {
             id: user.id,
             username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
             email: user.email,
-            roleId: 'learner',
+            role_id: 'learner',
             points: 0,
-            followedHalaqahs: [],
+            followed_halaqahs: [],
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            createdAt: new Date().toISOString(), // Handling both naming conventions
-            updatedAt: new Date().toISOString(),
           }, { onConflict: 'id' });
 
           if (upsertError) {

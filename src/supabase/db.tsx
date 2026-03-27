@@ -13,7 +13,7 @@ export function useDoc<T = any>(
     id: string | null | undefined
 ): UseDocResult<T> {
     const [data, setData] = useState<(T & { id: string }) | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(!!table && !!id);
     const [error, setError] = useState<Error | null>(null);
 
     const fetchData = useCallback(async () => {
@@ -78,26 +78,26 @@ export function useCollection<T = any>(
     }
 ) {
     const [data, setData] = useState<(T & { id: string })[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(!!table);
     const [error, setError] = useState<Error | null>(null);
 
     const optionsKey = JSON.stringify(options);
 
     const fetchData = useCallback(async () => {
         if (!table) return;
-        // Skip fetch if options is undefined (used for conditional fetching)
-        if (options === undefined) {
-            setData([]);
-            setIsLoading(false);
-            setError(null);
-            return;
-        }
         setIsLoading(true);
         setError(null);
 
         let q = supabase.from(table).select('*');
 
         if (options?.filters) {
+            // Skip if any filter value is undefined
+            if (options.filters.some(f => f.value === undefined)) {
+                setData([]);
+                setIsLoading(false);
+                setError(null);
+                return;
+            }
             options.filters.forEach(f => {
                 if (f.operator === '==') q = q.eq(f.column, f.value);
                 if (f.operator === '>=') q = q.gte(f.column, f.value);

@@ -51,7 +51,7 @@ function RegistrationForm() {
 
   // Fetch ALL available halaqahs for selection
   const { data: allHalaqahs, isLoading: isHalaqahsLoading } = useCollection("halaqahs", {
-    orderBy: { column: 'createdAt', ascending: false }
+    orderBy: { column: 'created_at', ascending: false }
   });
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(user ? "users" : null, user?.id);
@@ -67,8 +67,8 @@ function RegistrationForm() {
   // Check for ANY existing registration for this halaqah to prevent duplicates
   const regOptions = useMemo(() => ({
     filters: [
-      { column: 'userId', operator: '==', value: user?.id },
-      { column: 'halaqahId', operator: '==', value: selectedHalaqahId },
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'halaqah_id', operator: '==', value: selectedHalaqahId },
       { column: 'status', operator: 'in', value: ["active", "pending_verification"] }
     ]
   }), [user?.id, selectedHalaqahId]);
@@ -84,7 +84,7 @@ function RegistrationForm() {
   }, [isUserLoading, isUserDocLoading, isRegLoading, isHalaqahsLoading]);
 
   const isProfileActive = (
-    (selectedHalaqahId && userData?.followedHalaqahs?.includes(selectedHalaqahId))
+    (selectedHalaqahId && userData?.followed_halaqahs?.includes(selectedHalaqahId))
   );
 
   const existingReg = existingRegs?.[0];
@@ -111,12 +111,12 @@ function RegistrationForm() {
   const [akadAccepted, setAkadAccepted] = useState(false);
 
   // Program Detection
-  const isMufradat = circle?.programType === 'hi_mufradat' || halaqahId === 'mufradat-premium';
-  const isTikrar = circle?.programType === 'tikrar_daily' || halaqahId === 'tikrar-j30-b1';
+  const isMufradat = (circle?.program_type === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
+  const isTikrar = circle?.program_type === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
 
   const isPremiumProgram = useMemo(() => {
-    return circle?.isPremium === true || isMufradat || isTikrar;
-  }, [circle?.isPremium, isMufradat, isTikrar]);
+    return circle?.is_premium === true || isMufradat || isTikrar;
+  }, [circle?.is_premium, isMufradat, isTikrar]);
 
   // Minimum Infaq Calculation
   const minInfaq = useMemo(() => {
@@ -124,8 +124,11 @@ function RegistrationForm() {
       const rate = mufradatTarget === 'page' ? 20000 : 50000;
       return rate * parseInt(durationMonths);
     }
-    return circle?.basePrice || 0;
-  }, [isMufradat, mufradatTarget, durationMonths, circle?.basePrice]);
+    if (isTikrar) {
+      return levels.find(l => l.id === level)?.price || 50000;
+    }
+    return circle?.base_price || 0;
+  }, [isMufradat, isTikrar, mufradatTarget, durationMonths, level, circle?.base_price]);
 
   useEffect(() => {
     // Ensure infaqAmount is at least the minimum
@@ -158,9 +161,13 @@ function RegistrationForm() {
       return;
     }
     if (isMufradat && !akadAccepted) {
-      toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Commitment" });
+      toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Commitment Mufradat" });
       return;
     }
+    if (isTikrar && !akadAccepted) {
+        toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Commitment Tikrar" });
+        return;
+      }
     if (isPremiumProgram && infaqAmount < minInfaq) {
       toast({ variant: "destructive", title: `Minimal infaq untuk target ini adalah Rp ${minInfaq.toLocaleString('id-ID')}` });
       return;
@@ -185,21 +192,21 @@ function RegistrationForm() {
     setLoading(true);
     try {
       const { error } = await supabase.from("halaqah_registrations").insert({
-        userId: user?.id,
-        userName: name,
-        userEmail: user?.email,
+        user_id: user?.id,
+        user_name: name,
+        user_email: user?.email,
         whatsapp: whatsapp,
-        halaqahId: selectedHalaqahId,
-        halaqahTitle: circle?.title || (isMufradat ? 'Hi Mufradat' : 'Halaqah'),
-        isPaid: isPremiumProgram,
+        halaqah_id: selectedHalaqahId,
+        halaqah_title: circle?.title || (isMufradat ? 'Hi Mufradat' : 'Halaqah'),
+        is_paid: isPremiumProgram,
         level: isTikrar ? parseInt(level) : null,
-        targetJuz: isTikrar ? parseInt(targetJuz) : null,
+        target_juz: isTikrar ? parseInt(targetJuz) : null,
         amount: isPremiumProgram ? infaqAmount + uniqueCode : 0,
-        paymentMethod: isPremiumProgram ? "transfer" : "free",
-        senderName: isPremiumProgram ? senderName : null,
-        proofFileName: proofFile?.name || null,
+        payment_method: isPremiumProgram ? "transfer" : "free",
+        sender_name: isPremiumProgram ? senderName : null,
+        proof_file_name: proofFile?.name || null,
         status: "pending_verification",
-        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
         // Extra metadata for Hi Mufradat
         metadata: isMufradat ? {
           months: parseInt(durationMonths),
@@ -254,7 +261,7 @@ function RegistrationForm() {
               )}
             </div>
             <Button asChild className={cn("w-full font-black h-14 rounded-xl text-lg shadow-lg", isActuallyActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#800000]")}>
-              <Link href={isActuallyActive ? (halaqahId === 'tikrar-j30-b1' ? '/hafal' : `/study-circles/${circle?.id}`) : "/"}>
+              <Link href={isActuallyActive ? (halaqahId === 'tikrar-j30-b1' || selectedHalaqahId === 'tikrar-premium' ? '/tikrar' : `/study-circles/${circle?.id}`) : "/"}>
                 {isActuallyActive ? <><PlayCircle className="mr-2 w-6 h-6" /> MASUK KELAS</> : "KEMBALI KE DASBOR"}
               </Link>
             </Button>
@@ -289,7 +296,7 @@ function RegistrationForm() {
           <div className="mx-auto bg-white/20 rounded-full p-4 w-fit mb-4 border-2 border-white/10"><BookOpen className="h-8 w-8 text-amber-300" /></div>
           <CardTitle className="font-headline text-3xl font-black">Pendaftaran Halaqah</CardTitle>
           <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">
-            {circle?.title || (isMufradat ? 'Hi Mufradat' : (isTikrar ? 'Hi Hafal' : 'Pendaftaran')) || (selectedHalaqahId ? 'Program Terpilih' : 'Silakan Pilih Program')}
+            {circle?.title || (isMufradat ? 'Hi Mufradat' : (isTikrar ? 'Hi Tikrar' : 'Pendaftaran')) || (selectedHalaqahId ? 'Program Terpilih' : 'Silakan Pilih Program')}
           </CardDescription>
         </CardHeader>
 
@@ -305,11 +312,14 @@ function RegistrationForm() {
                   <SelectContent>
                     {(allHalaqahs || []).map(h => (
                       <SelectItem key={h.id} value={h.id} className="font-bold py-3 text-xs">
-                        {h.title} {h.isPremium ? '(Premium)' : '(Gratis)'}
+                        {h.title} {h.is_premium ? '(Premium)' : '(Gratis)'}
                       </SelectItem>
                     ))}
                     {!allHalaqahs?.length && (
-                      <SelectItem value="mufradat-premium" className="font-bold">Hi Mufradat</SelectItem>
+                      <>
+                        <SelectItem value="mufradat-premium" className="font-bold">Hi Mufradat</SelectItem>
+                        <SelectItem value="tikrar-premium" className="font-bold">Hi Tikrar</SelectItem>
+                      </>
                     )}
                   </SelectContent>
                 </Select>
@@ -333,24 +343,70 @@ function RegistrationForm() {
               </div>
 
               {isTikrar && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 bg-muted/30 rounded-2xl border-2 border-dashed">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest">Level</Label>
-                    <Select value={level} onValueChange={setLevel}>
-                      <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name} - Rp {l.price.toLocaleString('id-ID')}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 bg-muted/30 rounded-2xl border-2 border-dashed">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest">Level</Label>
+                      <Select value={level} onValueChange={setLevel}>
+                        <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name} - Rp {l.price.toLocaleString('id-ID')}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest">Target Juz</Label>
+                      <Select value={targetJuz} onValueChange={setTargetJuz}>
+                        <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 30 }, (_, i) => <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest">Target Juz</Label>
-                    <Select value={targetJuz} onValueChange={setTargetJuz}>
-                      <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 30 }, (_, i) => <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Nominal Infaq</Label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-3.5 text-xs font-black text-muted-foreground">Rp</div>
+                      <Input
+                        type="number"
+                        value={infaqAmount}
+                        onChange={(e) => setInfaqAmount(parseInt(e.target.value) || 0)}
+                        className="pl-10 h-14 border-2 text-xl font-black text-[#800000] focus-visible:ring-[#800000]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tikrar Akad Section */}
+                  <div className="p-6 bg-blue-50/50 rounded-2xl border-2 border-blue-200/50 space-y-4 animate-in fade-in zoom-in">
+                    <div className="flex items-center gap-2 text-[#800000]">
+                      <ShieldCheck className="w-5 h-5" />
+                      <h4 className="font-black text-sm uppercase tracking-widest text-[#800000]">Akad Itqan Hi Tikrar</h4>
+                    </div>
+                    <div className="space-y-3 text-[11px] text-blue-900 leading-relaxed font-medium">
+                      <p>Dengan mendaftar Hi Tikrar, saya berkomitmen untuk:</p>
+                      <ul className="list-disc pl-4 space-y-1">
+                        <li><strong>Disiplin</strong>: Mengikuti metode Tikrar 40x sesuai target harian untuk mencapai kualitas Itqan.</li>
+                        <li><strong>Fokus</strong>: Menuntaskan satu maqta (halaman) secara sempurna sebelum melanjutkan ke maqta berikutnya.</li>
+                        <li><strong>Jujur</strong>: Mengisi mutaba'ah kartu kontrol repetisi secara mandiri dan amanah.</li>
+                        <li><strong>Istiqlal</strong>: Mengharap ridho Allah semata dalam perjuangan menjaga Kalam-Nya.</li>
+                      </ul>
+                    </div>
+                    <div className="flex items-start gap-3 pt-2">
+                       <div 
+                        onClick={() => setAkadAccepted(!akadAccepted)}
+                        className={cn(
+                          "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 mt-0.5",
+                          akadAccepted ? "bg-[#800000] border-[#800000]" : "bg-white border-blue-300"
+                        )}
+                      >
+                        {akadAccepted && <Check className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <Label className="text-[10px] font-bold text-blue-900 leading-tight cursor-pointer" onClick={() => setAkadAccepted(!akadAccepted)}>
+                        Saya setuju dengan Akad & Komitmen Hi Tikrar di atas.
+                      </Label>
+                    </div>
                   </div>
                 </div>
               )}
@@ -398,13 +454,13 @@ function RegistrationForm() {
                     </p>
                   </div>
 
-                  {/* Akad Section */}
-                  <div className="p-6 bg-amber-50 rounded-2xl border-2 border-amber-200 space-y-4 animate-in fade-in zoom-in">
+                  {/* Mufradat Akad Section */}
+                  <div className="p-6 bg-emerald-50 rounded-2xl border-2 border-emerald-200 space-y-4 animate-in fade-in zoom-in">
                     <div className="flex items-center gap-2 text-[#800000]">
                       <ShieldCheck className="w-5 h-5" />
-                      <h4 className="font-black text-sm uppercase tracking-widest">Akad & Komitmen Peserta</h4>
+                      <h4 className="font-black text-sm uppercase tracking-widest text-[#800000]">Akad Commitment Hi Mufradat</h4>
                     </div>
-                    <div className="space-y-3 text-[11px] text-amber-900 leading-relaxed font-medium">
+                    <div className="space-y-3 text-[11px] text-emerald-900 leading-relaxed font-medium">
                       <p>Dengan mendaftar Hi Mufradat, saya berjanji untuk:</p>
                       <ul className="list-disc pl-4 space-y-1">
                         <li><strong>Disiplin</strong>: Mengikuti target hafalan sesuai pilihan (min. 1 halaman/pekan).</li>
@@ -418,12 +474,12 @@ function RegistrationForm() {
                         onClick={() => setAkadAccepted(!akadAccepted)}
                         className={cn(
                           "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 mt-0.5",
-                          akadAccepted ? "bg-[#800000] border-[#800000]" : "bg-white border-amber-300"
+                          akadAccepted ? "bg-[#800000] border-[#800000]" : "bg-white border-emerald-300"
                         )}
                       >
                         {akadAccepted && <Check className="w-3.5 h-3.5 text-white" />}
                       </div>
-                      <Label className="text-[10px] font-bold text-amber-900 leading-tight cursor-pointer" onClick={() => setAkadAccepted(!akadAccepted)}>
+                      <Label className="text-[10px] font-bold text-emerald-900 leading-tight cursor-pointer" onClick={() => setAkadAccepted(!akadAccepted)}>
                         Saya setuju dengan Akad & Ketentuan di atas (Ittafaqna).
                       </Label>
                     </div>

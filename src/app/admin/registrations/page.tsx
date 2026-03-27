@@ -24,7 +24,7 @@ export default function AdminRegistrationsPage() {
   const { data: registrations, isLoading, error } = useCollection("halaqah_registrations", regOptions);
 
   const handleApprove = async (reg: any) => {
-    if (!reg?.id || !reg?.userId) {
+    if (!reg?.id || !reg?.user_id) {
       toast({ variant: "destructive", title: "Data pendaftaran tidak lengkap." });
       return;
     }
@@ -35,35 +35,35 @@ export default function AdminRegistrationsPage() {
       // 1. Update Registration Status with start date
       const { error: regError } = await supabase.from("halaqah_registrations").update({
         status: "active",
-        verifiedAt: new Date().toISOString(),
-        startDate: new Date().toISOString()
+        verified_at: new Date().toISOString(),
+        start_date: new Date().toISOString()
       }).eq('id', reg.id);
 
       if (regError) throw regError;
 
       // 2. Update User Profile Access
-      const { data: userData } = await supabase.from("users").select("followedHalaqahs").eq('id', reg.userId).single();
-      const currentFollowed = userData?.followedHalaqahs || [];
+      const { data: userData } = await supabase.from("users").select("followed_halaqahs").eq('id', reg.user_id).single();
+      const currentFollowed = userData?.followed_halaqahs || [];
 
       const updateData: any = {
-        followedHalaqahs: currentFollowed.includes(reg.halaqahId) ? currentFollowed : [...currentFollowed, reg.halaqahId],
-        updatedAt: new Date().toISOString()
+        followed_halaqahs: currentFollowed.includes(reg.halaqah_id) ? currentFollowed : [...currentFollowed, reg.halaqah_id],
+        updated_at: new Date().toISOString()
       };
 
       // Special logic for Tikrar Premium Start Date
-      if (reg.halaqahId === 'tikrar-j30-b1') {
-        updateData.isTikrarPaid = true;
-        updateData.paidJuz = reg.targetJuz || 30;
-        updateData.tikrarLevel = reg.level || 3;
-        updateData.tikrarStartDate = new Date().toISOString();
+      if (reg.halaqah_id === 'tikrar-j30-b1' || reg.halaqah_id === 'tikrar-premium') {
+        updateData.is_tikrar_paid = true;
+        updateData.paid_juz = reg.target_juz || 30;
+        updateData.tikrar_level = reg.level || 3;
+        updateData.tikrar_start_date = new Date().toISOString();
       }
 
-      const { error: userError } = await supabase.from("users").update(updateData).eq('id', reg.userId);
+      const { error: userError } = await supabase.from("users").update(updateData).eq('id', reg.user_id);
       if (userError) throw userError;
 
       toast({
         title: "Akses Diaktifkan",
-        description: `Masyallah, akses ${reg.halaqahTitle} untuk ${reg.userName} telah aktif mulai hari ini.`,
+        description: `Masyallah, akses ${reg.halaqah_title} untuk ${reg.user_name} telah aktif mulai hari ini.`,
       });
     } catch (err: any) {
       console.error(err);
@@ -78,7 +78,7 @@ export default function AdminRegistrationsPage() {
     try {
       const { error } = await supabase.from("halaqah_registrations").update({
         status: "rejected",
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       }).eq('id', regId);
 
       if (error) throw error;
@@ -132,14 +132,14 @@ export default function AdminRegistrationsPage() {
               <div className="bg-muted/30 px-6 py-3 flex items-center justify-between border-b">
                 <div className="flex items-center gap-3">
                   <Badge variant="outline" className="text-[10px] font-black flex items-center gap-1.5 px-2 py-0.5 border-[#800000]/20 text-[#800000] bg-white">
-                    <BookOpen className="w-3 h-3" /> {reg.halaqahTitle}
+                    <BookOpen className="w-3 h-3" /> {reg.halaqah_title}
                   </Badge>
                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">
-                    {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    {reg.created_at ? new Date(reg.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
                   </span>
                 </div>
-                <Badge className={cn("text-white border-none font-black text-[9px] px-3 py-0.5 tracking-widest", reg.isPaid ? "bg-amber-500 shadow-sm shadow-amber-500/20" : "bg-blue-500 shadow-sm shadow-blue-500/20")}>
-                  {reg.isPaid ? 'BERBAYAR' : 'GRATIS'}
+                <Badge className={cn("text-white border-none font-black text-[9px] px-3 py-0.5 tracking-widest", reg.is_paid ? "bg-amber-500 shadow-sm shadow-amber-500/20" : "bg-blue-500 shadow-sm shadow-blue-500/20")}>
+                  {reg.is_paid ? 'BERBAYAR' : 'GRATIS'}
                 </Badge>
               </div>
               <CardContent className="p-6">
@@ -147,11 +147,11 @@ export default function AdminRegistrationsPage() {
                   <div className="md:col-span-4 space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#800000]/10 flex items-center justify-center text-[#800000] shrink-0 font-bold">
-                        {reg.userName?.[0] || 'U'}
+                        {reg.user_name?.[0] || 'U'}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-foreground">{reg.userName}</span>
-                        <span className="text-[10px] text-muted-foreground font-medium">{reg.userEmail}</span>
+                        <span className="text-sm font-black text-foreground">{reg.user_name}</span>
+                        <span className="text-[10px] text-muted-foreground font-medium">{reg.user_email}</span>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 pl-1">
@@ -165,27 +165,27 @@ export default function AdminRegistrationsPage() {
                   <div className="md:col-span-4 bg-[#800000]/5 p-5 rounded-2xl border-2 border-[#800000]/10 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Detail Kelas</span>
-                      <span className="text-xs font-bold text-[#800000] truncate max-w-[120px]">{reg.halaqahTitle}</span>
+                      <span className="text-xs font-bold text-[#800000] truncate max-w-[120px]">{reg.halaqah_title}</span>
                     </div>
-                    {reg.isPaid && (
+                    {reg.is_paid && (
                       <div className="flex items-center justify-between border-t pt-2 border-dashed border-[#800000]/20">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Infaq</span>
                         <span className="text-base font-black text-[#800000]">Rp {reg.amount?.toLocaleString('id-ID')}</span>
                       </div>
                     )}
-                    {reg.targetJuz && (
+                    {reg.target_juz && (
                       <div className="flex items-center justify-between border-t pt-2 border-dashed border-[#800000]/20">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Target Hafalan</span>
-                        <Badge className="bg-[#800000] text-[10px] font-black px-2 py-0">JUZ {reg.targetJuz}</Badge>
+                        <Badge className="bg-[#800000] text-[10px] font-black px-2 py-0">JUZ {reg.target_juz}</Badge>
                       </div>
                     )}
                   </div>
 
                   <div className="md:col-span-4 flex flex-col gap-3">
-                    {reg.isPaid && (
+                    {reg.is_paid && (
                       <div className="bg-muted p-2 rounded-xl flex items-center gap-2 text-[10px] mb-1 font-bold text-muted-foreground border-2 border-dashed border-muted-foreground/20 overflow-hidden">
                         <ImageIcon className="w-4 h-4 shrink-0 text-[#800000]" />
-                        <span className="truncate">{reg.proofFileName || "Bukti-Transfer.jpg"}</span>
+                        <span className="truncate">{reg.proof_file_name || "Bukti-Transfer.jpg"}</span>
                       </div>
                     )}
                     <Button

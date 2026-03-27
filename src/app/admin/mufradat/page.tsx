@@ -46,7 +46,7 @@ export default function AdminMufradatPage() {
   const [search, setSearch] = useState("");
   
   // Fetch users and their quiz attempts
-  const { data: users, isLoading: isUsersLoading, error: usersError } = useCollection("users");
+  const { data: users, isLoading: isUsersLoading, error: usersError } = useCollection("users", {});
   const { data: attempts, isLoading: isAttemptsLoading, error: attemptsError } = useCollection("quiz_attempts", {
     filters: [{ column: 'isPassed', operator: '==', value: true }]
   });

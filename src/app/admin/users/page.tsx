@@ -57,7 +57,7 @@ const INITIAL_ADD_FORM = {
   username: "",
   email: "",
   phone: "",
-  roleId: "learner",
+  role_id: "learner",
 };
 
 export default function AdminUsersPage() {
@@ -83,12 +83,12 @@ export default function AdminUsersPage() {
 
     const updateData: any = {
       username: editingUser.username,
-      roleId: editingUser.roleId,
+      role_id: editingUser.role_id,
       phone: editingUser.phone || "",
-      paidJuz: editingUser.paidJuz ? parseInt(editingUser.paidJuz) : null,
-      tikrarLevel: editingUser.tikrarLevel ? parseInt(editingUser.tikrarLevel) : null,
-      isTikrarPaid: editingUser.isTikrarPaid || false,
-      updatedAt: new Date().toISOString(),
+      paid_juz: editingUser.paid_juz ? parseInt(editingUser.paid_juz) : null,
+      tikrar_level: editingUser.tikrar_level ? parseInt(editingUser.tikrar_level) : null,
+      is_tikrar_paid: editingUser.is_tikrar_paid || false,
+      updated_at: new Date().toISOString(),
     };
 
     if (editingUser.tempDate) {
@@ -98,8 +98,8 @@ export default function AdminUsersPage() {
     updateDocumentNonBlocking("users", editingUser.id, updateData);
 
     // If role is admin, ensure they are in roles_admin
-    if (editingUser.roleId === 'admin') {
-      // roles_admin only has id and created_at, no roleId column
+    if (editingUser.role_id === 'admin') {
+      // roles_admin only has id and created_at, no role_id column
       addDocumentNonBlocking("roles_admin", { id: editingUser.id });
     }
 
@@ -124,18 +124,18 @@ export default function AdminUsersPage() {
         username: addForm.username,
         email: addForm.email,
         phone: addForm.phone,
-        roleId: addForm.roleId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        role_id: addForm.role_id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
 
-      if (addForm.roleId === 'admin') {
+      if (addForm.role_id === 'admin') {
         addDocumentNonBlocking("roles_admin", { id: tempId });
       }
 
       toast({
         title: "User Ditambahkan",
-        description: `Profil ${addForm.username} sebagai ${ROLES.find(r => r.id === addForm.roleId)?.name} berhasil dibuat.`,
+        description: `Profil ${addForm.username} sebagai ${ROLES.find(r => r.id === addForm.role_id)?.name} berhasil dibuat.`,
       });
       setIsAddDialogOpen(false);
       setAddForm(INITIAL_ADD_FORM);
@@ -204,8 +204,8 @@ export default function AdminUsersPage() {
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase">Peran / Hak Akses</Label>
                 <Select
-                  value={addForm.roleId}
-                  onValueChange={(val) => setAddForm({ ...addForm, roleId: val })}
+                  value={addForm.role_id}
+                  onValueChange={(val) => setAddForm({ ...addForm, role_id: val })}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -273,11 +273,11 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <Badge variant="outline" className={cn(
                         "text-[9px] font-black uppercase",
-                        u.roleId === 'admin' ? "bg-amber-500 text-white border-none" :
-                          u.roleId === 'muallimah' ? "bg-blue-600 text-white border-none" :
-                            u.roleId === 'musyrifah' ? "bg-emerald-600 text-white border-none" : ""
+                        u.role_id === 'admin' ? "bg-amber-500 text-white border-none" :
+                          u.role_id === 'muallimah' ? "bg-blue-600 text-white border-none" :
+                            u.role_id === 'musyrifah' ? "bg-emerald-600 text-white border-none" : ""
                       )}>
-                        {ROLES.find(r => r.id === u.roleId)?.name || 'Thalibah'}
+                        {ROLES.find(r => r.id === u.role_id)?.name || 'Thalibah'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -292,7 +292,7 @@ export default function AdminUsersPage() {
                             className="h-8 w-8 p-0 hover:bg-[#800000]/10 hover:text-[#800000]"
                             onClick={() => setEditingUser({
                               ...u,
-                              tempDate: u.tikrarStartDate?.toDate ? u.tikrarStartDate.toDate().toISOString().split('T')[0] : ""
+                              tempDate: u.tikrar_start_date?.toDate ? u.tikrar_start_date.toDate().toISOString().split('T')[0] : ""
                             })}
                           >
                             <UserCog className="h-4 w-4" />
@@ -327,8 +327,8 @@ export default function AdminUsersPage() {
                             <div className="space-y-2">
                               <Label className="text-xs font-bold uppercase text-muted-foreground">Peran User</Label>
                               <Select
-                                value={editingUser?.roleId || "learner"}
-                                onValueChange={(val) => setEditingUser({ ...editingUser, roleId: val })}
+                                value={editingUser?.role_id || "learner"}
+                                onValueChange={(val) => setEditingUser({ ...editingUser, role_id: val })}
                               >
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
@@ -346,8 +346,8 @@ export default function AdminUsersPage() {
                                 <div className="space-y-2">
                                   <Label className="text-xs font-bold uppercase text-muted-foreground">Target Juz</Label>
                                   <Select
-                                    value={editingUser?.paidJuz?.toString() || ""}
-                                    onValueChange={(val) => setEditingUser({ ...editingUser, paidJuz: val })}
+                                    value={editingUser?.paid_juz?.toString() || ""}
+                                    onValueChange={(val) => setEditingUser({ ...editingUser, paid_juz: val })}
                                   >
                                     <SelectTrigger>
                                       <SelectValue placeholder="-" />
@@ -362,8 +362,8 @@ export default function AdminUsersPage() {
                                 <div className="space-y-2">
                                   <Label className="text-xs font-bold uppercase text-muted-foreground">Level Tikrar</Label>
                                   <Select
-                                    value={editingUser?.tikrarLevel?.toString() || ""}
-                                    onValueChange={(val) => setEditingUser({ ...editingUser, tikrarLevel: val })}
+                                    value={editingUser?.tikrar_level?.toString() || ""}
+                                    onValueChange={(val) => setEditingUser({ ...editingUser, tikrar_level: val })}
                                   >
                                     <SelectTrigger>
                                       <SelectValue placeholder="-" />
@@ -382,11 +382,11 @@ export default function AdminUsersPage() {
                                   <p className="text-[10px] text-muted-foreground">Aktifkan akses counter repetisi.</p>
                                 </div>
                                 <Button
-                                  variant={editingUser?.isTikrarPaid ? "default" : "outline"}
-                                  className={cn("font-black text-[10px]", editingUser?.isTikrarPaid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
-                                  onClick={() => setEditingUser({ ...editingUser, isTikrarPaid: !editingUser.isTikrarPaid })}
+                                  variant={editingUser?.is_tikrar_paid ? "default" : "outline"}
+                                  className={cn("font-black text-[10px]", editingUser?.is_tikrar_paid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
+                                  onClick={() => setEditingUser({ ...editingUser, is_tikrar_paid: !editingUser.is_tikrar_paid })}
                                 >
-                                  {editingUser?.isTikrarPaid ? 'AKTIF' : 'NON-AKTIF'}
+                                  {editingUser?.is_tikrar_paid ? 'AKTIF' : 'NON-AKTIF'}
                                 </Button>
                               </div>
                             </div>

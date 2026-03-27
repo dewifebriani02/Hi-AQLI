@@ -43,13 +43,13 @@ const tajweedRules = [
   },
 ];
 
-export default function HafalPage() {
+export default function TikrarPage() {
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32">
       <div className="flex flex-col gap-2 mt-4 px-1">
         <div className="flex items-center gap-2 text-[#800000] mb-1">
           <RotateCcw className="w-5 h-5" />
-          <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Hafal • Pusat Itqan HI AQLI</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Tikrar • Pusat Itqan HI AQLI</span>
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Metode Tikrar</h1>
         <p className="text-muted-foreground text-sm">
@@ -85,7 +85,7 @@ export default function HafalPage() {
                 <CardHeader className="bg-[#800000]/5 border-b border-[#800000]/10">
                   <div className="flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-[#D4AF37]" />
-                    <CardTitle className="text-lg font-headline">Pencapaian Hafalan 30 Juz</CardTitle>
+                    <CardTitle className="text-lg font-headline">Pencapaian Tikrar 30 Juz</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-8">
@@ -104,7 +104,7 @@ export default function HafalPage() {
                 </CardContent>
                 <CardFooter>
                   <Button asChild className="w-full bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 font-bold h-12">
-                    <Link href="/hafal/quiz">Mulai Kuis Teori</Link>
+                    <Link href="/tikrar/quiz">Mulai Kuis Teori</Link>
                   </Button>
                 </CardFooter>
               </Card>

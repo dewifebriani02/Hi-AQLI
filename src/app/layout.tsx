@@ -10,7 +10,7 @@ import { BottomNav } from '@/components/bottom-nav';
 import { SupabaseProvider, useUser, supabase } from '@/supabase';
 import { useDoc, useCollection } from '@/supabase/db';
 import { Trophy, Zap, Star } from 'lucide-react';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -37,21 +37,28 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { data: isSuperAdminDoc } = useDoc("roles_superadmin", user?.id);
   const { data: userData, isLoading: isUserDocLoading } = useDoc("users", user?.id);
 
+  const hasAttemptedSync = useRef(false);
+
   // Auto-sync profile if missing
   useEffect(() => {
-    if (mounted && user && !isUserDocLoading && !userData) {
+    if (mounted && user && !isUserDocLoading && !userData && !hasAttemptedSync.current) {
       const syncProfile = async () => {
+        hasAttemptedSync.current = true;
         try {
-          await supabase.from('users').insert({
+          const { error } = await supabase.from('users').insert({
             id: user.id,
             username: user.user_metadata?.full_name || user.email?.split('@')[0],
             email: user.email,
-            roleId: 'learner',
+            role_id: 'learner',
             points: 0,
-            followedHalaqahs: [],
+            followed_halaqahs: [],
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });
+          
+          if (error && error.code !== '23505') {
+            console.error('Failed to auto-sync profile in layout:', error);
+          }
         } catch (err) {
           console.error('Failed to auto-sync profile in layout:', err);
         }
@@ -60,7 +67,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [mounted, user, userData, isUserDocLoading]);
 
-  const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc || userData?.roleId === 'admin' || userData?.roleId === 'superadmin';
+  const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc || userData?.role_id === 'admin' || userData?.role_id === 'superadmin';
   const points = userData?.points || 0;
 
   // Gate content until mounted to prevent hydration mismatch
@@ -79,7 +86,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
             <header className="sticky top-0 z-40 flex h-20 items-center justify-between px-6 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
               <div className="flex items-center gap-4">
-                {showAdminUI && <SidebarTrigger className="flex text-[#800000] hover:bg-[#800000]/5" />}
+                {showAdminUI && <SidebarTrigger className="md:hidden flex text-[#800000] hover:bg-[#800000]/5" />}
               </div>
               
               <div className="flex-1 flex justify-center">

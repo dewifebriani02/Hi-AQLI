@@ -91,7 +91,7 @@ export function TikrarSystem() {
   const { toast } = useToast();
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user ? "users" : null, user?.id);
-  const paidJuz = userData?.paidJuz || 1;
+  const paidJuz = userData?.paid_juz || 1;
 
   const [juz, setJuz] = useState(1);
   const [page, setPage] = useState(1);
@@ -116,7 +116,7 @@ export function TikrarSystem() {
 
   const examOptions = useMemo(() => ({
     filters: [
-      { column: 'userId', operator: '==', value: user?.id },
+      { column: 'user_id', operator: '==', value: user?.id },
       { column: 'page', operator: '==', value: page }
     ]
   }), [user?.id, page]);
@@ -302,12 +302,12 @@ export function TikrarSystem() {
     setIsRequestingExam(true);
     try {
       await addDocumentNonBlocking("page_exams", {
-        userId: user.id,
-        userName: userData?.username || user.user_metadata?.full_name || "Thalibah",
+        user_id: user.id,
+        user_name: userData?.username || user.user_metadata?.full_name || "Thalibah",
         page: page,
         juz: juz,
         status: "requested",
-        requestedAt: new Date().toISOString()
+        requested_at: new Date().toISOString()
       });
       const text = `Assalamu'alaikum Admin HI AQLI, saya ${userData?.username || user.user_metadata?.full_name} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
       window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(text)}`, '_blank');

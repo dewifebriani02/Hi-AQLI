@@ -67,7 +67,7 @@ export default function DashboardPage() {
     user?.id ? {
       filters: [
         { column: 'user_id', operator: '==', value: user.id },
-        { column: 'isPassed', operator: '==', value: true }
+        { column: 'is_passed', operator: '==', value: true }
       ],
       orderBy: { column: 'created_at', ascending: false }
     } : undefined
@@ -248,9 +248,11 @@ export default function DashboardPage() {
             <Zap className="w-3 h-3 fill-[#D4AF37] text-[#D4AF37] animate-pulse" />
             {points.toLocaleString()} POIN
           </Badge>
-          <Badge variant="outline" className="text-[9px] font-bold border-amber-200 text-amber-700 bg-amber-50 gap-1 uppercase tracking-tighter">
-            <Trophy className="w-2.5 h-2.5" /> Peringkat Sahabat
-          </Badge>
+          <Link href="/leaderboard">
+            <Badge variant="outline" className="text-[9px] font-bold border-amber-200 text-amber-700 bg-amber-50 gap-1 uppercase tracking-tighter cursor-pointer hover:bg-amber-100 transition-colors">
+              <Trophy className="w-2.5 h-2.5" /> Peringkat Sahabat
+            </Badge>
+          </Link>
         </div>
       </div>
 
@@ -373,13 +375,13 @@ export default function DashboardPage() {
             <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Mufradat</span>
           </Link>
 
-          {/* Hi Hafal (Locked) */}
+          {/* Hi Tikrar (Locked) */}
           <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
             <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
               <Award className="w-7 h-7 text-slate-400" />
               <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Hafal</span>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Tikrar</span>
           </div>
 
           {/* Hi Ngaji (Locked) */}
