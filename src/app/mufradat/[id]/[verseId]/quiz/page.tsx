@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Question {
   arabic: string;
@@ -44,6 +45,7 @@ export default function MufradatQuizPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [totalTime, setTotalTime] = useState(0);
+  const [attempts, setAttempts] = useState(1);
 
   const verseKey = `${id}:${verseId}`;
 
@@ -53,6 +55,52 @@ export default function MufradatQuizPage() {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
+
+  // Fetch leaderboard data
+  const { data: allAttempts } = useCollection("quiz_attempts", {
+    filters: [
+      { column: 'quizId', operator: '==', value: `mufradat_${verseKey}` }
+    ],
+    orderBy: { column: 'score', ascending: false }
+  });
+
+  const userIds = useMemo(() => [...new Set(allAttempts?.map(a => a.user_id) || [])], [allAttempts]);
+  const { data: leaderboardUsers } = useCollection(userIds.length > 0 ? "users" : null, {
+    filters: [{ column: 'id', operator: 'in', value: userIds }]
+  });
+
+  const uniqueLeaderboard = useMemo(() => {
+    if (!allAttempts) return [];
+    const uniqueMap = new Map();
+    allAttempts.forEach(attempt => {
+      const existing = uniqueMap.get(attempt.user_id);
+      const isNewBest = !existing || 
+        attempt.score > existing.score || 
+        (attempt.score === existing.score && (attempt.durationSeconds < existing.durationSeconds));
+      if (isNewBest) {
+        const userData = leaderboardUsers?.find(u => u.id === attempt.user_id);
+        uniqueMap.set(attempt.user_id, { ...attempt, userData });
+      }
+    });
+
+    return Array.from(uniqueMap.values())
+      .sort((a, b) => b.score - a.score || a.durationSeconds - b.durationSeconds)
+      .slice(0, 5);
+  }, [allAttempts, leaderboardUsers]);
+
+  const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
+    const soundUrls = {
+      correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+      incorrect: 'https://assets.mixkit.co/active_storage/sfx/2182/2182-preview.mp3',
+      perfect: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
+      fail: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3',
+    };
+    try {
+      const audio = new Audio(soundUrls[type]);
+      audio.volume = 0.4;
+      audio.play().catch(() => {});
+    } catch (e) {}
+  }, []);
 
   useEffect(() => {
     async function fetchQuestions() {
@@ -110,7 +158,12 @@ export default function MufradatQuizPage() {
     setSelectedAnswer(answer);
     setIsCorrect(correct);
     
-    if (correct) setScore(s => s + 1);
+    if (correct) {
+      playSfx('correct');
+      setScore(s => s + 1);
+    } else {
+      playSfx('incorrect');
+    }
 
     setTimeout(() => {
       if (currentIdx + 1 < questions.length) {
@@ -119,7 +172,10 @@ export default function MufradatQuizPage() {
         setIsCorrect(null);
       } else {
         setIsFinished(true);
-        saveAttempt(score + (correct ? 1 : 0));
+        const finalScore = score + (correct ? 1 : 0);
+        if (finalScore === questions.length) playSfx('perfect');
+        else playSfx('fail');
+        saveAttempt(finalScore);
       }
     }, 1000);
   };
@@ -152,6 +208,16 @@ export default function MufradatQuizPage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const handleReset = () => {
+    setCurrentIdx(0);
+    setScore(0);
+    setIsFinished(false);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setTotalTime(0);
+    setAttempts(prev => prev + 1);
+  };
+
   if (loading || isUserLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -167,11 +233,18 @@ export default function MufradatQuizPage() {
       <div className="max-w-md mx-auto py-12 px-4 flex flex-col gap-6">
         <Card className="text-center border-none shadow-2xl overflow-hidden rounded-3xl bg-white">
           <div className={cn(
-            "p-10 flex flex-col items-center gap-4 text-white",
+            "p-10 flex flex-col items-center gap-4 text-white relative overflow-hidden",
             isPerfect ? "bg-gradient-to-br from-amber-400 to-orange-500" : "bg-slate-800"
           )}>
+            {isPerfect && (
+              <div className="absolute top-4 right-4 animate-pulse">
+                <Badge className="bg-white text-orange-600 font-black border-none">+10 POIN</Badge>
+              </div>
+            )}
             <Trophy className={cn("w-16 h-16", isPerfect && "animate-bounce")} />
-            <h2 className="text-2xl font-black font-headline uppercase">{isPerfect ? "Masyallah!" : "Coba Lagi"}</h2>
+            <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">
+              {isPerfect ? "Masyallah Sempurna!" : "Alhamdulillah Selesai"}
+            </h2>
             <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Skor Akhir: {score} / {questions.length}</p>
           </div>
           <CardContent className="p-8 space-y-6">
@@ -186,17 +259,87 @@ export default function MufradatQuizPage() {
                </div>
              </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-3 p-8 border-t">
-            <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-6 rounded-xl shadow-lg">
-              <Link href={`/mufradat/${id}`}>KEMBALI KE SURAH</Link>
-            </Button>
-            {!isPerfect && (
-              <Button variant="outline" onClick={() => window.location.reload()} className="w-full border-2 border-slate-200 font-bold py-6 rounded-xl hover:bg-slate-50">
-                ULANGI LAGI
-              </Button>
+          <CardFooter className="flex flex-col gap-3 p-8 border-t bg-slate-50/50">
+            {isPerfect ? (
+              <>
+                <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                  <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}/quiz`}>
+                    Lanjut ke Ayat Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
+                  <Link href={`/mufradat/${id}`}>KEMBALI KE DAFTAR AYAT</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button onClick={handleReset} className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                   <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
+                </Button>
+                <Button asChild variant="ghost" className="w-full font-bold text-slate-500">
+                  <Link href={`/mufradat/${id}`}>KEMBALI KE SURAH</Link>
+                </Button>
+              </>
             )}
           </CardFooter>
         </Card>
+
+        {/* PAPAN JUARA (LEADERBOARD) */}
+        <div className="space-y-4 py-4 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-300">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-[#D4AF37] fill-current" />
+              <h3 className="text-xs font-black font-headline uppercase tracking-widest text-slate-700">Papan Juara Ayat Ini</h3>
+            </div>
+            <Badge variant="outline" className="text-[9px] font-black border-[#D4AF37]/30 text-[#D4AF37] bg-white px-2">TOP 5 PEJUANG</Badge>
+          </div>
+
+          <Card className="border-none shadow-lg overflow-hidden rounded-3xl bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {uniqueLeaderboard && uniqueLeaderboard.length > 0 ? uniqueLeaderboard.map((item: any, idx: number) => (
+                  <div key={item.id} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shadow-sm",
+                        idx === 0 ? "bg-amber-100 text-amber-700" : 
+                        idx === 1 ? "bg-slate-100 text-slate-700" : 
+                        idx === 2 ? "bg-orange-100 text-orange-700" : "bg-slate-50 text-slate-400"
+                      )}>
+                        {idx + 1}
+                      </div>
+                      <Avatar className="h-10 w-10 border-2 border-white shadow-sm shrink-0">
+                        <AvatarImage src={item.userData?.photoURL} />
+                        <AvatarFallback className="bg-[#800000] text-white text-xs font-black uppercase">
+                          {item.userData?.username?.[0] || item.userData?.email?.[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-black text-slate-800 truncate">
+                          {item.userData?.username || 'Hamba Allah'}
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-[#D4AF37] fill-current" /> {item.score}/{item.totalQuestions}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-medium italic">
+                             {formatTime(item.durationSeconds || 0)}s
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {idx === 0 && <Star className="w-4 h-4 fill-current text-amber-400 shrink-0" />}
+                  </div>
+                )) : (
+                  <div className="py-12 text-center text-slate-400 italic text-xs flex flex-col items-center gap-2">
+                    <RefreshCw className="w-6 h-6 opacity-20" />
+                    Belum ada pejuang kuis di ayat ini.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -214,6 +357,9 @@ export default function MufradatQuizPage() {
           </div>
         </div>
         <div className="text-xs font-black text-[#800000]">{currentIdx + 1} / {questions.length}</div>
+        <Button onClick={handleReset} variant="ghost" size="sm" className="h-8 px-2 text-[10px] font-black text-slate-400 hover:text-[#800000] uppercase tracking-tighter">
+          <RefreshCw className="w-3 h-3 mr-1" /> Ulangi
+        </Button>
       </div>
 
       <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1.5 bg-slate-100 [&>div]:bg-[#D4AF37]" />
