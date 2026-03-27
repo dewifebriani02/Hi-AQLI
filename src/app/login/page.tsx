@@ -13,8 +13,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+function LoginContent() {
   const { user } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -207,5 +208,17 @@ export default function LoginPage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col justify-center items-center min-h-[85vh] px-4 py-8">
+        <Loader2 className="animate-spin h-8 w-8 text-[#800000]" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

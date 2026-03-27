@@ -21,7 +21,7 @@ import {
   Clock,
   Shield,
   Heart,
-  Suitcase,
+  Luggage,
   CreditCard,
 } from "lucide-react";
 import Link from "next/link";
@@ -132,7 +132,7 @@ const preparationSteps = [
   },
   {
     category: "Persiapan Koper",
-    icon: <Suitcase className="w-5 h-5" />,
+    icon: <Luggage className="w-5 h-5" />,
     items: [
       "Pakaian ihram (putih) untuk laki-laki",
       "Mukena & pakaian sopan untuk wanita",
