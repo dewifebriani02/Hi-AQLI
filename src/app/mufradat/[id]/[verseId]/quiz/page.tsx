@@ -46,6 +46,7 @@ export default function MufradatQuizPage() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [totalTime, setTotalTime] = useState(0);
   const [attempts, setAttempts] = useState(1);
+  const [surahInfo, setSurahInfo] = useState<{ verses_count: number } | null>(null);
 
   const verseKey = `${id}:${verseId}`;
 
@@ -107,6 +108,11 @@ export default function MufradatQuizPage() {
       if (!id || !verseId) return;
       try {
         setLoading(true);
+        // Fetch surah info for boundary check
+        const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
+        const surahData = await surahRes.json();
+        setSurahInfo(surahData.chapter);
+
         // Fetch verse words
         const res = await fetch(
           `https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id`
@@ -264,11 +270,19 @@ export default function MufradatQuizPage() {
           <CardFooter className="flex flex-col gap-3 p-8 border-t bg-slate-50/50">
             {isPerfect ? (
               <>
-                <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                  <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}/quiz`}>
-                    Lanjut ke Ayat Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
-                  </Link>
-                </Button>
+                {surahInfo && parseInt(verseId) < surahInfo.verses_count ? (
+                  <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                    <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}/quiz`}>
+                      Lanjut ke Ayat Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                    <Link href={`/mufradat/${id}`}>
+                      Surah Selesai! Kembali <ChevronLeft className="w-4 h-4 rotate-180" />
+                    </Link>
+                  </Button>
+                )}
                 <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
                   <Link href={`/mufradat/${id}`}>KEMBALI KE DAFTAR AYAT</Link>
                 </Button>

@@ -53,16 +53,19 @@ function RegisterContent() {
           .single();
 
         if (!profile) {
-          await supabase.from('users').insert({
+          // Create missing profile using upsert for better resilience
+          await supabase.from('users').upsert({
             id: user.id,
-            username: username || user.user_metadata?.full_name || user.email?.split('@')[0],
+            username: username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
             email: user.email,
             roleId: 'learner',
             points: 0,
             followedHalaqahs: [],
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          });
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }, { onConflict: 'id' });
         }
         router.push(redirectTo);
       };

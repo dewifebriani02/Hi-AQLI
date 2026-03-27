@@ -46,22 +46,24 @@ export default function AuthCallbackPage() {
         }
 
         if (!profile) {
-          // Create missing profile
-          const { error: insertError } = await supabase.from('users').insert({
+          // Create missing profile using upsert for better resilience
+          const { error: upsertError } = await supabase.from('users').upsert({
             id: user.id,
-            username: user.user_metadata?.full_name || user.email?.split('@')[0],
+            username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
             email: user.email,
             roleId: 'learner',
             points: 0,
             followedHalaqahs: [],
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          });
+            createdAt: new Date().toISOString(), // Handling both naming conventions
+            updatedAt: new Date().toISOString(),
+          }, { onConflict: 'id' });
 
-          if (insertError) {
-            console.error('Error creating profile in callback:', insertError);
-            // We don't block the user if profile creation fails, 
-            // but log it for debugging
+          if (upsertError) {
+            console.error('Error syncing profile in callback:', upsertError);
+            // We don't block the user; they can still access the app
+            // Although a missing profile might cause minor issues in some tabs
           }
         }
       } catch (err) {
