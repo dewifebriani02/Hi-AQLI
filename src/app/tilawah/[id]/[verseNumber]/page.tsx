@@ -159,30 +159,16 @@ export default function VerseDetailPage() {
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Sahabat AQLI • Fokus Pendalaman Ayat</p>
         </div>
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="icon" className="text-amber-600"><Link href={`/tilawah/${id}/${verseNumber}/quiz`}><GraduationCap className="h-5 w-5" /></Link></Button>
           <Button variant="ghost" size="icon" disabled={currentVerseNum <= 1} onClick={() => router.push(`/tilawah/${id}/${currentVerseNum - 1}`)}><ArrowLeft className="h-5 w-5" /></Button>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="inline-block">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={!!(currentVerseNum >= totalVerses || (!isUserLoading && user && !isCurrentVerseCompleted))}
-                    onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
-                  >
-                    {!isUserLoading && user && !isCurrentVerseCompleted ? <Lock className="h-4 w-4 text-muted-foreground" /> : <ArrowRight className="h-5 w-5" />}
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              {!isUserLoading && user && !isCurrentVerseCompleted && (
-                <TooltipContent>
-                  <p className="text-[10px]">Selesaikan kuis ayat ini (100%) untuk lanjut</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={currentVerseNum >= totalVerses}
+            onClick={() => router.push(`/tilawah/${id}/${currentVerseNum + 1}`)}
+          >
+            <ArrowRight className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
@@ -263,14 +249,6 @@ export default function VerseDetailPage() {
               ))}
             </div>
           </CardContent>
-          <CardFooter className="pt-6 border-t bg-muted/10 p-4">
-            <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 h-14 text-lg">
-              <Link href={user ? `/tilawah/${id}/${verseNumber}/quiz` : "/login"}>
-                <GraduationCap className="w-5 h-5" />
-                {user ? "MULAI UJI HAFALAN" : "MASUK UNTUK UJI HAFALAN"}
-              </Link>
-            </Button>
-          </CardFooter>
         </Card>
 
         <Card className="border-amber-200 bg-amber-50 shadow-sm">
