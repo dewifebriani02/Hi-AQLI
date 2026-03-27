@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import dynamic from 'next/dynamic';
+import { usePathname } from 'next/navigation';
 
 const Logo = dynamic(() => import('@/components/logo').then(mod => mod.Logo), { 
   ssr: false,
@@ -23,7 +24,9 @@ const Logo = dynamic(() => import('@/components/logo').then(mod => mod.Logo), {
 
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const { user, isUserLoading } = useUser();
+  const isAuthPage = pathname === '/login' || pathname === '/register';
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -63,7 +66,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // Gate content until mounted to prevent hydration mismatch
   const showAdminUI = mounted && hasAdminAccess;
   const showUserUI = mounted && !isUserLoading;
-  const showBottomNav = mounted && !hasAdminAccess;
+  const showBottomNav = mounted && !hasAdminAccess && !isAuthPage;
 
   return (
     <>
@@ -80,7 +83,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </div>
               
               <div className="flex-1 flex justify-center">
-                <Logo variant="default" showText={true} className="scale-125 md:scale-150" textClassName="text-2xl md:text-3xl" imageSize={48} />
+                {!isAuthPage && (
+                  <Logo variant="default" showText={true} className="scale-125 md:scale-150" textClassName="text-2xl md:text-3xl" imageSize={48} />
+                )}
               </div>
 
               <div className="flex items-center gap-3">
