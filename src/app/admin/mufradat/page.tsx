@@ -46,28 +46,37 @@ export default function AdminMufradatPage() {
   const [search, setSearch] = useState("");
   
   // Fetch users and their quiz attempts
-  const { data: users, isLoading: isUsersLoading } = useCollection("users");
-  const { data: attempts, isLoading: isAttemptsLoading } = useCollection("quiz_attempts", {
+  const { data: users, isLoading: isUsersLoading, error: usersError } = useCollection("users");
+  const { data: attempts, isLoading: isAttemptsLoading, error: attemptsError } = useCollection("quiz_attempts", {
     filters: [{ column: 'isPassed', operator: '==', value: true }]
   });
 
   // Process data to get per-user stats
   const userStats = useMemo(() => {
-    if (!users || !attempts) return [];
+    if (!users) return [];
+    // attempts can be empty array
+    const safeAttempts = attempts || [];
 
     const sevenDaysAgo = subDays(new Date(), 7);
 
     return users.map(user => {
+      if (!user?.id) return null;
+
       // Filter unique passed verses for this user
-      const userPassedAttempts = attempts.filter(a => a.user_id === user.id);
+      const userPassedAttempts = safeAttempts.filter(a => a.user_id === user.id);
       
       // Weekly progress (last 7 days)
-      const weeklyPassedAttempts = userPassedAttempts.filter(a => 
-        new Date(a.created_at) > sevenDaysAgo
-      );
+      const weeklyPassedAttempts = userPassedAttempts.filter(a => {
+        if (!a.created_at) return false;
+        try {
+          return new Date(a.created_at) > sevenDaysAgo;
+        } catch (e) {
+          return false;
+        }
+      });
       
       const uniqueVersesWeekly = new Set(
-        weeklyPassedAttempts.map(a => `${a.surahId}:${a.verseNumber}`)
+        weeklyPassedAttempts.map(a => `${a.surahId || a.surahId}:${a.verseNumber || a.verseNumber}`)
       );
       
       const weeklyCount = uniqueVersesWeekly.size;
@@ -75,15 +84,15 @@ export default function AdminMufradatPage() {
 
       // Overall progress
       const uniqueVerses = new Set(
-        userPassedAttempts.map(a => `${a.surahId}:${a.verseNumber}`)
+        userPassedAttempts.map(a => `${a.surahId || a.surahId}:${a.verseNumber || a.verseNumber}`)
       );
       
       const passedCount = uniqueVerses.size;
       const progressPercent = (passedCount / TOTAL_QURAN_VERSES) * 100;
       
       // Get last activity date
-      const lastAttempt = userPassedAttempts.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      const lastAttempt = [...userPassedAttempts].sort((a, b) => 
+        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
       )[0];
 
       return {
@@ -95,13 +104,16 @@ export default function AdminMufradatPage() {
         lastActivity: lastAttempt ? new Date(lastAttempt.created_at) : null,
         totalPoints: user.points || 0
       };
-    }).sort((a, b) => b.passedCount - a.passedCount); // Sort by highest progress
+    }).filter(Boolean) as any[];
   }, [users, attempts]);
 
-  const filteredStats = userStats.filter(u => 
-    u.username?.toLowerCase().includes(search.toLowerCase()) ||
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredStats = useMemo(() => {
+    const s = search.toLowerCase();
+    return userStats.filter(u => 
+      (u.username || '').toLowerCase().includes(s) ||
+      (u.email || '').toLowerCase().includes(s)
+    );
+  }, [userStats, search]);
 
   const sendWhatsAppReminder = (u: any) => {
     if (!u.phone) {
@@ -124,15 +136,44 @@ export default function AdminMufradatPage() {
     );
   }
 
+  if (usersError || attemptsError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-vh-[70vh] gap-4 p-12 text-center bg-rose-50/50 rounded-3xl border-2 border-dashed border-rose-200 m-8">
+        <div className="mx-auto w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mb-2">
+            <AlertCircle className="w-10 h-10 text-rose-600" />
+        </div>
+        <h2 className="text-2xl font-black text-rose-900 font-headline uppercase">Gagal Memuat Data Monitoring</h2>
+        <p className="text-sm text-rose-700/80 max-w-md font-medium leading-relaxed">
+          Supabase menolak permintaan data ini. Hal ini biasanya terjadi jika pengaturan Keamanan (RLS) di database belum mengizinkan role Admin untuk melihat data peserta lain.
+        </p>
+        <div className="flex flex-col gap-2 bg-white/80 p-4 rounded-xl shadow-inner border border-rose-200 mt-4">
+            <span className="text-[10px] font-black uppercase text-rose-400 text-left">Internal Debugging Log:</span>
+            <code className="text-[11px] font-mono text-rose-600 bg-rose-50 px-3 py-2 rounded-lg text-left break-all">
+                {usersError?.message || attemptsError?.message || 'Unknown RLS Error'}
+            </code>
+        </div>
+        <Button onClick={() => window.location.reload()} className="mt-6 bg-rose-600 hover:bg-rose-700 text-white font-bold h-12 px-8 rounded-full shadow-lg transition-all active:scale-95">
+            RETRY CONNECTION
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-[#800000]">
-          <TrendingUp className="w-5 h-5" />
-          <span className="text-xs font-black uppercase tracking-widest">Admin Monitoring</span>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-[#800000]">
+            <TrendingUp className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-widest">Admin Monitoring</span>
+            </div>
+            <h1 className="text-4xl font-black font-headline tracking-tighter text-[#800000]">PROGRESS & REMINDER</h1>
+            <p className="text-muted-foreground">Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
         </div>
-        <h1 className="text-4xl font-black font-headline tracking-tighter text-[#800000]">PROGRESS & REMINDER</h1>
-        <p className="text-muted-foreground">Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
+        <div className="bg-muted/50 p-2 rounded-lg border border-dashed text-[9px] font-mono text-muted-foreground flex flex-col gap-0.5">
+            <span>Project: {process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] || 'Unknown'}</span>
+            <span>Auth ID: {users?.length > 0 ? 'Connected' : 'No Data Returned'}</span>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -140,10 +181,13 @@ export default function AdminMufradatPage() {
         <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden group">
           <div className="h-1.5 bg-[#800000]" />
           <CardHeader className="pb-2">
-            <CardDescription className="text-[10px] font-black uppercase tracking-widest">Total Peserta Aktif</CardDescription>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-[#800000] transition-colors">Total Peserta Terdaftar</CardDescription>
             <CardTitle className="text-3xl font-black flex items-center justify-between">
               {users?.length || 0}
-              <Users className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
+              <div className="flex flex-col items-end">
+                <Users className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
+                <span className="text-[10px] font-mono opacity-50 font-normal">Raw: {users?.length}</span>
+              </div>
             </CardTitle>
           </CardHeader>
         </Card>

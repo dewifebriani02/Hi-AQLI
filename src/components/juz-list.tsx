@@ -78,24 +78,21 @@ const JUZ_DATA: Record<number, { total_verses: number, mapping: Record<string, s
 interface JuzListProps {
   baseUrl?: string;
   userProgress?: any[];
+  variant?: "mufradat" | "tilawah";
 }
 
-export function JuzList({ baseUrl = "/mufradat", userProgress = [] }: JuzListProps) {
+export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "mufradat" }: JuzListProps) {
   const [search, setSearch] = useState("");
   
   const juzArray = Array.from({ length: 30 }, (_, i) => i + 1);
   
-  // Calculate completion status for each Juz
+  // Calculate completion status for each Juz (mufradat only)
   const completionMap = useMemo(() => {
     const counts = new Map<number, number>();
-    if (!userProgress) return counts;
+    if (variant === "tilawah" || !userProgress) return counts;
 
-    // We need to check if each passed attempt falls within a Juz's range
-    // Efficient way: for each Juz, check its mapping
     juzArray.forEach(jNum => {
       const data = JUZ_DATA[jNum];
-      let passedCount = 0;
-      
       const passedInJuz = new Set<string>();
 
       userProgress.forEach(attempt => {
@@ -116,7 +113,7 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [] }: JuzListPro
     });
 
     return counts;
-  }, [userProgress, juzArray]);
+  }, [userProgress, juzArray, variant]);
 
   const filteredJuz = juzArray.filter(j => 
     `Juz ${j}`.toLowerCase().includes(search.toLowerCase()) ||
@@ -140,17 +137,19 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [] }: JuzListPro
           const mapping = JUZ_MAPPING[j];
           const juzDetails = JUZ_DATA[j];
           const passedCount = completionMap.get(j) || 0;
-          const isCompleted = passedCount >= juzDetails.total_verses;
+          const isCompleted = variant === "mufradat" && passedCount >= juzDetails.total_verses;
 
           // We link to the surah detail for that Juz's starting point
           return (
-            <Link key={j} href={`${baseUrl}/${mapping.surah}`}>
+            <Link key={j} href={`${baseUrl}/${mapping.surah}${variant === 'tilawah' ? `?verse=${mapping.verse}` : ''}`}>
               <Card 
                 className={cn(
                   "p-5 transition-all cursor-pointer group border-none shadow-sm relative overflow-hidden rounded-2xl",
                   isCompleted 
                     ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80 shadow-md" 
-                    : "bg-card/50 hover:bg-accent hover:text-accent-foreground hover:shadow-md"
+                    : variant === 'tilawah'
+                      ? "bg-white hover:bg-emerald-50 hover:shadow-md border border-slate-100"
+                      : "bg-card/50 hover:bg-accent hover:text-accent-foreground hover:shadow-md"
                 )}
               >
                 {isCompleted && (
@@ -164,18 +163,21 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [] }: JuzListPro
                       "flex items-center justify-center w-12 h-12 rounded-xl font-black text-lg transition-all transform group-hover:scale-110",
                       isCompleted 
                         ? "bg-emerald-500 text-white" 
-                        : "bg-primary/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
+                        : variant === 'tilawah'
+                          ? "bg-emerald-100 text-emerald-700 group-hover:bg-emerald-500 group-hover:text-white"
+                          : "bg-primary/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
                     )}>
                       {j}
                     </div>
                     <div className="flex flex-col">
                       <h4 className={cn(
                         "font-black text-lg tracking-tight",
-                        isCompleted && "text-emerald-900"
+                        isCompleted && "text-emerald-900",
+                        variant === 'tilawah' && "text-slate-800"
                       )}>Juz {j}</h4>
                       <p className={cn(
                         "text-[10px] font-bold uppercase tracking-widest opacity-70",
-                        isCompleted ? "text-emerald-700" : "text-[#800000]"
+                        isCompleted ? "text-emerald-700" : variant === 'tilawah' ? "text-emerald-600" : "text-[#800000]"
                       )}>
                         Dimulai: {mapping.name}
                       </p>
@@ -187,13 +189,18 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [] }: JuzListPro
                         <Star className="w-2.5 h-2.5 fill-current" /> Juz Khatam
                       </div>
                     ) : (
-                      <div className="bg-muted/30 px-3 py-1.5 rounded-full text-[10px] font-black text-muted-foreground group-hover:bg-[#800000]/10 group-hover:text-[#800000] transition-colors">
-                        BELAJAR JUZ
+                      <div className={cn(
+                        "px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors",
+                        variant === 'tilawah'
+                          ? "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white"
+                          : "bg-muted/30 text-muted-foreground group-hover:bg-[#800000]/10 group-hover:text-[#800000]"
+                      )}>
+                        {variant === 'tilawah' ? 'BACA JUZ' : 'BELAJAR JUZ'}
                       </div>
                     )}
                   </div>
                 </div>
-                {passedCount > 0 && !isCompleted && (
+                {variant === "mufradat" && passedCount > 0 && !isCompleted && (
                   <div className="mt-4">
                     <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
                       <span>Progres Hafalan Juz</span>

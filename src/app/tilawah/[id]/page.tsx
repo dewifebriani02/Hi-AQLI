@@ -76,6 +76,7 @@ export default function SurahDetailPage() {
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const verseRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // No locks for Tilawah mode
   const isProgressLoading = false;
@@ -105,6 +106,20 @@ export default function SurahDetailPage() {
 
         if (verseData && verseData.verses) {
           setVerses(verseData.verses);
+          
+          // Scroll to verse if provided in query param
+          const searchParams = new URLSearchParams(window.location.search);
+          const verseToScroll = searchParams.get('verse');
+          if (verseToScroll) {
+            setTimeout(() => {
+              const element = verseRefs.current[verseToScroll];
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('bg-[#800000]/5');
+                setTimeout(() => element.classList.remove('bg-[#800000]/5'), 2000);
+              }
+            }, 500);
+          }
         }
       } catch (err: any) {
         console.error("Quran API Fetch Error:", err);
@@ -236,26 +251,16 @@ export default function SurahDetailPage() {
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>
           {verses.map((verse) => (
-            <div key={verse.id} className="py-12 px-4 space-y-8 transition-opacity">
+            <div 
+              key={verse.id} 
+              ref={el => { verseRefs.current[verse.verse_number.toString()] = el }}
+              className="py-12 px-4 space-y-8 transition-opacity rounded-2xl"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Link
-                    href={`/tilawah/${id}/${verse.verse_number}`}
-                    className="flex items-center justify-center w-12 h-10 rounded-full text-xs font-bold border transition-all bg-muted text-foreground border-border hover:bg-[#800000] hover:text-white"
-                  >
+                  <div className="flex items-center justify-center w-12 h-10 rounded-full text-xs font-bold border transition-all bg-emerald-50 text-emerald-700 border-emerald-100 italic">
                     ({verse.verse_number})
-                  </Link>
-
-                  <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold text-[#800000] gap-1">
-                    <Link href={`/tilawah/${id}/${verse.verse_number}`}><Info className="h-3 w-3" /> DETAIL</Link>
-                  </Button>
-
-                  <Button asChild variant="ghost" size="sm" className="text-[10px] font-bold gap-1 text-amber-600">
-                    <Link href={`/tilawah/${id}/${verse.verse_number}/quiz`}>
-                      <GraduationCap className="h-3 w-3" />
-                      UJI HAFALAN
-                    </Link>
-                  </Button>
+                  </div>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => toggleAudio(verse.verse_key)}>
                   {loadingAudioKey === verse.verse_key ? <Loader2 className="animate-spin h-4 w-4" /> : playingKey === verse.verse_key ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4" />}
