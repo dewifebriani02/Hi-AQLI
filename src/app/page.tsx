@@ -365,55 +365,50 @@ export default function DashboardPage() {
             <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Mufradat</span>
           </Link>
 
-          {/* Hi Hafal */}
-          <Link href="/hafal" className="flex flex-col items-center gap-2 group">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4AF37] to-yellow-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Award className="w-7 h-7 text-white" />
+          {/* Hi Hafal (Locked) */}
+          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
+              <Award className="w-7 h-7 text-slate-400" />
+              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Hafal</span>
-          </Link>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Hafal</span>
+          </div>
 
-          {/* Hi Ngaji */}
-          <Link href="/ngaji" className="flex flex-col items-center gap-2 group">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#800000] to-[#5a0000] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <BookOpen className="w-7 h-7 text-white" />
+          {/* Hi Ngaji (Locked) */}
+          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
+              <BookOpen className="w-7 h-7 text-slate-400" />
+              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Ngaji</span>
-          </Link>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Ngaji</span>
+          </div>
 
-          {/* Hi Berbagi */}
-          <Link href="/berbagi" className="flex flex-col items-center gap-2 group">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <HeartHandshake className="w-7 h-7 text-white" />
+          {/* Hi Berbagi (Locked) */}
+          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
+              <HeartHandshake className="w-7 h-7 text-slate-400" />
+              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Berbagi</span>
-          </Link>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Berbagi</span>
+          </div>
 
-          {/* Hi Mutaba'ah */}
-          <Link href="/mutabaah" className="flex flex-col items-center gap-2 group">
-            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all relative">
-              <Target className="w-7 h-7 text-[#800000]" />
-              {mutabaahPercent > 0 && (
-                <div className="absolute -top-1 -right-1 bg-[#800000] text-white text-[7px] font-black px-1 rounded-full border border-white">
-                  {mutabaahPercent}%
-                </div>
-              )}
+          {/* Hi Mutaba'ah (Locked) */}
+          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
+              <Target className="w-7 h-7 text-slate-400" />
+              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Mutaba'ah</span>
-          </Link>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Mutaba'ah</span>
+          </div>
 
-          {/* Hi Muhasabah */}
-          <Link href="/muhasabah" className="flex flex-col items-center gap-2 group">
-            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all relative">
-              <Shield className="w-7 h-7 text-[#D4AF37]" />
-              {muhasabahPercent > 0 && (
-                <div className="absolute -top-1 -right-1 bg-[#D4AF37] text-[#800000] text-[7px] font-black px-1 rounded-full border border-white">
-                  {muhasabahPercent}%
-                </div>
-              )}
+          {/* Hi Muhasabah (Locked) */}
+          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
+              <Shield className="w-7 h-7 text-slate-400" />
+              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Muhasabah</span>
-          </Link>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Muhasabah</span>
+          </div>
 
           {/* AI (Locked) */}
           <div className="flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
