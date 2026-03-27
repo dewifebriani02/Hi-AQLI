@@ -35,11 +35,11 @@ export const Logo = ({
     </div>
     {showText && (
       <span className={cn(
-        "font-headline text-2xl font-black tracking-tight",
+        "font-headline font-black tracking-tight leading-none select-none mt-0.5",
         whiteText ? "text-white" : (variant === 'gold' ? "text-[#D4AF37]" : "text-[#800000]"),
         textClassName
       )}>
-        HI AQLI
+        Hi AQLI
       </span>
     )}
   </div>

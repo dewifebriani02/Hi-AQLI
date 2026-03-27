@@ -57,10 +57,18 @@ export default function LeaderboardPage() {
     limit: 50
   }), []);
 
-  const { data: users, isLoading } = useCollection("users", leaderboardOptions);
+  const { data: allUsers, isLoading } = useCollection("users", leaderboardOptions);
+  
+  // Filter out 0-point accounts to keep the leaderboard "juara" (champions) only,
+  // but keep the current user in the list if they are in the top 50
+  const users = useMemo(() => {
+    return allUsers?.filter(u => (u.points || 0) > 0 || u.id === user?.id) || [];
+  }, [allUsers, user?.id]);
 
-  const currentUserData = users?.find(u => u.id === user?.id);
-  const currentUserRank = users?.findIndex(u => u.id === user?.id) + 1 || 0;
+  // Use a separate useDoc for current user to ensure sticky footer is always accurate
+  const { data: currentUserDoc } = useDoc("users", user?.id);
+  const currentUserData = currentUserDoc || users?.find(u => u.id === user?.id);
+  const currentUserRank = allUsers?.findIndex(u => u.id === user?.id) + 1 || 0;
 
   if (isLoading) {
     return (

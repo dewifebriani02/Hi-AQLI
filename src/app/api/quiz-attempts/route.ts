@@ -12,16 +12,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Try to insert with fallback for verseId/verseNumber
+    // Try to insert with standardized snake_case naming
     const insertData: any = {
       user_id: userId,
-      quizId: quizId,
-      surahId: surahId,
-      verseNumber: parseInt(verseId) || 0,
+      quiz_id: quizId,
+      surah_id: surahId,
+      verse_id: verseId,
       score: score,
-      totalQuestions: totalQuestions,
-      isPassed: !!isPassed,
-      durationSeconds: durationSeconds,
+      total_questions: totalQuestions,
+      is_passed: !!isPassed,
+      duration_seconds: durationSeconds,
       created_at: new Date().toISOString(),
     };
 
@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
             .update({
               points: currentPoints + 10,
               updated_at: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
             } as any)
             .eq('id', userId);
           

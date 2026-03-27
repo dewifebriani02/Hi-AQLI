@@ -84,17 +84,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <SidebarInset className="w-full flex flex-col">
           {/* Padding bottom untuk BottomNav */}
           <div className="flex flex-col flex-1 w-full pb-20 md:pb-0">
-            <header className="sticky top-0 z-40 flex h-20 items-center justify-between px-6 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
+            <header className="sticky top-0 z-40 flex h-24 items-center justify-between px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
               <div className="flex items-center gap-4">
-                {showAdminUI && <SidebarTrigger className="md:hidden flex text-[#800000] hover:bg-[#800000]/5" />}
+                {showAdminUI && <SidebarTrigger className="text-[#800000] hover:bg-[#800000]/5 mr-2" />}
+                <Link href="/" className="transition-transform hover:scale-105 active:scale-95">
+                  <Logo variant="default" showText={true} className="scale-110 md:scale-125 origin-left" textClassName="text-2xl md:text-3xl font-black tracking-tight" imageSize={48} />
+                </Link>
               </div>
               
-              <div className="flex-1 flex justify-center">
-                {!isAuthPage && (
-                  <Logo variant="default" showText={true} className="scale-125 md:scale-150" textClassName="text-2xl md:text-3xl" imageSize={48} />
-                )}
-              </div>
-
               <div className="flex items-center gap-3">
                 {mounted && user && (
                   <Link href="/leaderboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 shadow-sm hover:bg-slate-100 transition-all group backdrop-blur-sm">

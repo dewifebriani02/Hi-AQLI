@@ -190,7 +190,7 @@ export default function DashboardPage() {
   const todayQuizCount = quizAttempts?.filter((a: any) => {
     if (!a.created_at) return false;
     const attemptDate = new Date(a.created_at).toISOString().split('T')[0];
-    return attemptDate === todayStr && a.isPassed;
+    return attemptDate === todayStr && a.is_passed;
   }).length || 0;
 
   const repetisiPercent = Math.min(Math.round((todayQuizCount / 5) * 100), 100);

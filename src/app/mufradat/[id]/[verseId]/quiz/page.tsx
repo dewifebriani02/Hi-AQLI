@@ -60,7 +60,7 @@ export default function MufradatQuizPage() {
   // Fetch leaderboard data
   const { data: allAttempts, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
     filters: [
-      { column: 'quizId', operator: '==', value: `mufradat_${verseKey}` }
+      { column: 'quiz_id', operator: '==', value: `mufradat_${verseKey}` }
     ],
     orderBy: { column: 'score', ascending: false }
   });
@@ -76,8 +76,8 @@ export default function MufradatQuizPage() {
     allAttempts.forEach(attempt => {
       const existing = uniqueMap.get(attempt.user_id);
       const isNewBest = !existing || 
-        attempt.score > existing.score || 
-        (attempt.score === existing.score && (attempt.durationSeconds < existing.durationSeconds));
+        (attempt.score > existing.score || 
+        (attempt.score === existing.score && (attempt.duration_seconds < existing.duration_seconds)));
       if (isNewBest) {
         const userData = leaderboardUsers?.find(u => u.id === attempt.user_id);
         uniqueMap.set(attempt.user_id, { ...attempt, userData });
@@ -85,7 +85,7 @@ export default function MufradatQuizPage() {
     });
 
     return Array.from(uniqueMap.values())
-      .sort((a, b) => b.score - a.score || a.durationSeconds - b.durationSeconds)
+      .sort((a, b) => b.score - a.score || a.duration_seconds - b.duration_seconds)
       .slice(0, 5);
   }, [allAttempts, leaderboardUsers]);
 
@@ -336,10 +336,10 @@ export default function MufradatQuizPage() {
                         </span>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
-                            <Zap className="w-3 h-3 text-[#D4AF37] fill-current" /> {item.score}/{item.totalQuestions}
+                            <Zap className="w-3 h-3 text-[#D4AF37] fill-current" /> {item.score}/{item.total_questions}
                           </span>
                           <span className="text-[9px] text-slate-400 font-medium italic">
-                             {formatTime(item.durationSeconds || 0)}s
+                             {formatTime(item.duration_seconds || 0)}s
                           </span>
                         </div>
                       </div>
