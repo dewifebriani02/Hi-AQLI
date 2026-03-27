@@ -7,7 +7,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/bottom-nav';
-import { SupabaseProvider, useUser } from '@/supabase';
+import { SupabaseProvider, useUser, supabase } from '@/supabase';
 import { useDoc, useCollection } from '@/supabase/db';
 import { Trophy, Zap, Star } from 'lucide-react';
 import React, { useMemo, useState, useEffect } from 'react';
@@ -32,7 +32,30 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   const { data: isAdminDoc } = useDoc("roles_admin", user?.id);
   const { data: isSuperAdminDoc } = useDoc("roles_superadmin", user?.id);
-  const { data: userData } = useDoc("users", user?.id);
+  const { data: userData, isLoading: isUserDocLoading } = useDoc("users", user?.id);
+
+  // Auto-sync profile if missing
+  useEffect(() => {
+    if (mounted && user && !isUserDocLoading && !userData) {
+      const syncProfile = async () => {
+        try {
+          await supabase.from('users').insert({
+            id: user.id,
+            username: user.user_metadata?.full_name || user.email?.split('@')[0],
+            email: user.email,
+            roleId: 'learner',
+            points: 0,
+            followedHalaqahs: [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        } catch (err) {
+          console.error('Failed to auto-sync profile in layout:', err);
+        }
+      };
+      syncProfile();
+    }
+  }, [mounted, user, userData, isUserDocLoading]);
 
   const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc || userData?.roleId === 'admin' || userData?.roleId === 'superadmin';
   const points = userData?.points || 0;

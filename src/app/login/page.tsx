@@ -30,13 +30,18 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const errorMsg = searchParams.get('error');
+    if (errorMsg) {
+      setError(decodeURIComponent(errorMsg));
+    }
+
     if (user && !loading) {
       // Use window.location for hard redirect as fallback
       if (typeof window !== 'undefined') {
         window.location.href = redirectTo;
       }
     }
-  }, [user, loading, redirectTo]);
+  }, [user, loading, redirectTo, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
