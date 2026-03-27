@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser, initiateEmailSignUp, initiateGoogleSignIn, supabase } from '@/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,9 @@ import { Logo } from '@/components/logo';
 export default function RegisterPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirectTo') || '/';
+  
   const { toast } = useToast();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -60,7 +63,7 @@ export default function RegisterPage() {
             updated_at: new Date().toISOString(),
           });
         }
-        router.push('/');
+        router.push(redirectTo);
       };
 
       syncProfile();
@@ -103,7 +106,7 @@ export default function RegisterPage() {
               description: "Selamat datang di Hi AQLI, Ukhti otomatis masuk.",
             });
             // Give a tiny delay for toast
-            setTimeout(() => router.push('/'), 100);
+            setTimeout(() => router.push(redirectTo), 100);
         } else {
             // This case is unlikely if error is null but no user
             router.push('/login');
@@ -114,7 +117,7 @@ export default function RegisterPage() {
   const handleGoogleRegister = async () => {
     setGoogleLoading(true);
     setError(null);
-    const { error: googleError } = await initiateGoogleSignIn();
+    const { error: googleError } = await initiateGoogleSignIn(redirectTo);
     if (googleError) {
       setError(googleError.message);
       setGoogleLoading(false);

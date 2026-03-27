@@ -16,8 +16,11 @@ export default function AuthCallbackPage() {
       // We just need to wait a brief moment for the session to be established.
       const { data: { session } } = await supabase.auth.getSession();
       
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get('next') || '/';
+      
       if (session) {
-        router.replace('/');
+        router.replace(next);
       } else {
         // If no session is found after a short delay, go to login
         const timer = setTimeout(() => {

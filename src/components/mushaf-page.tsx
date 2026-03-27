@@ -10,6 +10,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, TooltipPortal
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { Mic2, Check, Play, Pause } from "lucide-react";
 
 interface Verse {
   id: number;
@@ -22,6 +31,15 @@ interface Verse {
   }[];
 }
 
+const RECITERS = [
+  { id: 7, name: "Mishary Rashid Alafasy" },
+  { id: 2, name: "AbdulBaset AbdulSamad (Murattal)" },
+  { id: 3, name: "Abdur-Rahman as-Sudais" },
+  { id: 6, name: "Mahmoud Khalil Al-Husary" },
+  { id: 12, name: "Saud al-Shuraim" },
+  { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
+];
+
 export function MushafPage() {
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
@@ -29,11 +47,21 @@ export function MushafPage() {
   const [inputPage, setInputPage] = useState("1");
   const [showTranslation, setShowTranslation] = useState(false);
   const [fontSize, setFontSize] = useState(32); // Default font size
+  
+  const { toast } = useToast();
+  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
+  const [showReciterDialog, setShowReciterDialog] = useState(false);
+  const [playingKey, setPlayingKey] = useState<string | null>(null);
+  const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   // Tooltip persistence state
   const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
 
   useEffect(() => {
+    const savedReciter = localStorage.getItem('aqli_reciter_id');
+    if (savedReciter) setSelectedReciterId(parseInt(savedReciter));
+
     const savedSize = localStorage.getItem('aqli_mushaf_font_size');
     if (savedSize) setFontSize(parseInt(savedSize));
 
@@ -55,7 +83,70 @@ export function MushafPage() {
     fetchPageVerses();
     setInputPage(page.toString());
     setActiveWordKey(null); // Reset when page changes
+    
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, [page]);
+
+  const selectReciter = (reciterId: number) => {
+    setSelectedReciterId(reciterId);
+    localStorage.setItem('aqli_reciter_id', reciterId.toString());
+    setShowReciterDialog(false);
+  };
+
+  const toggleAudio = async (verseKey: string) => {
+    if (!selectedReciterId) {
+      setShowReciterDialog(true);
+      return;
+    }
+
+    if (playingKey === verseKey) {
+      audioRef.current?.pause();
+      setPlayingKey(null);
+      return;
+    }
+
+    setLoadingAudioKey(verseKey);
+
+    try {
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const audioUrl = data.audio_files[0]?.url;
+
+      let fullUrl = audioUrl;
+      if (audioUrl.startsWith('//')) fullUrl = `https:${audioUrl}`;
+      else if (!audioUrl.startsWith('http')) fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
+
+      if (audioRef.current) audioRef.current.pause();
+
+      const audio = new Audio(fullUrl);
+      audioRef.current = audio;
+
+      audio.onplay = () => {
+        setPlayingKey(verseKey);
+        setLoadingAudioKey(null);
+      };
+
+      audio.onended = () => {
+        setPlayingKey(null);
+        // Autoplay next verse if possible
+        const currentIndex = verses.findIndex(v => v.verse_key === verseKey);
+        if (currentIndex !== -1 && currentIndex < verses.length - 1) {
+          setTimeout(() => toggleAudio(verses[currentIndex + 1].verse_key), 300);
+        }
+      };
+
+      await audio.play();
+    } catch (err) {
+      setLoadingAudioKey(null);
+      toast({ variant: "destructive", title: "Audio Error", description: "Gagal memutar qari." });
+    }
+  };
 
   const handlePageChange = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +229,36 @@ export function MushafPage() {
                 Terjemahan
               </Label>
             </div>
+
+            <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold h-9 rounded-full bg-[#800000]/5 border border-[#800000]/10 hover:bg-[#800000]/10 transition-colors">
+                  <Mic2 className="h-4 w-4" />
+                  <span className="text-[10px] uppercase tracking-wider">Qari</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-3xl border-none shadow-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-center font-headline text-[#800000] uppercase tracking-widest text-lg pt-4">Pilih Qari</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-2 py-6 max-h-[60vh] overflow-y-auto px-1">
+                  {RECITERS.map((r) => (
+                    <Button 
+                      key={r.id} 
+                      variant={selectedReciterId === r.id ? "default" : "outline"} 
+                      onClick={() => selectReciter(r.id)} 
+                      className={cn(
+                        "justify-between font-bold h-12 rounded-xl transition-all",
+                        selectedReciterId === r.id ? "bg-[#800000] text-white shadow-lg" : "hover:border-[#800000] hover:text-[#800000]"
+                      )}
+                    >
+                      <span className="text-xs uppercase tracking-tight">{r.name}</span>
+                      {selectedReciterId === r.id && <Check className="h-4 w-4" />}
+                    </Button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
@@ -201,13 +322,31 @@ export function MushafPage() {
                         </Tooltip>
                       );
                     })}
-                    {/* Compact Verse Marker */}
-                    <span 
-                      style={{ height: `${fontSize * 0.8}px`, width: 'auto' }}
-                      className="inline-flex items-center justify-center px-2 rounded-full border border-[#800000]/20 text-[10px] font-bold text-[#800000] mx-2 align-middle bg-white/50 shadow-xs shrink-0 translate-y-[-2px]"
+                    {/* Compact Verse Marker with Play Button */}
+                    <button 
+                      onClick={() => toggleAudio(verse.verse_key)}
+                      style={{ height: `${fontSize * 0.9}px` }}
+                      className={cn(
+                        "inline-flex items-center justify-center px-3 rounded-full border text-[10px] font-bold mx-2 align-middle shadow-sm transition-all active:scale-95 group relative overflow-hidden",
+                        playingKey === verse.verse_key 
+                          ? "bg-[#800000] text-white border-[#800000]" 
+                          : "bg-white/50 text-[#800000] border-[#800000]/20 hover:border-[#800000]/50 hover:bg-white"
+                      )}
                     >
-                      ({verse.verse_key.split(':')[1]})
-                    </span>
+                      {loadingAudioKey === verse.verse_key ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : playingKey === verse.verse_key ? (
+                        <div className="flex items-center gap-1.5">
+                           <Pause className="h-3 w-3 fill-current" />
+                           <span className="opacity-80">{verse.verse_key.split(':')[1]}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                           <Play className="h-3 w-3" />
+                           <span className="opacity-60">{verse.verse_key.split(':')[1]}</span>
+                        </div>
+                      )}
+                    </button>
                   </React.Fragment>
                 ))}
               </TooltipProvider>

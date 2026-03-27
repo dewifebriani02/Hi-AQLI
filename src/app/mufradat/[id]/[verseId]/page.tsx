@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, BrainCircuit, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,6 @@ import {
   TooltipTrigger,
   TooltipPortal,
 } from "@/components/ui/tooltip";
-import { getVerseAnalysis } from "@/app/actions";
-import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
 
@@ -50,9 +47,7 @@ export default function MufradatVerseDetailPage() {
   const [surahName, setSurahName] = useState("");
   const [totalVerses, setTotalVerses] = useState(0);
   const [apiTafsir, setApiTafsir] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<AnalyzeVerseOutput | null>(null);
   const [loading, setLoading] = useState(true);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
   const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
 
   const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
@@ -74,19 +69,6 @@ export default function MufradatVerseDetailPage() {
 
   const isCurrentVerseCompleted = completedVerseNumbers.has(currentVerseNum);
 
-  const fetchAiAnalysis = useCallback(async (name: string, num: number, text: string) => {
-    setAnalysisLoading(true);
-    try {
-      const result = await getVerseAnalysis({ surahName: name, verseNumber: num, verseText: text });
-      if (result) {
-        setAnalysis(result);
-      }
-    } catch (e) {
-      console.error("AI Analysis Error:", e);
-    } finally {
-      setAnalysisLoading(false);
-    }
-  }, []);
 
   const fetchOfficialTafsir = useCallback(async (chapterId: string, vNum: string) => {
     setApiTafsir(null);
@@ -124,8 +106,7 @@ export default function MufradatVerseDetailPage() {
         const vData = await vRes.json();
         setVerse(vData.verse);
 
-        setTimeout(() => fetchOfficialTafsir(id, verseId), 300);
-        if (vData.verse) fetchAiAnalysis(sData.chapter.name_simple, parseInt(verseId), vData.verse.text_uthmani);
+        if (vData.verse) setTimeout(() => fetchOfficialTafsir(id, verseId), 300);
       } catch (e) {
         console.error("Fetch Error:", e);
       } finally {
@@ -133,7 +114,7 @@ export default function MufradatVerseDetailPage() {
       }
     }
     fetchAll();
-  }, [id, verseId, fetchAiAnalysis, fetchOfficialTafsir]);
+  }, [id, verseId, fetchOfficialTafsir]);
 
   const incrementWordCount = (idx: number) => {
     setWordCounts(prev => ({
@@ -263,7 +244,7 @@ export default function MufradatVerseDetailPage() {
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/10 p-4">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black gap-2 py-6 h-14 text-lg rounded-xl shadow-lg border-b-4 border-[#800000]/20">
-              <Link href={user ? `/mufradat/${id}/${verseId}/quiz` : "/login"}>
+              <Link href={user ? `/mufradat/${id}/${verseId}/quiz` : `/login?redirectTo=/mufradat/${id}/${verseId}`}>
                 <GraduationCap className="w-5 h-5" />
                 {user ? "MULAI UJI HAFALAN" : "MASUK UNTUK UJI HAFALAN"}
               </Link>
@@ -303,27 +284,6 @@ export default function MufradatVerseDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-indigo-100 bg-indigo-50/30 border-l-4 border-l-indigo-500 overflow-hidden">
-          <CardHeader className="py-4 border-b border-indigo-50 bg-indigo-50/50">
-            <CardTitle className="text-base flex items-center gap-2 font-headline text-indigo-900">
-              <BrainCircuit className="w-5 h-5" /> Bimbingan AI • Hikmah & Konteks
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {analysisLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            ) : (
-              <div className="prose prose-sm max-w-none text-indigo-950">
-                <p className="leading-relaxed whitespace-pre-wrap italic font-medium">
-                  {analysis?.hikmah || "AI sedang merumuskan hikmah yang tepat untuk ayat ini..."}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

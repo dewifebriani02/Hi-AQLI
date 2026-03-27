@@ -8,11 +8,14 @@ export async function initiateEmailSignIn(email: string, password: string) {
 }
 
 /** Initiate Google sign-in. */
-export async function initiateGoogleSignIn() {
+export async function initiateGoogleSignIn(redirectTo?: string) {
+    const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
+    if (redirectTo) callbackUrl.searchParams.set('next', redirectTo);
+
     return supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
+            redirectTo: callbackUrl.toString(),
         },
     });
 }

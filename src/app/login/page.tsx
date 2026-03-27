@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,9 @@ import { Logo } from '@/components/logo';
 export default function LoginPage() {
   const { user } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirectTo') || '/';
+  
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,10 +32,10 @@ export default function LoginPage() {
     if (user && !loading) {
       // Use window.location for hard redirect as fallback
       if (typeof window !== 'undefined') {
-        window.location.href = '/';
+        window.location.href = redirectTo;
       }
     }
-  }, [user, loading]);
+  }, [user, loading, redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +61,7 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     setError(null);
-    const { error } = await initiateGoogleSignIn();
+    const { error } = await initiateGoogleSignIn(redirectTo);
 
     if (error) {
       setGoogleLoading(false);
@@ -189,7 +192,10 @@ export default function LoginPage() {
         <CardFooter className="bg-muted/30 py-6 border-t">
           <p className="text-center text-sm text-muted-foreground w-full">
             Belum punya akun?{' '}
-            <Link href="/register" className="text-[#800000] font-black hover:underline uppercase text-xs tracking-wider">
+            <Link 
+              href={`/register${redirectTo !== '/' ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`} 
+              className="text-[#800000] font-black hover:underline uppercase text-xs tracking-wider"
+            >
               Daftar Sekarang
             </Link>
           </p>

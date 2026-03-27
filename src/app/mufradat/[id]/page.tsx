@@ -74,7 +74,6 @@ export default function MufradatSurahDetailPage() {
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
-  const [showReciterDialog, setShowReciterDialog] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch progress for the current surah to handle locking
@@ -143,12 +142,11 @@ export default function MufradatSurahDetailPage() {
   const selectReciter = (reciterId: number) => {
     setSelectedReciterId(reciterId);
     localStorage.setItem('aqli_reciter_id', reciterId.toString());
-    setShowReciterDialog(false);
   };
 
   const toggleAudio = async (verseKey: string) => {
     if (!selectedReciterId) {
-      setShowReciterDialog(true);
+      toast({ title: "Pilih Qari", description: "Silakan pilih Qari di Mode Mushaf terlebih dahulu." });
       return;
     }
 
@@ -215,21 +213,6 @@ export default function MufradatSurahDetailPage() {
                 <Plus className="h-3 w-3" />
               </Button>
             </div>
-            <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span>Qari</span></Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
-                <div className="grid gap-2 py-4">
-                  {RECITERS.map((r) => (
-                    <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className="justify-between font-bold">
-                      {r.name} {selectedReciterId === r.id && <Check className="h-4 w-4" />}
-                    </Button>
-                  ))}
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
         <div className="sm:hidden flex justify-center">
