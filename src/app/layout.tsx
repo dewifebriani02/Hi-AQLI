@@ -14,7 +14,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { SplashScreen } from '@/components/splash-screen';
 import dynamic from 'next/dynamic';
 
 const Logo = dynamic(() => import('@/components/logo').then(mod => mod.Logo), { 
@@ -22,8 +21,6 @@ const Logo = dynamic(() => import('@/components/logo').then(mod => mod.Logo), {
   loading: () => <div className="w-[100px] h-[28px]" /> // Placeholder with similar dimensions
 });
 
-// Splash screen state management
-let splashShown = false;
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -40,23 +37,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc || userData?.roleId === 'admin' || userData?.roleId === 'superadmin';
   const points = userData?.points || 0;
 
-  // Splash screen logic - only show once per session
-  const [showSplash, setShowSplash] = useState(false);
-
-  useEffect(() => {
-    // Check if splash has been shown in this session
-    if (!splashShown && typeof window !== 'undefined' && mounted) {
-      const sessionKey = 'aqli_splash_shown';
-      const hasShown = sessionStorage.getItem(sessionKey);
-
-      if (!hasShown) {
-        setShowSplash(true);
-        sessionStorage.setItem(sessionKey, 'true');
-        splashShown = true;
-      }
-    }
-  }, [mounted]);
-
   // Gate content until mounted to prevent hydration mismatch
   const showAdminUI = mounted && hasAdminAccess;
   const showUserUI = mounted && !isUserLoading;
@@ -64,11 +44,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <SplashScreen
-        show={showSplash}
-        onComplete={() => setShowSplash(false)}
-        minDisplayTime={2000}
-      />
       <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
         {/* Sidebar hanya muncul untuk admin di md ke atas */}
@@ -82,7 +57,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </div>
               
               <div className="flex-1 flex justify-center">
-                <Logo variant="default" showText={true} className="scale-110" textClassName="text-xl" imageSize={42} />
+                <Logo variant="default" showText={true} className="scale-125 md:scale-150" textClassName="text-2xl md:text-3xl" imageSize={48} />
               </div>
 
               <div className="flex items-center gap-3">

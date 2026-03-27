@@ -79,9 +79,14 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden bg-white/80 backdrop-blur-sm">
         <div className="h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000]" />
-        <CardHeader className="space-y-1 text-center pt-8">
-          <CardTitle className="text-2xl font-black font-headline uppercase tracking-tight text-[#800000] italic">Ahlan wa Sahlan</CardTitle>
-          <CardDescription className="text-muted-foreground font-medium text-[11px] tracking-tight italic">Berhijrah dengan Ilmu, Beramal dengan Itqan.</CardDescription>
+        <CardHeader className="space-y-4 text-center pt-10 pb-2">
+          <div className="flex justify-center mb-2">
+            <Logo variant="default" showText={true} className="scale-125 md:scale-150" textClassName="text-2xl md:text-3xl" imageSize={56} />
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-black font-headline uppercase tracking-tight text-[#800000] italic">Ahlan wa Sahlan</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium text-[11px] tracking-tight italic">Berhijrah dengan Ilmu, Beramal dengan Itqan.</CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6 pt-4">
           {error && (
