@@ -357,6 +357,14 @@ export default function DashboardPage() {
           <LayoutGrid className="w-5 h-5 text-[#800000]" /> Layanan Utama
         </h2>
         <div className="grid grid-cols-4 gap-y-6 gap-x-2 pb-4">
+          {/* Hi Tilawah */}
+          <Link href="/tilawah" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <BookOpen className="w-7 h-7 text-white" />
+            </div>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Tilawah</span>
+          </Link>
+
           {/* Hi Mufradat */}
           <Link href="/mufradat" className="flex flex-col items-center gap-2 group">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">

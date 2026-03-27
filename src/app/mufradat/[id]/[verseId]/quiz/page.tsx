@@ -57,7 +57,7 @@ export default function MufradatQuizPage() {
   }, [user, isUserLoading, router]);
 
   // Fetch leaderboard data
-  const { data: allAttempts } = useCollection("quiz_attempts", {
+  const { data: allAttempts, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
     filters: [
       { column: 'quizId', operator: '==', value: `mufradat_${verseKey}` }
     ],
@@ -197,6 +197,8 @@ export default function MufradatQuizPage() {
           isPassed: finalScore === questions.length
         })
       });
+      // Refresh leaderboard after save
+      refreshLeaderboard();
     } catch (e) {
       console.error("Gagal simpan skor:", e);
     }
