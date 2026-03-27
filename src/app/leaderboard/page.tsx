@@ -2,7 +2,7 @@
 'use client';
 
 import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useCollection, useDoc } from "@/supabase/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
