@@ -41,6 +41,7 @@ interface Verse {
   text_uthmani?: string;
   words: Word[];
   translations: { text: string }[];
+  page_number: number;
 }
 
 interface SurahInfo {
@@ -89,6 +90,11 @@ export default function MufradatSurahDetailPage() {
 
   const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
+  // Unified progress (from parent or fresh if needed)
+  const { data: userProgress } = useCollection("quiz_attempts", {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
+  });
+
   const completedVerseNumbers = useMemo(() => {
     if (!progress) return new Set<number>();
     // Ensure all verse IDs are treated as numbers, regardless of DB type (Text vs Int)
@@ -106,6 +112,19 @@ export default function MufradatSurahDetailPage() {
     });
     return errorSet;
   }, [progress]);
+
+  // Track page completions to unlock next pages
+  const completedPageQuizzes = useMemo(() => {
+    const pageSet = new Set<number>();
+    if (!userProgress) return pageSet;
+    userProgress.forEach(p => {
+      if (p.is_passed && p.quiz_id.startsWith('mufradat_page_')) {
+        const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
+        pageSet.add(pNum);
+      }
+    });
+    return pageSet;
+  }, [userProgress]);
 
   useEffect(() => {
     const savedReciter = localStorage.getItem('aqli_reciter_id');
@@ -133,7 +152,7 @@ export default function MufradatSurahDetailPage() {
         }
 
         const verseRes = await fetch(
-          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani&per_page=300`
+          `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani,page_number&per_page=300`
         );
         const verseData = await verseRes.json();
 
@@ -297,26 +316,64 @@ export default function MufradatSurahDetailPage() {
 
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>
-          {verses.map((verse) => {
+          {verses.map((verse, index) => {
+            const prevVerse = index > 0 ? verses[index - 1] : null;
             const isFirstVerse = verse.verse_number === 1;
-            const prevVerseCompleted = completedVerseNumbers.has(verse.verse_number - 1);
-            const isLocked = !isFirstVerse && !prevVerseCompleted;
+            const isNewPage = prevVerse && verse.page_number !== prevVerse.page_number;
+            
+            // Completion checks
             const isCompleted = completedVerseNumbers.has(verse.verse_number);
+            const prevVerseDone = isFirstVerse || completedVerseNumbers.has(prevVerse?.verse_number || 0);
+            const prevPageQuizDone = !isNewPage || completedPageQuizzes.has(prevVerse.page_number);
+            
+            // A verse is locked if:
+            // 1. Previous verse in this surah is not done
+            // 2. OR It is on a new page and the previous page's quiz hasn't been passed
+            const isLocked = !isFirstVerse && (!prevVerseDone || !prevPageQuizDone);
 
             return (
-              <div 
-                key={verse.id} 
-                id={`verse-${verse.verse_number}`}
-                className={cn("py-12 px-4 space-y-8 transition-opacity", isLocked && "opacity-60")}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Button asChild={!isLocked} variant="outline" className={cn(
-                      "w-48 h-10 gap-2 font-black text-[10px] rounded-full transition-all active:scale-[0.95] shadow-sm uppercase tracking-widest",
-                      isLocked ? "bg-muted text-muted-foreground border-muted cursor-not-allowed" :
-                        isCompleted ? "bg-[#D4AF37] text-black border-[#800000]/20 hover:bg-[#D4AF37]/90" :
-                          "bg-white text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5"
-                    )} disabled={isLocked}>
+              <div key={verse.id}>
+                {/* PAGE MILESTONE UI */}
+                {isNewPage && (
+                  <div className="mx-4 my-8 p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center gap-4 text-center">
+                    <div className={cn(
+                      "w-12 h-12 rounded-full flex items-center justify-center shadow-lg",
+                      prevPageQuizDone ? "bg-emerald-500 text-white" : "bg-amber-100 text-amber-600 animate-bounce"
+                    )}>
+                      {prevPageQuizDone ? <Check className="w-6 h-6" /> : <GraduationCap className="w-6 h-6" />}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800">Selesai Halaman {prevVerse.page_number}</h4>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
+                        {prevPageQuizDone 
+                          ? `Alhamdulillah! Halaman ${prevVerse.page_number} tuntas.`
+                          : `Lakukan Murajaah 30 Kata untuk membuka Halaman ${verse.page_number}.`
+                        }
+                      </p>
+                    </div>
+                    <Button asChild variant={prevPageQuizDone ? "outline" : "default"} className={cn(
+                      "rounded-full px-6 font-black text-[10px] uppercase tracking-widest",
+                      !prevPageQuizDone && "bg-[#D4AF37] hover:bg-[#B8860B] text-black shadow-md"
+                    )}>
+                      <Link href={`/mufradat/page/${prevVerse.page_number}`}>
+                         {prevPageQuizDone ? "LIHAT REVIEW HALAMAN" : `MURAJAAH & UJIAN HALAMAN ${prevVerse.page_number}`}
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+
+                <div 
+                  id={`verse-${verse.verse_number}`}
+                  className={cn("py-12 px-4 space-y-8 transition-opacity", isLocked && "opacity-60")}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Button asChild={!isLocked} variant="outline" className={cn(
+                        "w-48 h-10 gap-2 font-black text-[10px] rounded-full transition-all active:scale-[0.95] shadow-sm uppercase tracking-widest",
+                        isLocked ? "bg-muted text-muted-foreground border-muted cursor-not-allowed" :
+                          isCompleted ? "bg-[#D4AF37] text-black border-[#800000]/20 hover:bg-[#D4AF37]/90" :
+                            "bg-white text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5"
+                      )} disabled={isLocked}>
                       {isLocked ? (
                         <span className="flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> TERKUNCI</span>
                       ) : (
@@ -379,8 +436,9 @@ export default function MufradatSurahDetailPage() {
                   </div>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
         </TooltipProvider>
       </div>
 

@@ -51,17 +51,37 @@ export default function MufradatPageDetailPage() {
 
   const juzNum = useMemo(() => getJuzForPage(pageNum), [pageNum]);
 
-  // Progress tracking: for pages, we use a separate quiz_id format: "mufradat_page_{pageNum}"
-  const progressOptions = useMemo(() => ({
-    filters: [
-      { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'quiz_id', operator: '==', value: `mufradat_page_${pageNum}` },
-      { column: 'is_passed', operator: '==', value: true }
-    ]
-  }), [user?.id, pageNum]);
+  const { data: allProgress } = useCollection("quiz_attempts", {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
+  });
 
-  const { data: progress } = useCollection("quiz_attempts", user ? progressOptions : undefined);
-  const isPageCompleted = useMemo(() => progress && progress.length > 0, [progress]);
+  const passedVerseKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (!allProgress) return keys;
+    allProgress.forEach(p => {
+      if (p.is_passed && p.quiz_id.startsWith('mufradat_')) {
+        // Handle mufradat_2:142 style quiz_ids
+        const key = p.quiz_id.replace('mufradat_', '');
+        if (key.includes(':')) keys.add(key);
+      }
+    });
+    return keys;
+  }, [allProgress]);
+
+  const isAllVersesPassed = useMemo(() => {
+    if (verses.length === 0) return false;
+    return verses.every(v => passedVerseKeys.has(v.verse_key));
+  }, [verses, passedVerseKeys]);
+
+  const passedCountInPage = useMemo(() => {
+    return verses.filter(v => passedVerseKeys.has(v.verse_key)).length;
+  }, [verses, passedVerseKeys]);
+
+  // Page Quiz progress
+  const isPageCompleted = useMemo(() => {
+    if (!allProgress) return false;
+    return allProgress.some(p => p.quiz_id === `mufradat_page_${pageNum}` && p.is_passed);
+  }, [allProgress, pageNum]);
 
   // Fetch latest attempt to get wrong_words for review
   const lastAttemptOptions = useMemo(() => ({
@@ -117,18 +137,38 @@ export default function MufradatPageDetailPage() {
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Hi Mufradat • Juz {juzNum}</p>
         </div>
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="icon" className="text-[#D4AF37]"><Link href={`/mufradat/page/${pageNum}/quiz`}><GraduationCap className="h-5 w-5" /></Link></Button>
+          <Button 
+            asChild={isAllVersesPassed} 
+            variant="ghost" 
+            size={isAllVersesPassed ? "icon" : "default"} 
+            className={cn(
+              "text-[#D4AF37] transition-all",
+              !isAllVersesPassed && "bg-amber-50 text-amber-600 px-3 gap-2 hover:bg-amber-100 border border-amber-200"
+            )}
+            disabled={!isAllVersesPassed}
+          >
+            {isAllVersesPassed ? (
+              <Link href={`/mufradat/page/${pageNum}/quiz`}>
+                <GraduationCap className="h-5 w-5" />
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2 font-black text-[10px] uppercase tracking-tighter">
+                <Lock className="w-3.5 h-3.5" /> PROGRES: {passedCountInPage}/{verses.length} AYAT
+              </div>
+            )}
+          </Button>
           <Button variant="ghost" size="icon" disabled={pageNum <= 1} onClick={() => router.push(`/mufradat/page/${pageNum - 1}`)}><ArrowLeft className="h-5 w-5" /></Button>
-          <Button variant="ghost" size="icon" disabled={pageNum >= 604} onClick={() => router.push(`/mufradat/page/${pageNum + 1}`)}><ArrowRight className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" disabled={pageNum >= 604 || !isPageCompleted} onClick={() => router.push(`/mufradat/page/${pageNum + 1}`)} className={cn(!isPageCompleted && "opacity-30")}><ArrowRight className="h-5 w-5" /></Button>
         </div>
       </div>
 
       <Card className="border-none bg-muted/20">
         <CardContent className="pt-8 pb-10 px-6 text-right" dir="rtl">
           <TooltipProvider delayDuration={0}>
-            <div className="flex flex-wrap justify-end gap-x-2 gap-y-6 w-full">
+            <div className="flex flex-col items-end gap-10 w-full">
               {verses.map((verse) => (
-                <div key={verse.id} className="flex flex-wrap justify-end gap-x-2">
+                <div key={verse.id} className="flex flex-col items-end w-full gap-2">
+                  <div className="flex flex-wrap justify-end gap-x-2 gap-y-4 w-full" dir="rtl">
                   {verse.words.filter(w => w.text_uthmani).map((word, wordIdx) => {
                     const wordKey = `${verse.id}-${wordIdx}`;
                     return (
@@ -152,7 +192,14 @@ export default function MufradatPageDetailPage() {
                       </Tooltip>
                     );
                   })}
-                  <span className="text-sm font-bold text-muted-foreground self-center mx-1 font-serif rotate-0 border border-muted px-1.5 rounded opacity-50">({verse.verse_number})</span>
+                  <Link 
+                    href={`/mufradat/${verse.verse_key.split(':')[0]}/${verse.verse_key.split(':')[1]}`}
+                    className="text-[10px] font-black text-[#800000]/60 self-center mx-1 font-sans rotate-0 border border-[#800000]/20 px-1.5 rounded hover:bg-[#800000] hover:text-white transition-all shadow-sm"
+                    title="Buka Detail Per Ayat"
+                  >
+                    ({verse.verse_number})
+                  </Link>
+                  </div>
                 </div>
               ))}
             </div>

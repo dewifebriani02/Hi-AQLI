@@ -50,6 +50,7 @@ export default function MufradatQuizPage() {
   const [attempts, setAttempts] = useState(1);
   const [surahInfo, setSurahInfo] = useState<{ verses_count: number } | null>(null);
   const [pageId, setPageId] = useState<number | null>(null);
+  const [nextVersePage, setNextVersePage] = useState<number | null>(null);
 
   const verseKey = `${id}:${verseId}`;
 
@@ -141,6 +142,16 @@ export default function MufradatQuizPage() {
           });
           
           setQuestions(generated);
+
+          // Fetch next verse metadata to check for page break
+          const nextV = parseInt(verseId) + 1;
+          if (surahData.chapter && nextV <= surahData.chapter.verses_count) {
+            const nextRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${nextV}?fields=page_number`);
+            const nextData = await nextRes.json();
+            if (nextData && nextData.verse) {
+              setNextVersePage(nextData.verse.page_number);
+            }
+          }
         }
       } catch (err) {
         console.error("Quiz Fetch Error:", err);
@@ -299,15 +310,23 @@ export default function MufradatQuizPage() {
             {isPerfect ? (
               <>
                 {surahInfo && parseInt(verseId) < surahInfo.verses_count ? (
-                  <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                    <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}`}>
-                      Lanjut ke Ayat Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
-                    </Link>
-                  </Button>
+                  nextVersePage && nextVersePage !== pageId ? (
+                    <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-black font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                      <Link href={`/mufradat/page/${pageId}`}>
+                        MURAJAAH DAN UJIAN HALAMAN {pageId} <ChevronLeft className="w-4 h-4 rotate-180" />
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                      <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}`}>
+                        Lanjut ke Ayat Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
+                      </Link>
+                    </Button>
+                  )
                 ) : (
                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                    <Link href={`/mufradat/${id}`}>
-                      Surah Selesai! Kembali <ChevronLeft className="w-4 h-4 rotate-180" />
+                    <Link href={`/mufradat/page/${pageId}`}>
+                      MURAJAAH & UJIAN HALAMAN {pageId} <ChevronLeft className="w-4 h-4 rotate-180" />
                     </Link>
                   </Button>
                 )}

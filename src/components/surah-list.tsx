@@ -178,7 +178,7 @@ export function SurahList({
 
           const startPage = SURAH_START_PAGES[surah.id] || 1;
           const href = baseUrl === "/mufradat" 
-            ? `/mufradat/page/${startPage}` 
+            ? `${baseUrl}/${surah.id}/1` 
             : `${baseUrl}/${surah.id}`;
 
           return (
