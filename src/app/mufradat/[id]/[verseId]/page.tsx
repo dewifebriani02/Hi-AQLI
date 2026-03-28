@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
+import { cn } from "@/lib/utils";
 
 interface WordData {
   id: number;
@@ -68,6 +69,20 @@ export default function MufradatVerseDetailPage() {
   }, [progress]);
 
   const isCurrentVerseCompleted = completedVerseNumbers.has(currentVerseNum);
+  
+  // Fetch latest attempt for THIS specific verse to get wrong_words
+  const lastAttemptOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'quiz_id', operator: '==', value: `mufradat_${id}:${verseId}` }
+    ],
+    orderBy: { column: 'created_at', ascending: false },
+    limit: 1
+  }), [user?.id, id, verseId]);
+
+  const { data: lastAttempts } = useCollection("quiz_attempts", user ? lastAttemptOptions : undefined);
+  const lastAttempt = useMemo(() => lastAttempts?.[0], [lastAttempts]);
+  const wrongWordIds = useMemo(() => new Set<number>(lastAttempt?.wrong_words || []), [lastAttempt]);
 
 
   const fetchOfficialTafsir = useCallback(async (chapterId: string, vNum: string) => {
@@ -176,8 +191,11 @@ export default function MufradatVerseDetailPage() {
                       tabIndex={0} role="button" onPointerEnter={() => setActiveWordIdx(wordIdx)}
                       className="text-2xl md:text-3xl font-arabic leading-[2] text-foreground hover:text-[#800000] focus:text-[#800000] outline-none cursor-help px-0.5 inline-block"
                     >
-                      {word.text_uthmani}
-                    </span>
+                        {word.text_uthmani}
+                        {wrongWordIds.has(word.id) && (
+                          <span className="absolute -top-1 -right-0.5 w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
+                        )}
+                      </span>
                   </TooltipTrigger>
                   <TooltipPortal>
                     <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
@@ -205,6 +223,9 @@ export default function MufradatVerseDetailPage() {
               </CardTitle>
               <p className="text-[11px] text-amber-900 font-medium leading-snug">
                 <strong>Repetisi</strong>: Ulangi setiap kata sebanyak minimal 5 kali dengan mengetuk baris kata pada daftar di bawah.
+                {wrongWordIds.size > 0 && (
+                  <span className="block mt-1 text-rose-600 animate-pulse">Ada {wrongWordIds.size} kata yang salah pada kuis terakhir. Mari review!</span>
+                )}
               </p>
             </div>
             {Object.keys(wordCounts).length > 0 && (
@@ -226,7 +247,12 @@ export default function MufradatVerseDetailPage() {
                       {idx + 1}
                     </span>
                     <div className="flex flex-col items-start gap-1">
-                      <span className="text-2xl font-arabic text-[#800000] text-right" dir="rtl">{word.text_uthmani}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-2xl font-arabic text-right", wrongWordIds.has(word.id) ? "text-rose-600" : "text-[#800000]")} dir="rtl">{word.text_uthmani}</span>
+                        {wrongWordIds.has(word.id) && (
+                          <Badge className="bg-rose-500 hover:bg-rose-600 text-white text-[8px] font-black h-4 px-1 uppercase tracking-tighter">REVIEW</Badge>
+                        )}
+                      </div>
                       {wordCounts[idx] > 0 && (
                         <Badge className="bg-[#D4AF37] hover:bg-[#D4AF37] text-black text-[9px] font-bold h-4 px-1 animate-in zoom-in-50 duration-200">
                           x{wordCounts[idx]}

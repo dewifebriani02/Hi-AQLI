@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 import {
   Tooltip,
@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
   TooltipPortal,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -92,6 +93,18 @@ export default function MufradatSurahDetailPage() {
     if (!progress) return new Set<number>();
     // Ensure all verse IDs are treated as numbers, regardless of DB type (Text vs Int)
     return new Set(progress.map(p => Number(p.verse_id)));
+  }, [progress]);
+
+  // Aggregate wrong words across all verses of this surah
+  const versesWithErrors = useMemo(() => {
+    const errorSet = new Set<number>();
+    if (!progress) return errorSet;
+    progress.forEach(p => {
+      if (p.wrong_words && p.wrong_words.length > 0) {
+        errorSet.add(Number(p.verse_id));
+      }
+    });
+    return errorSet;
   }, [progress]);
 
   useEffect(() => {
@@ -272,10 +285,11 @@ export default function MufradatSurahDetailPage() {
                   <p className="text-sm opacity-90 text-white/80">Uji hafalan kosakata tersulit dalam surah ini</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 bg-[#D4AF37] text-black px-4 py-2 rounded-full shadow-lg group-hover:scale-105 transition-transform">
-                <span className="text-xs font-black uppercase">Mulai</span>
-                <ArrowRight className="w-4 h-4" />
-              </div>
+              {versesWithErrors.size > 0 && (
+                <div className="flex items-center gap-2 mt-2 bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-lg">
+                  <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest animate-pulse">Perlu Review: {versesWithErrors.size} Ayat</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </Link>
@@ -307,8 +321,15 @@ export default function MufradatSurahDetailPage() {
                         <span className="flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> TERKUNCI</span>
                       ) : (
                         <Link href={`/mufradat/${id}/${verse.verse_number}`}>
-                          {isCompleted ? <Check className="w-3.5 h-3.5" /> : <GraduationCap className="w-3.5 h-3.5" />}
-                          {isCompleted ? "PELAJARI LAGI" : "Mulai Uji Hafalan Kata"}
+                          {isCompleted ? (
+                            versesWithErrors.has(verse.verse_number) ? (
+                              <span className="flex items-center gap-2 text-rose-600"><Star className="w-3.5 h-3.5 fill-current" /> REVIEW AYAT</span>
+                            ) : (
+                              <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5" /> PELAJARI LAGI</span>
+                            )
+                          ) : (
+                             <span className="flex items-center gap-2"><GraduationCap className="w-3.5 h-3.5" /> MULAI UJI HAFALAN</span>
+                          )}
                         </Link>
                       )}
                     </Button>
