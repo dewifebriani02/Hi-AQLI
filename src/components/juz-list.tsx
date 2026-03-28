@@ -213,15 +213,14 @@ export function JuzList({
           const finishedPagesCount = juzPages.filter(p => completedPages.has(p)).length;
           const isAllPagesDone = finishedPagesCount === totalPages;
           
-          // Juz N+1 is unlocked if Juz N Exam is passed. Juz 1 is always unlocked.
-          const isJuzUnlocked = j === 1 || completedExams.has(j - 1);
+          const startPage = juzPages[0];
+          const isJuzUnlocked = startPage === 1 || completedPages.has(startPage - 1);
           const isExpanded = expandedJuz === j;
 
           if (variant === 'tilawah') {
             return (
               <Link key={j} href={`${baseUrl}/${mapping.surah}?verse=${mapping.verse}`}>
                 <Card className="p-5 hover:bg-[#800000]/5 transition-all cursor-pointer border border-slate-100 shadow-sm rounded-2xl">
-                   {/* Tilawah-specific card remains similar to original but styled */}
                    <div className="flex items-center justify-between">
                     <div className="flex items-center gap-5">
                       <div className="flex items-center justify-center w-12 h-12 rounded-xl font-black text-lg bg-[#800000]/10 text-[#800000]">
@@ -246,57 +245,63 @@ export function JuzList({
             );
           }
 
-            const targetVerse = `/mufradat/${mapping.surah}/${mapping.verse}`;
+          const targetVerse = `/mufradat/${mapping.surah}/${mapping.verse}`;
 
-            return (
-              <div key={j} className="flex flex-col gap-2">
-                <div className="relative group">
-                  <Link href={isJuzUnlocked ? targetVerse : "#"} onClick={(e) => !isJuzUnlocked && e.preventDefault()}>
-                    <Card 
-                      className={cn(
-                        "p-5 transition-all cursor-pointer border-none shadow-sm relative overflow-hidden rounded-2xl",
-                        isExamPassed 
-                          ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80 shadow-md" 
-                          : !isJuzUnlocked
-                            ? "bg-slate-50 opacity-60 grayscale cursor-not-allowed"
-                            : "bg-white hover:bg-accent hover:text-accent-foreground hover:shadow-md border border-slate-100"
-                      )}
-                    >
-                      {!isJuzUnlocked && (
-                        <div className="absolute top-0 right-0 p-2 text-slate-400">
-                          <Lock className="w-4 h-4" />
+          return (
+            <div key={j} className="flex flex-col gap-2">
+              <div className="relative group">
+                <Card 
+                  className={cn(
+                    "p-0 transition-all shadow-sm relative overflow-hidden rounded-2xl flex",
+                    isExamPassed 
+                      ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80 shadow-md" 
+                      : !isJuzUnlocked
+                        ? "bg-slate-50 opacity-60 grayscale cursor-not-allowed"
+                        : "bg-white hover:bg-accent border border-slate-100"
+                  )}
+                >
+                  <Link 
+                    href={isJuzUnlocked ? targetVerse : "#"}
+                    className={cn(
+                      "flex-1 flex flex-col p-4 transition-all",
+                      !isJuzUnlocked && "pointer-events-none"
+                    )}
+                    onClick={(e) => !isJuzUnlocked && e.preventDefault()}
+                  >
+                    {!isJuzUnlocked && (
+                      <div className="absolute top-0 right-0 p-2 text-slate-400">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                    )}
+                    {isExamPassed && (
+                      <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-white rounded-bl-lg shadow-sm z-10 text-[8px] font-black px-2 py-0.5 uppercase tracking-tighter flex items-center gap-1">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> LULUS UJIAN
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-col w-full">
+                      <div className="flex items-center gap-5">
+                        <div className={cn(
+                          "flex items-center justify-center w-12 h-12 rounded-xl font-black text-lg transition-all",
+                          isExamPassed 
+                            ? "bg-emerald-500 text-white" 
+                            : isJuzUnlocked ? "bg-[#800000]/10 text-[#800000]" : "bg-slate-200 text-slate-400"
+                        )}>
+                          {j}
                         </div>
-                      )}
-                      {isExamPassed && (
-                        <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-white rounded-bl-lg shadow-sm z-10 text-[8px] font-black px-2 py-0.5 uppercase tracking-tighter flex items-center gap-1">
-                          <CheckCircle2 className="w-2.5 h-2.5" /> LULUS UJIAN
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-5">
-                          <div className={cn(
-                            "flex items-center justify-center w-12 h-12 rounded-xl font-black text-lg transition-all",
-                            isExamPassed 
-                              ? "bg-emerald-500 text-white" 
-                              : isJuzUnlocked ? "bg-[#800000]/10 text-[#800000]" : "bg-slate-200 text-slate-400"
-                          )}>
-                            {j}
-                          </div>
-                          <div className="flex flex-col">
-                            <h4 className={cn(
-                              "font-black text-lg tracking-tight",
-                              isExamPassed ? "text-emerald-900" : "text-slate-800"
-                            )}>Juz {j}</h4>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">
-                              {totalPages} HALAMAN • {finishedPagesCount} SELESAI
-                            </p>
-                          </div>
+                        <div className="flex flex-col">
+                          <h4 className={cn(
+                            "font-black text-lg tracking-tight",
+                            isExamPassed ? "text-emerald-900" : "text-slate-800"
+                          )}>Juz {j}</h4>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">
+                            {totalPages} HALAMAN • {finishedPagesCount} SELESAI
+                          </p>
                         </div>
                       </div>
 
                       {isJuzUnlocked && finishedPagesCount > 0 && !isExamPassed && (
-                        <div className="mt-4">
+                        <div className="mt-4 pr-12">
                           <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
                             <span>Progres Hafalan Juz</span>
                             <span>{Math.round((finishedPagesCount/totalPages)*100)}%</span>
@@ -306,39 +311,43 @@ export function JuzList({
                           </div>
                         </div>
                       )}
-                    </Card>
+                    </div>
                   </Link>
 
-                  {/* EXPAND BUTTON (Separate from Card Click) */}
-                  {isJuzUnlocked && (
-                    <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
-                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="w-10 h-10 rounded-full bg-muted/50 hidden sm:flex"
-                        onClick={(e) => togglePlay(e, j)}
-                      >
-                        {loadingAudioJuz === j ? <Loader2 className="w-5 h-5 animate-spin" /> : playingJuz === j ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-10 w-10 rounded-xl hover:bg-[#800000]/10 text-slate-400 hover:text-[#800000]"
-                        onClick={() => setExpandedJuz(isExpanded ? null : j)}
-                      >
-                        {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  <div className="w-12 border-l border-slate-50 flex flex-col items-center justify-center gap-2 py-2">
+                    {/* Padding for absolute buttons */}
+                  </div>
+                </Card>
+
+                {/* EXPAND BUTTONS (Separate from Card Click) */}
+                {isJuzUnlocked && (
+                  <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
+                     <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-10 h-10 rounded-full bg-muted/50 hidden sm:flex text-slate-400 hover:text-[#800000]"
+                      onClick={(e) => togglePlay(e, j)}
+                    >
+                      {loadingAudioJuz === j ? <Loader2 className="w-5 h-5 animate-spin" /> : playingJuz === j ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-10 w-10 rounded-xl hover:bg-[#800000]/10 text-slate-400 hover:text-[#800000]"
+                      onClick={() => setExpandedJuz(isExpanded ? null : j)}
+                    >
+                      {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                    </Button>
+                  </div>
+                )}
+              </div>
 
               {/* Expanded Page List */}
               {isExpanded && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 px-4 py-2 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200">
-                  {juzPages.map((p, idx) => {
+                  {juzPages.map((p) => {
                     const isDone = completedPages.has(p);
-                    const prevDone = idx === 0 || completedPages.has(juzPages[idx-1]);
-                    const isUnlocked = idx === 0 || prevDone;
+                    const isUnlocked = p === 1 || completedPages.has(p - 1);
 
                     return (
                       <Link 
@@ -352,13 +361,13 @@ export function JuzList({
                               ? "bg-white border-slate-100 hover:border-[#800000]/30 hover:shadow-sm" 
                               : "bg-slate-50 opacity-60 border-transparent grayscale cursor-not-allowed"
                         )}
-                        onClick={(e: React.MouseEvent) => !isUnlocked && e.preventDefault()}
+                        onClick={(e) => !isUnlocked && e.preventDefault()}
                       >
                         <div className="flex items-center gap-3">
-                          <span className={cn(
+                          <div className={cn(
                             "w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black",
                             isDone ? "bg-emerald-500 text-white" : isUnlocked ? "bg-slate-100 text-slate-500" : "bg-slate-200 text-slate-400"
-                          )}>{p}</span>
+                          )}>{p}</div>
                           <span className="text-xs font-bold tracking-tight">Halaman {p}</span>
                         </div>
                         {isDone ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : !isUnlocked && <Lock className="w-3.5 h-3.5 text-slate-400" />}
@@ -373,7 +382,7 @@ export function JuzList({
                       disabled={!isAllPagesDone}
                       variant={isExamPassed ? "outline" : "default"}
                       className={cn(
-                        "w-full h-14 rounded-2xl gap-2 font-black uppercase tracking-widest text-xs",
+                        "w-full h-14 rounded-2xl gap-2 font-black uppercase tracking-widest text-xs transition-all",
                         isExamPassed 
                           ? "border-emerald-500 text-emerald-700 bg-emerald-50 hover:bg-emerald-100" 
                           : isAllPagesDone 
@@ -382,7 +391,7 @@ export function JuzList({
                       )}
                     >
                       {isAllPagesDone ? (
-                        <Link href={`/mufradat/juz/${j}/exam`}>
+                        <Link href={`/mufradat/juz/${j}/exam`} className="flex items-center gap-2">
                           <GraduationCap className="w-5 h-5" />
                           {isExamPassed ? "ULANGI UJIAN JUZ (100 SOAL)" : "MULAI UJIAN JUZ (100 SOAL)"}
                         </Link>
@@ -394,7 +403,7 @@ export function JuzList({
                     </Button>
 
                     <Button asChild variant="ghost" className="w-full text-[10px] font-black text-muted-foreground hover:text-[#800000] uppercase tracking-[0.2em] gap-2">
-                      <Link href={`/mufradat/${mapping.surah}?verse=${mapping.verse}`}>
+                      <Link href={`/mufradat/${mapping.surah}/${mapping.verse}`}>
                         <ArrowRight className="w-3.5 h-3.5" /> LIHAT DETAIL PER AYAT (MODE LAMA)
                       </Link>
                     </Button>

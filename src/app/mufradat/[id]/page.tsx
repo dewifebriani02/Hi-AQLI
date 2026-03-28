@@ -318,18 +318,28 @@ export default function MufradatSurahDetailPage() {
         <TooltipProvider delayDuration={0}>
           {verses.map((verse, index) => {
             const prevVerse = index > 0 ? verses[index - 1] : null;
+            const isQuranStart = id === "1" && verse.verse_number === 1;
             const isFirstVerse = verse.verse_number === 1;
             const isNewPage = prevVerse && verse.page_number !== prevVerse.page_number;
             
             // Completion checks
             const isCompleted = completedVerseNumbers.has(verse.verse_number);
-            const prevVerseDone = isFirstVerse || completedVerseNumbers.has(prevVerse?.verse_number || 0);
+            const prevVerseDone = completedVerseNumbers.has(prevVerse?.verse_number || 0);
             const prevPageQuizDone = !isNewPage || completedPageQuizzes.has(prevVerse.page_number);
             
+            // Absolute Page Lock: must pass previous page to open this verse if it's the start of a surah or a new page
+            const isPrevPageDone = verse.page_number === 1 || completedPageQuizzes.has(verse.page_number - 1);
+
             // A verse is locked if:
-            // 1. Previous verse in this surah is not done
-            // 2. OR It is on a new page and the previous page's quiz hasn't been passed
-            const isLocked = !isFirstVerse && (!prevVerseDone || !prevPageQuizDone);
+            // 1. It's NOT the very first verse of the Quran AND
+            // 2. (It's the first verse of surah but previous page isn't done)
+            // 3. OR (It's not the first verse but previous verse isn't done)
+            // 4. OR (It's on a new page and the previous page's quiz hasn't been passed)
+            const isLocked = !isQuranStart && (
+              isFirstVerse 
+                ? !isPrevPageDone 
+                : (!prevVerseDone || !prevPageQuizDone)
+            );
 
             return (
               <div key={verse.id}>

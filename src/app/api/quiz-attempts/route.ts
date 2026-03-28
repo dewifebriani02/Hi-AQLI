@@ -16,14 +16,14 @@ export async function POST(request: NextRequest) {
     const insertData: any = {
       user_id,
       quiz_id,
-      surah_id,
-      verse_id,
-      score,
-      total_questions,
+      surah_id: surah_id?.toString() || "0",
+      verse_id: verse_id?.toString() || "0",
+      score: Number(score) || 0,
+      total_questions: Number(total_questions) || 0,
       is_passed: !!is_passed,
-      duration_seconds,
-      wrong_words, // New field for review feature
-      page_id: page_id ? Number(page_id) : null, // Record Mushaf page
+      duration_seconds: Number(duration_seconds) || 0,
+      wrong_words: Array.isArray(wrong_words) ? wrong_words : [], 
+      page_id: page_id ? Number(page_id) : null,
       created_at: new Date().toISOString(),
     };
 
@@ -31,10 +31,10 @@ export async function POST(request: NextRequest) {
       .from('quiz_attempts')
       .insert(insertData);
 
-    // GRACEFUL DEGRADATION: If the insert fails because of 'wrong_words' or 'page_id' column missing, 
-    // try one more time without them so we don't lose the user's progress.
-    if (insertError && (insertError.message.includes('wrong_words') || insertError.message.includes('page_id') || insertError.code === '42703')) {
-      console.warn('Column mismatch detected in quiz_attempts table, retrying without new fields...');
+    // GRACEFUL DEGRADATION: If the insert fails because of 'wrong_words' or 'page_id' column missing
+    // or ANY column mismatch error (code 42703), retry without the newest fields.
+    if (insertError && (insertError.code === '42703' || insertError.message.includes('wrong_words') || insertError.message.includes('page_id'))) {
+      console.warn(`Column mismatch in [quiz_attempts]. Retrying without new fields. Error: ${insertError.message}`);
       const { wrong_words: _, page_id: __, ...legacyData } = insertData;
       const { error: retryError } = await supabase
         .from('quiz_attempts')
@@ -45,19 +45,19 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       console.error('Supabase error saving mufradat quiz:', insertError);
       
-      // If table is missing completely, return a informative error but not a 500 (to reduce console noise during setup)
+      // If table is missing completely (42P01)
       if (insertError.code === '42P01') {
-        console.error('CRITICAL: Table "public.quiz_attempts" is missing. Please run the SQL initialization script.');
         return NextResponse.json({ 
           success: false, 
           error: 'Table missing', 
           message: 'Database not initialized. Please run the SQL script provided.' 
-        }, { status: 200 }); // Returning 200 so UI doesn't crash, but success: false
+        }, { status: 200 });
       }
 
       return NextResponse.json({ 
         error: 'Failed to save quiz attempt', 
-        details: insertError.message 
+        details: insertError.message,
+        code: insertError.code
       }, { status: 500 });
     }
 

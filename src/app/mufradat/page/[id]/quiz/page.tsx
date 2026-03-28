@@ -59,25 +59,27 @@ export default function MufradatPageQuizPage() {
 
   // Fetch leaderboard data
   const { data: allAttempts, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
-    filters: [
-      { column: 'quiz_id', operator: '==', value: quizId }
-    ],
+    filters: [{ column: 'quiz_id', operator: '==', value: quizId }],
     orderBy: { column: 'score', ascending: false }
   });
 
   const userIds = useMemo(() => [...new Set(allAttempts?.map(a => a.user_id) || [])], [allAttempts]);
+  
   const { data: leaderboardUsers } = useCollection(userIds.length > 0 ? "users" : null, {
     filters: [{ column: 'id', operator: 'in', value: userIds }]
   });
 
-  const uniqueLeaderboard = useMemo(() => {
+  const leaderboardData = useMemo(() => {
     if (!allAttempts) return [];
+    
+    // Get unique best score per user
     const uniqueMap = new Map();
     allAttempts.forEach(attempt => {
       const existing = uniqueMap.get(attempt.user_id);
       const isNewBest = !existing || 
         (attempt.score > existing.score || 
         (attempt.score === existing.score && (attempt.duration_seconds < existing.duration_seconds)));
+      
       if (isNewBest) {
         const userData = leaderboardUsers?.find(u => u.id === attempt.user_id);
         uniqueMap.set(attempt.user_id, { ...attempt, userData });
@@ -317,7 +319,61 @@ export default function MufradatPageQuizPage() {
           </CardFooter>
         </Card>
         
-        {/* Leaderboard omitted for brevity - reuse from previous quiz page */}
+        {/* Leaderboard Card */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-[#D4AF37]" /> Papan Juara Halaman Ini
+            </h3>
+            <span className="text-[10px] font-bold text-slate-400">TOP 5 PEJUANG</span>
+          </div>
+
+          <Card className="border-none shadow-lg overflow-hidden rounded-3xl bg-white">
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {leaderboardData.length > 0 ? leaderboardData.map((item: any, idx: number) => (
+                  <div key={item.id} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className={cn(
+                        "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0",
+                        idx === 0 ? "bg-[#D4AF37] text-white shadow-md rotate-3" : 
+                        idx === 1 ? "bg-slate-200 text-slate-600" :
+                        idx === 2 ? "bg-amber-100 text-amber-700" : "bg-slate-50 text-slate-400"
+                      )}>
+                        {idx + 1}
+                      </div>
+                      <Avatar className="w-10 h-10 border-2 border-white shadow-sm shrink-0">
+                        <AvatarImage src={item.userData?.avatar_url} />
+                        <AvatarFallback className="bg-[#800000]/5 text-[#800000] font-bold text-xs">
+                          {(item.userData?.username || 'H').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-black text-slate-800 truncate">
+                          {item.userData?.username || 'Hamba Allah'}
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-[#D4AF37] fill-current" /> {item.score}/{item.total_questions}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-medium italic">
+                             {formatTime(item.duration_seconds || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {idx === 0 && <Star className="w-4 h-4 fill-current text-amber-400 shrink-0" />}
+                  </div>
+                )) : (
+                  <div className="py-12 text-center text-slate-400 italic text-xs flex flex-col items-center gap-2">
+                    <RefreshCw className="w-6 h-6 opacity-20" />
+                    Belum ada pejuang kuis di halaman ini.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
