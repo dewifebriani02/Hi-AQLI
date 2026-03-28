@@ -2,12 +2,13 @@
 
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { Search, CheckCircle2, Star } from "lucide-react";
+import { Search, CheckCircle2, Star, ChevronDown, ChevronRight, Lock, GraduationCap, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Loader2 } from "lucide-react";
+import { JUZ_PAGE_MAPPING, getPagesForJuz } from "@/lib/quran-mapping";
 
 // Mapping Juz to starting surah and verse
 const JUZ_MAPPING: Record<number, { surah: number, verse: number, name: string }> = {
@@ -94,37 +95,33 @@ export function JuzList({
   const [playingJuz, setPlayingJuz] = useState<number | null>(null);
   const [loadingAudioJuz, setLoadingAudioJuz] = useState<number | null>(null);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [expandedJuz, setExpandedJuz] = useState<number | null>(null);
   
   const juzArray = Array.from({ length: 30 }, (_, i) => i + 1);
   
-  // Calculate completion status for each Juz (mufradat only)
-  const completionMap = useMemo(() => {
-    const counts = new Map<number, number>();
-    if (variant === "tilawah" || !userProgress) return counts;
+  // Calculate completion status for pages and juz exams
+  const progressData = useMemo(() => {
+    const completedPages = new Set<number>();
+    const completedExams = new Set<number>();
+    
+    if (!userProgress) return { completedPages, completedExams };
 
-    juzArray.forEach(jNum => {
-      const data = JUZ_DATA[jNum];
-      const passedInJuz = new Set<string>();
-
-      userProgress.forEach(attempt => {
-        if (!attempt.is_passed) return;
-        
-        const sId = attempt.surah_id.toString();
-        const vNum = Number(attempt.verse_id);
-        
-        if (data.mapping[sId]) {
-          const [start, end] = data.mapping[sId].split('-').map(Number);
-          if (vNum >= start && vNum <= end) {
-            passedInJuz.add(`${sId}:${vNum}`);
-          }
-        }
-      });
+    userProgress.forEach(attempt => {
+      if (!attempt.is_passed) return;
       
-      counts.set(jNum, passedInJuz.size);
+      if (attempt.quiz_id.startsWith('mufradat_page_')) {
+        const pNum = parseInt(attempt.quiz_id.replace('mufradat_page_', ''));
+        completedPages.add(pNum);
+      } else if (attempt.quiz_id.startsWith('mufradat_juz_exam_')) {
+        const jNum = parseInt(attempt.quiz_id.replace('mufradat_juz_exam_', ''));
+        completedExams.add(jNum);
+      }
     });
 
-    return counts;
-  }, [userProgress, juzArray, variant]);
+    return { completedPages, completedExams };
+  }, [userProgress]);
+
+  const { completedPages, completedExams } = progressData;
 
   const filteredJuz = juzArray.filter(j => 
     `Juz ${j}`.toLowerCase().includes(search.toLowerCase()) ||
@@ -207,108 +204,185 @@ export function JuzList({
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
+      <div className="flex flex-col gap-3 pb-4">
         {filteredJuz.map((j) => {
           const mapping = JUZ_MAPPING[j];
-          const juzDetails = JUZ_DATA[j];
-          const passedCount = completionMap.get(j) || 0;
-          const isCompleted = variant === "mufradat" && passedCount >= juzDetails.total_verses;
+          const juzPages = getPagesForJuz(j);
+          const isExamPassed = completedExams.has(j);
+          const totalPages = juzPages.length;
+          const finishedPagesCount = juzPages.filter(p => completedPages.has(p)).length;
+          const isAllPagesDone = finishedPagesCount === totalPages;
+          
+          // Juz N+1 is unlocked if Juz N Exam is passed. Juz 1 is always unlocked.
+          const isJuzUnlocked = j === 1 || completedExams.has(j - 1);
+          const isExpanded = expandedJuz === j;
 
-          // We link to the surah detail for that Juz's starting point
+          if (variant === 'tilawah') {
+            return (
+              <Link key={j} href={`${baseUrl}/${mapping.surah}?verse=${mapping.verse}`}>
+                <Card className="p-5 hover:bg-[#800000]/5 transition-all cursor-pointer border border-slate-100 shadow-sm rounded-2xl">
+                   {/* Tilawah-specific card remains similar to original but styled */}
+                   <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-xl font-black text-lg bg-[#800000]/10 text-[#800000]">
+                        {j}
+                      </div>
+                      <div className="flex flex-col">
+                        <h4 className="font-black text-lg text-slate-800">Juz {j}</h4>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#800000] opacity-70">Dimulai: {mapping.name}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-10 h-10 rounded-full bg-[#800000]/5 text-[#800000]"
+                      onClick={(e) => togglePlay(e, j)}
+                    >
+                      {loadingAudioJuz === j ? <Loader2 className="w-5 h-5 animate-spin" /> : playingJuz === j ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                    </Button>
+                  </div>
+                </Card>
+              </Link>
+            );
+          }
+
           return (
-            <Link key={j} href={`${baseUrl}/${mapping.surah}${variant === 'tilawah' ? `?verse=${mapping.verse}` : ''}`}>
+            <div key={j} className="flex flex-col gap-2">
               <Card 
                 className={cn(
                   "p-5 transition-all cursor-pointer group border-none shadow-sm relative overflow-hidden rounded-2xl",
-                  isCompleted 
+                  isExamPassed 
                     ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80 shadow-md" 
-                    : variant === 'tilawah'
-                      ? "bg-white hover:bg-[#800000]/5 hover:shadow-md border border-slate-100"
-                      : "bg-card/50 hover:bg-accent hover:text-accent-foreground hover:shadow-md"
+                    : !isJuzUnlocked
+                      ? "bg-slate-50 opacity-60 grayscale cursor-not-allowed"
+                      : "bg-white hover:bg-accent hover:text-accent-foreground hover:shadow-md border border-slate-100"
                 )}
+                onClick={() => isJuzUnlocked && setExpandedJuz(isExpanded ? null : j)}
               >
-                {isCompleted && (
-                  <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-white rounded-bl-lg shadow-sm z-10">
-                    <CheckCircle2 className="w-3 h-3" />
+                {!isJuzUnlocked && (
+                  <div className="absolute top-0 right-0 p-2 text-slate-400">
+                    <Lock className="w-4 h-4" />
                   </div>
                 )}
+                {isExamPassed && (
+                  <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-white rounded-bl-lg shadow-sm z-10 text-[8px] font-black px-2 py-0.5 uppercase tracking-tighter flex items-center gap-1">
+                    <CheckCircle2 className="w-2.5 h-2.5" /> LULUS UJIAN
+                  </div>
+                )}
+                
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-5">
                     <div className={cn(
                       "flex items-center justify-center w-12 h-12 rounded-xl font-black text-lg transition-all transform group-hover:scale-110",
-                      isCompleted 
+                      isExamPassed 
                         ? "bg-emerald-500 text-white" 
-                        : variant === 'tilawah'
-                          ? "bg-[#800000]/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
-                          : "bg-primary/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
+                        : isJuzUnlocked ? "bg-[#800000]/10 text-[#800000]" : "bg-slate-200 text-slate-400"
                     )}>
                       {j}
                     </div>
                     <div className="flex flex-col">
                       <h4 className={cn(
                         "font-black text-lg tracking-tight",
-                        isCompleted && "text-emerald-900",
-                        variant === 'tilawah' && "text-slate-800"
+                        isExamPassed ? "text-emerald-900" : "text-slate-800"
                       )}>Juz {j}</h4>
-                      <p className={cn(
-                        "text-[10px] font-bold uppercase tracking-widest opacity-70",
-                        isCompleted ? "text-emerald-700" : variant === 'tilawah' ? "text-[#800000]" : "text-[#800000]"
-                      )}>
-                        Dimulai: {mapping.name}
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">
+                        {totalPages} HALAMAN • {finishedPagesCount} SELESAI
                       </p>
                     </div>
                   </div>
-                  <div className="text-right flex items-center gap-3">
-                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "w-10 h-10 rounded-full transition-all shrink-0",
-                        playingJuz === j 
-                          ? "bg-[#800000] text-white hover:bg-[#800000]/90" 
-                          : "bg-[#800000]/5 text-[#800000] hover:bg-[#800000]/10"
-                      )}
-                      onClick={(e) => togglePlay(e, j)}
-                    >
-                      {loadingAudioJuz === j ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : playingJuz === j ? (
-                        <Pause className="w-5 h-5 fill-current" />
-                      ) : (
-                        <Play className="w-5 h-5 fill-current ml-0.5" />
-                      )}
-                    </Button>
-                    <div className="flex flex-col items-end gap-1">
-                      {isCompleted ? (
-                        <div className="flex items-center gap-1 bg-emerald-200/50 px-2 py-1 rounded-full text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
-                          <Star className="w-2.5 h-2.5 fill-current" /> Juz Khatam
-                        </div>
-                      ) : (
-                        <div className={cn(
-                          "px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors",
-                          variant === 'tilawah'
-                            ? "bg-[#800000]/5 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
-                            : "bg-muted/30 text-muted-foreground group-hover:bg-[#800000]/10 group-hover:text-[#800000]"
-                        )}>
-                          {variant === 'tilawah' ? 'BACA JUZ' : 'BELAJAR JUZ'}
-                        </div>
-                      )}
-                    </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {isJuzUnlocked && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-10 h-10 rounded-full bg-muted/50"
+                        onClick={(e) => togglePlay(e, j)}
+                      >
+                        {loadingAudioJuz === j ? <Loader2 className="w-5 h-5 animate-spin" /> : playingJuz === j ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                      </Button>
+                    )}
+                    {isJuzUnlocked && (isExpanded ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />)}
                   </div>
                 </div>
-                {variant === "mufradat" && passedCount > 0 && !isCompleted && (
+
+                {isJuzUnlocked && finishedPagesCount > 0 && !isExamPassed && (
                   <div className="mt-4">
                     <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
                       <span>Progres Hafalan Juz</span>
-                      <span>{Math.round((passedCount/juzDetails.total_verses)*100)}%</span>
+                      <span>{Math.round((finishedPagesCount/totalPages)*100)}%</span>
                     </div>
-                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-[#800000] to-orange-500" style={{ width: `${(passedCount/juzDetails.total_verses)*100}%` }} />
+                    <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-[#800000] to-[#D4AF37]" style={{ width: `${(finishedPagesCount/totalPages)*100}%` }} />
                     </div>
                   </div>
                 )}
               </Card>
-            </Link>
+
+              {/* Expanded Page List */}
+              {isExpanded && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 px-4 py-2 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200">
+                  {juzPages.map((p, idx) => {
+                    const isDone = completedPages.has(p);
+                    const prevDone = idx === 0 || completedPages.has(juzPages[idx-1]);
+                    const isUnlocked = idx === 0 || prevDone;
+
+                    return (
+                      <Link 
+                        key={p} 
+                        href={isUnlocked ? `/mufradat/page/${p}` : "#"}
+                        className={cn(
+                          "flex items-center justify-between p-3 rounded-xl transition-all border",
+                          isDone 
+                            ? "bg-emerald-50 border-emerald-100 text-emerald-800" 
+                            : isUnlocked 
+                              ? "bg-white border-slate-100 hover:border-[#800000]/30 hover:shadow-sm" 
+                              : "bg-slate-50 opacity-60 border-transparent grayscale cursor-not-allowed"
+                        )}
+                        onClick={(e: React.MouseEvent) => !isUnlocked && e.preventDefault()}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={cn(
+                            "w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black",
+                            isDone ? "bg-emerald-500 text-white" : isUnlocked ? "bg-slate-100 text-slate-500" : "bg-slate-200 text-slate-400"
+                          )}>{p}</span>
+                          <span className="text-xs font-bold tracking-tight">Halaman {p}</span>
+                        </div>
+                        {isDone ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : !isUnlocked && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+                      </Link>
+                    );
+                  })}
+                  
+                  {/* Juz Exam Button */}
+                  <div className="col-span-full mt-4">
+                    <Button 
+                      asChild={isAllPagesDone} 
+                      disabled={!isAllPagesDone}
+                      variant={isExamPassed ? "outline" : "default"}
+                      className={cn(
+                        "w-full h-14 rounded-2xl gap-2 font-black uppercase tracking-widest text-xs",
+                        isExamPassed 
+                          ? "border-emerald-500 text-emerald-700 bg-emerald-50 hover:bg-emerald-100" 
+                          : isAllPagesDone 
+                            ? "bg-[#D4AF37] hover:bg-[#B8860B] text-black shadow-lg" 
+                            : "bg-muted text-muted-foreground opacity-50"
+                      )}
+                    >
+                      {isAllPagesDone ? (
+                        <Link href={`/mufradat/juz/${j}/exam`}>
+                          <GraduationCap className="w-5 h-5" />
+                          {isExamPassed ? "ULANGI UJIAN JUZ (100 SOAL)" : "MULAI UJIAN JUZ (100 SOAL)"}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                           <Lock className="w-4 h-4" /> SELESAIKAN SEMUA HALAMAN UNTUK UJIAN
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

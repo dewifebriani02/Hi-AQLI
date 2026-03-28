@@ -8,6 +8,7 @@ import { Search, CheckCircle2, Star, Play, Pause, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SURAH_START_PAGES } from "@/lib/quran-mapping";
 
 interface Surah {
   id: number;
@@ -175,8 +176,13 @@ export function SurahList({
           const passedCount = completionMap.get(surah.id) || 0;
           const isCompleted = passedCount >= surah.verses_count;
 
+          const startPage = SURAH_START_PAGES[surah.id] || 1;
+          const href = baseUrl === "/mufradat" 
+            ? `/mufradat/page/${startPage}` 
+            : `${baseUrl}/${surah.id}`;
+
           return (
-            <Link key={surah.id} href={`${baseUrl}/${surah.id}`}>
+            <Link key={surah.id} href={href}>
               <Card 
                 className={cn(
                   "p-4 transition-all cursor-pointer group border-none shadow-sm relative overflow-hidden",
