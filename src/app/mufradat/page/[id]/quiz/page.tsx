@@ -198,8 +198,9 @@ export default function MufradatPageQuizPage() {
           score: finalScore,
           total_questions: questions.length,
           duration_seconds: totalTime,
-          is_passed: finalScore === questions.length,
-          wrong_words: wrongWords.map(w => w.id) 
+          is_passed: finalScore >= 80,
+          wrong_words: wrongWords.map(w => w.id),
+          page_id: Number(pageNum)
         })
       });
       refreshLeaderboard();

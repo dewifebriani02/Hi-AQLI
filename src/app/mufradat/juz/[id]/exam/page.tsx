@@ -172,7 +172,8 @@ export default function MufradatJuzExamPage() {
           total_questions: questions.length,
           duration_seconds: totalTime,
           is_passed: finalScore >= 90,
-          wrong_words: wrongWords.map(w => w.id)
+          wrong_words: wrongWords.map(w => w.id),
+          page_id: null // Juz exam spans multiple pages, so we pass null or could track specific page per word
         })
       });
     } catch (e) {

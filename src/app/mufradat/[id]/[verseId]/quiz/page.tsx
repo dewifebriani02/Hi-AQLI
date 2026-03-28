@@ -49,6 +49,7 @@ export default function MufradatQuizPage() {
   const [wrongWords, setWrongWords] = useState<Question[]>([]);
   const [attempts, setAttempts] = useState(1);
   const [surahInfo, setSurahInfo] = useState<{ verses_count: number } | null>(null);
+  const [pageId, setPageId] = useState<number | null>(null);
 
   const verseKey = `${id}:${verseId}`;
 
@@ -117,11 +118,12 @@ export default function MufradatQuizPage() {
 
         // Fetch verse words
         const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id`
+          `https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&fields=page_number`
         );
         const data = await res.json();
         
         if (data && data.verse && data.verse.words) {
+          setPageId(data.verse.page_number);
           const words = data.verse.words.filter((w: any) => w.char_type_name === 'word');
           
           // Simple "decoy" translations for multi-choice
@@ -207,7 +209,8 @@ export default function MufradatQuizPage() {
           total_questions: questions.length,
           duration_seconds: totalTime,
           is_passed: finalScore === questions.length,
-          wrong_words: wrongWords.map(w => w.id)
+          wrong_words: wrongWords.map(w => w.id),
+          page_id: pageId
         })
       });
       // Refresh leaderboard after save
