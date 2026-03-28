@@ -26,6 +26,7 @@ import { useCollection } from "@/supabase/db";
 import { getPagesForJuz } from "@/lib/quran-mapping";
 
 interface Question {
+  id: number;
   arabic: string;
   correct: string;
   options: string[];
@@ -46,6 +47,7 @@ export default function MufradatJuzExamPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [totalTime, setTotalTime] = useState(0);
+  const [wrongWords, setWrongWords] = useState<Question[]>([]);
   const [attempts, setAttempts] = useState(1);
 
   const quizId = `mufradat_juz_exam_${juzNum}`;
@@ -95,6 +97,7 @@ export default function MufradatJuzExamPage() {
           const correct = w.translation?.text || "???";
           const filteredDecoys = decoys.filter(d => d !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
           return {
+            id: w.id,
             arabic: w.text_uthmani,
             correct: correct,
             options: [correct, ...filteredDecoys].sort(() => Math.random() - 0.5)
@@ -134,6 +137,7 @@ export default function MufradatJuzExamPage() {
       setScore(s => s + 1);
     } else {
       playSfx('incorrect');
+      setWrongWords(prev => [...prev, currentQ]);
     }
 
     setTimeout(() => {
@@ -167,7 +171,8 @@ export default function MufradatJuzExamPage() {
           score: finalScore,
           total_questions: questions.length,
           duration_seconds: totalTime,
-          is_passed: finalScore >= 90 // 90% to pass the Juz Exam
+          is_passed: finalScore >= 90,
+          wrong_words: wrongWords.map(w => w.id)
         })
       });
     } catch (e) {
@@ -188,6 +193,7 @@ export default function MufradatJuzExamPage() {
     setSelectedAnswer(null);
     setIsCorrect(null);
     setTotalTime(0);
+    setWrongWords([]);
     setAttempts(prev => prev + 1);
   };
 
@@ -236,6 +242,23 @@ export default function MufradatJuzExamPage() {
                </p>
              )}
           </CardContent>
+          {wrongWords.length > 0 && (
+            <div className="px-8 pb-8 text-left">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-1 flex-1 bg-slate-200 rounded-full" />
+                <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Saran Review ({wrongWords.length})</span>
+                <div className="h-1 flex-1 bg-slate-200 rounded-full" />
+              </div>
+              <div className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto pr-2">
+                {wrongWords.map((w, idx) => (
+                  <div key={idx} className="bg-rose-50 p-3 rounded-xl flex items-center justify-between border border-rose-100 group hover:bg-rose-100 transition-colors">
+                    <span className="text-2xl font-arabic text-[#800000]">{w.arabic}</span>
+                    <span className="text-sm font-medium text-slate-700">{w.correct}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <CardFooter className="flex flex-col gap-3 p-8 border-t bg-slate-50/50">
             {isPassed ? (
               <>

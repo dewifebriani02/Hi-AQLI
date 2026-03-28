@@ -4,7 +4,7 @@ import { supabase } from '@/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user_id, quiz_id, surah_id, verse_id, score, total_questions, duration_seconds, is_passed } = body;
+    const { user_id, quiz_id, surah_id, verse_id, score, total_questions, duration_seconds, is_passed, wrong_words } = body;
 
     console.log('Mufradat Quiz Save Attempt:', { user_id, quiz_id, surah_id, verse_id });
 
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       total_questions,
       is_passed: !!is_passed,
       duration_seconds,
+      wrong_words, // New field for review feature
       created_at: new Date().toISOString(),
     };
 

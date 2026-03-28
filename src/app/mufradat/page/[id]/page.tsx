@@ -7,6 +7,7 @@ import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, Arr
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -61,6 +62,20 @@ export default function MufradatPageDetailPage() {
 
   const { data: progress } = useCollection("quiz_attempts", user ? progressOptions : undefined);
   const isPageCompleted = useMemo(() => progress && progress.length > 0, [progress]);
+
+  // Fetch latest attempt to get wrong_words for review
+  const lastAttemptOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'quiz_id', operator: '==', value: `mufradat_page_${pageNum}` }
+    ],
+    orderBy: { column: 'created_at', ascending: false },
+    limit: 1
+  }), [user?.id, pageNum]);
+
+  const { data: lastAttempts } = useCollection("quiz_attempts", user ? lastAttemptOptions : undefined);
+  const lastAttempt = useMemo(() => lastAttempts?.[0], [lastAttempts]);
+  const wrongWordIds = useMemo(() => new Set<number>(lastAttempt?.wrong_words || []), [lastAttempt]);
 
   const fetchPageData = useCallback(async () => {
     if (!pageNum) return;
@@ -124,6 +139,9 @@ export default function MufradatPageDetailPage() {
                             className="text-2xl md:text-3xl font-arabic leading-[1.8] text-foreground hover:text-[#800000] focus:text-[#800000] outline-none cursor-help px-0.5 inline-block transition-colors"
                           >
                             {word.text_uthmani}
+                            {wrongWordIds.has(word.id) && (
+                              <span className="absolute -top-1 -right-0.5 w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
+                            )}
                           </span>
                         </TooltipTrigger>
                         <TooltipPortal>
@@ -152,6 +170,9 @@ export default function MufradatPageDetailPage() {
               </CardTitle>
               <p className="text-[11px] text-amber-900 font-medium leading-snug">
                 <strong>Repetisi</strong>: Ulangi setiap kata sebanyak minimal 5 kali dengan mengetuk baris kata pada daftar di bawah.
+                {wrongWordIds.size > 0 && (
+                  <span className="block mt-1 text-rose-600 animate-pulse">Ada {wrongWordIds.size} kata yang salah pada kuis terakhir. Mari review!</span>
+                )}
               </p>
             </div>
             {Object.keys(wordCounts).length > 0 && (
@@ -171,11 +192,19 @@ export default function MufradatPageDetailPage() {
                     onClick={() => incrementWordCount(wordKey)}
                   >
                     <div className="flex items-center gap-4">
-                      <span className="text-[10px] font-bold text-muted-foreground w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border/50">
+                      <span className={cn(
+                        "text-[10px] font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0 border border-border/50",
+                        wrongWordIds.has(word.id) ? "bg-rose-500 text-white border-rose-600" : "bg-muted text-muted-foreground"
+                      )}>
                         {globalIdx + 1}
                       </span>
                       <div className="flex flex-col items-start gap-1">
-                        <span className="text-2xl font-arabic text-[#800000] text-right" dir="rtl">{word.text_uthmani}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-2xl font-arabic text-right", wrongWordIds.has(word.id) ? "text-rose-600" : "text-[#800000]")} dir="rtl">{word.text_uthmani}</span>
+                          {wrongWordIds.has(word.id) && (
+                            <Badge className="bg-rose-500 hover:bg-rose-600 text-white text-[8px] font-black h-4 px-1 uppercase tracking-tighter">REVIEW</Badge>
+                          )}
+                        </div>
                         {wordCounts[wordKey] > 0 && (
                           <Badge className="bg-[#D4AF37] hover:bg-[#D4AF37] text-black text-[9px] font-bold h-4 px-1 animate-in zoom-in-50 duration-200">
                             x{wordCounts[wordKey]}
