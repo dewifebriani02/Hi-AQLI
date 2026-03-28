@@ -200,7 +200,7 @@ export default function MufradatPageQuizPage() {
           score: finalScore,
           total_questions: questions.length,
           duration_seconds: totalTime,
-          is_passed: finalScore >= 80,
+          is_passed: finalScore === 100,
           wrong_words: wrongWords.map(w => w.id),
           page_id: Number(pageNum)
         })
@@ -246,16 +246,28 @@ export default function MufradatPageQuizPage() {
             "p-10 flex flex-col items-center gap-4 text-white relative overflow-hidden",
             isPerfect ? "bg-gradient-to-br from-amber-400 to-orange-500" : "bg-slate-800"
           )}>
-            {isPerfect && (
-              <div className="absolute top-4 right-4 animate-pulse">
-                <Badge className="bg-white text-orange-600 font-black border-none">+10 POIN</Badge>
+            {isPerfect ? (
+              <div className="flex flex-col items-center gap-2">
+                <Trophy className="w-16 h-16 text-yellow-200 animate-bounce" />
+                <h2 className="text-3xl font-black uppercase tracking-tighter">LUAR BIASA GEMILANG!</h2>
+                <div className="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/30 backdrop-blur-sm">
+                  🎯 HALAMAN {Number(pageNum) + 1} TERBUKA!
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <Target className="w-12 h-12 text-slate-400 opacity-50" />
+                <h2 className="text-2xl font-black uppercase tracking-tighter">COBA LAGI, PEJUANG!</h2>
+                <div className="bg-rose-500/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border border-rose-500/30 text-rose-100">
+                  ⚠️ BUTUH 100% (SEMPURNA) UNTUK LANJUT
+                </div>
               </div>
             )}
-            <Trophy className={cn("w-16 h-16", isPerfect && "animate-bounce")} />
-            <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">
-              {isPerfect ? "Masyallah Sempurna!" : "Alhamdulillah Selesai"}
-            </h2>
-            <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Skor Akhir: {score} / {questions.length}</p>
+            
+            <div className="mt-4 flex flex-col items-center">
+              <span className="text-6xl font-black">{score}<span className="text-2xl opacity-50">/{questions.length}</span></span>
+              <p className="text-[10px] opacity-70 font-bold uppercase tracking-widest mt-2">Skor Kosakata Anda</p>
+            </div>
           </div>
           <CardContent className="p-8 space-y-6">
              <div className="grid grid-cols-2 gap-4">

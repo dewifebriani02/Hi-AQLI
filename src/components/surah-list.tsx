@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, CheckCircle2, Star, Play, Pause, Loader2 } from "lucide-react";
+import { Search, CheckCircle2, Star, Play, Pause, Loader2, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -144,6 +144,19 @@ export function SurahList({
     return finalMap;
   }, [userProgress]);
 
+  // Page Quiz progress for locking
+  const completedPageQuizzes = useMemo(() => {
+    const pageSet = new Set<number>();
+    if (!userProgress) return pageSet;
+    userProgress.forEach(p => {
+      if (p.is_passed && p.quiz_id.startsWith('mufradat_page_')) {
+        const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
+        pageSet.add(pNum);
+      }
+    });
+    return pageSet;
+  }, [userProgress]);
+
   const filteredSurahs = surahs.filter((s) =>
     s.name_simple.toLowerCase().includes(search.toLowerCase()) ||
     s.translated_name.name.toLowerCase().includes(search.toLowerCase())
@@ -177,97 +190,113 @@ export function SurahList({
           const isCompleted = passedCount >= surah.verses_count;
 
           const startPage = SURAH_START_PAGES[surah.id] || 1;
+          const isUnlocked = baseUrl !== "/mufradat" || startPage === 1 || completedPageQuizzes.has(startPage - 1) || passedCount > 0;
+          
           const href = baseUrl === "/mufradat" 
-            ? `${baseUrl}/${surah.id}/1` 
+            ? `${baseUrl}/${surah.id}` 
             : `${baseUrl}/${surah.id}`;
+
+          const CardContent = (
+            <Card 
+              className={cn(
+                "p-4 transition-all group border-none shadow-sm relative overflow-hidden h-full",
+                isUnlocked && "cursor-pointer",
+                !isUnlocked && "opacity-40 grayscale pointer-events-none select-none border border-slate-200",
+                isCompleted 
+                  ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80" 
+                  : "bg-card/50 hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              {!isUnlocked && (
+                <div className="absolute top-2 right-2 p-1.5 bg-slate-400/20 rounded-full">
+                  <Lock className="w-4 h-4 text-slate-400" />
+                </div>
+              )}
+              {isCompleted && (
+                <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-white rounded-bl-lg shadow-sm">
+                  <CheckCircle2 className="w-3 h-3" />
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "flex items-center justify-center w-10 h-10 rounded-lg font-bold text-sm transition-colors rotate-45",
+                    isCompleted 
+                      ? "bg-emerald-500 text-white" 
+                      : !isUnlocked ? "bg-slate-200 text-slate-400" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                  )}>
+                    <span className="-rotate-45">{surah.id}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <h4 className={cn(
+                      "font-bold text-base",
+                      isCompleted && "text-emerald-900"
+                    )}>{surah.name_simple}</h4>
+                    <p className={cn(
+                      "text-xs text-muted-foreground",
+                      isCompleted ? "text-emerald-700/70" : "group-hover:text-accent-foreground/80"
+                    )}>
+                      {surah.translated_name.name} • {surah.verses_count} Ayat
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={!isUnlocked}
+                    className={cn(
+                      "w-10 h-10 rounded-full transition-all shrink-0",
+                      playingId === surah.id 
+                        ? "bg-[#800000] text-white hover:bg-[#800000]/90" 
+                        : "bg-muted/50 text-muted-foreground hover:bg-[#800000]/10 hover:text-[#800000]"
+                    )}
+                    onClick={(e) => isUnlocked && togglePlay(e, surah.id)}
+                  >
+                    {loadingAudioId === surah.id ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : playingId === surah.id ? (
+                      <Pause className="w-5 h-5 fill-current" />
+                    ) : (
+                      <Play className="w-5 h-5 fill-current ml-0.5" />
+                    )}
+                  </Button>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <div className={cn(
+                      "text-xl font-arabic leading-none",
+                      isCompleted ? "text-emerald-800" : "mb-1"
+                    )}>{surah.name_arabic}</div>
+                    {isCompleted ? (
+                      <div className="flex items-center gap-1 bg-emerald-200/50 px-1.5 py-0.5 rounded text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
+                        <Star className="w-2 h-2 fill-current" /> Khatam
+                      </div>
+                    ) : (
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground group-hover:text-accent-foreground/80 font-semibold">
+                        {!isUnlocked ? "TERKUNCI" : (surah.revelation_place === "makkah" ? "Makkiyah" : "Madaniyah")}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {passedCount > 0 && !isCompleted && isUnlocked && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                    <span>Progres Hafalan</span>
+                    <span>{Math.round((passedCount/surah.verses_count)*100)}%</span>
+                  </div>
+                  <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-[#800000]" style={{ width: `${(passedCount/surah.verses_count)*100}%` }} />
+                  </div>
+                </div>
+              )}
+            </Card>
+          );
+
+          if (!isUnlocked) return <div key={surah.id}>{CardContent}</div>;
 
           return (
             <Link key={surah.id} href={href}>
-              <Card 
-                className={cn(
-                  "p-4 transition-all cursor-pointer group border-none shadow-sm relative overflow-hidden",
-                  isCompleted 
-                    ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80" 
-                    : "bg-card/50 hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                {isCompleted && (
-                  <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-white rounded-bl-lg shadow-sm">
-                    <CheckCircle2 className="w-3 h-3" />
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "flex items-center justify-center w-10 h-10 rounded-lg font-bold text-sm transition-colors rotate-45",
-                      isCompleted 
-                        ? "bg-emerald-500 text-white" 
-                        : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                    )}>
-                      <span className="-rotate-45">{surah.id}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <h4 className={cn(
-                        "font-bold text-base",
-                        isCompleted && "text-emerald-900"
-                      )}>{surah.name_simple}</h4>
-                      <p className={cn(
-                        "text-xs text-muted-foreground",
-                        isCompleted ? "text-emerald-700/70" : "group-hover:text-accent-foreground/80"
-                      )}>
-                        {surah.translated_name.name} • {surah.verses_count} Ayat
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "w-10 h-10 rounded-full transition-all shrink-0",
-                        playingId === surah.id 
-                          ? "bg-[#800000] text-white hover:bg-[#800000]/90" 
-                          : "bg-muted/50 text-muted-foreground hover:bg-[#800000]/10 hover:text-[#800000]"
-                      )}
-                      onClick={(e) => togglePlay(e, surah.id)}
-                    >
-                      {loadingAudioId === surah.id ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : playingId === surah.id ? (
-                        <Pause className="w-5 h-5 fill-current" />
-                      ) : (
-                        <Play className="w-5 h-5 fill-current ml-0.5" />
-                      )}
-                    </Button>
-                    <div className="text-right flex flex-col items-end gap-1">
-                      <div className={cn(
-                        "text-xl font-arabic leading-none",
-                        isCompleted ? "text-emerald-800" : "mb-1"
-                      )}>{surah.name_arabic}</div>
-                      {isCompleted ? (
-                        <div className="flex items-center gap-1 bg-emerald-200/50 px-1.5 py-0.5 rounded text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
-                          <Star className="w-2 h-2 fill-current" /> Khatam
-                        </div>
-                      ) : (
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground group-hover:text-accent-foreground/80 font-semibold">
-                          {surah.revelation_place === "makkah" ? "Makkiyah" : "Madaniyah"}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {passedCount > 0 && !isCompleted && (
-                  <div className="mt-3">
-                    <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-                      <span>Progres Hafalan</span>
-                      <span>{Math.round((passedCount/surah.verses_count)*100)}%</span>
-                    </div>
-                    <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-[#800000]" style={{ width: `${(passedCount/surah.verses_count)*100}%` }} />
-                    </div>
-                  </div>
-                )}
-              </Card>
+              {CardContent}
             </Link>
           );
         })}

@@ -56,10 +56,9 @@ export default function MufradatVerseDetailPage() {
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'surah_id', operator: '==', value: id },
       { column: 'is_passed', operator: '==', value: true }
     ]
-  }), [user?.id, id]);
+  }), [user?.id]);
 
   const { data: progress } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
@@ -68,7 +67,35 @@ export default function MufradatVerseDetailPage() {
     return new Set(progress.map(p => Number(p.verse_id)));
   }, [progress]);
 
-  const isCurrentVerseCompleted = completedVerseNumbers.has(currentVerseNum);
+  const isCurrentVerseCompleted = completedVerseNumbers.has(Number(verseId));
+
+  const completedPageQuizzes = useMemo(() => {
+    const pageSet = new Set<number>();
+    if (!progress) return pageSet;
+    progress.forEach(p => {
+      if (p.is_passed && p.quiz_id.startsWith('mufradat_page_')) {
+        const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
+        pageSet.add(pNum);
+      }
+    });
+    return pageSet;
+  }, [progress]);
+
+  // Strict Sequential Guard: Redirect if Verse's Page is locked
+  useEffect(() => {
+    if (!verse || !progress) return;
+    const pNum = (verse as any).page_number;
+    
+    // Soft Access: Check if user has ANY progress on this page
+    const isPageStarted = completedPageQuizzes.has(pNum) || progress.some(p => (Number(p.page_id) === pNum) || (Number(p.page_number) === pNum));
+    
+    // Sequential rule: Page P is unlocked if P-1 is mastered OR if already started
+    const isUnlocked = pNum <= 1 || completedPageQuizzes.has(pNum - 1) || isPageStarted || isCurrentVerseCompleted;
+    
+    if (!isUnlocked) {
+      router.push(`/mufradat/${id}`);
+    }
+  }, [verse, progress, completedPageQuizzes, router, id, isCurrentVerseCompleted]);
   
   // Fetch latest attempt for THIS specific verse to get wrong_words
   const lastAttemptOptions = useMemo(() => ({

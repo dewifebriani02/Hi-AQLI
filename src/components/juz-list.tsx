@@ -99,29 +99,59 @@ export function JuzList({
   
   const juzArray = Array.from({ length: 30 }, (_, i) => i + 1);
   
+  const formatTime = (seconds: number) => {
+    if (seconds === Infinity) return "--:--";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   // Calculate completion status for pages and juz exams
   const progressData = useMemo(() => {
     const completedPages = new Set<number>();
+    const pagesWithAnyProgress = new Set<number>();
     const completedExams = new Set<number>();
+    const pageStats = new Map<number, { maxScore: number, attempts: number, bestTime: number }>();
     
-    if (!userProgress) return { completedPages, completedExams };
+    if (!userProgress) return { completedPages, completedExams, pagesWithAnyProgress, pageStats };
 
     userProgress.forEach(attempt => {
-      if (!attempt.is_passed) return;
+      // Unified Page Retrieval: Look for page_id first (DB column), then derive from quiz_id
+      let pNum = attempt.page_id ? Number(attempt.page_id) : null;
+      if (!pNum && attempt.quiz_id.startsWith('mufradat_page_')) {
+        pNum = parseInt(attempt.quiz_id.replace('mufradat_page_', ''));
+      }
+
+      if (pNum) {
+        pagesWithAnyProgress.add(pNum);
+        
+        // Update Stats
+        const score = Math.round((Number(attempt.score) / (Number(attempt.total_questions) || 1)) * 100) || 0;
+        const time = Number(attempt.duration_seconds) || Infinity;
+        
+        const current = pageStats.get(pNum) || { maxScore: 0, attempts: 0, bestTime: Infinity };
+        pageStats.set(pNum, {
+          maxScore: Math.max(current.maxScore, score),
+          attempts: current.attempts + 1,
+          bestTime: Math.min(current.bestTime, time)
+        });
+
+        // Track 100% Mastery
+        if (attempt.is_passed && attempt.quiz_id.startsWith('mufradat_page_')) {
+          completedPages.add(pNum);
+        }
+      }
       
-      if (attempt.quiz_id.startsWith('mufradat_page_')) {
-        const pNum = parseInt(attempt.quiz_id.replace('mufradat_page_', ''));
-        completedPages.add(pNum);
-      } else if (attempt.quiz_id.startsWith('mufradat_juz_exam_')) {
+      if (attempt.is_passed && attempt.quiz_id.startsWith('mufradat_juz_exam_')) {
         const jNum = parseInt(attempt.quiz_id.replace('mufradat_juz_exam_', ''));
         completedExams.add(jNum);
       }
     });
 
-    return { completedPages, completedExams };
+    return { completedPages, completedExams, pagesWithAnyProgress, pageStats };
   }, [userProgress]);
 
-  const { completedPages, completedExams } = progressData;
+  const { completedPages, completedExams, pagesWithAnyProgress, pageStats } = progressData;
 
   const filteredJuz = juzArray.filter(j => 
     `Juz ${j}`.toLowerCase().includes(search.toLowerCase()) ||
@@ -214,7 +244,7 @@ export function JuzList({
           const isAllPagesDone = finishedPagesCount === totalPages;
           
           const startPage = juzPages[0];
-          const isJuzUnlocked = startPage === 1 || completedPages.has(startPage - 1);
+          const isJuzUnlocked = startPage === 1 || completedPages.has(startPage - 1) || finishedPagesCount > 0;
           const isExpanded = expandedJuz === j;
 
           if (variant === 'tilawah') {
@@ -256,21 +286,20 @@ export function JuzList({
                     isExamPassed 
                       ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80 shadow-md" 
                       : !isJuzUnlocked
-                        ? "bg-slate-50 opacity-60 grayscale cursor-not-allowed"
+                        ? "bg-slate-50 opacity-60 grayscale cursor-not-allowed border border-slate-100"
                         : "bg-white hover:bg-accent border border-slate-100"
                   )}
                 >
-                  <Link 
-                    href={isJuzUnlocked ? targetVerse : "#"}
+                  <div 
                     className={cn(
                       "flex-1 flex flex-col p-4 transition-all",
-                      !isJuzUnlocked && "pointer-events-none"
+                      isJuzUnlocked ? "cursor-pointer" : "pointer-events-none"
                     )}
-                    onClick={(e) => !isJuzUnlocked && e.preventDefault()}
+                    onClick={() => isJuzUnlocked && setExpandedJuz(isExpanded ? null : j)}
                   >
                     {!isJuzUnlocked && (
-                      <div className="absolute top-0 right-0 p-2 text-slate-400">
-                        <Lock className="w-4 h-4" />
+                      <div className="absolute top-2 right-2 p-1.5 bg-slate-400/20 rounded-full">
+                        <Lock className="w-4 h-4 text-slate-400" />
                       </div>
                     )}
                     {isExamPassed && (
@@ -312,7 +341,7 @@ export function JuzList({
                         </div>
                       )}
                     </div>
-                  </Link>
+                  </div>
 
                   <div className="w-12 border-l border-slate-50 flex flex-col items-center justify-center gap-2 py-2">
                     {/* Padding for absolute buttons */}
@@ -347,7 +376,8 @@ export function JuzList({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 px-4 py-2 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200">
                   {juzPages.map((p) => {
                     const isDone = completedPages.has(p);
-                    const isUnlocked = p === 1 || completedPages.has(p - 1);
+                    const isUnlocked = p === 1 || completedPages.has(p - 1) || pagesWithAnyProgress.has(p) || isDone;
+                    const stats = pageStats.get(p) || { maxScore: 0, attempts: 0, bestTime: Infinity };
 
                     return (
                       <Link 
@@ -356,7 +386,7 @@ export function JuzList({
                         className={cn(
                           "flex items-center justify-between p-3 rounded-xl transition-all border",
                           isDone 
-                            ? "bg-emerald-50 border-emerald-100 text-emerald-800" 
+                            ? "bg-emerald-50 border-emerald-100 text-emerald-800 shadow-sm" 
                             : isUnlocked 
                               ? "bg-white border-slate-100 hover:border-[#800000]/30 hover:shadow-sm" 
                               : "bg-slate-50 opacity-60 border-transparent grayscale cursor-not-allowed"
@@ -368,9 +398,22 @@ export function JuzList({
                             "w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black",
                             isDone ? "bg-emerald-500 text-white" : isUnlocked ? "bg-slate-100 text-slate-500" : "bg-slate-200 text-slate-400"
                           )}>{p}</div>
-                          <span className="text-xs font-bold tracking-tight">Halaman {p}</span>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold tracking-tight">Halaman {p}</span>
+                            {stats.attempts > 0 && (
+                              <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">
+                                <span className={cn(stats.maxScore === 100 ? "text-emerald-600" : "text-amber-600")}>🎯 {stats.maxScore}%</span>
+                                <span>🔄 {stats.attempts}x</span>
+                                {stats.bestTime !== Infinity && <span>⏱️ {formatTime(stats.bestTime)}</span>}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {isDone ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : !isUnlocked && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+                        {isDone ? (
+                          <div className="flex items-center gap-1 bg-emerald-500 text-white p-1 rounded-lg">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </div>
+                        ) : !isUnlocked && <Lock className="w-3.5 h-3.5 text-slate-400" />}
                       </Link>
                     );
                   })}

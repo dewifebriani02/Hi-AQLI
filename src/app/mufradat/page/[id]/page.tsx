@@ -51,7 +51,7 @@ export default function MufradatPageDetailPage() {
 
   const juzNum = useMemo(() => getJuzForPage(pageNum), [pageNum]);
 
-  const { data: allProgress } = useCollection("quiz_attempts", {
+  const { data: allProgress, isLoading: isProgressLoading } = useCollection("quiz_attempts", {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 
@@ -80,8 +80,23 @@ export default function MufradatPageDetailPage() {
   // Page Quiz progress
   const isPageCompleted = useMemo(() => {
     if (!allProgress) return false;
+    // Check for 100% mastery specifically (is_passed now represents 100% after our update)
     return allProgress.some(p => p.quiz_id === `mufradat_page_${pageNum}` && p.is_passed);
   }, [allProgress, pageNum]);
+
+  // Global Sequential Guard: Redirect if previous page is not 100% finished
+  useEffect(() => {
+    if (!allProgress || pageNum <= 1 || isProgressLoading) return;
+    
+    const isPrevPageDone = allProgress.some(p => 
+      p.quiz_id === `mufradat_page_${pageNum - 1}` && p.is_passed
+    );
+    
+    if (!isPrevPageDone) {
+      // Strict sequential guard: Redirect if previous page is not 100% finished
+      router.push(`/mufradat/page/${pageNum - 1}`);
+    }
+  }, [allProgress, pageNum, router, isProgressLoading]);
 
   // Fetch latest attempt to get wrong_words for review
   const lastAttemptOptions = useMemo(() => ({
@@ -158,7 +173,18 @@ export default function MufradatPageDetailPage() {
             )}
           </Button>
           <Button variant="ghost" size="icon" disabled={pageNum <= 1} onClick={() => router.push(`/mufradat/page/${pageNum - 1}`)}><ArrowLeft className="h-5 w-5" /></Button>
-          <Button variant="ghost" size="icon" disabled={pageNum >= 604 || !isPageCompleted} onClick={() => router.push(`/mufradat/page/${pageNum + 1}`)} className={cn(!isPageCompleted && "opacity-30")}><ArrowRight className="h-5 w-5" /></Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            disabled={pageNum >= 604 || !isPageCompleted} 
+            onClick={() => isPageCompleted && router.push(`/mufradat/page/${pageNum + 1}`)} 
+            className={cn(
+              "transition-all duration-300", 
+              !isPageCompleted && "text-muted-foreground/20 opacity-20 pointer-events-none cursor-not-allowed"
+            )}
+          >
+            <ArrowRight className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
@@ -277,7 +303,7 @@ export default function MufradatPageDetailPage() {
             </Button>
             
             {isPageCompleted && pageNum < 604 && (
-              <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 hover:bg-[#800000]/5 text-[#800000] font-black gap-2 py-6 h-14 text-lg rounded-xl transition-all">
+              <Button asChild variant="outline" className="w-full border-2 border-emerald-500/20 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-700 font-black gap-2 py-6 h-14 text-lg rounded-xl transition-all shadow-sm">
                 <Link href={`/mufradat/page/${pageNum + 1}`}>
                   LANJUT KE HALAMAN {pageNum + 1}
                   <ArrowRight className="w-5 h-5" />

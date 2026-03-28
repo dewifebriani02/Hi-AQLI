@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star } from "lucide-react";
@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
+import { SURAH_START_PAGES } from "@/lib/quran-mapping";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -63,6 +64,7 @@ const RECITERS = [
 
 export default function MufradatSurahDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const { toast } = useToast();
   const { user } = useUser();
@@ -91,40 +93,80 @@ export default function MufradatSurahDetailPage() {
   const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
   // Unified progress (from parent or fresh if needed)
-  const { data: userProgress } = useCollection("quiz_attempts", {
+  const { data: userProgress, isLoading: isUserProgressLoading } = useCollection("quiz_attempts", {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 
-  const completedVerseNumbers = useMemo(() => {
-    if (!progress) return new Set<number>();
-    // Ensure all verse IDs are treated as numbers, regardless of DB type (Text vs Int)
-    return new Set(progress.map(p => Number(p.verse_id)));
-  }, [progress]);
+  // Aggregate all progress and stats for this surah
+  const progressData = useMemo(() => {
+    const pageQuizzes = new Set<number>();
+    const passedVerses = new Set<number>();
+    const errorVerses = new Set<number>();
+    const stats = new Map<number, { maxScore: number, attempts: number }>();
+    
+    // Process Page Quizzes from global userProgress
+    if (userProgress) {
+      userProgress.forEach(p => {
+        if (p.is_passed && p.quiz_id.startsWith('mufradat_page_')) {
+          const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
+          pageQuizzes.add(pNum);
+        }
+      });
+    }
 
-  // Aggregate wrong words across all verses of this surah
-  const versesWithErrors = useMemo(() => {
-    const errorSet = new Set<number>();
-    if (!progress) return errorSet;
-    progress.forEach(p => {
-      if (p.wrong_words && p.wrong_words.length > 0) {
-        errorSet.add(Number(p.verse_id));
-      }
-    });
-    return errorSet;
-  }, [progress]);
+    // Process Verse Attempts from local surah progress
+    if (progress) {
+      progress.forEach(p => {
+        const vNum = Number(p.verse_id);
+        if (isNaN(vNum)) return;
 
-  // Track page completions to unlock next pages
-  const completedPageQuizzes = useMemo(() => {
-    const pageSet = new Set<number>();
-    if (!userProgress) return pageSet;
-    userProgress.forEach(p => {
-      if (p.is_passed && p.quiz_id.startsWith('mufradat_page_')) {
-        const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
-        pageSet.add(pNum);
-      }
-    });
-    return pageSet;
-  }, [userProgress]);
+        passedVerses.add(vNum);
+        
+        // Update errors
+        if (p.wrong_words && p.wrong_words.length > 0) {
+          errorVerses.add(vNum);
+        }
+
+        // Update Stats
+        const score = Math.round((Number(p.score) / (Number(p.total_questions) || 1)) * 100) || 0;
+        const current = stats.get(vNum) || { maxScore: 0, attempts: 0 };
+        stats.set(vNum, {
+          maxScore: Math.max(current.maxScore, score),
+          attempts: current.attempts + 1
+        });
+      });
+    }
+
+    return { 
+      completedPageQuizzes: pageQuizzes, 
+      completedVerseNumbers: passedVerses, 
+      versesWithErrors: errorVerses,
+      verseStatsMap: stats
+    };
+  }, [userProgress, progress]);
+
+  const { 
+    completedPageQuizzes, 
+    completedVerseNumbers, 
+    versesWithErrors, 
+    verseStatsMap 
+  } = progressData;
+
+  const currentSurahPassedVerses = completedVerseNumbers;
+
+  // Strict Sequential Guard: Redirect if Surah's starting page is locked
+  useEffect(() => {
+    if (isUserProgressLoading || !userProgress) return;
+    const hasAnyProgress = currentSurahPassedVerses.size > 0;
+    const sId = Number(id);
+    const startPage = SURAH_START_PAGES[sId] || 1;
+    // Surah is unlocked if it starts on Page 1, or if previous page is 100% finished, or if already started
+    const isUnlocked = startPage === 1 || completedPageQuizzes.has(startPage - 1) || hasAnyProgress;
+    
+    if (!isUnlocked) {
+      router.push('/mufradat');
+    }
+  }, [id, userProgress, isUserProgressLoading, completedPageQuizzes, router, currentSurahPassedVerses]);
 
   useEffect(() => {
     const savedReciter = localStorage.getItem('aqli_reciter_id');
@@ -324,59 +366,84 @@ export default function MufradatSurahDetailPage() {
             
             // Completion checks
             const isCompleted = completedVerseNumbers.has(verse.verse_number);
-            const prevVerseDone = completedVerseNumbers.has(prevVerse?.verse_number || 0);
-            const prevPageQuizDone = !isNewPage || completedPageQuizzes.has(prevVerse.page_number);
             
-            // Absolute Page Lock: must pass previous page to open this verse if it's the start of a surah or a new page
-            const isPrevPageDone = verse.page_number === 1 || completedPageQuizzes.has(verse.page_number - 1);
+            // Soft Access: If the user has started THIS page, don't lock the rest of the page
+            const isPageStarted = completedPageQuizzes.has(verse.page_number) || 
+                                 verses.some(v => v.page_number === verse.page_number && completedVerseNumbers.has(v.verse_number));
 
-            // A verse is locked if:
-            // 1. It's NOT the very first verse of the Quran AND
-            // 2. (It's the first verse of surah but previous page isn't done)
-            // 3. OR (It's not the first verse but previous verse isn't done)
-            // 4. OR (It's on a new page and the previous page's quiz hasn't been passed)
-            const isLocked = !isQuranStart && (
-              isFirstVerse 
-                ? !isPrevPageDone 
-                : (!prevVerseDone || !prevPageQuizDone)
-            );
+            // Absolute Page Lock: must pass previous page to open any verse in this page (unless already started)
+            const isPrevPageDone = verse.page_number === 1 || completedPageQuizzes.has(verse.page_number - 1) || isPageStarted;
+            const isPrevVerseDone = isFirstVerse || completedVerseNumbers.has(prevVerse?.verse_number || 0);
+            const isPrevPageQuizDone = !isNewPage || completedPageQuizzes.has(prevVerse.page_number);
+
+            // A verse is UNLOCKED if:
+            // 1. It is the very first verse of the Quran (1:1)
+            // 2. OR It's already completed (Passed)
+            // 3. OR (The cumulative logic: previous page is done AND (it's V1 or previous verse is done) AND no page-break quiz is missing)
+            const isUnlockedByContext = isPrevPageDone && isPrevVerseDone && isPrevPageQuizDone;
+            const isLocked = !isQuranStart && !isCompleted && !isUnlockedByContext;
 
             return (
               <div key={verse.id}>
                 {/* PAGE MILESTONE UI */}
                 {isNewPage && (
-                  <div className="mx-4 my-8 p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center gap-4 text-center">
-                    <div className={cn(
-                      "w-12 h-12 rounded-full flex items-center justify-center shadow-lg",
-                      prevPageQuizDone ? "bg-emerald-500 text-white" : "bg-amber-100 text-amber-600 animate-bounce"
-                    )}>
-                      {prevPageQuizDone ? <Check className="w-6 h-6" /> : <GraduationCap className="w-6 h-6" />}
+                  <div className="mx-4 my-8 p-6 bg-slate-50/80 rounded-3xl border border-slate-200/50 backdrop-blur-sm shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-1 bg-gradient-to-b from-[#800000] to-[#D4AF37] h-full" />
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-xs font-black text-slate-400">
+                          {verse.page_number}
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-black text-slate-800 uppercase tracking-tighter">HALAMAN {verse.page_number}</h3>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Mushaf Al-Madinah</p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Page Quiz Stats */}
+                        {(() => {
+                          const pageEffort = userProgress?.find(a => a.quiz_id === `mufradat_page_${prevVerse.page_number}`);
+                          if (pageEffort) {
+                            return (
+                              <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Hasil Murajaah:</span>
+                                <div className="flex items-center gap-2">
+                                  <span className={cn("text-xs font-black", pageEffort.is_passed ? "text-emerald-600" : "text-amber-600")}>
+                                    🎯 {Math.round((pageEffort.score / pageEffort.total_questions) * 100)}%
+                                  </span>
+                                  <span className="text-[9px] font-bold text-slate-400 italic">
+                                    ⏱️ {Math.floor(pageEffort.duration_seconds / 60)}:{(pageEffort.duration_seconds % 60).toString().padStart(2, '0')}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
+                        <Button asChild variant={isPrevPageQuizDone ? "outline" : "default"} className={cn(
+                          "h-9 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm",
+                          isPrevPageQuizDone ? "border-2 border-slate-200 bg-white hover:border-[#800000]/30" : "bg-amber-500 hover:bg-amber-600 text-white"
+                        )}>
+                          <Link href={`/mufradat/page/${prevVerse.page_number}/quiz`}>
+                            {isPrevPageQuizDone ? "ULANGI MURAJAAH" : "MURAJAAH & UJIAN HALAMAN"}
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800">Selesai Halaman {prevVerse.page_number}</h4>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
-                        {prevPageQuizDone 
-                          ? `Alhamdulillah! Halaman ${prevVerse.page_number} tuntas.`
-                          : `Lakukan Murajaah 30 Kata untuk membuka Halaman ${verse.page_number}.`
-                        }
-                      </p>
-                    </div>
-                    <Button asChild variant={prevPageQuizDone ? "outline" : "default"} className={cn(
-                      "rounded-full px-6 font-black text-[10px] uppercase tracking-widest",
-                      !prevPageQuizDone && "bg-[#D4AF37] hover:bg-[#B8860B] text-black shadow-md"
-                    )}>
-                      <Link href={`/mufradat/page/${prevVerse.page_number}`}>
-                         {prevPageQuizDone ? "LIHAT REVIEW HALAMAN" : `MURAJAAH & UJIAN HALAMAN ${prevVerse.page_number}`}
-                      </Link>
-                    </Button>
                   </div>
                 )}
 
                 <div 
                   id={`verse-${verse.verse_number}`}
-                  className={cn("py-12 px-4 space-y-8 transition-opacity", isLocked && "opacity-60")}
+                  className={cn("py-12 px-4 space-y-8 transition-opacity border-b border-dashed border-slate-100", isLocked && "opacity-60")}
                 >
                   <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-[#800000] opacity-40">
+                      <span className="text-xs font-black border-[#800000]/20 border-r pr-3">{verse.verse_key}</span>
+                    </div>
                     <div className="flex items-center gap-3">
                       <Button asChild={!isLocked} variant="outline" className={cn(
                         "w-48 h-10 gap-2 font-black text-[10px] rounded-full transition-all active:scale-[0.95] shadow-sm uppercase tracking-widest",
@@ -384,71 +451,98 @@ export default function MufradatSurahDetailPage() {
                           isCompleted ? "bg-[#D4AF37] text-black border-[#800000]/20 hover:bg-[#D4AF37]/90" :
                             "bg-white text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5"
                       )} disabled={isLocked}>
-                      {isLocked ? (
-                        <span className="flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> TERKUNCI</span>
-                      ) : (
-                        <Link href={`/mufradat/${id}/${verse.verse_number}`}>
-                          {isCompleted ? (
-                            versesWithErrors.has(verse.verse_number) ? (
-                              <span className="flex items-center gap-2 text-rose-600"><Star className="w-3.5 h-3.5 fill-current" /> REVIEW AYAT</span>
+                        {isLocked ? (
+                          <span className="flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> TERKUNCI</span>
+                        ) : (
+                          <Link href={`/mufradat/${id}/${verse.verse_number}`}>
+                            {isCompleted ? (
+                              versesWithErrors.has(verse.verse_number) ? (
+                                <span className="flex items-center gap-2 text-rose-600"><Star className="w-3.5 h-3.5 fill-current" /> REVIEW AYAT</span>
+                              ) : (
+                                <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5" /> PELAJARI LAGI</span>
+                              )
                             ) : (
-                              <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5" /> PELAJARI LAGI</span>
-                            )
-                          ) : (
-                             <span className="flex items-center gap-2"><GraduationCap className="w-3.5 h-3.5" /> MULAI UJI HAFALAN</span>
-                          )}
-                        </Link>
-                      )}
-                    </Button>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => toggleAudio(verse.verse_key)} disabled={isLocked} className="text-[#800000]">
-                    {loadingAudioKey === verse.verse_key ? <Loader2 className="animate-spin h-4 w-4" /> : playingKey === verse.verse_key ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                </div>
-
-                <div className={cn("flex flex-wrap justify-end gap-x-3 gap-y-4 w-full", isLocked && "blur-[2px] select-none")} dir="rtl">
-                  {verse.words?.map((word, wordIdx) => {
-                    const wordKey = `${verse.verse_key}-${wordIdx}`;
-                    return (
-                      <Tooltip key={wordIdx} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
-                        <TooltipTrigger asChild>
-                          <span
-                            tabIndex={isLocked ? -1 : 0}
-                            role="button"
-                            onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
-                            style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
-                            className={cn(
-                              "font-arabic text-foreground/90 outline-none transition-colors px-0.5 inline-block",
-                              !isLocked && "hover:text-[#800000] focus:text-[#800000] cursor-help"
+                              <span className="flex items-center gap-2"><GraduationCap className="w-3.5 h-3.5" /> MULAI UJI HAFALAN</span>
                             )}
-                          >
-                            {word.text_uthmani}
-                          </span>
-                        </TooltipTrigger>
-                        {!isLocked && (
-                          <TooltipPortal>
-                            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
-                              <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
-                            </TooltipContent>
-                          </TooltipPortal>
+                          </Link>
                         )}
-                      </Tooltip>
-                    );
-                  })}
-                </div>
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => toggleAudio(verse.verse_key)} disabled={isLocked} className="text-[#800000]">
+                        {loadingAudioKey === verse.verse_key ? <Loader2 className="animate-spin h-4 w-4" /> : playingKey === verse.verse_key ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
 
-                <div className={cn("text-left bg-[#800000]/5 p-5 rounded-xl border-l-4", isLocked ? "border-muted" : "border-[#800000]")}>
-                  <p className={cn("text-[10px] font-bold mb-2 uppercase tracking-widest", isLocked ? "text-muted-foreground" : "text-[#800000]")}>
-                    Terjemahan Ayat
-                  </p>
-                  <div className={cn("text-base leading-relaxed text-slate-700", isLocked ? "text-muted-foreground italic" : "text-foreground/90")}>
-                    {isLocked ? "Selesaikan kuis ayat sebelumnya untuk membaca terjemahan ini." : <div dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }} />}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Terjemah per Kata</p>
+                      {/* Verse Stats Badge */}
+                      {(() => {
+                        const vStats = verseStatsMap.get(verse.verse_number);
+                        if (vStats && vStats.attempts > 0) {
+                          return (
+                            <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
+                              <span className={cn("text-[10px] font-black", vStats.maxScore === 100 ? "text-emerald-600" : "text-amber-600")}>🎯 {vStats.maxScore}%</span>
+                              <span className="text-[9px] font-bold text-slate-400 tracking-tighter uppercase">🔄 {vStats.attempts}x</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    
+                    <div className={cn("flex flex-wrap justify-start gap-x-3 gap-y-4 w-full", isLocked && "blur-[2px] select-none")} dir="rtl">
+                      {verse.words?.map((word, wordIdx) => {
+                        const wordKey = `${verse.verse_key}-${wordIdx}`;
+                        return (
+                          <Tooltip key={wordKey} open={activeWordKey === wordKey && !isLocked} onOpenChange={(o) => o && setActiveWordKey(wordKey)}>
+                            <TooltipTrigger asChild>
+                              <span
+                                tabIndex={isLocked ? -1 : 0}
+                                role="button"
+                                onPointerEnter={() => !isLocked && setActiveWordKey(wordKey)}
+                                style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+                                className={cn(
+                                  "font-arabic text-foreground/90 outline-none transition-colors px-0.5 inline-block",
+                                  !isLocked && "hover:text-[#800000] focus:text-[#800000] cursor-help"
+                                )}
+                              >
+                                {word.text_uthmani}
+                              </span>
+                            </TooltipTrigger>
+                            {!isLocked && (
+                              <TooltipPortal>
+                                <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                                  <p className="text-xs font-medium">{word.translation?.text || "..."}</p>
+                                </TooltipContent>
+                              </TooltipPortal>
+                            )}
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className={cn("text-left bg-[#800000]/5 p-5 rounded-xl border-l-4 shadow-sm", isLocked ? "border-muted" : "border-[#800000]")}>
+                    <p className={cn("text-[10px] font-bold mb-2 uppercase tracking-widest", isLocked ? "text-muted-foreground" : "text-[#800000]")}>
+                      Terjemahan Ayat
+                    </p>
+                    <div className={cn("text-base leading-relaxed text-slate-700", isLocked ? "text-muted-foreground italic" : "text-foreground/90 font-medium")}>
+                      {isLocked ? (
+                        !isPrevPageDone 
+                          ? `Buka Murajaah Halaman ${verse.page_number - 1} untuk akses ayat ini.` 
+                          : !isPrevPageQuizDone
+                            ? `Selesaikan Murajaah Halaman ${prevVerse.page_number} untuk lanjut.`
+                            : "Selesaikan kuis ayat sebelumnya untuk membaca terjemahan ini."
+                      ) : (
+                        <div dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }} />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </TooltipProvider>
       </div>
 
