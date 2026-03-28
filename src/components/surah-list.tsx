@@ -4,8 +4,9 @@ import { useEffect, useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, CheckCircle2, Star } from "lucide-react";
+import { Search, CheckCircle2, Star, Play, Pause, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface Surah {
@@ -22,12 +23,21 @@ interface Surah {
 interface SurahListProps {
   baseUrl?: string;
   userProgress?: any[];
+  selectedReciterId?: number;
 }
 
-export function SurahList({ baseUrl = "/tilawah", userProgress = [] }: SurahListProps) {
+export function SurahList({ 
+  baseUrl = "/tilawah", 
+  userProgress = [], 
+  selectedReciterId = 7 
+}: SurahListProps) {
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  const [playingId, setPlayingId] = useState<number | null>(null);
+  const [loadingAudioId, setLoadingAudioId] = useState<number | null>(null);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     async function fetchSurahs() {
@@ -43,6 +53,67 @@ export function SurahList({ baseUrl = "/tilawah", userProgress = [] }: SurahList
     }
     fetchSurahs();
   }, []);
+
+  // Audio Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
+    };
+  }, [audio]);
+
+  const togglePlay = async (e: React.MouseEvent, surahId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (playingId === surahId) {
+      audio?.pause();
+      setPlayingId(null);
+      return;
+    }
+
+    if (audio) {
+      audio.pause();
+    }
+
+    setLoadingAudioId(surahId);
+
+    try {
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_chapter/${surahId}`);
+      const data = await res.json();
+      const audioUrl = data.audio_files[0]?.url;
+
+      if (!audioUrl) throw new Error("Audio not found");
+
+      let fullUrl = audioUrl;
+      if (audioUrl.startsWith('//')) fullUrl = `https:${audioUrl}`;
+      else if (!audioUrl.startsWith('http')) fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
+
+      const newAudio = new Audio(fullUrl);
+      setAudio(newAudio);
+      
+      newAudio.onplay = () => {
+        setPlayingId(surahId);
+        setLoadingAudioId(null);
+      };
+
+      newAudio.onended = () => {
+        setPlayingId(null);
+      };
+
+      newAudio.onerror = () => {
+        setLoadingAudioId(null);
+        setPlayingId(null);
+      };
+
+      await newAudio.play();
+    } catch (err) {
+      console.error("Audio Playback Error:", err);
+      setLoadingAudioId(null);
+    }
+  };
 
   // Calculate completion status for each surah
   const completionMap = useMemo(() => {
@@ -142,20 +213,41 @@ export function SurahList({ baseUrl = "/tilawah", userProgress = [] }: SurahList
                       </p>
                     </div>
                   </div>
-                  <div className="text-right flex flex-col items-end gap-1">
-                    <div className={cn(
-                      "text-xl font-arabic leading-none",
-                      isCompleted ? "text-emerald-800" : "mb-1"
-                    )}>{surah.name_arabic}</div>
-                    {isCompleted ? (
-                      <div className="flex items-center gap-1 bg-emerald-200/50 px-1.5 py-0.5 rounded text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
-                        <Star className="w-2 h-2 fill-current" /> Khatam
-                      </div>
-                    ) : (
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground group-hover:text-accent-foreground/80 font-semibold">
-                        {surah.revelation_place === "makkah" ? "Makkiyah" : "Madaniyah"}
-                      </div>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "w-10 h-10 rounded-full transition-all shrink-0",
+                        playingId === surah.id 
+                          ? "bg-[#800000] text-white hover:bg-[#800000]/90" 
+                          : "bg-muted/50 text-muted-foreground hover:bg-[#800000]/10 hover:text-[#800000]"
+                      )}
+                      onClick={(e) => togglePlay(e, surah.id)}
+                    >
+                      {loadingAudioId === surah.id ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : playingId === surah.id ? (
+                        <Pause className="w-5 h-5 fill-current" />
+                      ) : (
+                        <Play className="w-5 h-5 fill-current ml-0.5" />
+                      )}
+                    </Button>
+                    <div className="text-right flex flex-col items-end gap-1">
+                      <div className={cn(
+                        "text-xl font-arabic leading-none",
+                        isCompleted ? "text-emerald-800" : "mb-1"
+                      )}>{surah.name_arabic}</div>
+                      {isCompleted ? (
+                        <div className="flex items-center gap-1 bg-emerald-200/50 px-1.5 py-0.5 rounded text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
+                          <Star className="w-2 h-2 fill-current" /> Khatam
+                        </div>
+                      ) : (
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground group-hover:text-accent-foreground/80 font-semibold">
+                          {surah.revelation_place === "makkah" ? "Makkiyah" : "Madaniyah"}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {passedCount > 0 && !isCompleted && (

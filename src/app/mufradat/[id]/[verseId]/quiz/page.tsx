@@ -288,7 +288,7 @@ export default function MufradatQuizPage() {
               <>
                 {surahInfo && parseInt(verseId) < surahInfo.verses_count ? (
                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                    <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}/quiz`}>
+                    <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}`}>
                       Lanjut ke Ayat Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
                     </Link>
                   </Button>

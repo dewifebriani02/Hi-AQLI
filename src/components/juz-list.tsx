@@ -4,8 +4,10 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { Search, CheckCircle2, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Play, Pause, Loader2 } from "lucide-react";
 
 // Mapping Juz to starting surah and verse
 const JUZ_MAPPING: Record<number, { surah: number, verse: number, name: string }> = {
@@ -79,10 +81,19 @@ interface JuzListProps {
   baseUrl?: string;
   userProgress?: any[];
   variant?: "mufradat" | "tilawah";
+  selectedReciterId?: number;
 }
 
-export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "mufradat" }: JuzListProps) {
+export function JuzList({ 
+  baseUrl = "/mufradat", 
+  userProgress = [], 
+  variant = "mufradat",
+  selectedReciterId = 7
+}: JuzListProps) {
   const [search, setSearch] = useState("");
+  const [playingJuz, setPlayingJuz] = useState<number | null>(null);
+  const [loadingAudioJuz, setLoadingAudioJuz] = useState<number | null>(null);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   
   const juzArray = Array.from({ length: 30 }, (_, i) => i + 1);
   
@@ -119,6 +130,70 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "m
     `Juz ${j}`.toLowerCase().includes(search.toLowerCase()) ||
     JUZ_MAPPING[j].name.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Audio Cleanup
+  useEffect(() => {
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
+    };
+  }, [audio]);
+
+  const togglePlay = async (e: React.MouseEvent, jNum: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (playingJuz === jNum) {
+      audio?.pause();
+      setPlayingJuz(null);
+      return;
+    }
+
+    if (audio) {
+      audio.pause();
+    }
+
+    setLoadingAudioJuz(jNum);
+
+    try {
+      const mapping = JUZ_MAPPING[jNum];
+      const verseKey = `${mapping.surah}:${mapping.verse}`;
+      
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
+      const data = await res.json();
+      const audioUrl = data.audio_files[0]?.url;
+
+      if (!audioUrl) throw new Error("Audio not found");
+
+      let fullUrl = audioUrl;
+      if (audioUrl.startsWith('//')) fullUrl = `https:${audioUrl}`;
+      else if (!audioUrl.startsWith('http')) fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
+
+      const newAudio = new Audio(fullUrl);
+      setAudio(newAudio);
+      
+      newAudio.onplay = () => {
+        setPlayingJuz(jNum);
+        setLoadingAudioJuz(null);
+      };
+
+      newAudio.onended = () => {
+        setPlayingJuz(null);
+      };
+
+      newAudio.onerror = () => {
+        setLoadingAudioJuz(null);
+        setPlayingJuz(null);
+      };
+
+      await newAudio.play();
+    } catch (err) {
+      console.error("Audio Playback Error:", err);
+      setLoadingAudioJuz(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -183,21 +258,42 @@ export function JuzList({ baseUrl = "/mufradat", userProgress = [], variant = "m
                       </p>
                     </div>
                   </div>
-                  <div className="text-right flex flex-col items-end gap-1">
-                     {isCompleted ? (
-                      <div className="flex items-center gap-1 bg-emerald-200/50 px-2 py-1 rounded-full text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
-                        <Star className="w-2.5 h-2.5 fill-current" /> Juz Khatam
-                      </div>
-                    ) : (
-                      <div className={cn(
-                        "px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors",
-                        variant === 'tilawah'
-                          ? "bg-[#800000]/5 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
-                          : "bg-muted/30 text-muted-foreground group-hover:bg-[#800000]/10 group-hover:text-[#800000]"
-                      )}>
-                        {variant === 'tilawah' ? 'BACA JUZ' : 'BELAJAR JUZ'}
-                      </div>
-                    )}
+                  <div className="text-right flex items-center gap-3">
+                     <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "w-10 h-10 rounded-full transition-all shrink-0",
+                        playingJuz === j 
+                          ? "bg-[#800000] text-white hover:bg-[#800000]/90" 
+                          : "bg-[#800000]/5 text-[#800000] hover:bg-[#800000]/10"
+                      )}
+                      onClick={(e) => togglePlay(e, j)}
+                    >
+                      {loadingAudioJuz === j ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : playingJuz === j ? (
+                        <Pause className="w-5 h-5 fill-current" />
+                      ) : (
+                        <Play className="w-5 h-5 fill-current ml-0.5" />
+                      )}
+                    </Button>
+                    <div className="flex flex-col items-end gap-1">
+                      {isCompleted ? (
+                        <div className="flex items-center gap-1 bg-emerald-200/50 px-2 py-1 rounded-full text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
+                          <Star className="w-2.5 h-2.5 fill-current" /> Juz Khatam
+                        </div>
+                      ) : (
+                        <div className={cn(
+                          "px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors",
+                          variant === 'tilawah'
+                            ? "bg-[#800000]/5 text-[#800000] group-hover:bg-[#800000] group-hover:text-white"
+                            : "bg-muted/30 text-muted-foreground group-hover:bg-[#800000]/10 group-hover:text-[#800000]"
+                        )}>
+                          {variant === 'tilawah' ? 'BACA JUZ' : 'BELAJAR JUZ'}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {variant === "mufradat" && passedCount > 0 && !isCompleted && (
