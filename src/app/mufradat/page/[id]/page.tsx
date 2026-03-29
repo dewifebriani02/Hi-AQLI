@@ -81,7 +81,7 @@ export default function MufradatPageDetailPage() {
   const isPageCompleted = useMemo(() => {
     if (!allProgress) return false;
     // Check for 100% mastery specifically (is_passed now represents 100% after our update)
-    return allProgress.some(p => p.quiz_id === `mufradat_page_${pageNum}` && p.is_passed);
+    return allProgress.some(p => p.quiz_id === `mufradat_page_${pageNum}` && (p.is_passed || Number(p.score) === Number(p.total_questions)));
   }, [allProgress, pageNum]);
 
   // Global Sequential Guard: Redirect if previous page is not 100% finished
@@ -89,7 +89,7 @@ export default function MufradatPageDetailPage() {
     if (!allProgress || pageNum <= 1 || isProgressLoading) return;
     
     const isPrevPageDone = allProgress.some(p => 
-      p.quiz_id === `mufradat_page_${pageNum - 1}` && p.is_passed
+      p.quiz_id === `mufradat_page_${pageNum - 1}` && (p.is_passed || Number(p.score) === Number(p.total_questions))
     );
     
     if (!isPrevPageDone) {

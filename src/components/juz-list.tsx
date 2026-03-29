@@ -137,7 +137,7 @@ export function JuzList({
         });
 
         // Track 100% Mastery
-        if (attempt.is_passed && attempt.quiz_id.startsWith('mufradat_page_')) {
+        if ((attempt.is_passed || Number(attempt.score) === Number(attempt.total_questions)) && attempt.quiz_id.startsWith('mufradat_page_')) {
           completedPages.add(pNum);
         }
       }

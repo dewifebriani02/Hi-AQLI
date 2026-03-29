@@ -107,7 +107,7 @@ export default function MufradatSurahDetailPage() {
     // Process Page Quizzes from global userProgress
     if (userProgress) {
       userProgress.forEach(p => {
-        if (p.is_passed && p.quiz_id.startsWith('mufradat_page_')) {
+        if ((p.is_passed || Number(p.score) === Number(p.total_questions)) && p.quiz_id.startsWith('mufradat_page_')) {
           const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
           pageQuizzes.add(pNum);
         }

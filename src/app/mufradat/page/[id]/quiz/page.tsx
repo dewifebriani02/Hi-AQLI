@@ -207,7 +207,7 @@ export default function MufradatPageQuizPage() {
           score: finalScore,
           total_questions: questions.length,
           duration_seconds: totalTime,
-          is_passed: finalScore === 100,
+          is_passed: finalScore === questions.length,
           wrong_words: wrongWords.map(w => w.id),
           page_id: Number(pageNum)
         })
