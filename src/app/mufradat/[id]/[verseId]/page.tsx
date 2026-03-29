@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock } from "lucide-react";
 import Link from "next/link";
@@ -45,6 +45,7 @@ export default function MufradatVerseDetailPage() {
   const currentVerseNum = parseInt(verseId);
 
   const { user, isUserLoading } = useUser();
+  const studyCardRef = useRef<HTMLDivElement>(null);
 
   const [verse, setVerse] = useState<VerseDetail | null>(null);
   const [surahName, setSurahName] = useState("");
@@ -173,13 +174,16 @@ export default function MufradatVerseDetailPage() {
       if (!id || !verseId) return;
       try {
         setLoading(true);
-        const sRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        const sData = await sRes.json();
+        // Parallel fetch for Chapter and Verse data
+        const [sRes, vRes] = await Promise.all([
+          fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`),
+          fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`)
+        ]);
+
+        const [sData, vData] = await Promise.all([sRes.json(), vRes.json()]);
+        
         setSurahName(sData.chapter.name_simple);
         setTotalVerses(sData.chapter.verses_count);
-
-        const vRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`);
-        const vData = await vRes.json();
         setVerse(vData.verse);
 
         if (vData.verse) setTimeout(() => fetchOfficialTafsir(id, verseId), 300);
@@ -191,6 +195,15 @@ export default function MufradatVerseDetailPage() {
     }
     fetchAll();
   }, [id, verseId, fetchOfficialTafsir]);
+
+  // Auto-scroll to study section once loaded
+  useEffect(() => {
+    if (!loading && studyCardRef.current) {
+      setTimeout(() => {
+        studyCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [loading]);
 
   const incrementWordCount = (idx: number) => {
     setWordCounts(prev => ({
@@ -245,7 +258,7 @@ export default function MufradatVerseDetailPage() {
         </div>
       </div>
 
-      <Card className="border-none bg-muted/20">
+      <Card ref={studyCardRef} className="border-none bg-muted/20 scroll-mt-24">
         <CardContent className="pt-8 pb-10 px-6 text-right" dir="rtl">
           <TooltipProvider delayDuration={0}>
             <div className="flex flex-wrap justify-end gap-x-2 gap-y-4 w-full">

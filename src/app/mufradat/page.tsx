@@ -73,7 +73,7 @@ export default function MufradatPage() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
             <BookOpen className="w-5 h-5" />
-            <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Mufradat • Daftar Surat & Juz</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Mufradat • Per Ayat & Per Halaman</span>
           </div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">Al-Qur'an</h1>
           <p className="text-muted-foreground text-sm max-w-md">Pelajari setiap kata dan maknai setiap ayat dalam Mushaf HI AQLI.</p>
@@ -138,10 +138,10 @@ export default function MufradatPage() {
       <Tabs defaultValue="surah" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="surah" className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
-            <Layers className="w-4 h-4" /> Daftar Surat
+            <Layers className="w-4 h-4" /> Per Ayat
           </TabsTrigger>
           <TabsTrigger value="juz" className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
-            <BookOpen className="w-4 h-4" /> Daftar Juz
+            <BookOpen className="w-4 h-4" /> Per Halaman
           </TabsTrigger>
         </TabsList>
         

@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   ChevronLeft, 
@@ -41,6 +41,7 @@ export default function MufradatQuizPage() {
   const verseId = params.verseId as string;
   const from = searchParams.get('from');
   const { user, isUserLoading } = useUser();
+  const studyCardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -117,16 +118,15 @@ export default function MufradatQuizPage() {
       if (!id || !verseId) return;
       try {
         setLoading(true);
-        // Fetch surah info for boundary check
-        const surahRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        const surahData = await surahRes.json();
-        setSurahInfo(surahData.chapter);
+        // Parallel fetch for Surah and Verse data
+        const [surahRes, vRes] = await Promise.all([
+          fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`),
+          fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&fields=page_number`)
+        ]);
 
-        // Fetch verse words
-        const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&fields=page_number`
-        );
-        const data = await res.json();
+        const [surahData, data] = await Promise.all([surahRes.json(), vRes.json()]);
+        
+        setSurahInfo(surahData.chapter);
         
         if (data && data.verse && data.verse.words) {
           setPageId(data.verse.page_number);
