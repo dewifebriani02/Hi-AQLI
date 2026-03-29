@@ -8,14 +8,15 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/bottom-nav';
 import { SupabaseProvider, useUser, supabase } from '@/supabase';
+import { signOut } from '@/supabase/auth';
 import { useDoc, useCollection } from '@/supabase/db';
-import { Trophy, Zap, Star } from 'lucide-react';
+import { Trophy, Zap, Star, ShieldAlert, LogOut } from 'lucide-react';
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import dynamic from 'next/dynamic';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const Logo = dynamic(() => import('@/components/logo').then(mod => mod.Logo), { 
   ssr: false,
@@ -25,6 +26,7 @@ const Logo = dynamic(() => import('@/components/logo').then(mod => mod.Logo), {
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isUserLoading } = useUser();
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const [mounted, setMounted] = useState(false);
@@ -69,11 +71,34 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc || userData?.role_id === 'admin' || userData?.role_id === 'superadmin';
   const points = userData?.points || 0;
+  const isBlacklisted = !!userData?.is_blacklisted;
 
   // Gate content until mounted to prevent hydration mismatch
-  const showAdminUI = mounted && hasAdminAccess;
+  const showAdminUI = mounted && hasAdminAccess && !isBlacklisted;
   const showUserUI = mounted && !isUserLoading;
-  const showBottomNav = mounted;
+  const showBottomNav = mounted && !isBlacklisted;
+
+  // Blacklist Guard View
+  if (mounted && user && !isUserDocLoading && isBlacklisted) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mb-6">
+          <ShieldAlert className="w-10 h-10 text-rose-600" />
+        </div>
+        <h1 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tighter">AKSES DIBATASI</h1>
+        <p className="text-slate-500 max-w-sm mb-8 font-medium">
+          Maaf, akun Anda telah dibatalkan aksesnya oleh sistem atau administrator Hi AQLI. Silakan hubungi admin via WhatsApp untuk informasi lebih lanjut.
+        </p>
+        <Button 
+          onClick={() => signOut()} 
+          variant="outline" 
+          className="border-2 border-slate-200 font-black uppercase text-[10px] tracking-widest gap-2 py-6 px-10 rounded-2xl bg-white shadow-xl active:scale-95"
+        >
+          <LogOut className="w-4 h-4" /> KELUAR DARI AKUN
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -35,7 +35,7 @@ const adminItems = [
   { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
   { href: "/admin/donations", label: "Manajemen Infaq", icon: HeartHandshake },
   { href: "/admin/campaigns", label: "Manajemen Kampanye", icon: LayoutGrid },
-  { href: "/admin/users", label: "Manajemen Peserta", icon: UserCog },
+  { href: "/admin/users", label: "Manajemen Users", icon: UserCog },
   { href: "/admin/classes", label: "Manajemen Kelas", icon: Library },
   { 
     label: "Manajemen Hi Mufradat", 

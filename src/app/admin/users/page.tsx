@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from "react";
-import { useUser } from "@/supabase";
+import { useUser, supabase } from "@/supabase";
 import { useCollection } from "@/supabase/db";
 import { updateDocumentNonBlocking, addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,13 +34,13 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle, Phone } from "lucide-react";
+import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle, Phone, ShieldAlert, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
 const ROLES = [
-  { id: "learner", name: "Thalibah" },
+  { id: "learner", name: "Thalibah / User" }, // Dynamic label handling
   { id: "muallimah", name: "Mu'allimah" },
   { id: "musyrifah", name: "Musyrifah" },
   { id: "admin", name: "Administrator" },
@@ -71,15 +71,19 @@ export default function AdminUsersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState(INITIAL_ADD_FORM);
 
-  const { data: users, isLoading } = useCollection("users");
+  const { data: users, isLoading, refresh: refreshUsers } = useCollection("users");
+  const { data: mufradatGroups } = useCollection("mufradat_groups");
 
   const filteredUsers = users?.filter(u =>
     u.username?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleUpdateUser = () => {
+  const handleUpdateUser = async () => {
     if (!editingUser?.id) return;
+
+    const oldGroupId = users?.find(u => u.id === editingUser.id)?.mufradat_group_id;
+    const newGroupId = editingUser.mufradat_group_id;
 
     const updateData: any = {
       username: editingUser.username,
@@ -88,6 +92,8 @@ export default function AdminUsersPage() {
       paid_juz: editingUser.paid_juz ? parseInt(editingUser.paid_juz) : null,
       tikrar_level: editingUser.tikrar_level ? parseInt(editingUser.tikrar_level) : null,
       is_tikrar_paid: editingUser.is_tikrar_paid || false,
+      is_blacklisted: editingUser.is_blacklisted || false,
+      mufradat_group_id: newGroupId || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -95,19 +101,35 @@ export default function AdminUsersPage() {
       updateData.tikrarStartDate = new Date(editingUser.tempDate).toISOString();
     }
 
-    updateDocumentNonBlocking("users", editingUser.id, updateData);
+    try {
+      const { error } = await supabase.from('users').update(updateData).eq('id', editingUser.id);
+      if (error) throw error;
 
-    // If role is admin, ensure they are in roles_admin
-    if (editingUser.role_id === 'admin') {
-      // roles_admin only has id and created_at, no role_id column
-      addDocumentNonBlocking("roles_admin", { id: editingUser.id });
+      // Update member counts if group changed
+      if (oldGroupId !== newGroupId) {
+        if (oldGroupId) {
+          const { data: members } = await supabase.from('users').select('id').eq('mufradat_group_id', oldGroupId);
+          await supabase.from('mufradat_groups').update({ member_count: members?.length || 0 }).eq('id', oldGroupId);
+        }
+        if (newGroupId) {
+          const { data: members } = await supabase.from('users').select('id').eq('mufradat_group_id', newGroupId);
+          await supabase.from('mufradat_groups').update({ member_count: members?.length || 0 }).eq('id', newGroupId);
+        }
+      }
+
+      if (editingUser.role_id === 'admin') {
+        await supabase.from('roles_admin').upsert({ id: editingUser.id });
+      }
+
+      toast({
+        title: "Data Diperbarui",
+        description: `Profil ${editingUser.username} telah berhasil diupdate.`,
+      });
+      setIsEditDialogOpen(false);
+      refreshUsers();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal update", description: err.message });
     }
-
-    toast({
-      title: "Data Diperbarui",
-      description: `Profil ${editingUser.username} telah berhasil diupdate.`,
-    });
-    setIsEditDialogOpen(false);
   };
 
   const handleAddUser = async () => {
@@ -271,14 +293,24 @@ export default function AdminUsersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn(
-                        "text-[9px] font-black uppercase",
-                        u.role_id === 'admin' ? "bg-amber-500 text-white border-none" :
-                          u.role_id === 'muallimah' ? "bg-blue-600 text-white border-none" :
-                            u.role_id === 'musyrifah' ? "bg-emerald-600 text-white border-none" : ""
-                      )}>
-                        {ROLES.find(r => r.id === u.role_id)?.name || 'Thalibah'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={cn(
+                          "text-[9px] font-black uppercase",
+                          u.role_id === 'admin' ? "bg-amber-500 text-white border-none" :
+                            u.role_id === 'muallimah' ? "bg-blue-600 text-white border-none" :
+                              u.role_id === 'musyrifah' ? "bg-emerald-600 text-white border-none" : ""
+                        )}>
+                          {u.role_id === 'learner' 
+                            ? (u.followed_halaqahs?.length > 0 ? "Thalibah" : "User Umum")
+                            : (ROLES.find(r => r.id === u.role_id)?.name || 'User')
+                          }
+                        </Badge>
+                        {u.is_blacklisted && (
+                          <Badge className="bg-rose-600 text-white border-none text-[9px] font-black uppercase tracking-widest">
+                            BLACKLISTED
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <Dialog open={isEditDialogOpen && editingUser?.id === u.id} onOpenChange={(open) => {
@@ -333,26 +365,75 @@ export default function AdminUsersPage() {
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   {ROLES.map(r => (
-                                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                    <SelectItem key={r.id} value={r.id}>
+                                      {r.id === 'learner' 
+                                        ? (editingUser?.followed_halaqahs?.length > 0 ? "Thalibah" : "User Umum") 
+                                        : r.name
+                                      }
+                                    </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             </div>
 
-                            {/* Tikrar Section - Only show if relevant or explicitly needed */}
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-rose-50 border-2 border-dashed border-rose-200">
+                                <div className="space-y-0.5">
+                                  <Label className="text-sm font-black text-rose-900 flex items-center gap-1.5 uppercase">
+                                    <ShieldAlert className="w-4 h-4" /> Blacklist User
+                                  </Label>
+                                  <p className="text-[10px] text-rose-600 font-medium">Blokir akses ke seluruh menu Hi AQLI.</p>
+                                </div>
+                                <Button
+                                  variant={editingUser?.is_blacklisted ? "destructive" : "outline"}
+                                  className={cn("font-black text-[10px] h-9 px-4", !editingUser?.is_blacklisted && "text-rose-600 border-rose-200")}
+                                  onClick={() => setEditingUser({ ...editingUser, is_blacklisted: !editingUser?.is_blacklisted })}
+                                >
+                                  {editingUser?.is_blacklisted ? 'BLACKLISTED' : 'AKTIF'}
+                                </Button>
+                            </div>
+
+                            {/* Hi Mufradat Group Assignment */}
+                            <div className="border-t pt-4 space-y-4">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                                <GraduationCap className="w-3.5 h-3.5 text-[#800000]" /> Manajemen Grup Hi Mufradat
+                              </p>
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Pilih Grup / Batch</Label>
+                                <Select
+                                  value={editingUser?.mufradat_group_id || "none"}
+                                  onValueChange={(val) => setEditingUser({ ...editingUser, mufradat_group_id: val === "none" ? null : val })}
+                                >
+                                  <SelectTrigger className="h-11">
+                                    <SelectValue placeholder="Belum ada grup" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Tanpa Grup (Keluar dari Grup)</SelectItem>
+                                    {mufradatGroups?.map(g => (
+                                      <SelectItem key={g.id} value={g.id}>
+                                         <div className="flex items-center gap-2">
+                                            <span className="font-bold">{g.name}</span>
+                                            <span className="text-[10px] opacity-50">({g.member_count || 0}/50)</span>
+                                         </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
                             <div className="border-t pt-4 space-y-4">
                               <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Detail Khusus Tikrar (Jika Ada)</p>
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label className="text-xs font-bold uppercase text-muted-foreground">Target Juz</Label>
                                   <Select
-                                    value={editingUser?.paid_juz?.toString() || ""}
-                                    onValueChange={(val) => setEditingUser({ ...editingUser, paid_juz: val })}
+                                    value={editingUser?.paid_juz?.toString() || "none"}
+                                    onValueChange={(val) => setEditingUser({ ...editingUser, paid_juz: val === "none" ? null : val })}
                                   >
                                     <SelectTrigger>
                                       <SelectValue placeholder="-" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                      <SelectItem value="none">Belum diatur</SelectItem>
                                       {Array.from({ length: 30 }, (_, i) => (
                                         <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>
                                       ))}
@@ -362,13 +443,14 @@ export default function AdminUsersPage() {
                                 <div className="space-y-2">
                                   <Label className="text-xs font-bold uppercase text-muted-foreground">Level Tikrar</Label>
                                   <Select
-                                    value={editingUser?.tikrar_level?.toString() || ""}
-                                    onValueChange={(val) => setEditingUser({ ...editingUser, tikrar_level: val })}
+                                    value={editingUser?.tikrar_level?.toString() || "none"}
+                                    onValueChange={(val) => setEditingUser({ ...editingUser, tikrar_level: val === "none" ? null : val })}
                                   >
                                     <SelectTrigger>
                                       <SelectValue placeholder="-" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                      <SelectItem value="none">Belum diatur</SelectItem>
                                       {TIKRAR_LEVELS.map(l => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                       ))}
