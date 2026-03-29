@@ -244,7 +244,7 @@ export function JuzList({
           const isAllPagesDone = finishedPagesCount === totalPages;
           
           const startPage = juzPages[0];
-          const isJuzUnlocked = startPage === 1 || completedPages.has(startPage - 1) || finishedPagesCount > 0;
+          const isJuzUnlocked = startPage === 1 || completedPages.has(startPage - 1);
           const isExpanded = expandedJuz === j;
 
           if (variant === 'tilawah') {
@@ -376,7 +376,7 @@ export function JuzList({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 px-4 py-2 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200">
                   {juzPages.map((p) => {
                     const isDone = completedPages.has(p);
-                    const isUnlocked = p === 1 || completedPages.has(p - 1) || pagesWithAnyProgress.has(p) || isDone;
+                    const isUnlocked = p === 1 || completedPages.has(p - 1) || isDone;
                     const stats = pageStats.get(p) || { maxScore: 0, attempts: 0, bestTime: Infinity };
 
                     return (
