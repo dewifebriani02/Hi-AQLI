@@ -219,7 +219,7 @@ export default function MufradatPageDetailPage() {
                     );
                   })}
                   <Link 
-                    href={`/mufradat/${verse.verse_key.split(':')[0]}/${verse.verse_key.split(':')[1]}`}
+                    href={`/mufradat/${verse.verse_key.split(':')[0]}/${verse.verse_key.split(':')[1]}?from=page`}
                     className="text-[10px] font-black text-[#800000]/60 self-center mx-1 font-sans rotate-0 border border-[#800000]/20 px-1.5 rounded hover:bg-[#800000] hover:text-white transition-all shadow-sm"
                     title="Buka Detail Per Ayat"
                   >

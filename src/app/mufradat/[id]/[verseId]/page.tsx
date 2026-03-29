@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock } from "lucide-react";
@@ -37,9 +37,11 @@ interface VerseDetail {
 
 export default function MufradatVerseDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const id = params.id as string;
   const verseId = params.verseId as string;
+  const from = searchParams.get('from');
   const currentVerseNum = parseInt(verseId);
 
   const { user, isUserLoading } = useUser();
@@ -297,7 +299,7 @@ export default function MufradatVerseDetailPage() {
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/10 p-4 flex flex-col gap-3">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black gap-2 py-6 h-14 text-lg rounded-xl shadow-lg border-b-4 border-[#800000]/20">
-              <Link href={user ? `/mufradat/${id}/${verseId}/quiz` : `/login?redirectTo=/mufradat/${id}/${verseId}`}>
+              <Link href={user ? `/mufradat/${id}/${verseId}/quiz${from ? `?from=${from}` : ''}` : `/login?redirectTo=/mufradat/${id}/${verseId}${from ? `?from=${from}` : ''}`}>
                 <GraduationCap className="w-5 h-5" />
                 {user ? (isCurrentVerseCompleted ? "ULANGI UJI HAFALAN" : "MULAI UJI HAFALAN") : "MASUK UNTUK UJI HAFALAN"}
               </Link>
@@ -305,7 +307,7 @@ export default function MufradatVerseDetailPage() {
 
             {isCurrentVerseCompleted && currentVerseNum < totalVerses && (
               <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 hover:bg-[#800000]/5 text-[#800000] font-black gap-2 py-6 h-14 text-lg rounded-xl transition-all">
-                <Link href={`/mufradat/${id}/${currentVerseNum + 1}`}>
+                <Link href={`/mufradat/${id}/${currentVerseNum + 1}${from ? `?from=${from}` : ''}`}>
                   LANJUT KE AYAT {currentVerseNum + 1}
                   <ArrowRight className="w-5 h-5" />
                 </Link>

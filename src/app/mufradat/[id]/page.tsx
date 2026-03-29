@@ -427,7 +427,7 @@ export default function MufradatSurahDetailPage() {
                           "h-9 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm",
                           isPrevPageQuizDone ? "border-2 border-slate-200 bg-white hover:border-[#800000]/30" : "bg-amber-500 hover:bg-amber-600 text-white"
                         )}>
-                          <Link href={`/mufradat/page/${prevVerse.page_number}/quiz`}>
+                          <Link href={`/mufradat/page/${prevVerse.page_number}/quiz?from=surah&surahId=${id}&nextVerseId=${verse.verse_number}`}>
                             {isPrevPageQuizDone ? "ULANGI MURAJAAH" : "MURAJAAH & UJIAN HALAMAN"}
                           </Link>
                         </Button>
@@ -454,7 +454,7 @@ export default function MufradatSurahDetailPage() {
                         {isLocked ? (
                           <span className="flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> TERKUNCI</span>
                         ) : (
-                          <Link href={`/mufradat/${id}/${verse.verse_number}`}>
+                          <Link href={`/mufradat/${id}/${verse.verse_number}?from=surah`}>
                             {isCompleted ? (
                               versesWithErrors.has(verse.verse_number) ? (
                                 <span className="flex items-center gap-2 text-rose-600"><Star className="w-3.5 h-3.5 fill-current" /> REVIEW AYAT</span>

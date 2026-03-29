@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,7 +12,8 @@ import {
   Trophy,
   Star,
   Zap,
-  Timer
+  Timer,
+  Target
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -32,9 +33,15 @@ interface Question {
 
 export default function MufradatPageQuizPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const pageId = params.id as string;
   const pageNum = parseInt(pageId);
+
+  const from = searchParams.get('from');
+  const surahId = searchParams.get('surahId');
+  const nextVerseId = searchParams.get('nextVerseId');
+
   const { user, isUserLoading } = useUser();
 
   const [loading, setLoading] = useState(true);
@@ -301,21 +308,29 @@ export default function MufradatPageQuizPage() {
           <CardFooter className="flex flex-col gap-3 p-8 border-t bg-slate-50/50">
             {isPerfect ? (
               <>
-                {pageNum < 604 ? (
+                {from === 'surah' && surahId && nextVerseId ? (
                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                    <Link href={`/mufradat/page/${pageNum + 1}`}>
-                      Lanjut ke Halaman Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
+                    <Link href={`/mufradat/${surahId}/${nextVerseId}?from=surah`}>
+                      Lanjut ke Ayat {nextVerseId} <ChevronLeft className="w-4 h-4 rotate-180" />
                     </Link>
                   </Button>
                 ) : (
-                  <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                    <Link href={`/mufradat`}>
-                      Selesai! Kembali <ChevronLeft className="w-4 h-4 rotate-180" />
-                    </Link>
-                  </Button>
+                  pageNum < 604 ? (
+                    <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                      <Link href={`/mufradat/page/${pageNum + 1}${from ? `?from=${from}` : ''}`}>
+                        Lanjut ke Halaman Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                      <Link href={`/mufradat`}>
+                        Selesai! Kembali <ChevronLeft className="w-4 h-4 rotate-180" />
+                      </Link>
+                    </Button>
+                  )
                 )}
                 <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
-                  <Link href="/mufradat">KEMBALI KE DAFTAR JUZ</Link>
+                  <Link href={from === 'surah' && surahId ? `/mufradat/${surahId}` : "/mufradat"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR JUZ'}</Link>
                 </Button>
               </>
             ) : (

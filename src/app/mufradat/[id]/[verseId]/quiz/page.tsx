@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -33,9 +33,11 @@ interface Question {
 
 export default function MufradatQuizPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const id = params.id as string;
   const verseId = params.verseId as string;
+  const from = searchParams.get('from');
   const { user, isUserLoading } = useUser();
 
   const [loading, setLoading] = useState(true);
@@ -311,27 +313,30 @@ export default function MufradatQuizPage() {
               <>
                 {surahInfo && parseInt(verseId) < surahInfo.verses_count ? (
                   nextVersePage && nextVersePage !== pageId ? (
+                    /* Page Break: Always encourage Page Quiz before next verse/page */
                     <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-black font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                      <Link href={`/mufradat/page/${pageId}`}>
+                      <Link href={`/mufradat/page/${pageId}/quiz${from ? `?from=${from}${from === 'surah' ? `&surahId=${id}&nextVerseId=${parseInt(verseId) + 1}` : ''}` : ''}`}>
                         MURAJAAH DAN UJIAN HALAMAN {pageId} <ChevronLeft className="w-4 h-4 rotate-180" />
                       </Link>
                     </Button>
                   ) : (
+                    /* Same Page: Next Verse */
                     <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                      <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}`}>
+                      <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}${from ? `?from=${from}` : ''}`}>
                         Lanjut ke Ayat Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
                       </Link>
                     </Button>
                   )
                 ) : (
+                  /* End of Surah: Final Page Quiz */
                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                    <Link href={`/mufradat/page/${pageId}`}>
+                    <Link href={`/mufradat/page/${pageId}/quiz${from ? `?from=${from}` : ''}`}>
                       MURAJAAH & UJIAN HALAMAN {pageId} <ChevronLeft className="w-4 h-4 rotate-180" />
                     </Link>
                   </Button>
                 )}
                 <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
-                  <Link href="/mufradat">KEMBALI KE DAFTAR SURAT</Link>
+                  <Link href={from === 'surah' ? `/mufradat/${id}` : "/mufradat"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR SURAT'}</Link>
                 </Button>
               </>
             ) : (
