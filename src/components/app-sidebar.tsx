@@ -37,7 +37,14 @@ const adminItems = [
   { href: "/admin/campaigns", label: "Manajemen Kampanye", icon: LayoutGrid },
   { href: "/admin/users", label: "Manajemen Peserta", icon: UserCog },
   { href: "/admin/classes", label: "Manajemen Kelas", icon: Library },
-  { href: "/admin/mufradat", label: "Progres Mufradat", icon: GraduationCap },
+  { 
+    label: "Manajemen Hi Mufradat", 
+    icon: GraduationCap,
+    subItems: [
+      { href: "/admin/mufradat", label: "Progres Peserta" },
+      { href: "/admin/mufradat/groups", label: "Manajemen Grup" },
+    ]
+  },
 ];
 
 
@@ -84,9 +91,42 @@ export function AppSidebar() {
           </h2>
           <SidebarMenu>
             {adminItems.map((item) => {
+              if (item.subItems) {
+                return (
+                  <SidebarMenuItem key={item.label}>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 px-4 py-2 text-white/40 group-data-[collapsible=icon]:hidden">
+                         <item.icon className="w-3.5 h-3.5" />
+                         <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                      </div>
+                      <div className="flex flex-col gap-1 list-none">
+                        {item.subItems.map(sub => {
+                           const isSubActive = pathname === sub.href;
+                           return (
+                             <SidebarMenuButton
+                                key={sub.href}
+                                asChild
+                                isActive={isSubActive}
+                                tooltip={sub.label}
+                                className={cn(
+                                  "transition-all duration-300 ml-2",
+                                  isSubActive ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90" : "text-white/80 hover:bg-white/10"
+                                )}
+                              >
+                                <Link href={sub.href} onClick={handleLinkClick}>
+                                  <span className="font-bold text-xs">{sub.label}</span>
+                                </Link>
+                              </SidebarMenuButton>
+                           );
+                        })}
+                      </div>
+                    </div>
+                  </SidebarMenuItem>
+                );
+              }
               const isActive = pathname === item.href;
               return (
-                <SidebarMenuItem key={item.href}>
+                <SidebarMenuItem key={item.href || item.label}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive}
@@ -96,7 +136,7 @@ export function AppSidebar() {
                       isActive ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90" : "text-white hover:bg-white/10"
                     )}
                   >
-                    <Link href={item.href} onClick={handleLinkClick}>
+                    <Link href={item.href!} onClick={handleLinkClick}>
                       <item.icon className={cn("shrink-0", isActive ? "text-black" : "text-white")} />
                       <span className="font-bold">{item.label}</span>
                     </Link>

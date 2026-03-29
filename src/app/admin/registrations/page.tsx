@@ -50,6 +50,47 @@ export default function AdminRegistrationsPage() {
         updated_at: new Date().toISOString()
       };
 
+      // Special logic for Hi Mufradat Auto-Grouping
+      if (reg.halaqah_id === 'mufradat-premium' || reg.halaqah_title?.toLowerCase().includes('mufradat')) {
+        try {
+          // 1. Find latest group with space (< 50)
+          const { data: availableGroups } = await supabase
+            .from('mufradat_groups')
+            .select('*')
+            .lt('member_count', 50)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          let targetGroupId;
+
+          if (availableGroups && availableGroups.length > 0) {
+            targetGroupId = availableGroups[0].id;
+            // Increment member count
+            await supabase
+              .from('mufradat_groups')
+              .update({ member_count: availableGroups[0].member_count + 1 })
+              .eq('id', targetGroupId);
+          } else {
+            // Create new group
+            const { data: allGroups } = await supabase.from('mufradat_groups').select('id');
+            const nextNum = (allGroups?.length || 0) + 1;
+            const { data: newGroup, error: groupError } = await supabase
+              .from('mufradat_groups')
+              .insert({ name: `Grup ${nextNum}`, member_count: 1 })
+              .select()
+              .single();
+            
+            if (groupError) throw groupError;
+            targetGroupId = newGroup.id;
+          }
+
+          updateData.mufradat_group_id = targetGroupId;
+        } catch (groupErr) {
+          console.error("Auto-grouping error:", groupErr);
+          // Non-blocking error, just log it
+        }
+      }
+
       // Special logic for Tikrar Premium Start Date
       if (reg.halaqah_id === 'tikrar-j30-b1' || reg.halaqah_id === 'tikrar-premium') {
         updateData.is_tikrar_paid = true;

@@ -32,21 +32,46 @@ import {
   CheckCircle,
   Phone
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+
 const TOTAL_QURAN_VERSES = 6236;
 const WEEKLY_TARGET_VERSES = 15; // Roughly 1 page
 
 export default function AdminMufradatPage() {
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+
+  useEffect(() => {
+    const gid = searchParams.get('groupId');
+    if (gid) setSelectedGroupId(gid);
+  }, [searchParams]);
   
-  // Fetch users and their quiz attempts
-  const { data: users, isLoading: isUsersLoading, error: usersError } = useCollection("users", {});
+  // Fetch groups, users and their quiz attempts
+  const { data: groups } = useCollection("mufradat_groups", {
+    orderBy: { column: 'name', ascending: true }
+  });
+  
+  const userOptions = useMemo(() => {
+    if (selectedGroupId === "all") return {};
+    return { filters: [{ column: 'mufradat_group_id', operator: '==', value: selectedGroupId }] };
+  }, [selectedGroupId]);
+
+  const { data: users, isLoading: isUsersLoading, error: usersError } = useCollection("users", userOptions);
   const { data: attempts, isLoading: isAttemptsLoading, error: attemptsError } = useCollection("quiz_attempts", {
     filters: [{ column: 'is_passed', operator: '==', value: true }]
   });
@@ -102,10 +127,11 @@ export default function AdminMufradatPage() {
         reachedWeeklyTarget,
         progressPercent,
         lastActivity: lastAttempt ? new Date(lastAttempt.created_at) : null,
-        totalPoints: user.points || 0
+        totalPoints: user.points || 0,
+        groupName: groups?.find(g => g.id === user.mufradat_group_id)?.name || "Grup Tidak Diketahui"
       };
     }).filter(Boolean) as any[];
-  }, [users, attempts]);
+  }, [users, attempts, groups]);
 
   const filteredStats = useMemo(() => {
     const s = search.toLowerCase();
@@ -223,17 +249,38 @@ export default function AdminMufradatPage() {
               <CardTitle className="text-xl font-black font-headline text-[#800000]">DAFTAR PROGRESS & JAPRI WA</CardTitle>
               <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-70">Target: Minimal {WEEKLY_TARGET_VERSES} ayat / pekan</CardDescription>
             </div>
-            <div className="relative w-full md:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Cari Peserta..." 
-                className="pl-10 h-10 border-none bg-muted/50 rounded-lg text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-48">
+                <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                  <SelectTrigger className="h-10 border-none bg-muted/50 rounded-lg text-xs font-bold font-sans">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-3.5 h-3.5 text-[#800000]" />
+                      <SelectValue placeholder="Pilih Grup" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Grup</SelectItem>
+                    {groups?.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Cari Peserta..." 
+                  className="pl-10 h-10 border-none bg-muted/50 rounded-lg text-sm"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
+
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-muted/10">
