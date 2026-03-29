@@ -347,7 +347,7 @@ export default function MufradatPageQuizPage() {
                   )
                 )}
                 <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
-                  <Link href={from === 'surah' && surahId ? `/mufradat/${surahId}` : "/mufradat"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR JUZ'}</Link>
+                  <Link href={from === 'surah' && surahId ? `/mufradat/${surahId}` : "/mufradat?tab=juz"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR HALAMAN'}</Link>
                 </Button>
               </>
             ) : (
@@ -356,7 +356,7 @@ export default function MufradatPageQuizPage() {
                    <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
                 </Button>
                 <Button asChild variant="ghost" className="w-full font-bold text-slate-500">
-                  <Link href="/mufradat">KEMBALI KE DAFTAR JUZ</Link>
+                  <Link href="/mufradat?tab=juz">KEMBALI KE DAFTAR HALAMAN</Link>
                 </Button>
               </>
             )}
@@ -426,7 +426,7 @@ export default function MufradatPageQuizPage() {
     <div className="max-w-2xl mx-auto flex flex-col gap-6 px-4 py-8 pb-32">
       <div className="flex items-center gap-4">
         <Button asChild variant="ghost" size="icon" className="shrink-0">
-          <Link href={`/mufradat/page/${pageNum}`}><ChevronLeft className="h-6 w-6" /></Link>
+          <Link href={`/mufradat/page/${pageNum}?from=juz`}><ChevronLeft className="h-6 w-6" /></Link>
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">Kuis Halaman {pageNum}</h1>

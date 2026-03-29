@@ -146,7 +146,7 @@ export default function MufradatPageDetailPage() {
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32 px-4 sm:px-0">
       <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
-        <Button asChild variant="ghost" size="icon" className="text-[#800000]"><Link href="/mufradat"><ChevronLeft className="h-6 w-6" /></Link></Button>
+        <Button asChild variant="ghost" size="icon" className="text-[#800000]"><Link href="/mufradat?tab=juz"><ChevronLeft className="h-6 w-6" /></Link></Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">Mushaf Halaman {pageNum}</h1>
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Hi Mufradat • Juz {juzNum}</p>
@@ -296,7 +296,7 @@ export default function MufradatPageDetailPage() {
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/10 p-4 flex flex-col gap-3">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black gap-2 py-6 h-14 text-lg rounded-xl shadow-lg border-b-4 border-[#800000]/20">
-              <Link href={user ? `/mufradat/page/${pageNum}/quiz` : `/login?redirectTo=/mufradat/page/${pageNum}`}>
+              <Link href={user ? `/mufradat/page/${pageNum}/quiz?from=juz` : `/login?redirectTo=/mufradat/page/${pageNum}?tab=juz`}>
                 <GraduationCap className="w-5 h-5" />
                 {user ? (isPageCompleted ? "ULANGI UJI HAFALAN" : "MULAI UJI HAFALAN 30 KATA") : "MASUK UNTUK UJI HAFALAN"}
               </Link>

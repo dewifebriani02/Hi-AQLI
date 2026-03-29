@@ -8,6 +8,7 @@ import { JuzList } from "@/components/juz-list";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
 import { useMemo, useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { 
   Dialog, 
   DialogContent, 
@@ -42,8 +43,25 @@ export default function MufradatPage() {
     user ? progressOptions : undefined
   );
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("surah");
   const [selectedReciterId, setSelectedReciterId] = useState<number>(7);
   const [isReciterDialogOpen, setIsReciterDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'juz' || tab === 'surah') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', val);
+    router.replace(`/mufradat?${params.toString()}`);
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('aqli_reciter_id');
@@ -135,7 +153,7 @@ export default function MufradatPage() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="surah" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="surah" className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
             <Layers className="w-4 h-4" /> Per Ayat
