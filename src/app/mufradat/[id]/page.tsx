@@ -170,8 +170,12 @@ export default function MufradatSurahDetailPage() {
     const hasAnyProgress = currentSurahPassedVerses.size > 0;
     const sId = Number(id);
     const startPage = SURAH_START_PAGES[sId] || 1;
-    // Surah is unlocked if it starts on Page 1, or if previous page is 100% finished, or if already started
-    const isUnlocked = startPage === 1 || completedPageQuizzes.has(startPage - 1) || hasAnyProgress;
+    
+    // Lenient Surah Lock: 
+    // 1. Surah 1 & 2 are always open (Fatihah & Baqarah)
+    // 2. OR User has some progress already
+    // 3. OR Previous page quiz is done
+    const isUnlocked = sId <= 2 || hasAnyProgress || completedPageQuizzes.has(startPage - 1);
     
     if (!isUnlocked) {
       router.push('/mufradat');

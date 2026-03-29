@@ -68,9 +68,20 @@ export default function MufradatVerseDetailPage() {
     const passed = new Set<number>();
     if (!progress) return passed;
     progress.forEach(p => {
-      const isPassed = p.is_passed || Number(p.score) === Number(p.total_questions);
-      if (isPassed && !p.quiz_id.startsWith('mufradat_page_')) {
-        passed.add(Number(p.verse_id));
+      if (p.quiz_id.startsWith('mufradat_page_')) return;
+
+      // Robust Passed Check: is_passed OR (total > 0 && score >= total)
+      const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
+      
+      if (isPassed) {
+        // Robust Verse ID detection: from verse_id or quiz_id fallback
+        let vNum = Number(p.verse_id);
+        if (isNaN(vNum) || vNum === 0) {
+          const match = p.quiz_id.match(/mufradat_\d+[:|-](\d+)/);
+          if (match) vNum = parseInt(match[1]);
+        }
+        
+        if (vNum > 0) passed.add(vNum);
       }
     });
     return passed;
@@ -82,40 +93,44 @@ export default function MufradatVerseDetailPage() {
     const pageSet = new Set<number>();
     if (!progress) return pageSet;
     progress.forEach(p => {
-      const isPassed = p.is_passed || Number(p.score) === Number(p.total_questions);
-      if (isPassed && p.quiz_id.startsWith('mufradat_page_')) {
+      if (!p.quiz_id.startsWith('mufradat_page_')) return;
+
+      // Robust Passed Check
+      const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
+      
+      if (isPassed) {
         const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
-        pageSet.add(pNum);
+        if (!isNaN(pNum)) pageSet.add(pNum);
       }
     });
     return pageSet;
   }, [progress]);
 
-  // Strict Sequential Guard: Redirect if Verse's Page is locked
+  // Strict Sequential Guard: Redirect if Verse is locked
   useEffect(() => {
     if (isUserLoading || isProgressLoading || !user || !verse || !progress) return;
-    const pNum = Number((verse as any).page_number);
     
-    // Soft Access: Check if user has ANY progress on this page
-    const isPageStarted = completedPageQuizzes.has(pNum) || progress.some(p => (Number(p.page_id) === pNum) || (Number(p.page_number) === pNum));
-    
-    // Sequential rule: Verse V is unlocked if it's the first verse or if previous verse is done
     const vIdx = parseInt(verseId);
     const isFirstVerseOfQuran = parseInt(id) === 1 && vIdx === 1;
     const isFirstVerseOfSurah = vIdx === 1;
     const isPrevVerseDone = completedVerseNumbers.has(vIdx - 1);
     
     // A verse is UNLOCKED if:
-    // 1. It's the first verse of the Quran
+    // 1. It's the first verse of the Quran (1:1)
     // 2. OR It's already completed
-    // 3. OR It's the first verse of a surah (optional: you could require previous surah done, but keep it simple for now as requested)
+    // 3. OR It's the first verse of a surah 
     // 4. OR Previous verse in the same surah is done
     const isUnlocked = isFirstVerseOfQuran || isFirstVerseOfSurah || isCurrentVerseCompleted || isPrevVerseDone;
     
     if (!isUnlocked) {
-      router.push(`/mufradat/${id}`);
+      // Grace period: Wait 500ms before redirecting to allow DB sync
+      // This prevents 'flicker' redirects if the user just finished the kuis
+      const timer = setTimeout(() => {
+        router.push(`/mufradat/${id}`);
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [verse, progress, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers]);
+  }, [verse, progress, isProgressLoading, isUserLoading, user, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers]);
   
   // Fetch latest attempt for THIS specific verse to get wrong_words
   const lastAttemptOptions = useMemo(() => ({
