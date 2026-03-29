@@ -200,7 +200,11 @@ export default function MufradatVerseDetailPage() {
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Hi Mufradat • Tadabbur Ayat</p>
         </div>
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="icon" className="text-[#D4AF37]"><Link href={`/mufradat/${id}/${verseId}/quiz`}><GraduationCap className="h-5 w-5" /></Link></Button>
+          <Button asChild variant="ghost" size="icon" className="text-[#D4AF37]">
+            <Link href={`/mufradat/${id}/${verseId}/quiz${from ? `?from=${from}` : ''}`}>
+              <GraduationCap className="h-5 w-5" />
+            </Link>
+          </Button>
           <Button variant="ghost" size="icon" disabled={currentVerseNum <= 1} onClick={() => router.push(`/mufradat/${id}/${currentVerseNum - 1}`)}><ArrowLeft className="h-5 w-5" /></Button>
 
           <TooltipProvider>

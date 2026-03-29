@@ -116,11 +116,17 @@ export default function MufradatSurahDetailPage() {
     // Process Verse Attempts from local surah progress
     if (progress) {
       progress.forEach(p => {
-        const vNum = Number(p.verse_id);
-        if (isNaN(vNum)) return;
+        // More robust verse ID detection: from verse_id or quiz_id (mufradat_X:Y)
+        let vNum = Number(p.verse_id);
+        if (isNaN(vNum) || vNum === 0) {
+          const match = p.quiz_id.match(/mufradat_\d+[:|-](\d+)/);
+          if (match) vNum = parseInt(match[1]);
+        }
+        
+        if (isNaN(vNum) || vNum === 0) return;
 
         // Lenient Passed Check: is_passed OR score == total_questions
-        const isPassed = p.is_passed || Number(p.score) === Number(p.total_questions);
+        const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
         
         if (isPassed) {
           passedVerses.add(vNum);

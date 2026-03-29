@@ -200,14 +200,18 @@ export default function MufradatQuizPage() {
       } else {
         setIsFinished(true);
         const finalScore = score + (correct ? 1 : 0);
+        // Important: use the state + current if it WAS wrong to capture the last wrong item
+        const finalWrongWords = correct ? [...wrongWords] : [...wrongWords, currentQ];
+        
         if (finalScore === questions.length) playSfx('perfect');
         else playSfx('fail');
-        saveAttempt(finalScore);
+        
+        saveAttempt(finalScore, finalWrongWords.map((w: any) => w.id));
       }
     }, 1000);
   };
 
-  const saveAttempt = async (finalScore: number) => {
+  const saveAttempt = async (finalScore: number, finalWrongWordIds: number[]) => {
     if (!user) return;
     try {
       await fetch('/api/quiz-attempts', {
@@ -222,7 +226,7 @@ export default function MufradatQuizPage() {
           total_questions: questions.length,
           duration_seconds: totalTime,
           is_passed: finalScore === questions.length,
-          wrong_words: wrongWords.map(w => w.id),
+          wrong_words: finalWrongWordIds,
           page_id: pageId
         })
       });
@@ -335,7 +339,7 @@ export default function MufradatQuizPage() {
                    <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
                 </Button>
                 <Button asChild variant="ghost" className="w-full font-bold text-slate-500">
-                  <Link href="/mufradat">KEMBALI KE DAFTAR SURAT</Link>
+                  <Link href={from === 'surah' ? `/mufradat/${id}` : "/mufradat"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR SURAT'}</Link>
                 </Button>
               </>
             )}
