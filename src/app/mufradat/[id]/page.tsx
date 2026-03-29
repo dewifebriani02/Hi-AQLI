@@ -371,75 +371,24 @@ export default function MufradatSurahDetailPage() {
             // Completion checks
             const isCompleted = completedVerseNumbers.has(verse.verse_number);
             
-            // Soft Access: If the user has started THIS page, don't lock the rest of the page
-            const curPageNum = Number(verse.page_number);
-            const prevPageNum = prevVerse ? Number(prevVerse.page_number) : 0;
-            
-            const isPageStarted = completedPageQuizzes.has(curPageNum) || 
-                                 verses.some(v => Number(v.page_number) === curPageNum && completedVerseNumbers.has(v.verse_number));
-
-            // Absolute Page Lock: must pass previous page to open any verse in this page (unless already started)
-            const isPrevPageDone = curPageNum === 1 || completedPageQuizzes.has(curPageNum - 1) || isPageStarted;
+            // Sequential rule: Verse V is unlocked if previous verse is done
             const isPrevVerseDone = isFirstVerse || completedVerseNumbers.has(prevVerse?.verse_number || 0);
-            const isPrevPageQuizDone = !isNewPage || completedPageQuizzes.has(prevPageNum);
 
             // A verse is UNLOCKED if:
             // 1. It is the very first verse of the Quran (1:1)
             // 2. OR It's already completed (Passed)
-            // 3. OR (The cumulative logic: previous page is done AND (it's V1 or previous verse is done) AND no page-break quiz is missing)
-            const isUnlockedByContext = isPrevPageDone && isPrevVerseDone && isPrevPageQuizDone;
+            // 3. OR Previous verse is done (Linear flow)
+            const isUnlockedByContext = isPrevVerseDone;
             const isLocked = !isQuranStart && !isCompleted && !isUnlockedByContext;
 
             return (
               <div key={verse.id}>
-                {/* PAGE MILESTONE UI */}
+                {/* Page Break Indicator (Optional, but keeping UI clean as requested) */}
                 {isNewPage && (
-                  <div className="mx-4 my-8 p-6 bg-slate-50/80 rounded-3xl border border-slate-200/50 backdrop-blur-sm shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 w-1 bg-gradient-to-b from-[#800000] to-[#D4AF37] h-full" />
-                    
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-xs font-black text-slate-400">
-                          {verse.page_number}
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-black text-slate-800 uppercase tracking-tighter">HALAMAN {verse.page_number}</h3>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Mushaf Al-Madinah</p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Page Quiz Stats */}
-                        {(() => {
-                          const pageEffort = userProgress?.find(a => a.quiz_id === `mufradat_page_${prevVerse.page_number}`);
-                          if (pageEffort) {
-                            return (
-                              <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Hasil Murajaah:</span>
-                                <div className="flex items-center gap-2">
-                                  <span className={cn("text-xs font-black", pageEffort.is_passed ? "text-emerald-600" : "text-amber-600")}>
-                                    🎯 {Math.round((pageEffort.score / pageEffort.total_questions) * 100)}%
-                                  </span>
-                                  <span className="text-[9px] font-bold text-slate-400 italic">
-                                    ⏱️ {Math.floor(pageEffort.duration_seconds / 60)}:{(pageEffort.duration_seconds % 60).toString().padStart(2, '0')}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-
-                        <Button asChild variant={isPrevPageQuizDone ? "outline" : "default"} className={cn(
-                          "h-9 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm",
-                          isPrevPageQuizDone ? "border-2 border-slate-200 bg-white hover:border-[#800000]/30" : "bg-amber-500 hover:bg-amber-600 text-white"
-                        )}>
-                          <Link href={`/mufradat/page/${prevVerse.page_number}/quiz?from=surah&surahId=${id}&nextVerseId=${verse.verse_number}`}>
-                            {isPrevPageQuizDone ? "ULANGI MURAJAAH" : "MURAJAAH & UJIAN HALAMAN"}
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="mx-8 my-4 h-px bg-slate-100 relative">
+                     <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 bg-white text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                       Halaman {verse.page_number}
+                     </span>
                   </div>
                 )}
 
@@ -536,11 +485,7 @@ export default function MufradatSurahDetailPage() {
                     </p>
                     <div className={cn("text-base leading-relaxed text-slate-700", isLocked ? "text-muted-foreground italic" : "text-foreground/90 font-medium")}>
                       {isLocked ? (
-                        !isPrevPageDone 
-                          ? `Buka Murajaah Halaman ${verse.page_number - 1} untuk akses ayat ini.` 
-                          : !isPrevPageQuizDone
-                            ? `Selesaikan Murajaah Halaman ${prevVerse.page_number} untuk lanjut.`
-                            : "Selesaikan kuis ayat sebelumnya untuk membaca terjemahan ini."
+                        "Selesaikan kuis ayat sebelumnya untuk membaca terjemahan ini."
                       ) : (
                         <div dangerouslySetInnerHTML={{ __html: verse.translations[0]?.text || "" }} />
                       )}

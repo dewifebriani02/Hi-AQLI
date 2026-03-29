@@ -99,13 +99,23 @@ export default function MufradatVerseDetailPage() {
     // Soft Access: Check if user has ANY progress on this page
     const isPageStarted = completedPageQuizzes.has(pNum) || progress.some(p => (Number(p.page_id) === pNum) || (Number(p.page_number) === pNum));
     
-    // Sequential rule: Page P is unlocked if P-1 is mastered OR if already started
-    const isUnlocked = pNum <= 1 || completedPageQuizzes.has(pNum - 1) || isPageStarted || isCurrentVerseCompleted;
+    // Sequential rule: Verse V is unlocked if it's the first verse or if previous verse is done
+    const vIdx = parseInt(verseId);
+    const isFirstVerseOfQuran = parseInt(id) === 1 && vIdx === 1;
+    const isFirstVerseOfSurah = vIdx === 1;
+    const isPrevVerseDone = completedVerseNumbers.has(vIdx - 1);
+    
+    // A verse is UNLOCKED if:
+    // 1. It's the first verse of the Quran
+    // 2. OR It's already completed
+    // 3. OR It's the first verse of a surah (optional: you could require previous surah done, but keep it simple for now as requested)
+    // 4. OR Previous verse in the same surah is done
+    const isUnlocked = isFirstVerseOfQuran || isFirstVerseOfSurah || isCurrentVerseCompleted || isPrevVerseDone;
     
     if (!isUnlocked) {
       router.push(`/mufradat/${id}`);
     }
-  }, [verse, progress, completedPageQuizzes, router, id, isCurrentVerseCompleted]);
+  }, [verse, progress, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers]);
   
   // Fetch latest attempt for THIS specific verse to get wrong_words
   const lastAttemptOptions = useMemo(() => ({

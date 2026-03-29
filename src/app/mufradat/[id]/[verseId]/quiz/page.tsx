@@ -312,28 +312,18 @@ export default function MufradatQuizPage() {
             {isPerfect ? (
               <>
                 {surahInfo && parseInt(verseId) < surahInfo.verses_count ? (
-                  nextVersePage && nextVersePage !== pageId ? (
-                    /* Page Break: Always encourage Page Quiz before next verse/page */
-                    <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-black font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                      <Link href={`/mufradat/page/${pageId}/quiz${from ? `?from=${from}${from === 'surah' ? `&surahId=${id}&nextVerseId=${parseInt(verseId) + 1}` : ''}` : ''}`}>
-                        MURAJAAH DAN UJIAN HALAMAN {pageId} <ChevronLeft className="w-4 h-4 rotate-180" />
-                      </Link>
-                    </Button>
-                  ) : (
-                    /* Same Page: Next Verse */
-                    <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                      <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}${from ? `?from=${from}` : ''}`}>
-                        Lanjut ke Ayat Berikutnya <ChevronLeft className="w-4 h-4 rotate-180" />
-                      </Link>
-                    </Button>
-                  )
-                ) : (
-                  /* End of Surah: Final Page Quiz */
+                  /* Always go to next verse, skipping Page Quiz interruption */
                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                    <Link href={`/mufradat/page/${pageId}/quiz${from ? `?from=${from}` : ''}`}>
-                      MURAJAAH & UJIAN HALAMAN {pageId} <ChevronLeft className="w-4 h-4 rotate-180" />
+                    <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}${from ? `?from=${from}` : ''}`}>
+                      Lanjut ke Ayat {parseInt(verseId) + 1} <ChevronLeft className="w-4 h-4 rotate-180" />
                     </Link>
                   </Button>
+                ) : (
+                  /* End of Surah: Just offer to go back */
+                  <div className="w-full p-4 bg-emerald-50 rounded-2xl text-center border border-emerald-100 mb-2">
+                    <p className="text-xs font-bold text-emerald-800 uppercase tracking-widest">Ma Syaa Allah!</p>
+                    <p className="text-[10px] text-emerald-600 font-medium">Anda telah menyelesaikan surat ini.</p>
+                  </div>
                 )}
                 <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
                   <Link href={from === 'surah' ? `/mufradat/${id}` : "/mufradat"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR SURAT'}</Link>
