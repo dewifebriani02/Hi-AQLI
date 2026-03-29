@@ -372,13 +372,16 @@ export default function MufradatSurahDetailPage() {
             const isCompleted = completedVerseNumbers.has(verse.verse_number);
             
             // Soft Access: If the user has started THIS page, don't lock the rest of the page
-            const isPageStarted = completedPageQuizzes.has(verse.page_number) || 
-                                 verses.some(v => v.page_number === verse.page_number && completedVerseNumbers.has(v.verse_number));
+            const curPageNum = Number(verse.page_number);
+            const prevPageNum = prevVerse ? Number(prevVerse.page_number) : 0;
+            
+            const isPageStarted = completedPageQuizzes.has(curPageNum) || 
+                                 verses.some(v => Number(v.page_number) === curPageNum && completedVerseNumbers.has(v.verse_number));
 
             // Absolute Page Lock: must pass previous page to open any verse in this page (unless already started)
-            const isPrevPageDone = verse.page_number === 1 || completedPageQuizzes.has(verse.page_number - 1) || isPageStarted;
+            const isPrevPageDone = curPageNum === 1 || completedPageQuizzes.has(curPageNum - 1) || isPageStarted;
             const isPrevVerseDone = isFirstVerse || completedVerseNumbers.has(prevVerse?.verse_number || 0);
-            const isPrevPageQuizDone = !isNewPage || completedPageQuizzes.has(prevVerse.page_number);
+            const isPrevPageQuizDone = !isNewPage || completedPageQuizzes.has(prevPageNum);
 
             // A verse is UNLOCKED if:
             // 1. It is the very first verse of the Quran (1:1)
