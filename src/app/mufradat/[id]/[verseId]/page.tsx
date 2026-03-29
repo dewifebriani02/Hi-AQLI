@@ -94,7 +94,7 @@ export default function MufradatVerseDetailPage() {
   // Strict Sequential Guard: Redirect if Verse's Page is locked
   useEffect(() => {
     if (!verse || !progress) return;
-    const pNum = (verse as any).page_number;
+    const pNum = Number((verse as any).page_number);
     
     // Soft Access: Check if user has ANY progress on this page
     const isPageStarted = completedPageQuizzes.has(pNum) || progress.some(p => (Number(p.page_id) === pNum) || (Number(p.page_number) === pNum));
