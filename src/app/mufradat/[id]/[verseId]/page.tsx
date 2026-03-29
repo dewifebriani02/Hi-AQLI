@@ -57,35 +57,34 @@ export default function MufradatVerseDetailPage() {
 
   const progressOptions = useMemo(() => ({
     filters: [
-      { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'surah_id', operator: '==', value: id }
+      { column: 'user_id', operator: '==', value: user?.id }
     ]
-  }), [user?.id, id]);
+  }), [user?.id]);
 
   const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
   const completedVerseNumbers = useMemo(() => {
     const passed = new Set<number>();
     if (!progress) return passed;
+    
+    // Filter by THIS surah ID in memory for accuracy
     progress.forEach(p => {
       if (p.quiz_id.startsWith('mufradat_page_')) return;
+      
+      // Check if attempt belongs to this surah
+      const idMatch = p.quiz_id.match(/mufradat_(\d+)[:|-](\d+)/);
+      const sNum = idMatch ? parseInt(idMatch[1]) : Number(p.surah_id);
+      if (sNum !== parseInt(id)) return;
 
-      // Robust Passed Check: is_passed OR (total > 0 && score >= total)
       const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
       
       if (isPassed) {
-        // Robust Verse ID detection: from verse_id or quiz_id fallback
-        let vNum = Number(p.verse_id);
-        if (isNaN(vNum) || vNum === 0) {
-          const match = p.quiz_id.match(/mufradat_\d+[:|-](\d+)/);
-          if (match) vNum = parseInt(match[1]);
-        }
-        
+        let vNum = idMatch ? parseInt(idMatch[2]) : Number(p.verse_id);
         if (vNum > 0) passed.add(vNum);
       }
     });
     return passed;
-  }, [progress]);
+  }, [progress, id]);
 
   const isCurrentVerseCompleted = completedVerseNumbers.has(Number(verseId));
 
@@ -123,11 +122,11 @@ export default function MufradatVerseDetailPage() {
     const isUnlocked = isFirstVerseOfQuran || isFirstVerseOfSurah || isCurrentVerseCompleted || isPrevVerseDone;
     
     if (!isUnlocked) {
-      // Grace period: Wait 500ms before redirecting to allow DB sync
+      // Grace period: Wait 1500ms before redirecting to allow DB sync
       // This prevents 'flicker' redirects if the user just finished the kuis
       const timer = setTimeout(() => {
         router.push(`/mufradat/${id}`);
-      }, 500);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [verse, progress, isProgressLoading, isUserLoading, user, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers]);

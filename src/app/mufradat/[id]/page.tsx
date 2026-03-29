@@ -82,19 +82,12 @@ export default function MufradatSurahDetailPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch progress for the current surah to handle locking
-  const progressOptions = useMemo(() => ({
-    filters: [
-      { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'surah_id', operator: '==', value: id }
-    ]
-  }), [user?.id, id]);
-
-  const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
-
-  // Unified progress (from parent or fresh if needed)
-  const { data: userProgress, isLoading: isUserProgressLoading } = useCollection("quiz_attempts", {
+  // Unified global progress fetch (no surah filter to avoid type/sync issues)
+  const { data: userProgress, isLoading: isUserProgressLoading } = useCollection("quiz_attempts", user ? {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
-  });
+  } : undefined);
+
+  const isProgressLoading = isUserProgressLoading;
 
   // Aggregate all progress and stats for this surah
   const progressData = useMemo(() => {
@@ -103,47 +96,48 @@ export default function MufradatSurahDetailPage() {
     const errorVerses = new Set<number>();
     const stats = new Map<number, { maxScore: number, attempts: number }>();
     
-    // Process Page Quizzes from global userProgress
+    // Process ALL Attempts from global userProgress
     if (userProgress) {
       userProgress.forEach(p => {
-        if ((p.is_passed || Number(p.score) === Number(p.total_questions)) && p.quiz_id.startsWith('mufradat_page_')) {
-          const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
-          pageQuizzes.add(pNum);
-        }
-      });
-    }
-
-    // Process Verse Attempts from local surah progress
-    if (progress) {
-      progress.forEach(p => {
-        // More robust verse ID detection: from verse_id or quiz_id (mufradat_X:Y)
-        let vNum = Number(p.verse_id);
-        if (isNaN(vNum) || vNum === 0) {
-          const match = p.quiz_id.match(/mufradat_\d+[:|-](\d+)/);
-          if (match) vNum = parseInt(match[1]);
-        }
-        
-        if (isNaN(vNum) || vNum === 0) return;
-
-        // Lenient Passed Check: is_passed OR score == total_questions
+        // Robust Passed Check
         const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
-        
-        if (isPassed) {
-          passedVerses.add(vNum);
-        }
-        
-        // Update errors
-        if (p.wrong_words && p.wrong_words.length > 0) {
-          errorVerses.add(vNum);
+
+        // 1. Process Page Quizzes
+        if (p.quiz_id.startsWith('mufradat_page_')) {
+          if (isPassed) {
+            const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
+            if (!isNaN(pNum)) pageQuizzes.add(pNum);
+          }
+          return;
         }
 
-        // Update Stats
-        const score = Math.round((Number(p.score) / (Number(p.total_questions) || 1)) * 100) || 0;
-        const current = stats.get(vNum) || { maxScore: 0, attempts: 0 };
-        stats.set(vNum, {
-          maxScore: Math.max(current.maxScore, score),
-          attempts: current.attempts + 1
-        });
+        // 2. Process Verse Attempts (Filter by THIS surah)
+        const idMatch = p.quiz_id.match(/mufradat_(\d+)[:|-](\d+)/);
+        const sNum = idMatch ? parseInt(idMatch[1]) : Number(p.surah_id);
+        
+        // If it belongs to this surah
+        if (sNum === parseInt(id)) {
+          let vNum = idMatch ? parseInt(idMatch[2]) : Number(p.verse_id);
+          if (vNum > 0) {
+            const score = Math.round((Number(p.score) / (Number(p.total_questions) || 1)) * 100) || 0;
+            
+            if (isPassed) {
+              passedVerses.add(vNum);
+            }
+            
+            // Update errors
+            if (p.wrong_words && p.wrong_words.length > 0) {
+              errorVerses.add(vNum);
+            }
+
+            // Update Stats
+            const current = stats.get(vNum) || { maxScore: 0, attempts: 0 };
+            stats.set(vNum, {
+              maxScore: Math.max(current.maxScore, score),
+              attempts: current.attempts + 1
+            });
+          }
+        }
       });
     }
 
@@ -153,7 +147,7 @@ export default function MufradatSurahDetailPage() {
       versesWithErrors: errorVerses,
       verseStatsMap: stats
     };
-  }, [userProgress, progress]);
+  }, [userProgress, id]);
 
   const { 
     completedPageQuizzes, 
