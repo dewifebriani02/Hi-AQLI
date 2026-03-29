@@ -67,7 +67,7 @@ export default function MufradatSurahDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   const [surah, setSurah] = useState<SurahInfo | null>(null);
   const [nextSurah, setNextSurah] = useState<SurahInfo | null>(null);
@@ -160,7 +160,7 @@ export default function MufradatSurahDetailPage() {
 
   // Strict Sequential Guard: Redirect if Surah's starting page is locked
   useEffect(() => {
-    if (isUserProgressLoading || !userProgress) return;
+    if (isUserLoading || isUserProgressLoading || !user || !userProgress) return;
     const hasAnyProgress = currentSurahPassedVerses.size > 0;
     const sId = Number(id);
     const startPage = SURAH_START_PAGES[sId] || 1;

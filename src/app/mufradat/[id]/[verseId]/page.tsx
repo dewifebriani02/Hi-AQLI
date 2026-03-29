@@ -62,7 +62,7 @@ export default function MufradatVerseDetailPage() {
     ]
   }), [user?.id, id]);
 
-  const { data: progress } = useCollection("quiz_attempts", user ? progressOptions : undefined);
+  const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
   const completedVerseNumbers = useMemo(() => {
     const passed = new Set<number>();
@@ -93,7 +93,7 @@ export default function MufradatVerseDetailPage() {
 
   // Strict Sequential Guard: Redirect if Verse's Page is locked
   useEffect(() => {
-    if (!verse || !progress) return;
+    if (isUserLoading || isProgressLoading || !user || !verse || !progress) return;
     const pNum = Number((verse as any).page_number);
     
     // Soft Access: Check if user has ANY progress on this page
