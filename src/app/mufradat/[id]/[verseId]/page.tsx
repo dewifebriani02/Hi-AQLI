@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock } from "lucide-react";
 import Link from "next/link";
@@ -35,7 +35,7 @@ interface VerseDetail {
   words: WordData[];
 }
 
-export default function MufradatVerseDetailPage() {
+function VerseDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -399,5 +399,13 @@ export default function MufradatVerseDetailPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function MufradatVerseDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex flex-col items-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-sm">Menyiapkan Penjabaran...</p></div>}>
+      <VerseDetailContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   ChevronLeft, 
@@ -33,7 +33,7 @@ interface Question {
   options: string[];
 }
 
-export default function MufradatPageQuizPage() {
+function PageQuizContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -475,5 +475,18 @@ export default function MufradatPageQuizPage() {
         Pilih jawaban yang paling tepat sesuai makna dalam halaman ini.
       </p>
     </div>
+  );
+}
+
+export default function MufradatPageQuizPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
+        <p className="text-sm font-bold opacity-60 uppercase tracking-widest text-[#800000]">Menyiapkan Kuis Halaman...</p>
+      </div>
+    }>
+      <PageQuizContent />
+    </Suspense>
   );
 }

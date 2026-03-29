@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   ChevronLeft, 
@@ -33,7 +33,7 @@ interface Question {
   options: string[];
 }
 
-export default function MufradatQuizPage() {
+function MufradatQuizContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -175,8 +175,6 @@ export default function MufradatQuizPage() {
     }
     return () => clearInterval(interval);
   }, [isFinished, loading, user]);
-
-  // Navigation Fix: Removed conflicting popstate logic
 
   const handleAnswer = (answer: string) => {
     if (selectedAnswer || isFinished) return;
@@ -345,14 +343,12 @@ export default function MufradatQuizPage() {
             {isPerfect ? (
               <>
                 {surahInfo && parseInt(verseId) < surahInfo.verses_count ? (
-                  /* Always go to next verse, skipping Page Quiz interruption */
                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
                     <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}${from ? `?from=${from}` : ''}`}>
                       Lanjut ke Ayat {parseInt(verseId) + 1} <ChevronLeft className="w-4 h-4 rotate-180" />
                     </Link>
                   </Button>
                 ) : (
-                  /* End of Surah: Just offer to go back */
                   <div className="w-full p-4 bg-emerald-50 rounded-2xl text-center border border-emerald-100 mb-2">
                     <p className="text-xs font-bold text-emerald-800 uppercase tracking-widest">Ma Syaa Allah!</p>
                     <p className="text-[10px] text-emerald-600 font-medium">Anda telah menyelesaikan surat ini.</p>
@@ -488,5 +484,18 @@ export default function MufradatQuizPage() {
         Pilih jawaban yang paling tepat sesuai makna dalam ayat ini.
       </p>
     </div>
+  );
+}
+
+export default function MufradatQuizPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
+        <p className="text-muted-foreground font-medium text-sm uppercase tracking-widest">Menyiapkan Kuis...</p>
+      </div>
+    }>
+      <MufradatQuizContent />
+    </Suspense>
   );
 }

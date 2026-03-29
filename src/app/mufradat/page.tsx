@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/juz-list";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { 
   Dialog, 
@@ -28,7 +28,7 @@ const RECITERS = [
   { id: 1, name: "AbdulBaset AbdulSamad", style: "Mujawwad" },
 ];
 
-export default function MufradatPage() {
+function MufradatPageContent() {
   const { user, isUserLoading } = useUser();
 
   // Fetch all passed attempts for the current user
@@ -181,5 +181,18 @@ export default function MufradatPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function MufradatPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Menyiapkan Kurikulum...</p>
+      </div>
+    }>
+      <MufradatPageContent />
+    </Suspense>
   );
 }

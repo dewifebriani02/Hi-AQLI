@@ -30,7 +30,8 @@ import {
   ExternalLink,
   Search,
   CheckCircle2,
-  Trash2
+  Trash2,
+  Zap
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -75,6 +76,59 @@ export default function MufradatGroupsPage() {
       refresh();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal menyimpan", description: e.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleMigrateUngrouped = async () => {
+    if (!groups || groups.length === 0) {
+      toast({ variant: "destructive", title: "Gagal Migrasi", description: "Buat minimal satu grup terlebih dahulu." });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      // 1. Find all users with no group
+      const { data: ungroupedUsers, error: fetchErr } = await supabase
+        .from('users')
+        .select('id')
+        .is('mufradat_group_id', null);
+      
+      if (fetchErr) throw fetchErr;
+      
+      if (!ungroupedUsers || ungroupedUsers.length === 0) {
+        toast({ title: "Migrasi Selesai", description: "Semua thalibah sudah masuk ke dalam grup." });
+        return;
+      }
+
+      // 2. Pick the first group (Grup 1)
+      const targetGroup = groups[0];
+      
+      // 3. Update all these users
+      const userIds = ungroupedUsers.map(u => u.id);
+      const { error: updateErr } = await supabase
+        .from('users')
+        .update({ mufradat_group_id: targetGroup.id })
+        .in('id', userIds);
+      
+      if (updateErr) throw updateErr;
+
+      // 4. Update group member count
+      const { error: groupErr } = await supabase
+        .from('mufradat_groups')
+        .update({ member_count: (targetGroup.member_count || 0) + userIds.length })
+        .eq('id', targetGroup.id);
+      
+      if (groupErr) throw groupErr;
+
+      toast({ 
+        title: "Migrasi Berhasil", 
+        description: `Masyallah, ${userIds.length} thalibah telah dipindahkan ke ${targetGroup.name}.` 
+      });
+      refresh();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal Migrasi", description: e.message });
     } finally {
       setIsProcessing(false);
     }
@@ -141,6 +195,15 @@ export default function MufradatGroupsPage() {
               <p className="text-xs text-amber-800 font-medium leading-relaxed">
                 Setiap grup dibatasi maksimal 50 thalibah. Pendaftaran baru otomatis mengisi grup terakhir yang belum penuh.
               </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleMigrateUngrouped}
+                disabled={isProcessing}
+                className="mt-3 w-full border-amber-300 text-amber-900 bg-white/50 hover:bg-white font-black text-[9px] h-8 gap-1.5 uppercase transition-all active:scale-95"
+              >
+                <Zap className="w-3 h-3" /> Pindahkan Thalibah Lama ke Grup 1
+              </Button>
            </CardContent>
         </Card>
         

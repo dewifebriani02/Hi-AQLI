@@ -33,7 +33,7 @@ import {
   Phone
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -51,7 +51,7 @@ import {
 const TOTAL_QURAN_VERSES = 6236;
 const WEEKLY_TARGET_VERSES = 15; // Roughly 1 page
 
-export default function AdminMufradatPage() {
+function MufradatMonitoringContent() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
@@ -371,5 +371,18 @@ export default function AdminMufradatPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AdminMufradatPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Menyiapkan Monitoring...</p>
+      </div>
+    }>
+      <MufradatMonitoringContent />
+    </Suspense>
   );
 }
