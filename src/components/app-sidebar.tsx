@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -23,6 +24,11 @@ import {
   UserCog,
   LayoutGrid,
   Library,
+  ChevronDown,
+  ChevronRight,
+  BarChart3,
+  Search,
+  CheckCircle,
 } from "lucide-react";
 import dynamic from 'next/dynamic';
 const Logo = dynamic(() => import('./logo').then(mod => mod.Logo), { ssr: false });
@@ -38,11 +44,13 @@ const adminItems = [
   { href: "/admin/users", label: "Manajemen Users", icon: UserCog },
   { href: "/admin/classes", label: "Manajemen Kelas", icon: Library },
   { 
-    label: "Manajemen Hi Mufradat", 
+    label: "Kelola Hi Mufradat", 
     icon: GraduationCap,
     subItems: [
-      { href: "/admin/mufradat", label: "Progres Peserta" },
-      { href: "/admin/mufradat/groups", label: "Manajemen Grup" },
+      { href: "/admin/mufradat/groups", label: "Kelola Group" },
+      { href: "/admin/mufradat", label: "Monitor Peserta & Group" },
+      { href: "/admin/registrations", label: "Verifikasi Pembayaran" },
+      { href: "/admin/mufradat/reports", label: "Laporan Kinerja" },
     ]
   },
 ];
@@ -52,6 +60,13 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  const toggleExpand = (label: string) => {
+    setExpandedItems(prev => 
+      prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label]
+    );
+  };
 
   const { data: isAdmin } = useDoc(user ? "roles_admin" : null, user?.id);
   const { data: isSuperAdmin } = useDoc(user ? "roles_superadmin" : null, user?.id);
@@ -92,34 +107,47 @@ export function AppSidebar() {
           <SidebarMenu>
             {adminItems.map((item) => {
               if (item.subItems) {
+                const isExpanded = expandedItems.includes(item.label);
+                const isAnySubActive = item.subItems.some(sub => pathname === sub.href);
+                
                 return (
                   <SidebarMenuItem key={item.label}>
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 px-4 py-2 text-white/40 group-data-[collapsible=icon]:hidden">
-                         <item.icon className="w-3.5 h-3.5" />
-                         <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
-                      </div>
-                      <div className="flex flex-col gap-1 list-none">
-                        {item.subItems.map(sub => {
-                           const isSubActive = pathname === sub.href;
-                           return (
-                             <SidebarMenuButton
+                      <SidebarMenuButton
+                        onClick={() => toggleExpand(item.label)}
+                        className={cn(
+                          "transition-all duration-300",
+                          isExpanded || isAnySubActive ? "text-[#D4AF37]" : "text-white hover:bg-white/10"
+                        )}
+                        tooltip={item.label}
+                      >
+                        <item.icon className="shrink-0" />
+                        <span className="font-bold flex-1">{item.label}</span>
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </SidebarMenuButton>
+                      
+                      {isExpanded && (
+                        <div className="flex flex-col gap-1 ml-4 pl-4 border-l border-white/10 mt-1">
+                          {item.subItems.map((sub) => {
+                            const isSubActive = pathname === sub.href;
+                            return (
+                              <SidebarMenuButton
                                 key={sub.href}
                                 asChild
                                 isActive={isSubActive}
-                                tooltip={sub.label}
                                 className={cn(
-                                  "transition-all duration-300 ml-2",
-                                  isSubActive ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90" : "text-white/80 hover:bg-white/10"
+                                  "transition-all duration-300 h-8",
+                                  isSubActive ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90" : "text-white/60 hover:text-white hover:bg-white/5"
                                 )}
                               >
                                 <Link href={sub.href} onClick={handleLinkClick}>
-                                  <span className="font-bold text-xs">{sub.label}</span>
+                                  <span className="text-[11px] font-bold">{sub.label}</span>
                                 </Link>
                               </SidebarMenuButton>
-                           );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </SidebarMenuItem>
                 );

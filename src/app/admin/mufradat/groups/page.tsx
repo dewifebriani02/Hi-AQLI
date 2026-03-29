@@ -30,11 +30,11 @@ import {
   ExternalLink,
   Search,
   CheckCircle2,
-  Trash2,
   Zap,
   Eye,
   UserMinus,
-  X
+  UserPlus,
+  Calendar
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -43,18 +43,24 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 export default function MufradatGroupsPage() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<{name: string, whatsapp_link: string}>({ name: "", whatsapp_link: "" });
+  const [editValues, setEditValues] = useState<{name: string, whatsapp_link: string, start_date: string}>({ 
+    name: "", 
+    whatsapp_link: "", 
+    start_date: "" 
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewingGroupId, setViewingGroupId] = useState<string | null>(null);
   const [isViewMembersOpen, setIsViewMembersOpen] = useState(false);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
 
   const { data: groups, isLoading, refresh } = useCollection("mufradat_groups", {
     orderBy: { column: 'created_at', ascending: true }
@@ -67,6 +73,15 @@ export default function MufradatGroupsPage() {
     return allUsers.filter(u => u.mufradat_group_id === viewingGroupId);
   }, [viewingGroupId, allUsers]);
 
+  const availableUsers = useMemo(() => {
+    if (!allUsers) return [];
+    const s = userSearch.toLowerCase();
+    return allUsers.filter(u => 
+      !u.mufradat_group_id && 
+      (u.username?.toLowerCase().includes(s) || u.email?.toLowerCase().includes(s))
+    );
+  }, [allUsers, userSearch]);
+
   const filteredGroups = useMemo(() => {
     if (!groups) return [];
     const s = search.toLowerCase();
@@ -75,7 +90,11 @@ export default function MufradatGroupsPage() {
 
   const handleStartEdit = (group: any) => {
     setEditingId(group.id);
-    setEditValues({ name: group.name, whatsapp_link: group.whatsapp_link || "" });
+    setEditValues({ 
+      name: group.name, 
+      whatsapp_link: group.whatsapp_link || "",
+      start_date: group.start_date || ""
+    });
   };
 
   const handleSave = async (id: string) => {
@@ -85,7 +104,8 @@ export default function MufradatGroupsPage() {
         .from('mufradat_groups')
         .update({
           name: editValues.name,
-          whatsapp_link: editValues.whatsapp_link
+          whatsapp_link: editValues.whatsapp_link,
+          start_date: editValues.start_date || null
         })
         .eq('id', id);
 
@@ -131,6 +151,42 @@ export default function MufradatGroupsPage() {
     }
   };
 
+  const handleJoinGroup = async (userId: string, groupId: string) => {
+    const group = groups?.find(g => g.id === groupId);
+    if (group && (group.member_count || 0) >= 50) {
+      toast({ variant: "destructive", title: "Grup Penuh", description: "Maksimal 50 thalibah per grup." });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ mufradat_group_id: groupId })
+        .eq('id', userId);
+      
+      if (error) throw error;
+
+      // Recount members
+      const { data: members } = await supabase
+        .from('users')
+        .select('id')
+        .eq('mufradat_group_id', groupId);
+      
+      await supabase
+        .from('mufradat_groups')
+        .update({ member_count: members?.length || 0 })
+        .eq('id', groupId);
+
+      toast({ title: "Peserta Ditambahkan", description: "Peserta telah berhasil dimasukkan ke dalam grup." });
+      refresh();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal menambahkan peserta", description: e.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleFillGroupGaps = async () => {
     if (!groups || groups.length === 0) {
       toast({ variant: "destructive", title: "Gagal Proses", description: "Buat minimal satu grup terlebih dahulu." });
@@ -139,7 +195,6 @@ export default function MufradatGroupsPage() {
 
     setIsProcessing(true);
     try {
-      // 1. Find all users with no group
       const { data: ungroupedUsers, error: fetchErr } = await supabase
         .from('users')
         .select('id')
@@ -155,7 +210,6 @@ export default function MufradatGroupsPage() {
       let remainingUsers = [...ungroupedUsers];
       let updatedCount = 0;
 
-      // 2. Iterate through groups from oldest to newest to fill gaps (max 50)
       for (const group of groups) {
         if (remainingUsers.length === 0) break;
         
@@ -171,7 +225,6 @@ export default function MufradatGroupsPage() {
           
           if (moveErr) throw moveErr;
 
-          // Recount for this specific group
           const { data: memberCount } = await supabase.from('users').select('id', { count: 'exact', head: true }).eq('mufradat_group_id', group.id);
           await supabase.from('mufradat_groups').update({ member_count: memberCount?.length || 0 }).eq('id', group.id);
           
@@ -200,7 +253,8 @@ export default function MufradatGroupsPage() {
         .insert({
           name: `Grup ${nextNum}`,
           whatsapp_link: "",
-          member_count: 0
+          member_count: 0,
+          start_date: new Date().toISOString().split('T')[0]
         });
 
       if (error) throw error;
@@ -287,6 +341,7 @@ export default function MufradatGroupsPage() {
               <TableHeader className="bg-muted/10">
                 <TableRow className="hover:bg-transparent border-none">
                   <TableHead className="w-[180px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Nama Grup</TableHead>
+                  <TableHead className="w-[120px] text-[10px] font-black uppercase tracking-widest">Mulai</TableHead>
                   <TableHead className="w-[150px] text-[10px] font-black uppercase tracking-widest">Peserta</TableHead>
                   <TableHead className="min-w-[250px] text-[10px] font-black uppercase tracking-widest">Link WhatsApp Monitoring</TableHead>
                   <TableHead className="text-right pr-6 w-[250px] text-[10px] font-black uppercase tracking-widest">Aksi</TableHead>
@@ -311,6 +366,23 @@ export default function MufradatGroupsPage() {
                         )}
                       </TableCell>
                       <TableCell>
+                        {isEditing ? (
+                          <Input 
+                            type="date"
+                            value={editValues.start_date}
+                            onChange={e => setEditValues(v => ({ ...v, start_date: e.target.value }))}
+                            className="h-9 text-[10px] font-bold"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                             <Calendar className="w-3 h-3" />
+                             <span className="text-[11px] font-bold">
+                                {group.start_date ? new Date(group.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                             </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-sm">{group.member_count || 0}</span>
                           <div className="w-16 sm:w-20 h-2 bg-muted rounded-full overflow-hidden shrink-0">
@@ -323,7 +395,7 @@ export default function MufradatGroupsPage() {
                           {isFull && <CheckCircle2 className="w-3 h-3 text-amber-500 shrink-0" />}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell tabIndex={0}>
                         {isEditing ? (
                           <div className="flex items-center gap-2">
                             <LinkIcon className="w-3 h-3 text-muted-foreground shrink-0" />
@@ -373,10 +445,11 @@ export default function MufradatGroupsPage() {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3" 
+                                className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3 border-2" 
                                 onClick={() => {
                                   setViewingGroupId(group.id);
                                   setIsViewMembersOpen(true);
+                                  setIsAddingMember(false);
                                 }}
                               >
                                  <Eye className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Lihat Peserta</span>
@@ -384,7 +457,7 @@ export default function MufradatGroupsPage() {
                              <Button asChild variant="ghost" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase text-[#800000] px-2 sm:px-3">
                                 <Link href={`/admin/mufradat?groupId=${group.id}`}>Monitor</Link>
                              </Button>
-                             <Button variant="outline" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3" onClick={() => handleStartEdit(group)}>
+                             <Button variant="outline" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3 border-2" onClick={() => handleStartEdit(group)}>
                                 Edit
                              </Button>
                           </div>
@@ -393,13 +466,6 @@ export default function MufradatGroupsPage() {
                     </TableRow>
                   );
                 })}
-                {filteredGroups.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground font-medium italic">
-                      Belum ada grup yang terdaftar.
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </div>
@@ -408,46 +474,108 @@ export default function MufradatGroupsPage() {
 
       {/* VIEW MEMBERS MODAL */}
       <Dialog open={isViewMembersOpen} onOpenChange={setIsViewMembersOpen}>
-        <DialogContent className="max-w-xl max-h-[80vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-6 bg-muted/30 border-b">
+        <DialogContent className="max-w-xl max-h-[80vh] flex flex-col p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
+          <DialogHeader className="p-6 bg-[#800000]/5 border-b flex flex-row items-center justify-between space-y-0">
             <DialogTitle className="flex items-center gap-2 text-[#800000] font-black uppercase tracking-tight">
-              <Users className="w-5 h-5" /> Peserta {groups?.find(g => g.id === viewingGroupId)?.name}
+              <Users className="w-5 h-5 text-[#D4AF37]" /> 
+              {isAddingMember ? 'Tambah Peserta' : `Peserta ${groups?.find(g => g.id === viewingGroupId)?.name}`}
             </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto p-6">
-             <div className="space-y-3">
-               {groupMembers.length > 0 ? groupMembers.map(member => (
-                 <Card key={member.id} className="border shadow-sm group hover:border-[#800000]/30 transition-all">
-                   <CardContent className="p-4 flex items-center justify-between">
-                     <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border shadow-sm">
-                           <AvatarImage src={member.avatar_url} />
-                           <AvatarFallback className="bg-[#800000] text-white text-xs font-black uppercase">
-                              {(member.username || 'U').charAt(0)}
-                           </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                           <span className="text-sm font-black text-slate-800">{member.username || 'Tanpa Nama'}</span>
-                           <span className="text-[10px] text-muted-foreground font-medium">{member.email}</span>
-                        </div>
-                     </div>
-                     <Button 
-                       variant="ghost" 
-                       size="sm" 
-                       className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-bold text-[10px] uppercase gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                       onClick={() => handleRemoveMember(member.id, viewingGroupId!)}
-                       disabled={isProcessing}
-                     >
-                       <UserMinus className="w-3.5 h-3.5" /> Keluarkan
-                     </Button>
-                   </CardContent>
-                 </Card>
-               )) : (
-                 <div className="text-center py-12 text-muted-foreground italic text-sm">
-                    Belum ada thalibah di grup ini.
-                 </div>
+            <Button 
+               variant={isAddingMember ? "ghost" : "outline"} 
+               size="sm" 
+               onClick={() => setIsAddingMember(!isAddingMember)}
+               className={cn(
+                 "h-8 font-black uppercase text-[10px] gap-2 border-2 rounded-xl",
+                 isAddingMember ? "text-muted-foreground" : "border-[#800000]/20 text-[#800000]"
                )}
-             </div>
+            >
+               {isAddingMember ? <ArrowLeft className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+               {isAddingMember ? 'Kembali' : 'Tambah Manual'}
+            </Button>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+             {isAddingMember ? (
+               <div className="space-y-4">
+                 <div className="relative">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                   <Input 
+                      placeholder="Cari thalibah tanpa grup..." 
+                      className="pl-10 h-11 border-2 bg-white rounded-xl shadow-sm focus:border-[#800000]/30 transition-all"
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                   />
+                 </div>
+                 <div className="space-y-2">
+                   {availableUsers.length > 0 ? availableUsers.map(user => (
+                     <Card key={user.id} className="border shadow-sm hover:border-[#800000]/30 transition-all bg-white group rounded-xl overflow-hidden">
+                       <CardContent className="p-3 flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <Avatar className="h-9 w-9 border-2 border-white shadow-md">
+                             <AvatarImage src={user.avatar_url} />
+                             <AvatarFallback className="text-[10px] font-black bg-[#800000] text-white">
+                               {(user.username || 'U').charAt(0)}
+                             </AvatarFallback>
+                           </Avatar>
+                           <div className="flex flex-col">
+                             <span className="text-sm font-black text-slate-800">{user.username || 'Tanpa Nama'}</span>
+                             <span className="text-[10px] text-muted-foreground font-medium">{user.email}</span>
+                           </div>
+                         </div>
+                         <Button 
+                           size="sm" 
+                           onClick={() => handleJoinGroup(user.id, viewingGroupId!)}
+                           disabled={isProcessing}
+                           className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase text-[9px] h-8 px-4 rounded-lg shadow-md active:scale-95 transition-all"
+                         >
+                           Tambah
+                         </Button>
+                       </CardContent>
+                     </Card>
+                   )) : (
+                     <div className="text-center py-12 bg-white border-2 border-dashed rounded-2xl">
+                        <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-muted-foreground italic text-xs">Tidak ada thalibah tanpa grup yang ditemukan.</p>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             ) : (
+               <div className="space-y-3">
+                 {groupMembers.length > 0 ? groupMembers.map(member => (
+                   <Card key={member.id} className="border shadow-sm group hover:border-[#800000]/30 transition-all bg-white rounded-xl overflow-hidden">
+                     <CardContent className="p-4 flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border-2 border-white shadow-md">
+                             <AvatarImage src={member.avatar_url} />
+                             <AvatarFallback className="bg-[#800000] text-white text-xs font-black uppercase">
+                                {(member.username || 'U').charAt(0)}
+                             </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                             <span className="text-sm font-black text-slate-800">{member.username || 'Tanpa Nama'}</span>
+                             <span className="text-[10px] text-muted-foreground font-medium">{member.email}</span>
+                          </div>
+                       </div>
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-bold text-[10px] uppercase gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                         onClick={() => handleRemoveMember(member.id, viewingGroupId!)}
+                         disabled={isProcessing}
+                       >
+                         <UserMinus className="w-3.5 h-3.5" /> Keluarkan
+                       </Button>
+                     </CardContent>
+                   </Card>
+                 )) : (
+                   <div className="text-center py-12 bg-white border-2 border-dashed rounded-2xl">
+                        <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-muted-foreground italic text-xs">Belum ada thalibah di grup ini.</p>
+                   </div>
+                 )}
+               </div>
+             )}
           </div>
         </DialogContent>
       </Dialog>
