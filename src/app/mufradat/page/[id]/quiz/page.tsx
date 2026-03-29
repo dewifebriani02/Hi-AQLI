@@ -19,6 +19,8 @@ import Link from "next/link";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/supabase";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
@@ -43,6 +45,7 @@ export default function MufradatPageQuizPage() {
   const nextVerseId = searchParams.get('nextVerseId');
 
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -186,35 +189,49 @@ export default function MufradatPageQuizPage() {
       } else {
         setIsFinished(true);
         const finalScore = score + (correct ? 1 : 0);
+        const finalWrongWords = correct ? [...wrongWords] : [...wrongWords, currentQ];
         if (finalScore === questions.length) playSfx('perfect');
         else playSfx('fail');
-        saveAttempt(finalScore);
+        saveAttempt(finalScore, finalWrongWords.map((w: any) => w.id));
       }
     }, 1000);
   };
 
-  const saveAttempt = async (finalScore: number) => {
+  const saveAttempt = async (finalScore: number, finalWrongWordIds: number[]) => {
     if (!user) return;
     try {
-      await fetch('/api/quiz-attempts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const isPassed = finalScore === questions.length;
+      
+      const { error: insertError } = await supabase
+        .from('quiz_attempts')
+        .insert({
           user_id: user.id,
           quiz_id: quizId,
-          surah_id: "0", // 0 indicates page-based
-          verse_id: pageNum.toString(), // reuse verse_id field for pageNum for now or adjust DB
+          surah_id: "0", 
+          verse_id: pageNum.toString(), 
           score: finalScore,
           total_questions: questions.length,
           duration_seconds: totalTime,
-          is_passed: finalScore === questions.length,
-          wrong_words: wrongWords.map(w => w.id),
-          page_id: Number(pageNum)
-        })
-      });
+          is_passed: isPassed,
+          wrong_words: finalWrongWordIds,
+          page_id: Number(pageNum),
+          created_at: new Date().toISOString()
+        });
+
+      if (insertError) throw insertError;
+
+      if (isPassed) {
+        toast({ title: "Masyallah! Halaman Selesai", description: "Progres hafalan berhasil disimpan." });
+      }
+
       refreshLeaderboard();
-    } catch (e) {
+    } catch (e: any) {
       console.error("Gagal simpan skor:", e);
+      toast({ 
+        title: "Gagal menyimpan progres", 
+        description: e.message || "Pastikan koneksi internet stabil.",
+        variant: "destructive"
+      });
     }
   };
 

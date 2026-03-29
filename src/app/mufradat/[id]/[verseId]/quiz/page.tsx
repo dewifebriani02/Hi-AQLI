@@ -19,6 +19,8 @@ import Link from "next/link";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/supabase";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
@@ -39,6 +41,7 @@ export default function MufradatQuizPage() {
   const verseId = params.verseId as string;
   const from = searchParams.get('from');
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -214,10 +217,11 @@ export default function MufradatQuizPage() {
   const saveAttempt = async (finalScore: number, finalWrongWordIds: number[]) => {
     if (!user) return;
     try {
-      await fetch('/api/quiz-attempts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const isPassed = finalScore === questions.length;
+      
+      const { error: insertError } = await supabase
+        .from('quiz_attempts')
+        .insert({
           user_id: user.id,
           quiz_id: `mufradat_${verseKey}`,
           surah_id: id,
@@ -225,15 +229,40 @@ export default function MufradatQuizPage() {
           score: finalScore,
           total_questions: questions.length,
           duration_seconds: totalTime,
-          is_passed: finalScore === questions.length,
+          is_passed: isPassed,
           wrong_words: finalWrongWordIds,
-          page_id: pageId
-        })
-      });
+          page_id: pageId,
+          created_at: new Date().toISOString()
+        });
+
+      if (insertError) throw insertError;
+
+      // Update points for perfect score
+      if (isPassed) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('points')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        const currentPoints = profile?.points || 0;
+        await supabase
+          .from('users')
+          .update({ points: currentPoints + 10 })
+          .eq('id', user.id);
+          
+        toast({ title: "Masyallah! +10 Poin", description: "Progres hafalan berhasil disimpan." });
+      }
+
       // Refresh leaderboard after save
       refreshLeaderboard();
-    } catch (e) {
+    } catch (e: any) {
       console.error("Gagal simpan skor:", e);
+      toast({ 
+        title: "Gagal menyimpan progres", 
+        description: e.message || "Pastikan koneksi internet stabil.",
+        variant: "destructive"
+      });
     }
   };
 
