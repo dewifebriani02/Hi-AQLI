@@ -47,18 +47,18 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       const syncProfile = async () => {
         hasAttemptedSync.current = true;
         try {
-          const { error } = await supabase.from('users').insert({
+          // Use upsert to avoid 409 Conflict errors if the user already exists
+          const { error } = await supabase.from('users').upsert({
             id: user.id,
             username: user.user_metadata?.full_name || user.email?.split('@')[0],
             email: user.email,
             role_id: 'learner',
             points: 0,
             followed_halaqahs: [],
-            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          });
+          }, { onConflict: 'id', ignoreDuplicates: true });
           
-          if (error && error.code !== '23505') {
+          if (error) {
             console.error('Failed to auto-sync profile in layout:', error);
           }
         } catch (err) {
@@ -74,12 +74,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const isBlacklisted = !!userData?.is_blacklisted;
 
   // Gate content until mounted to prevent hydration mismatch
-  const showAdminUI = mounted && hasAdminAccess && !isBlacklisted;
-  const showUserUI = mounted && !isUserLoading;
-  const showBottomNav = mounted && !isBlacklisted;
+  // The server and initial client render must match. 
+  // We return a simple layout shell until mounted.
+  if (!mounted) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   // Blacklist Guard View
-  if (mounted && user && !isUserDocLoading && isBlacklisted) {
+  if (user && !isUserDocLoading && isBlacklisted) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mb-6">
@@ -100,6 +102,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const showAdminUI = hasAdminAccess && !isBlacklisted;
+  const showUserUI = !isUserLoading;
+  const showBottomNav = !isBlacklisted;
+
   return (
     <>
       <SidebarProvider defaultOpen={false}>
@@ -118,7 +124,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </div>
               
               <div className="flex items-center gap-3">
-                {mounted && user && (
+                {user && (
                   <Link href="/leaderboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 shadow-sm hover:bg-slate-100 transition-all group backdrop-blur-sm">
                     <Trophy className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
                     <span className="text-[11px] font-black text-slate-700 tracking-tight">
@@ -151,7 +157,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarInset>
       </div>
-      {showBottomNav && <BottomNav />}
+      <BottomNav />
       <Toaster />
     </SidebarProvider>
     </>

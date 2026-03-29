@@ -131,9 +131,9 @@ export default function MufradatGroupsPage() {
     }
   };
 
-  const handleMigrateUngrouped = async () => {
+  const handleFillGroupGaps = async () => {
     if (!groups || groups.length === 0) {
-      toast({ variant: "destructive", title: "Gagal Migrasi", description: "Buat minimal satu grup terlebih dahulu." });
+      toast({ variant: "destructive", title: "Gagal Proses", description: "Buat minimal satu grup terlebih dahulu." });
       return;
     }
 
@@ -148,37 +148,44 @@ export default function MufradatGroupsPage() {
       if (fetchErr) throw fetchErr;
       
       if (!ungroupedUsers || ungroupedUsers.length === 0) {
-        toast({ title: "Migrasi Selesai", description: "Semua thalibah sudah masuk ke dalam grup." });
+        toast({ title: "Optimasi Selesai", description: "Tidak ada thalibah tanpa grup yang ditemukan." });
         return;
       }
 
-      // 2. Pick the first group (Grup 1)
-      const targetGroup = groups[0];
-      
-      // 3. Update all these users
-      const userIds = ungroupedUsers.map(u => u.id);
-      const { error: updateErr } = await supabase
-        .from('users')
-        .update({ mufradat_group_id: targetGroup.id })
-        .in('id', userIds);
-      
-      if (updateErr) throw updateErr;
+      let remainingUsers = [...ungroupedUsers];
+      let updatedCount = 0;
 
-      // 4. Update group member count
-      const { error: groupErr } = await supabase
-        .from('mufradat_groups')
-        .update({ member_count: (targetGroup.member_count || 0) + userIds.length })
-        .eq('id', targetGroup.id);
-      
-      if (groupErr) throw groupErr;
+      // 2. Iterate through groups from oldest to newest to fill gaps (max 50)
+      for (const group of groups) {
+        if (remainingUsers.length === 0) break;
+        
+        const spaceAvailable = 50 - (group.member_count || 0);
+        if (spaceAvailable > 0) {
+          const batchToMove = remainingUsers.splice(0, spaceAvailable);
+          const userIds = batchToMove.map(u => u.id);
+          
+          const { error: moveErr } = await supabase
+            .from('users')
+            .update({ mufradat_group_id: group.id })
+            .in('id', userIds);
+          
+          if (moveErr) throw moveErr;
+
+          // Recount for this specific group
+          const { data: memberCount } = await supabase.from('users').select('id', { count: 'exact', head: true }).eq('mufradat_group_id', group.id);
+          await supabase.from('mufradat_groups').update({ member_count: memberCount?.length || 0 }).eq('id', group.id);
+          
+          updatedCount += userIds.length;
+        }
+      }
 
       toast({ 
-        title: "Migrasi Berhasil", 
-        description: `Masyallah, ${userIds.length} thalibah telah dipindahkan ke ${targetGroup.name}.` 
+        title: "Optimasi Berhasil", 
+        description: `Masyallah, ${updatedCount} thalibah telah dipindahkan untuk mengisi kekosongan grup.` 
       });
       refresh();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal Migrasi", description: e.message });
+      toast({ variant: "destructive", title: "Gagal Optimasi", description: e.message });
     } finally {
       setIsProcessing(false);
     }
@@ -218,24 +225,24 @@ export default function MufradatGroupsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl space-y-8 pb-32">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button asChild variant="ghost" size="icon" className="rounded-full">
+          <Button asChild variant="ghost" size="icon" className="rounded-full shrink-0">
             <Link href="/admin/mufradat"><ArrowLeft className="w-5 h-5" /></Link>
           </Button>
-          <div>
-            <h1 className="text-3xl font-black font-headline tracking-tighter text-[#800000]">MANAJEMEN GRUP</h1>
-            <p className="text-muted-foreground text-sm uppercase tracking-widest font-bold">Hi Mufradat • Batch 50 Thalibah</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tighter text-[#800000] truncate uppercase">MANAJEMEN GRUP</h1>
+            <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-widest font-bold">Hi Mufradat • Batch 50 Thalibah</p>
           </div>
         </div>
-        <Button onClick={handleAddGroup} disabled={isProcessing} className="bg-[#800000] hover:bg-[#800000]/90 font-black h-12 px-6 rounded-xl shadow-lg gap-2">
+        <Button onClick={handleAddGroup} disabled={isProcessing} className="bg-[#800000] hover:bg-[#800000]/90 font-black h-12 px-6 rounded-xl shadow-lg gap-2 w-full sm:w-auto">
           {isProcessing ? <Loader2 className="animate-spin w-5 h-5" /> : <Plus className="w-5 h-5" />}
           TAMBAH GRUP BARU
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="md:col-span-1 bg-amber-50 border-amber-200">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <Card className="col-span-1 lg:col-span-1 bg-amber-50 border-amber-200">
            <CardHeader className="pb-2">
              <CardTitle className="text-sm font-black flex items-center gap-2 text-amber-900">
                 <Users className="w-4 h-4" /> INFO KAPASITAS
@@ -243,26 +250,26 @@ export default function MufradatGroupsPage() {
            </CardHeader>
            <CardContent>
               <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                Setiap grup dibatasi maksimal 50 thalibah. Pendaftaran baru otomatis mengisi grup terakhir yang belum penuh.
+                Setiap grup dibatasi maksimal 50 thalibah. Fitur di bawah akan mengisi slot kosong grup sebelumnya secara otomatis.
               </p>
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={handleMigrateUngrouped}
+                onClick={handleFillGroupGaps}
                 disabled={isProcessing}
                 className="mt-3 w-full border-amber-300 text-amber-900 bg-white/50 hover:bg-white font-black text-[9px] h-8 gap-1.5 uppercase transition-all active:scale-95"
               >
-                <Zap className="w-3 h-3" /> Pindahkan Thalibah Lama ke Grup 1
+                <Zap className="w-3 h-3" /> Tutup Lubang & Isi Grup
               </Button>
            </CardContent>
         </Card>
         
-        <div className="md:col-span-3 flex items-center gap-3">
+        <div className="col-span-1 md:col-span-2 lg:col-span-3 flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Cari nama grup..." 
-              className="pl-10 h-12 border-2 bg-white/50 rounded-xl"
+              className="pl-10 h-12 border-2 bg-white/50 rounded-xl w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -275,125 +282,127 @@ export default function MufradatGroupsPage() {
           <CardTitle className="text-lg font-black font-headline text-[#800000]">DAFTAR BATCH & LINK WHATSAPP</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/10">
-              <TableRow className="hover:bg-transparent border-none">
-                <TableHead className="w-[200px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Nama Grup</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">Peserta</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">Link WhatsApp Monitoring</TableHead>
-                <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-widest">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredGroups.map((group) => {
-                const isEditing = editingId === group.id;
-                const isFull = group.member_count >= 50;
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[800px] md:min-w-full">
+              <TableHeader className="bg-muted/10">
+                <TableRow className="hover:bg-transparent border-none">
+                  <TableHead className="w-[180px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Nama Grup</TableHead>
+                  <TableHead className="w-[150px] text-[10px] font-black uppercase tracking-widest">Peserta</TableHead>
+                  <TableHead className="min-w-[250px] text-[10px] font-black uppercase tracking-widest">Link WhatsApp Monitoring</TableHead>
+                  <TableHead className="text-right pr-6 w-[250px] text-[10px] font-black uppercase tracking-widest">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredGroups.map((group) => {
+                  const isEditing = editingId === group.id;
+                  const isFull = group.member_count >= 50;
 
-                return (
-                  <TableRow key={group.id} className="hover:bg-[#800000]/5 transition-colors group">
-                    <TableCell className="py-4 pl-6">
-                      {isEditing ? (
-                        <Input 
-                          value={editValues.name} 
-                          onChange={e => setEditValues(v => ({ ...v, name: e.target.value }))}
-                          className="h-9 font-bold text-xs"
-                        />
-                      ) : (
-                        <span className="font-black text-[#800000]">{group.name}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm">{group.member_count || 0}</span>
-                        <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                           <div 
-                              className={`h-full transition-all ${isFull ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                              style={{ width: `${Math.min((group.member_count / 50) * 100, 100)}%` }} 
-                           />
-                        </div>
-                        <span className="text-[10px] font-bold text-muted-foreground">/ 50</span>
-                        {isFull && <CheckCircle2 className="w-3 h-3 text-amber-500" />}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <LinkIcon className="w-3 h-3 text-muted-foreground" />
+                  return (
+                    <TableRow key={group.id} className="hover:bg-[#800000]/5 transition-colors group">
+                      <TableCell className="py-4 pl-6">
+                        {isEditing ? (
                           <Input 
-                            placeholder="https://chat.whatsapp.com/..."
-                            value={editValues.whatsapp_link} 
-                            onChange={e => setEditValues(v => ({ ...v, whatsapp_link: e.target.value }))}
-                            className="h-9 text-xs"
+                            value={editValues.name} 
+                            onChange={e => setEditValues(v => ({ ...v, name: e.target.value }))}
+                            className="h-9 font-bold text-xs"
                           />
-                        </div>
-                      ) : (
+                        ) : (
+                          <span className="font-black text-[#800000]">{group.name}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
-                          <LinkIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                            {group.whatsapp_link || 'Belum diatur'}
-                          </span>
-                          {group.whatsapp_link && (
-                            <a href={group.whatsapp_link} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#800000]/10 rounded-full text-[#800000]">
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                          )}
+                          <span className="font-bold text-sm">{group.member_count || 0}</span>
+                          <div className="w-16 sm:w-20 h-2 bg-muted rounded-full overflow-hidden shrink-0">
+                             <div 
+                                className={`h-full transition-all ${isFull ? 'bg-amber-500' : 'bg-emerald-500'}`} 
+                                style={{ width: `${Math.min((group.member_count / 50) * 100, 100)}%` }} 
+                             />
+                          </div>
+                          <span className="text-[10px] font-bold text-muted-foreground shrink-0">/ 50</span>
+                          {isFull && <CheckCircle2 className="w-3 h-3 text-amber-500 shrink-0" />}
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      {isEditing ? (
-                        <div className="flex items-center justify-end gap-2">
-                           <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="text-muted-foreground text-xs font-bold" 
-                            onClick={() => setEditingId(null)}
-                           >
-                            Batal
-                           </Button>
-                           <Button 
-                            size="sm" 
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 gap-1.5 font-bold"
-                            onClick={() => handleSave(group.id)}
-                            disabled={isProcessing}
-                           >
-                             <Save className="w-3.5 h-3.5" /> Simpan
-                           </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-end gap-2">
-                            <Button 
-                              variant="outline" 
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <LinkIcon className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <Input 
+                              placeholder="https://chat.whatsapp.com/..."
+                              value={editValues.whatsapp_link} 
+                              onChange={e => setEditValues(v => ({ ...v, whatsapp_link: e.target.value }))}
+                              className="h-9 text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <LinkIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">
+                              {group.whatsapp_link || 'Belum diatur'}
+                            </span>
+                            {group.whatsapp_link && (
+                              <a href={group.whatsapp_link} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#800000]/10 rounded-full text-[#800000]">
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        {isEditing ? (
+                          <div className="flex items-center justify-end gap-2">
+                             <Button 
                               size="sm" 
-                              className="h-8 text-[10px] font-black uppercase" 
-                              onClick={() => {
-                                setViewingGroupId(group.id);
-                                setIsViewMembersOpen(true);
-                              }}
-                            >
-                               <Eye className="w-3.5 h-3.5 mr-1.5" /> Lihat Peserta
-                            </Button>
-                           <Button asChild variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase text-[#800000]">
-                              <Link href={`/admin/mufradat?groupId=${group.id}`}>Monitor</Link>
-                           </Button>
-                           <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase" onClick={() => handleStartEdit(group)}>
-                              Edit
-                           </Button>
-                        </div>
-                      )}
+                              variant="ghost" 
+                              className="text-muted-foreground text-[10px] font-bold h-8" 
+                              onClick={() => setEditingId(null)}
+                             >
+                              Batal
+                             </Button>
+                             <Button 
+                              size="sm" 
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 gap-1.5 font-bold text-[10px]"
+                              onClick={() => handleSave(group.id)}
+                              disabled={isProcessing}
+                             >
+                               <Save className="w-3.5 h-3.5" /> Simpan
+                             </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3" 
+                                onClick={() => {
+                                  setViewingGroupId(group.id);
+                                  setIsViewMembersOpen(true);
+                                }}
+                              >
+                                 <Eye className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Lihat Peserta</span>
+                              </Button>
+                             <Button asChild variant="ghost" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase text-[#800000] px-2 sm:px-3">
+                                <Link href={`/admin/mufradat?groupId=${group.id}`}>Monitor</Link>
+                             </Button>
+                             <Button variant="outline" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3" onClick={() => handleStartEdit(group)}>
+                                Edit
+                             </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filteredGroups.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground font-medium italic">
+                      Belum ada grup yang terdaftar.
                     </TableCell>
                   </TableRow>
-                );
-              })}
-              {filteredGroups.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-32 text-center text-muted-foreground font-medium italic">
-                    Belum ada grup yang terdaftar.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
