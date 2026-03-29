@@ -122,18 +122,17 @@ export function SurahList({
     if (!userProgress) return map;
 
     userProgress.forEach(attempt => {
-      if (attempt.is_passed) {
+      const isPassed = attempt.is_passed || Number(attempt.score) === Number(attempt.total_questions);
+      if (isPassed && !attempt.quiz_id.startsWith('mufradat_page_') && !attempt.quiz_id.startsWith('mufradat_juz_exam_')) {
         const sId = Number(attempt.surah_id);
         const vId = Number(attempt.verse_id);
         
-        // We use a Set-like string key to ignore duplicate passed attempts for same verse
-        const key = `${sId}:${vId}`;
-        // Store unique verse counts per surah
-        // Actually, just store all passed verse numbers in a Set per surah
-        if (!map.has(sId)) {
-          (map as any).set(sId, new Set());
+        if (sId > 0) {
+          if (!map.has(sId)) {
+            (map as any).set(sId, new Set());
+          }
+          (map.get(sId) as any).add(vId);
         }
-        (map.get(sId) as any).add(vId);
       }
     });
 
@@ -149,7 +148,8 @@ export function SurahList({
     const pageSet = new Set<number>();
     if (!userProgress) return pageSet;
     userProgress.forEach(p => {
-      if (p.is_passed && p.quiz_id.startsWith('mufradat_page_')) {
+      const isPassed = p.is_passed || Number(p.score) === Number(p.total_questions);
+      if (isPassed && p.quiz_id.startsWith('mufradat_page_')) {
         const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
         pageSet.add(pNum);
       }

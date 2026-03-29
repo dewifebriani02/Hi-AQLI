@@ -58,15 +58,22 @@ export default function MufradatVerseDetailPage() {
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'is_passed', operator: '==', value: true }
+      { column: 'surah_id', operator: '==', value: id }
     ]
-  }), [user?.id]);
+  }), [user?.id, id]);
 
   const { data: progress } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
   const completedVerseNumbers = useMemo(() => {
-    if (!progress) return new Set<number>();
-    return new Set(progress.map(p => Number(p.verse_id)));
+    const passed = new Set<number>();
+    if (!progress) return passed;
+    progress.forEach(p => {
+      const isPassed = p.is_passed || Number(p.score) === Number(p.total_questions);
+      if (isPassed && !p.quiz_id.startsWith('mufradat_page_')) {
+        passed.add(Number(p.verse_id));
+      }
+    });
+    return passed;
   }, [progress]);
 
   const isCurrentVerseCompleted = completedVerseNumbers.has(Number(verseId));
@@ -75,7 +82,8 @@ export default function MufradatVerseDetailPage() {
     const pageSet = new Set<number>();
     if (!progress) return pageSet;
     progress.forEach(p => {
-      if (p.is_passed && p.quiz_id.startsWith('mufradat_page_')) {
+      const isPassed = p.is_passed || Number(p.score) === Number(p.total_questions);
+      if (isPassed && p.quiz_id.startsWith('mufradat_page_')) {
         const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
         pageSet.add(pNum);
       }

@@ -33,8 +33,7 @@ export default function MufradatPage() {
   // Fetch all passed attempts for the current user
   const progressOptions = useMemo(() => ({
     filters: [
-      { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'is_passed', operator: '==', value: true }
+      { column: 'user_id', operator: '==', value: user?.id }
     ]
   }), [user?.id]);
 

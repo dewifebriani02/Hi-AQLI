@@ -85,8 +85,7 @@ export default function MufradatSurahDetailPage() {
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'surah_id', operator: '==', value: id },
-      { column: 'is_passed', operator: '==', value: true }
+      { column: 'surah_id', operator: '==', value: id }
     ]
   }), [user?.id, id]);
 
@@ -120,7 +119,12 @@ export default function MufradatSurahDetailPage() {
         const vNum = Number(p.verse_id);
         if (isNaN(vNum)) return;
 
-        passedVerses.add(vNum);
+        // Lenient Passed Check: is_passed OR score == total_questions
+        const isPassed = p.is_passed || Number(p.score) === Number(p.total_questions);
+        
+        if (isPassed) {
+          passedVerses.add(vNum);
+        }
         
         // Update errors
         if (p.wrong_words && p.wrong_words.length > 0) {
