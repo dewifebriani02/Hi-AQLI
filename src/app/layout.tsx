@@ -30,22 +30,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const [mounted, setMounted] = useState(false);
-  const [showInitialSplash, setShowInitialSplash] = useState(false);
+  const [showInitialSplash, setShowInitialSplash] = useState(true);
 
   useEffect(() => {
     setMounted(true);
-    
-    // Check if splash has been shown in this session
-    const hasShownSplash = sessionStorage.getItem('hi_aqli_splash_shown');
-    if (!hasShownSplash) {
-      setShowInitialSplash(true);
-      // Increased delay to 10 seconds as requested by the user
-      const timer = setTimeout(() => {
-        setShowInitialSplash(false);
-      }, 10000);
-      sessionStorage.setItem('hi_aqli_splash_shown', 'true');
-      return () => clearTimeout(timer);
-    }
+    const timer = setTimeout(() => {
+      setShowInitialSplash(false);
+    }, 10000);
+    return () => clearTimeout(timer);
   }, []);
 
   const { data: isAdminDoc } = useDoc("roles_admin", user?.id);
@@ -87,41 +79,27 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const isBlacklisted = !!userData?.is_blacklisted;
 
   // Render a consistent splash screen for loading and initial view
-  const SplashView = () => (
-    <div className="fixed inset-0 z-[9999] bg-[#800000] flex flex-col items-center justify-center p-8 text-center overscroll-none touch-none">
-       {/* Background Ornaments from splash-bg.png */}
+  const SplashView = ({ isPersistent = false }: { isPersistent?: boolean }) => (
+    <div className={cn(
+      "fixed inset-0 z-[9999] bg-[#800000] flex flex-col items-center justify-center overscroll-none touch-none",
+      !isPersistent && "animate-out fade-out duration-1000 fill-mode-forwards ease-in-out pointer-events-none"
+    )}>
+       {/* One and Only Image: app-splash.jpg */}
        <img 
-          src="/splash-bg.png" 
-          alt="" 
-          className="absolute inset-0 w-full h-full object-cover opacity-90 transition-opacity duration-1000" 
+          src="/app-splash.jpg" 
+          alt="Hi AQLI" 
+          className="w-full h-full object-cover sm:object-contain transition-opacity duration-700" 
+          onLoad={() => {
+            // Can be used to ensure image is ready
+          }}
        />
-       {/* Subtle Overlay to make logo/text pop */}
-       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30" />
-       
-       <div className="relative z-10 flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-1000">
-          <div className="relative">
-            <div className="absolute inset-0 blur-2xl bg-amber-500/20 rounded-full animate-pulse" />
-            <img 
-              src="/app-logo-gold.png" 
-              alt="Logo" 
-              className="w-48 h-48 sm:w-64 sm:h-64 object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-20"
-            />
-          </div>
-          <div className="space-y-4 max-w-xs sm:max-w-md">
-            <h1 className="text-4xl sm:text-5xl font-black text-[#D4AF37] font-headline tracking-tighter drop-shadow-xl">Hi AQLI</h1>
-            <div className="h-px w-16 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto opacity-50" />
-            <p className="text-white text-base sm:text-lg font-bold italic tracking-wider drop-shadow-lg uppercase leading-tight px-4">
-              "Berhijrah dengan Ilmu, Beramal dengan Itqan"
-            </p>
-          </div>
-       </div>
     </div>
   );
 
   // The server and initial client render must match. 
   // We return a splash shell until mounted to avoid white flicker.
   if (!mounted) {
-    return <SplashView />;
+    return <SplashView isPersistent={true} />;
   }
 
   // Blacklist Guard View
@@ -152,15 +130,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {showInitialSplash && (
-        <div className="fixed inset-0 z-[9999] bg-[#800000] flex items-center justify-center animate-out fade-out duration-1000 fill-mode-forwards ease-in-out pointer-events-none">
-          <img 
-            src="/splash-bg.png" 
-            alt="Hi AQLI Splash" 
-            className="w-full h-full object-cover sm:object-contain"
-          />
-        </div>
-      )}
+      {showInitialSplash && <SplashView isPersistent={false} />}
       <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
         {/* Sidebar hanya muncul untuk admin di md ke atas */}
@@ -229,13 +199,12 @@ export default function RootLayout({
         <meta name="description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
         
         {/* Preload splash assets as early as possible */}
-        <link rel="preload" href="/splash-bg.png" as="image" />
-        <link rel="preload" href="/app-logo-gold.png" as="image" />
+        <link rel="preload" href="/app-splash.jpg" as="image" />
 
         {/* PWA & iOS Optimization */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="apple-touch-startup-image" href="/splash-bg.png" />
+        <link rel="apple-touch-startup-image" href="/app-splash.jpg" />
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
