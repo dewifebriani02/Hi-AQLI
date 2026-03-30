@@ -23,7 +23,9 @@ import {
   TrendingUp, 
   Activity,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Zap,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -64,10 +66,15 @@ export default function MufradatReportsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl space-y-8 pb-32">
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+        <Link href="/admin" className="hover:text-[#800000] transition-colors">Admin</Link>
+        <ChevronRight className="w-3 h-3" />
+        <Link href="/admin/mufradat" className="hover:text-[#800000] transition-colors">Hi Mufradat</Link>
+        <ChevronRight className="w-3 h-3" />
+        <span className="text-[#800000]">Laporan Kinerja</span>
+      </div>
+
       <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" size="icon" className="rounded-full shrink-0">
-          <Link href="/admin/mufradat"><ArrowLeft className="w-5 h-5" /></Link>
-        </Button>
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tighter text-[#800000] truncate uppercase">LAPORAN KINERJA</h1>
           <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-widest font-bold">Analitik Hi Mufradat • Real-time</p>
@@ -190,7 +197,7 @@ export default function MufradatReportsPage() {
             </CardHeader>
             <CardContent>
                <p className="text-xs text-emerald-800 font-medium leading-relaxed">
-                  Data mastery menunjukkan peningkatan signifikan pada thalibah yang aktif di batch awal. Pastikan pembukaan batch baru dilakukan setelah utilisasi batch sebelumnya mencapai >90%.
+                  Data mastery menunjukkan peningkatan signifikan pada thalibah yang aktif di batch awal. Pastikan pembukaan batch baru dilakukan setelah utilisasi batch sebelumnya mencapai {" lebih dari "} 90%.
                </p>
             </CardContent>
          </Card>

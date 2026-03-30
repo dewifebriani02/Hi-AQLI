@@ -30,7 +30,8 @@ import {
   MessageCircle, 
   AlertCircle,
   CheckCircle,
-  Phone
+  Phone,
+  ChevronRight
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -39,6 +40,7 @@ import { formatDistanceToNow, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 import { 
   Select, 
@@ -187,14 +189,18 @@ function MufradatMonitoringContent() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+        <Link href="/admin" className="hover:text-[#800000] transition-colors">Admin</Link>
+        <ChevronRight className="w-3 h-3" />
+        <Link href="/admin/mufradat" className="hover:text-[#800000] transition-colors text-[#800000]">Hi Mufradat</Link>
+        <ChevronRight className="w-3 h-3" />
+        <span className="text-[#800000]">Monitor Peserta</span>
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-[#800000]">
-            <TrendingUp className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-widest">Admin Monitoring</span>
-            </div>
             <h1 className="text-4xl font-black font-headline tracking-tighter text-[#800000]">PROGRESS & REMINDER</h1>
-            <p className="text-muted-foreground">Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
+            <p className="text-muted-foreground font-medium text-sm">Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
         </div>
         <div className="bg-muted/50 p-2 rounded-lg border border-dashed text-[9px] font-mono text-muted-foreground flex flex-col gap-0.5">
             <span>Project: {process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] || 'Unknown'}</span>
@@ -287,7 +293,7 @@ function MufradatMonitoringContent() {
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="w-[280px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Peserta</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest">Status Pekanan</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">Ayat Lulus</TableHead>
+                <TableHead className="text-[10px) font-black uppercase tracking-widest">Ayat Lulus</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest w-[160px]">Progres (%)</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">Aksi Reminder</TableHead>
               </TableRow>

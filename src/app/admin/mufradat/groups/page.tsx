@@ -33,8 +33,10 @@ import {
   Zap,
   Eye,
   UserMinus,
+  X,
   UserPlus,
-  Calendar
+  Calendar,
+  ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -279,11 +281,16 @@ export default function MufradatGroupsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl space-y-8 pb-32">
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+        <Link href="/admin" className="hover:text-[#800000] transition-colors">Admin</Link>
+        <ChevronRight className="w-3 h-3" />
+        <Link href="/admin/mufradat" className="hover:text-[#800000] transition-colors">Hi Mufradat</Link>
+        <ChevronRight className="w-3 h-3" />
+        <span className="text-[#800000]">Kelola Group</span>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button asChild variant="ghost" size="icon" className="rounded-full shrink-0">
-            <Link href="/admin/mufradat"><ArrowLeft className="w-5 h-5" /></Link>
-          </Button>
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tighter text-[#800000] truncate uppercase">MANAJEMEN GRUP</h1>
             <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-widest font-bold">Hi Mufradat • Batch 50 Thalibah</p>
