@@ -95,8 +95,8 @@ export default function MufradatSurahDetailPage() {
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || []);
-  }, [userData, registrations]);
+    return getMufradatStatus(userData, registrations || [], id);
+  }, [userData, registrations, id]);
 
   const isProgressLoading = isUserProgressLoading;
 
@@ -564,8 +564,8 @@ export default function MufradatSurahDetailPage() {
           </Link>
         </div>
       )}
-      {/* Access Blocked Overlay */}
-      {access.isBlocked && (
+      {/* Access Blocked Overlay - Only show if not Surah 1 (since it has free verses) or if user is logged in but blocked */}
+      {((parseInt(id) !== 1) || (user && access.isBlocked)) && access.isBlocked && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
           <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
              <div className="bg-rose-600 py-10 flex flex-col items-center gap-3 text-white">

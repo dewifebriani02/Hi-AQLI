@@ -13,6 +13,8 @@ export interface MufradatAccessSummary {
   showSoftReminder: boolean;
   message: string;
   nextBillingMonth?: string;
+  redirectTo?: string;
+  buttonText?: string;
 }
 
 /**
@@ -23,9 +25,41 @@ export interface MufradatAccessSummary {
  * 2. Grace period until the 10th of THAT month.
  * 3. Blocking starts after the 11th if unpaid.
  * 4. Leave (Cuti) exempts from billing but blocks verse access.
+ * 5. Surah 1 (Al-Fatihah) Verses 1-5 are always FREE for everyone.
  */
-export function getMufradatStatus(user: any, registrations: any[] = []): MufradatAccessSummary {
+export function getMufradatStatus(
+  user: any, 
+  registrations: any[] = [], 
+  surahId?: string | number, 
+  verseId?: string | number
+): MufradatAccessSummary {
+  // 0. FREE ACCESS OVERRIDE: Al-Fatihah (1) Verses 1-5
+  const sNum = surahId ? parseInt(surahId.toString()) : null;
+  const vNum = verseId ? parseInt(verseId.toString()) : null;
+  
+  if (sNum === 1 && vNum !== null && vNum >= 1 && vNum <= 5) {
+    return {
+      status: 'active',
+      isBlocked: false,
+      showSoftReminder: false,
+      message: "Selamat Datang! Ukhti sedang menikmati akses gratis Al-Fatihah 1-5."
+    };
+  }
+
+  // 1. GUEST ACCESS: Not logged in or no baseline profile
   if (!user || user.mufradat_status === 'inactive' || !user.mufradat_group_id) {
+    // If not logged in at all, redirect to registration
+    if (!user) {
+      return {
+        status: 'inactive',
+        isBlocked: true,
+        showSoftReminder: false,
+        message: "Program ini membutuhkan pendaftaran untuk mengakses seluruh ayat. Mari bergabung menjadi peserta Hi Mufradat!",
+        redirectTo: '/login?mode=register',
+        buttonText: 'DAFTAR SEKARANG'
+      };
+    }
+
     return {
       status: 'inactive',
       isBlocked: true,

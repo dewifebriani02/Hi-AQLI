@@ -369,12 +369,12 @@ function MufradatPageContent() {
                           {/* User Profile Info */}
                           <Avatar className="h-12 w-12 border-2 border-white shadow-sm ring-2 ring-slate-50 group-hover:ring-[#800000]/10 transition-all">
                             <AvatarImage src={u.avatar_url} />
-                            <AvatarFallback className="bg-slate-100 text-slate-400 font-bold">{u.full_name?.[0] || 'U'}</AvatarFallback>
+                            <AvatarFallback className="bg-slate-100 text-slate-400 font-bold">{u.username?.[0] || u.full_name?.[0] || 'U'}</AvatarFallback>
                           </Avatar>
                           
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-slate-800 leading-tight group-hover:text-[#800000] transition-colors">{u.full_name || 'Ukhti'}</span>
+                              <span className="font-bold text-slate-800 leading-tight group-hover:text-[#800000] transition-colors">{u.username || u.full_name || 'Ukhti'}</span>
                               {user?.id === u.id && (
                                 <span className="text-[9px] bg-[#800000]/10 text-[#800000] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Saya</span>
                               )}
@@ -410,28 +410,31 @@ function MufradatPageContent() {
                           </div>
                           
                           {user?.id !== u.id && (
-                            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                              <button 
-                                onClick={() => sendReaction(u.id, 'mabruk')}
-                                className="w-8 h-8 rounded-full bg-slate-50 hover:bg-amber-100 border border-slate-200 hover:border-amber-200 flex items-center justify-center transition-all text-amber-600 hover:scale-110 active:scale-95"
-                                title="Kirim Mabruk!"
-                              >
-                                <PartyPopper className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={() => sendReaction(u.id, 'semangat')}
-                                className="w-8 h-8 rounded-full bg-slate-50 hover:bg-emerald-100 border border-slate-200 hover:border-emerald-200 flex items-center justify-center transition-all text-emerald-600 hover:scale-110 active:scale-95"
-                                title="Kirim Semangat!"
-                              >
-                                <ThumbsUp className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={() => sendReaction(u.id, 'hebat')}
-                                className="w-8 h-8 rounded-full bg-slate-50 hover:bg-rose-100 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-all text-rose-600 hover:scale-110 active:scale-95"
-                                title="Kirim Hebat!"
-                              >
-                                <Heart className="w-4 h-4" />
-                              </button>
+                            <div className="flex flex-col items-end gap-1.5 mt-1">
+                              <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-0.5 opacity-50 group-hover:opacity-100 transition-opacity">Beri Selamat</span>
+                              <div className="flex items-center gap-1.5 transition-all">
+                                <button 
+                                  onClick={() => sendReaction(u.id, 'mabruk')}
+                                  className="w-8 h-8 rounded-full bg-slate-50 hover:bg-amber-100 border border-slate-200 hover:border-amber-200 flex items-center justify-center transition-all text-amber-600 hover:scale-110 active:scale-95 shadow-sm"
+                                  title="Kirim Mabruk!"
+                                >
+                                  <PartyPopper className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => sendReaction(u.id, 'semangat')}
+                                  className="w-8 h-8 rounded-full bg-slate-50 hover:bg-emerald-100 border border-slate-200 hover:border-emerald-200 flex items-center justify-center transition-all text-emerald-600 hover:scale-110 active:scale-95 shadow-sm"
+                                  title="Kirim Semangat!"
+                                >
+                                  <ThumbsUp className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => sendReaction(u.id, 'hebat')}
+                                  className="w-8 h-8 rounded-full bg-slate-50 hover:bg-rose-100 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-all text-rose-600 hover:scale-110 active:scale-95 shadow-sm"
+                                  title="Kirim Hebat!"
+                                >
+                                  <Heart className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -451,8 +454,8 @@ function MufradatPageContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Access Blocked Overlay */}
-      {access.isBlocked && (
+      {/* Access Blocked Overlay - Only show if user is registered but blocked, not for guests on the main index */}
+      {user && access.isBlocked && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
           <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
              <div className="bg-rose-600 py-10 flex flex-col items-center gap-3 text-white">

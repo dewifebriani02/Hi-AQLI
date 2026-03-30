@@ -72,8 +72,8 @@ function VerseDetailContent() {
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || []);
-  }, [userData, registrations]);
+    return getMufradatStatus(userData, registrations || [], id, verseId);
+  }, [userData, registrations, id, verseId]);
 
   const completedVerseNumbers = useMemo(() => {
     const passed = new Set<number>();
