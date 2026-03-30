@@ -30,9 +30,22 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const [mounted, setMounted] = useState(false);
+  const [showInitialSplash, setShowInitialSplash] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    
+    // Check if splash has been shown in this session
+    const hasShownSplash = sessionStorage.getItem('hi_aqli_splash_shown');
+    if (!hasShownSplash) {
+      setShowInitialSplash(true);
+      // We will set showInitialSplash to false after a timeout
+      const timer = setTimeout(() => {
+        setShowInitialSplash(false);
+      }, 2500);
+      sessionStorage.setItem('hi_aqli_splash_shown', 'true');
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const { data: isAdminDoc } = useDoc("roles_admin", user?.id);
@@ -108,6 +121,15 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {showInitialSplash && (
+        <div className="fixed inset-0 z-[9999] bg-[#800000] flex items-center justify-center animate-out fade-out duration-1000 fill-mode-forwards ease-in-out pointer-events-none">
+          <img 
+            src="/splash-bg.png" 
+            alt="Hi AQLI Splash" 
+            className="w-full h-full object-cover sm:object-contain animate-in fade-in zoom-in duration-700"
+          />
+        </div>
+      )}
       <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
         {/* Sidebar hanya muncul untuk admin di md ke atas */}
