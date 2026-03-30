@@ -3,8 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart } from "lucide-react";
 import Link from "next/link";
+import { getMufradatStatus } from "@/lib/mufradat-access";
 import {
   Tooltip,
   TooltipContent,
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useCollection, useDoc } from "@/supabase/db";
 import { SURAH_START_PAGES } from "@/lib/quran-mapping";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -86,6 +87,16 @@ export default function MufradatSurahDetailPage() {
   const { data: userProgress, isLoading: isUserProgressLoading } = useCollection("quiz_attempts", user ? {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   } : undefined);
+
+  const { data: registrations } = useCollection("halaqah_registrations", {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
+  });
+
+  const { data: userData } = useDoc(user?.id ? "users" : null, user?.id);
+
+  const access = useMemo(() => {
+    return getMufradatStatus(userData, registrations || []);
+  }, [userData, registrations]);
 
   const isProgressLoading = isUserProgressLoading;
 
@@ -328,6 +339,26 @@ export default function MufradatSurahDetailPage() {
             </div>
           </div>
         </div>
+
+      {/* Soft Reminder Banner */}
+      {access.showSoftReminder && (
+        <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+              <Heart className="w-5 h-5 fill-amber-500" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
+              <p className="text-[11px] font-medium text-amber-900 leading-tight">
+                {access.message}
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-9 px-4 rounded-xl shrink-0">
+            <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
+          </Button>
+        </div>
+      )}
         <div className="sm:hidden flex justify-center">
           <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border w-full justify-between px-4">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ukuran Teks</span>
@@ -524,6 +555,38 @@ export default function MufradatSurahDetailPage() {
               </CardContent>
             </Card>
           </Link>
+        </div>
+      )}
+      {/* Access Blocked Overlay */}
+      {access.isBlocked && (
+        <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
+          <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+             <div className="bg-rose-600 py-10 flex flex-col items-center gap-3 text-white">
+                <ShieldAlert className="h-16 w-16" />
+                <h2 className="text-2xl font-black font-headline uppercase tracking-widest">Akses Tertutup</h2>
+             </div>
+             <CardContent className="pt-8 pb-10 space-y-6 text-center">
+                <div className="space-y-3">
+                   <p className="text-sm font-bold text-slate-800 leading-relaxed px-4">
+                      {access.message}
+                   </p>
+                   <p className="text-[11px] text-muted-foreground italic px-6">
+                      Hi AQLI membutuhkan dana untuk biaya operasional agar terus dapat menemani perjuangan Ukhti dalam mendalami kalam-Nya.
+                   </p>
+                </div>
+                <div className="flex flex-col gap-3 px-4">
+                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black h-14 rounded-2xl text-lg shadow-lg">
+                      <Link href="/mufradat/billing">
+                         <CreditCard className="mr-2 w-6 h-6" /> 
+                         {access.status === 'on_leave' ? 'CEK STATUS CUTI' : 'KONFIRMASI PEMBAYARAN'}
+                      </Link>
+                   </Button>
+                   <Button asChild variant="ghost" className="text-muted-foreground font-bold">
+                      <Link href="/">Kembali ke Dasbor</Link>
+                   </Button>
+                </div>
+             </CardContent>
+          </Card>
         </div>
       )}
     </div>

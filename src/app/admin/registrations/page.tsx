@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useState, useMemo } from "react";
+import { addMonths, parseISO, format, startOfMonth, addDays } from "date-fns";
 
 export default function AdminRegistrationsPage() {
   const { user } = useUser();
@@ -102,6 +103,45 @@ export default function AdminRegistrationsPage() {
       const { error: userError } = await supabase.from("users").update(updateData).eq('id', reg.user_id);
       if (userError) throw userError;
 
+      // --- HI MUFRADAT SUBSCRIPTION LOGIC ---
+      if (reg.halaqah_id === 'mufradat-premium' || reg.halaqah_title?.toLowerCase().includes('mufradat')) {
+        const type = reg.payment_type || 'initial';
+        const billingMonth = reg.billing_month || format(new Date(), 'yyyy-MM');
+        
+        let subUpdate: any = {
+           mufradat_status: 'active',
+           updated_at: new Date().toISOString()
+        };
+
+        if (type === 'monthly') {
+          // Set due date to the 10th of the month AFTER the billing month
+          const monthDate = parseISO(`${billingMonth}-01`);
+          const nextDueDate = addDays(addMonths(monthDate, 1), 9); // 10th of next month
+          subUpdate.mufradat_due_date = nextDueDate.toISOString();
+          subUpdate.mufradat_status = 'active';
+        } 
+        else if (type === 'leave_request') {
+          // Set to on_leave until end of billing month
+          const monthDate = parseISO(`${billingMonth}-01`);
+          const leaveUntil = addDays(addMonths(monthDate, 1), -1); // End of billing month
+          subUpdate.mufradat_status = 'on_leave';
+          subUpdate.mufradat_leave_until = leaveUntil.toISOString();
+          
+          // Decrement leave balance (assuming single month per request)
+          const { data: currentUsr } = await supabase.from('users').select('mufradat_leave_balance').eq('id', reg.user_id).single();
+          subUpdate.mufradat_leave_balance = Math.max(0, (currentUsr?.mufradat_leave_balance || 3) - 1);
+        }
+        else if (type === 'initial' || type === 're_registration') {
+           // Set initial due date to the 10th of the month following the current month
+           const nextD = addDays(addMonths(startOfMonth(new Date()), 1), 9);
+           subUpdate.mufradat_due_date = nextD.toISOString();
+           subUpdate.mufradat_status = 'active';
+        }
+
+        await supabase.from("users").update(subUpdate).eq('id', reg.user_id);
+      }
+      // --- END HI MUFRADAT ---
+
       toast({
         title: "Akses Diaktifkan",
         description: `Masyallah, akses ${reg.halaqah_title} untuk ${reg.user_name} telah aktif mulai hari ini.`,
@@ -178,6 +218,19 @@ export default function AdminRegistrationsPage() {
                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">
                     {reg.created_at ? new Date(reg.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
                   </span>
+                  {reg.payment_type && (
+                    <Badge variant="outline" className={cn(
+                      "text-[9px] font-black border-none px-2 py-0.5 uppercase",
+                      reg.payment_type === 'leave_request' ? "bg-indigo-100 text-indigo-700" : "bg-emerald-100 text-emerald-700"
+                    )}>
+                      {reg.payment_type === 'leave_request' ? 'PENGAJUAN CUTI' : `INFAQ: ${reg.payment_type}`}
+                    </Badge>
+                  )}
+                  {reg.billing_month && (
+                    <Badge className="bg-slate-800 text-white text-[9px] font-black border-none px-2 py-0.5">
+                      PERIODE: {reg.billing_month}
+                    </Badge>
+                  )}
                 </div>
                 <Badge className={cn("text-white border-none font-black text-[9px] px-3 py-0.5 tracking-widest", reg.is_paid ? "bg-amber-500 shadow-sm shadow-amber-500/20" : "bg-blue-500 shadow-sm shadow-blue-500/20")}>
                   {reg.is_paid ? 'BERBAYAR' : 'GRATIS'}

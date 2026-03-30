@@ -6,9 +6,17 @@ import { BookOpen, Layers, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/juz-list";
 import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useDoc, useCollection } from "@/supabase/db";
 import { useMemo, useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { 
   Dialog, 
   DialogContent, 
@@ -16,8 +24,9 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
-import { Headphones, Check, Music } from "lucide-react";
+import { Headphones, Check, Music, ShieldAlert, CreditCard, Coffee, ArrowRight, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getMufradatStatus } from "@/lib/mufradat-access";
 
 const RECITERS = [
   { id: 7, name: "Mishary Rashid Alafasy", style: "Murattal" },
@@ -42,6 +51,16 @@ function MufradatPageContent() {
     "quiz_attempts", 
     user ? progressOptions : undefined
   );
+
+  const { data: registrations } = useCollection("halaqah_registrations", {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
+  });
+
+  const { data: userData } = useDoc(user?.id ? "users" : null, user?.id);
+
+  const access = useMemo(() => {
+    return getMufradatStatus(userData, registrations || []);
+  }, [userData, registrations]);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -153,6 +172,26 @@ function MufradatPageContent() {
         </Dialog>
       </div>
 
+      {/* Soft Reminder Banner */}
+      {access.showSoftReminder && (
+        <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+              <Heart className="w-5 h-5 fill-amber-500" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
+              <p className="text-[11px] font-medium text-amber-900 leading-tight">
+                {access.message}
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-9 px-4 rounded-xl shrink-0">
+            <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
+          </Button>
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="surah" className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
@@ -180,6 +219,39 @@ function MufradatPageContent() {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Access Blocked Overlay */}
+      {access.isBlocked && (
+        <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
+          <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+             <div className="bg-rose-600 py-10 flex flex-col items-center gap-3 text-white">
+                <ShieldAlert className="h-16 w-16" />
+                <h2 className="text-2xl font-black font-headline uppercase tracking-widest">Akses Tertutup</h2>
+             </div>
+             <CardContent className="pt-8 pb-10 space-y-6 text-center">
+                <div className="space-y-3">
+                   <p className="text-sm font-bold text-slate-800 leading-relaxed px-4">
+                      {access.message}
+                   </p>
+                   <p className="text-[11px] text-muted-foreground italic px-6">
+                      Hi AQLI membutuhkan dana untuk biaya operasional agar terus dapat menemani perjuangan Ukhti dalam mendalami kalam-Nya.
+                   </p>
+                </div>
+                <div className="flex flex-col gap-3 px-4">
+                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black h-14 rounded-2xl text-lg shadow-lg">
+                      <Link href="/mufradat/billing">
+                         <CreditCard className="mr-2 w-6 h-6" /> 
+                         {access.status === 'on_leave' ? 'CEK STATUS CUTI' : 'KONFIRMASI PEMBAYARAN'}
+                      </Link>
+                   </Button>
+                   <Button asChild variant="ghost" className="text-muted-foreground font-bold">
+                      <Link href="/">Kembali ke Dasbor</Link>
+                   </Button>
+                </div>
+             </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
