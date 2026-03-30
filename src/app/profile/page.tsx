@@ -73,7 +73,8 @@ export default function ProfilePage() {
   }), []);
 
   const { data: allUsers } = useCollection("users", rankOptions);
-  const rank = allUsers?.findIndex(u => u.id === user?.id) + 1 || '-';
+  const userIndex = allUsers?.findIndex(u => u.id === user?.id);
+  const rank = userIndex !== -1 && userIndex !== undefined ? userIndex + 1 : '-';
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -141,7 +142,7 @@ export default function ProfilePage() {
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground font-medium">
-                <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-[#800000]" /> {user.email}</span>
+                <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-[#800000]" /> {user.email || '-'}</span>
                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-[#800000]" /> Sejak {user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : '-'}</span>
               </div>
             </div>
@@ -225,7 +226,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-2 gap-4">
                 <Card className="border-none bg-[#800000]/5 text-center p-6">
                   <Trophy className="w-8 h-8 text-[#D4AF37] mx-auto mb-2" />
-                  <div className="text-2xl font-bold font-headline">{points.toLocaleString()}</div>
+                  <div className="text-2xl font-bold font-headline">{(points || 0).toLocaleString('id-ID')}</div>
                   <p className="text-[10px] font-bold text-[#800000] uppercase tracking-widest">Total Poin</p>
                 </Card>
                 <Card className="border-none bg-emerald-50 text-center p-6">
