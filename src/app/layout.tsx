@@ -39,10 +39,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     const hasShownSplash = sessionStorage.getItem('hi_aqli_splash_shown');
     if (!hasShownSplash) {
       setShowInitialSplash(true);
-      // Increased delay to 3 seconds for better tagline readability
+      // Increased delay to 10 seconds as requested by the user
       const timer = setTimeout(() => {
         setShowInitialSplash(false);
-      }, 3000);
+      }, 10000);
       sessionStorage.setItem('hi_aqli_splash_shown', 'true');
       return () => clearTimeout(timer);
     }
@@ -88,25 +88,31 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   // Render a consistent splash screen for loading and initial view
   const SplashView = () => (
-    <div className="fixed inset-0 z-[9999] bg-[#800000] flex flex-col items-center justify-center p-6 text-center">
+    <div className="fixed inset-0 z-[9999] bg-[#800000] flex flex-col items-center justify-center p-8 text-center overscroll-none touch-none">
        {/* Background Ornaments from splash-bg.png */}
        <img 
           src="/splash-bg.png" 
           alt="" 
-          className="absolute inset-0 w-full h-full object-cover opacity-80" 
+          className="absolute inset-0 w-full h-full object-cover opacity-90 transition-opacity duration-1000" 
        />
-       {/* Dark Overlay to make logo/text pop */}
-       <div className="absolute inset-0 bg-black/20" />
+       {/* Subtle Overlay to make logo/text pop */}
+       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30" />
        
-       <div className="relative z-10 flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-700">
-          <img 
-            src="/app-logo-gold.png" 
-            alt="Logo" 
-            className="w-40 h-40 object-contain drop-shadow-2xl"
-          />
-          <div className="space-y-2">
-            <h1 className="text-3xl font-black text-[#D4AF37] font-headline tracking-tighter drop-shadow-md">Hi AQLI</h1>
-            <p className="text-white/90 text-sm font-bold italic tracking-wide drop-shadow-sm uppercase">"Berhijrah dengan Ilmu, Beramal dengan Itqan"</p>
+       <div className="relative z-10 flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-1000">
+          <div className="relative">
+            <div className="absolute inset-0 blur-2xl bg-amber-500/20 rounded-full animate-pulse" />
+            <img 
+              src="/app-logo-gold.png" 
+              alt="Logo" 
+              className="w-48 h-48 sm:w-64 sm:h-64 object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-20"
+            />
+          </div>
+          <div className="space-y-4 max-w-xs sm:max-w-md">
+            <h1 className="text-4xl sm:text-5xl font-black text-[#D4AF37] font-headline tracking-tighter drop-shadow-xl">Hi AQLI</h1>
+            <div className="h-px w-16 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto opacity-50" />
+            <p className="text-white text-base sm:text-lg font-bold italic tracking-wider drop-shadow-lg uppercase leading-tight px-4">
+              "Berhijrah dengan Ilmu, Beramal dengan Itqan"
+            </p>
           </div>
        </div>
     </div>
@@ -221,6 +227,15 @@ export default function RootLayout({
       <head>
         <title>Hi AQLI</title>
         <meta name="description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
+        
+        {/* Preload splash assets as early as possible */}
+        <link rel="preload" href="/splash-bg.png" as="image" />
+        <link rel="preload" href="/app-logo-gold.png" as="image" />
+
+        {/* PWA & iOS Optimization */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="apple-touch-startup-image" href="/splash-bg.png" />
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
