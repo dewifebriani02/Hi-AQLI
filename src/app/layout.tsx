@@ -39,10 +39,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     const hasShownSplash = sessionStorage.getItem('hi_aqli_splash_shown');
     if (!hasShownSplash) {
       setShowInitialSplash(true);
-      // We will set showInitialSplash to false after a timeout
+      // Increased delay to 3 seconds for better tagline readability
       const timer = setTimeout(() => {
         setShowInitialSplash(false);
-      }, 2500);
+      }, 3000);
       sessionStorage.setItem('hi_aqli_splash_shown', 'true');
       return () => clearTimeout(timer);
     }
@@ -86,18 +86,36 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const points = userData?.points || 0;
   const isBlacklisted = !!userData?.is_blacklisted;
 
+  // Render a consistent splash screen for loading and initial view
+  const SplashView = () => (
+    <div className="fixed inset-0 z-[9999] bg-[#800000] flex flex-col items-center justify-center p-6 text-center">
+       {/* Background Ornaments from splash-bg.png */}
+       <img 
+          src="/splash-bg.png" 
+          alt="" 
+          className="absolute inset-0 w-full h-full object-cover opacity-80" 
+       />
+       {/* Dark Overlay to make logo/text pop */}
+       <div className="absolute inset-0 bg-black/20" />
+       
+       <div className="relative z-10 flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-700">
+          <img 
+            src="/app-logo-gold.png" 
+            alt="Logo" 
+            className="w-40 h-40 object-contain drop-shadow-2xl"
+          />
+          <div className="space-y-2">
+            <h1 className="text-3xl font-black text-[#D4AF37] font-headline tracking-tighter drop-shadow-md">Hi AQLI</h1>
+            <p className="text-white/90 text-sm font-bold italic tracking-wide drop-shadow-sm uppercase">"Berhijrah dengan Ilmu, Beramal dengan Itqan"</p>
+          </div>
+       </div>
+    </div>
+  );
+
   // The server and initial client render must match. 
   // We return a splash shell until mounted to avoid white flicker.
   if (!mounted) {
-    return (
-      <div className="min-h-screen bg-[#800000] flex items-center justify-center">
-         <img 
-            src="/splash-bg.png" 
-            alt="Loading..." 
-            className="w-full h-full object-cover sm:object-contain animate-pulse"
-         />
-      </div>
-    );
+    return <SplashView />;
   }
 
   // Blacklist Guard View
