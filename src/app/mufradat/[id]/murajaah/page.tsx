@@ -29,7 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase, useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useCollection, useDoc } from "@/supabase/db";
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import { useMemo } from "react";
 
@@ -82,7 +82,9 @@ export default function MurajaahQuizPage() {
   const [sentCongrats, setSentCongrats] = useState<string[]>([]);
   const [optimisticAttempt, setOptimisticAttempt] = useState<any>(null);
 
-  // Murajaah quiz uses separate quizId format
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+
+  // Murajaah quiz uses separate quizId format - Filtered by Group (RLS)
   const { data: allAttempts, isLoading: isLeaderboardLoading } = useCollection("quiz_attempts", {
     filters: [
       { column: 'quiz_id', operator: '==', value: `murajaah_${id}` }
@@ -221,6 +223,7 @@ export default function MurajaahQuizPage() {
     setOptimisticAttempt({
       id: optimisticId,
       user_id: user.id,
+      group_id: userData?.mufradat_group_id,
       quiz_id: `murajaah_${id}`,
       surah_id: id,
       verse_id: "0", // 0 indicates murajaah (full surah)
@@ -234,6 +237,7 @@ export default function MurajaahQuizPage() {
     try {
       addDocumentNonBlocking("quiz_attempts", {
         user_id: user.id,
+        group_id: userData?.mufradat_group_id,
         quiz_id: `murajaah_${id}`,
         surah_id: id,
         verse_id: "0",
@@ -391,11 +395,11 @@ export default function MurajaahQuizPage() {
     });
   };
 
-  if (isUserLoading || loading) {
+  if (isUserLoading || loading || isUserDataLoading || isLeaderboardLoading) {
     return (
-      <div className="flex flex-col gap-6 max-w-3xl mx-auto py-32 items-center">
+      <div className="flex flex-col gap-6 max-w-3xl mx-auto py-32 items-center text-center">
         <Loader2 className="w-10 h-10 animate-spin text-[#D4AF37]" />
-        <p className="text-muted-foreground font-medium">Menyiapkan Kuis Murajaah...</p>
+        <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Menyiapkan Kuis Murajaah & Papan Juara...</p>
       </div>
     );
   }

@@ -51,61 +51,111 @@ export function getMufradatStatus(user: any, registrations: any[] = []): Mufrada
 
   const today = new Date();
   const dayOfMonth = getDate(today);
-  
-  // Identify currently relevant billing months
-  // If today is 28th-31st, we are issuing for NEXT month.
-  // If today is 1st-10th, we are in grace for CURRENT month.
-  
   const currentMonthStr = format(today, 'yyyy-MM');
   const nextMonthStr = format(subMonths(today, -1), 'yyyy-MM');
+
+  // Logic: 
+  // 1. Initial registration (no payment_type) counts for the month it was created.
+  // 2. Regular monthly payments must match the billing_month.
+  // 3. Status must be 'verified' to be considered 'paid'.
   
-  // Check if user has a verified payment for the relevant month
   const hasPaidCurrent = registrations.some(r => 
-    r.status === 'active' && 
-    r.payment_type === 'monthly' && 
-    r.billing_month === currentMonthStr
+    r.status === 'verified' && 
+    (r.halaqah_id === 'mufradat-premium' || r.halaqah_id === user.mufradat_group_id || r.halaqah_title?.toLowerCase().includes('mufradat')) &&
+    (
+      (r.payment_type === 'monthly' && r.billing_month === currentMonthStr) ||
+      (!r.payment_type && r.created_at && format(parseISO(r.created_at), 'yyyy-MM') === currentMonthStr) ||
+      (!r.payment_type && !r.created_at) // Fallback for legacy
+    )
   );
   
   const hasPaidNext = registrations.some(r => 
-    r.status === 'active' && 
+    r.status === 'verified' && 
     r.payment_type === 'monthly' && 
     r.billing_month === nextMonthStr
   );
 
-  // LOGIC: After 10th of current month
-  if (dayOfMonth > 10) {
-    // If not paid for current month, user is BLOCKED
-    if (!hasPaidCurrent) {
-      return {
-        status: 'blocked',
-        isBlocked: true,
-        showSoftReminder: false,
-        message: "Akses Terhenti. Infaq Hi Mufradat Ukhti belum terverifikasi untuk bulan ini. Hi AQLI membutuhkan dana untuk biaya operasional."
-      };
-    }
-    
-    // If paid for current month but it's >= 28th, show reminder for NEXT month
-    if (dayOfMonth >= 28 && !hasPaidNext) {
+  // Check for PENDING verification (to show specialized message)
+  const hasPendingNext = registrations.some(r => 
+    r.status === 'pending_verification' && 
+    r.payment_type === 'monthly' && 
+    r.billing_month === nextMonthStr
+  );
+
+  const hasPendingCurrent = registrations.some(r => 
+    r.status === 'pending_verification' && 
+    (
+      (r.payment_type === 'monthly' && r.billing_month === currentMonthStr) ||
+      (!r.payment_type)
+    )
+  );
+
+  // SAFE ZONE: 28th to 10th
+  // ACCESS IS NEVER BLOCKED HERE.
+  const isSafeZone = dayOfMonth >= 28 || dayOfMonth <= 10;
+
+  if (isSafeZone) {
+    // If 28th-31st: Reminding for NEXT month
+    if (dayOfMonth >= 28) {
+      if (hasPaidNext) {
+        return {
+          status: 'active',
+          isBlocked: false,
+          showSoftReminder: false,
+          message: "Akses Aktif. Jazakillah Khair atas infaqnya, Ukhti!"
+        };
+      }
+      
+      const msg = hasPendingNext 
+        ? "Bukti Infaq periode depan sedang diverifikasi Musyrifah. Mohon ditunggu ya, Ukhti."
+        : "Masa Infaq (28 s/d 10): Silakan konfirmasi infaq Hi Mufradat Ukhti untuk periode berikutnya. Syukran.";
+
       return {
         status: 'grace_period',
-        isBlocked: false,
+        isBlocked: false, // NO POPUP DURING SAFE ZONE
         showSoftReminder: true,
         nextBillingMonth: nextMonthStr,
-        message: "Pengingat Lembut: Tagihan periode berikutnya sudah tersedia. Hi AQLI membutuhkan dukungan operasional tepat waktu. Syukran."
+        message: msg
+      };
+    } 
+    // If 1st-10th: Reminding for CURRENT month
+    else {
+      if (hasPaidCurrent) {
+        return {
+          status: 'active',
+          isBlocked: false,
+          showSoftReminder: false,
+          message: "Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!"
+        };
+      }
+
+      const msg = hasPendingCurrent
+        ? "Bukti Infaq bulan ini sedang diverifikasi Musyrifah. Mohon ditunggu ya, Ukhti."
+        : "Masa Tenggang: Mohon konfirmasi infaq Hi Mufradat Ukhti untuk bulan ini sebelum tanggal 10 agar akses tidak terputus.";
+
+      return {
+        status: 'grace_period',
+        isBlocked: false, // NO POPUP DURING SAFE ZONE
+        showSoftReminder: true,
+        nextBillingMonth: currentMonthStr,
+        message: msg
       };
     }
   } 
-  // LOGIC: 1st to 10th (Grace Period for current month)
-  else {
-    if (!hasPaidCurrent) {
-      return {
-        status: 'grace_period',
-        isBlocked: false,
-        showSoftReminder: true,
-        nextBillingMonth: currentMonthStr,
-        message: "Masa Tenggang: Mohon konfirmasi infaq Hi Mufradat Ukhti untuk bulan ini sebelum tanggal 10 agar akses tidak terputus."
-      };
-    }
+
+  // OUTSIDE SAFE ZONE: 11th to 27th
+  // BLOCKING IS ACTIVE IF UNPAID.
+  if (!hasPaidCurrent) {
+    const msg = hasPendingCurrent
+      ? "Bukti Infaq Ukhti sedang menunggu verifikasi Musyrifah. Akses akan terbuka otomatis setelah diverifikasi."
+      : "Akses Terhenti. Infaq Hi Mufradat Ukhti belum terverifikasi untuk bulan ini. Hi AQLI membutuhkan dana untuk biaya operasional.";
+
+    return {
+      status: 'blocked',
+      isBlocked: !hasPendingCurrent, // Only block if NO pending verification
+      showSoftReminder: hasPendingCurrent,
+      message: msg
+    };
   }
 
   return {

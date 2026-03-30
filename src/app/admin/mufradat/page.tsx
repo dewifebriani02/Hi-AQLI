@@ -74,9 +74,14 @@ function MufradatMonitoringContent() {
   }, [selectedGroupId]);
 
   const { data: users, isLoading: isUsersLoading, error: usersError } = useCollection("users", userOptions);
-  const { data: attempts, isLoading: isAttemptsLoading, error: attemptsError } = useCollection("quiz_attempts", {
-    filters: [{ column: 'is_passed', operator: '==', value: true }]
-  });
+  
+  const attemptOptions = useMemo(() => {
+    const baseFilters = [{ column: 'is_passed', operator: '==', value: true }];
+    if (selectedGroupId === "all") return { filters: baseFilters };
+    return { filters: [...baseFilters, { column: 'group_id', operator: '==', value: selectedGroupId }] };
+  }, [selectedGroupId]);
+
+  const { data: attempts, isLoading: isAttemptsLoading, error: attemptsError } = useCollection("quiz_attempts", attemptOptions);
 
   // Process data to get per-user stats
   const userStats = useMemo(() => {

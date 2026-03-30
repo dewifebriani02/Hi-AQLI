@@ -71,7 +71,7 @@ export default function StudyCirclesPage() {
 
   // Check all user registrations to manage UI states
   const regOptions = useMemo(() => ({
-    filters: [{ column: 'userId', operator: '==', value: user?.id }]
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   }), [user?.id]);
 
   const { data: allRegs } = useCollection("halaqah_registrations", regOptions);
@@ -82,11 +82,11 @@ export default function StudyCirclesPage() {
   );
 
   const getHalaqahStatus = (id: string) => {
-    const reg = allRegs?.find(r => r.halaqahId === id);
+    const reg = allRegs?.find(r => r.halaqah_id === id);
     if (!reg) {
       // Special check for migrated/legacy tikrar data in user profile
-      if (id === 'tikrar-j30-b1' && userData?.isTikrarPaid) return 'active';
-      if (userData?.followedHalaqahs?.includes(id)) return 'active';
+      if (id === 'tikrar-j30-b1' && userData?.is_tikrar_paid) return 'active';
+      if (userData?.followed_halaqahs?.includes(id)) return 'active';
       return 'none';
     }
     return reg.status; // 'active', 'pending_verification', 'rejected'

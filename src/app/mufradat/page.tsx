@@ -15,7 +15,8 @@ import {
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle 
+  CardTitle,
+  CardFooter
 } from "@/components/ui/card";
 import { 
   Dialog, 
@@ -24,8 +25,29 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
-import { Headphones, Check, Music, ShieldAlert, CreditCard, Coffee, ArrowRight, Heart } from "lucide-react";
+import { 
+  Headphones, 
+  Check, 
+  Music, 
+  ShieldAlert, 
+  CreditCard, 
+  Coffee, 
+  ArrowRight, 
+  Heart, 
+  Trophy, 
+  Zap, 
+  Award, 
+  Star,
+  Users,
+  Search,
+  CheckCircle2,
+  ArrowLeft,
+  Loader2,
+  PartyPopper,
+  ThumbsUp
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 
 const RECITERS = [
@@ -52,11 +74,72 @@ function MufradatPageContent() {
     user ? progressOptions : undefined
   );
 
-  const { data: registrations } = useCollection("halaqah_registrations", {
+  const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations", {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 
-  const { data: userData } = useDoc(user?.id ? "users" : null, user?.id);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+
+  // GROUP LEADERBOARD DATA
+  const { data: allGroupUsers, isLoading: isGroupUsersLoading } = useCollection(userData?.mufradat_group_id ? "users" : null, {
+    filters: [{ column: 'mufradat_group_id', operator: '==', value: userData?.mufradat_group_id }]
+  });
+
+  const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(userData?.mufradat_group_id ? "quiz_attempts" : null, {
+    filters: [
+      { column: 'group_id', operator: '==', value: userData?.mufradat_group_id },
+      { column: 'is_passed', operator: '==', value: true }
+    ]
+  });
+
+  const { data: allReactions, refresh: refreshReactions } = useCollection("mufradat_reactions");
+
+  const groupRankings = useMemo(() => {
+    if (!allGroupUsers) return [];
+    
+    return allGroupUsers.map(u => {
+      const userAttempts = (allGroupAttempts || []).filter(a => a.user_id === u.id);
+      
+      // UNIQUE VERSES (Hafalan)
+      const uniqueVerses = new Set(userAttempts.map(a => `${a.surah_id}:${a.verse_id}`)).size;
+      
+      // TOTAL PASSED (Aktivitas/Repetisi)
+      const totalPassed = userAttempts.length;
+      
+      // REACTION SUMMARY
+      const userReactions = (allReactions || []).filter(r => r.to_user_id === u.id);
+      const reactionSummary = {
+        mabruk: userReactions.filter(r => r.reaction_type === 'mabruk').length,
+        semangat: userReactions.filter(r => r.reaction_type === 'semangat').length,
+        hebat: userReactions.filter(r => r.reaction_type === 'hebat').length,
+        total: userReactions.length
+      };
+      
+      return {
+        ...u,
+        points: u.points || 0,
+        verseCount: uniqueVerses,
+        activityCount: totalPassed,
+        reactionSummary
+      };
+    }).sort((a: any, b: any) => b.verseCount - a.verseCount || b.points - a.points)
+      .slice(0, 20); // Top 20
+  }, [allGroupUsers, allGroupAttempts, allReactions]);
+
+  const sendReaction = async (toUserId: string, type: string) => {
+    if (!user) return;
+    try {
+      await supabase.from('mufradat_reactions').insert({
+        from_user_id: user.id,
+        to_user_id: toUserId,
+        reaction_type: type,
+        group_id: userData?.mufradat_group_id
+      });
+      refreshReactions();
+    } catch (err) {
+      console.error("Error sending reaction:", err);
+    }
+  };
 
   const access = useMemo(() => {
     return getMufradatStatus(userData, registrations || []);
@@ -95,7 +178,7 @@ function MufradatPageContent() {
 
   const selectedReciterName = RECITERS.find(r => r.id === selectedReciterId)?.name || "Pilih Qari";
 
-  if (isUserLoading) {
+  if (isUserLoading || isRegLoading || isUserDataLoading || isProgressLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
@@ -116,60 +199,79 @@ function MufradatPageContent() {
           <p className="text-muted-foreground text-sm max-w-md">Pelajari setiap kata dan maknai setiap ayat dalam Mushaf HI AQLI.</p>
         </div>
 
-        <Dialog open={isReciterDialogOpen} onOpenChange={setIsReciterDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="h-12 px-6 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all shrink-0 bg-white">
-              <div className="w-8 h-8 rounded-full bg-[#800000]/10 flex items-center justify-center text-[#800000] group-hover:bg-[#800000] group-hover:text-white transition-colors">
-                <Headphones className="w-4 h-4" />
+        <div className={cn(
+          "grid gap-2 shrink-0 w-full sm:w-auto",
+          activeTab === 'rank' ? "grid-cols-1" : "grid-cols-2 sm:flex sm:flex-row"
+        )}>
+          <Button asChild variant="outline" className="h-12 px-6 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all bg-white shadow-sm w-full sm:w-auto">
+            <Link href="/mufradat/billing" className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <CreditCard className="w-4 h-4" />
               </div>
               <div className="flex flex-col items-start leading-none gap-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pilihan Qari</span>
-                <span className="text-xs font-bold text-slate-800">{selectedReciterName}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Langganan</span>
+                <span className="text-xs font-bold text-slate-800">STATUS & INFAQ</span>
               </div>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
-            <DialogHeader className="p-6 bg-gradient-to-br from-[#800000] to-[#b91c1c] text-white">
-              <DialogTitle className="text-xl font-black font-headline flex items-center gap-3">
-                <Music className="w-6 h-6 text-[#D4AF37]" />
-                PILIH QARI FAVORIT
-              </DialogTitle>
-              <p className="text-white/70 text-xs font-medium">Suara Tilawah akan menyesuaikan Qari yang Anda pilih.</p>
-            </DialogHeader>
-            <div className="p-4 grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto bg-slate-50">
-              {RECITERS.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => selectReciter(r.id)}
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-2xl transition-all border-2",
-                    selectedReciterId === r.id 
-                      ? "bg-white border-[#800000] shadow-md scale-[1.02]" 
-                      : "bg-white/50 border-transparent hover:border-slate-200 hover:bg-white"
-                  )}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center font-black text-sm",
-                      selectedReciterId === r.id ? "bg-[#800000] text-white" : "bg-slate-100 text-slate-400"
-                    )}>
-                      {r.name[0]}
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className={cn("text-sm font-bold", selectedReciterId === r.id ? "text-[#800000]" : "text-slate-700")}>{r.name}</span>
-                      <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">{r.style}</span>
-                    </div>
+            </Link>
+          </Button>
+
+          {activeTab !== 'rank' && (
+            <Dialog open={isReciterDialogOpen} onOpenChange={setIsReciterDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="h-12 px-6 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all shrink-0 bg-white shadow-sm w-full sm:w-auto">
+                  <div className="w-8 h-8 rounded-full bg-[#800000]/10 flex items-center justify-center text-[#800000] group-hover:bg-[#800000] group-hover:text-white transition-colors">
+                    <Headphones className="w-4 h-4" />
                   </div>
-                  {selectedReciterId === r.id && (
-                    <div className="w-6 h-6 rounded-full bg-[#800000] flex items-center justify-center text-white">
-                      <Check className="w-3.5 h-3.5" />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
+                  <div className="flex flex-col items-start leading-none gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pilihan Qari</span>
+                    <span className="text-xs font-bold text-slate-800 truncate max-w-[80px] sm:max-w-none">{selectedReciterName}</span>
+                  </div>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+                <DialogHeader className="p-6 bg-gradient-to-br from-[#800000] to-[#b91c1c] text-white">
+                  <DialogTitle className="text-xl font-black font-headline flex items-center gap-3">
+                    <Music className="w-6 h-6 text-[#D4AF37]" />
+                    PILIH QARI FAVORIT
+                  </DialogTitle>
+                  <p className="text-white/70 text-xs font-medium">Suara Tilawah akan menyesuaikan Qari yang Anda pilih.</p>
+                </DialogHeader>
+                <div className="p-4 grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto bg-slate-50">
+                  {RECITERS.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => selectReciter(r.id)}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl transition-all border-2",
+                        selectedReciterId === r.id 
+                          ? "bg-white border-[#800000] shadow-md scale-[1.02]" 
+                          : "bg-white/50 border-transparent hover:border-slate-200 hover:bg-white"
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center font-black text-sm",
+                          selectedReciterId === r.id ? "bg-[#800000] text-white" : "bg-slate-100 text-slate-400"
+                        )}>
+                          {r.name[0]}
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className={cn("text-sm font-bold", selectedReciterId === r.id ? "text-[#800000]" : "text-slate-700")}>{r.name}</span>
+                          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">{r.style}</span>
+                        </div>
+                      </div>
+                      {selectedReciterId === r.id && (
+                        <div className="w-6 h-6 rounded-full bg-[#800000] flex items-center justify-center text-white">
+                          <Check className="w-3.5 h-3.5" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       {/* Soft Reminder Banner */}
@@ -193,12 +295,15 @@ function MufradatPageContent() {
       )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
+        <TabsList className="grid w-full grid-cols-3 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="surah" className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
-            <Layers className="w-4 h-4" /> Per Ayat
+            <Layers className="w-4 h-4" /> Ayat
           </TabsTrigger>
           <TabsTrigger value="juz" className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
-            <BookOpen className="w-4 h-4" /> Per Halaman
+            <BookOpen className="w-4 h-4" /> Halaman
+          </TabsTrigger>
+          <TabsTrigger value="rank" className="font-bold gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white rounded-lg transition-all">
+            <Trophy className="w-4 h-4" /> Juara
           </TabsTrigger>
         </TabsList>
         
@@ -217,6 +322,89 @@ function MufradatPageContent() {
             userProgress={progress} 
             selectedReciterId={selectedReciterId} 
           />
+        </TabsContent>
+
+        <TabsContent value="rank" className="focus-visible:outline-none space-y-4">
+          <Card className="border-none shadow-xl overflow-hidden rounded-3xl bg-white">
+            <CardHeader className="bg-gradient-to-br from-[#800000] to-rose-900 text-white p-8">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-6 h-6 text-amber-400 fill-current" />
+                    <CardTitle className="text-2xl font-black font-headline uppercase leading-none">Papan Juara Grup</CardTitle>
+                  </div>
+                  <CardDescription className="text-white/70 font-medium">Berdasarkan Total Poin & Kapasitas Hafalan.</CardDescription>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+               {!userData?.mufradat_group_id ? (
+                 <div className="py-20 text-center flex flex-col items-center gap-4 bg-slate-50/50">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                      <Zap className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">Belum Ada Grup</h3>
+                      <p className="text-sm text-muted-foreground px-12">Ukhti belum bergabung ke dalam grup manapun untuk melihat peringkat.</p>
+                    </div>
+                 </div>
+               ) : (
+                 <div className="divide-y divide-slate-100">
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-2">
+                             {u.reactionSummary.total > 0 && (
+                               <div className="flex items-center -space-x-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 shadow-sm animate-in fade-in zoom-in">
+                                 {u.reactionSummary.mabruk > 0 && <span title="Mabruk!" className="text-[10px]">🌟</span>}
+                                 {u.reactionSummary.semangat > 0 && <span title="Semangat!" className="text-[10px]">💪</span>}
+                                 {u.reactionSummary.hebat > 0 && <span title="Hebat!" className="text-[10px]">🙌</span>}
+                                 <span className="text-[9px] font-black text-amber-700 ml-1.5">{u.reactionSummary.total}</span>
+                               </div>
+                             )}
+                             {idx < 3 && <Star className={cn("w-5 h-5 fill-current transition-transform hover:scale-110", idx === 0 ? "text-amber-400" : idx === 1 ? "text-slate-300" : "text-amber-700/30")} />}
+                          </div>
+                          
+                          {user?.id !== u.id && (
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => sendReaction(u.id, 'mabruk')}
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-amber-100 flex items-center justify-center transition-colors text-amber-600"
+                                title="Kirim Mabruk!"
+                              >
+                                <PartyPopper className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => sendReaction(u.id, 'semangat')}
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-emerald-100 flex items-center justify-center transition-colors text-emerald-600"
+                                title="Kirim Semangat!"
+                              >
+                                <ThumbsUp className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => sendReaction(u.id, 'hebat')}
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-100 flex items-center justify-center transition-colors text-rose-600"
+                                title="Kirim Hebat!"
+                              >
+                                <Heart className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                 </div>
+               )}
+            </CardContent>
+            {userData?.mufradat_group_id && (
+              <CardFooter className="bg-slate-50 p-6 flex flex-col items-center gap-2 border-t border-slate-100 italic">
+                <p className="text-[10px] font-medium text-slate-400 text-center leading-relaxed">
+                  Papan Juara diperbarui secara otomatis ketika thalibah berhasil melewati kuis ayat, halaman, atau murajaah.
+                </p>
+              </CardFooter>
+            )}
+          </Card>
         </TabsContent>
       </Tabs>
 

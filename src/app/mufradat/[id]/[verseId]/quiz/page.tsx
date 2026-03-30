@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/supabase";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useCollection, useDoc } from "@/supabase/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Question {
@@ -58,6 +58,8 @@ function MufradatQuizContent() {
   const [pageId, setPageId] = useState<number | null>(null);
   const [nextVersePage, setNextVersePage] = useState<number | null>(null);
 
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+
   const verseKey = `${id}:${verseId}`;
 
   // Auth Guard: Redirect if not logged in
@@ -67,8 +69,8 @@ function MufradatQuizContent() {
     }
   }, [user, isUserLoading, router]);
 
-  // Fetch leaderboard data
-  const { data: allAttempts, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
+  // Fetch leaderboard data (RLS will automatically filter by group)
+  const { data: allAttempts, isLoading: isLeaderboardLoading, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
     filters: [
       { column: 'quiz_id', operator: '==', value: `mufradat_${verseKey}` }
     ],
@@ -221,6 +223,7 @@ function MufradatQuizContent() {
         .from('quiz_attempts')
         .insert({
           user_id: user.id,
+          group_id: userData?.mufradat_group_id,
           quiz_id: `mufradat_${verseKey}`,
           surah_id: id,
           verse_id: verseId,
@@ -281,11 +284,11 @@ function MufradatQuizContent() {
     setAttempts(prev => prev + 1);
   };
 
-  if (loading || isUserLoading) {
+  if (loading || isUserLoading || isUserDataLoading || isLeaderboardLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
-        <p className="text-muted-foreground font-medium text-sm uppercase tracking-widest">Menyiapkan Kuis...</p>
+        <p className="text-muted-foreground font-medium text-sm uppercase tracking-widest">Menyiapkan Kuis & Papan Juara...</p>
       </div>
     );
   }

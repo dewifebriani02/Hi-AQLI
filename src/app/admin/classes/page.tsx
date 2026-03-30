@@ -287,7 +287,7 @@ export default function AdminClassesPage() {
             const sisa = getSisaKuota(h);
             const total = h.quota || 0;
             return (
-              <Card key={h.id} className={cn("border-none shadow-sm group overflow-hidden border-l-4", h.isPremium ? "border-l-[#800000]" : "border-l-blue-500")}>
+              <Card key={h.id} className={cn("border-none shadow-sm group overflow-hidden border-l-4", h.is_premium ? "border-l-[#800000]" : "border-l-blue-500")}>
                 <CardContent className="p-5">
                   <div className="flex justify-between items-start mb-2">
                     <div className="space-y-1">
@@ -401,7 +401,7 @@ export default function AdminClassesPage() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleRemoveParticipant(p.id, p.userId)}
+                        onClick={() => handleRemoveParticipant(p.id, p.user_id)}
                       >
                         <X className="w-3.5 h-3.5" />
                       </Button>

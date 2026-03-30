@@ -67,15 +67,30 @@ export default function MufradatBillingPage() {
       return;
     }
 
+    if (!user?.id) {
+      toast({ variant: "destructive", title: "Sesi Habis", description: "Mohon login kembali." });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // 1. Insert into halaqah_registrations
+      // 1. Get a valid halaqah_id for Hi Mufradat (Must be a UUID from halaqahs table)
+      const { data: halaqahData } = await supabase
+        .from("halaqahs")
+        .select("id")
+        .ilike("title", "%Hi Mufradat%")
+        .limit(1)
+        .maybeSingle();
+
+      const hId = halaqahData?.id || null;
+
+      // 2. Insert into halaqah_registrations
       const { error } = await supabase.from("halaqah_registrations").insert({
-        user_id: user?.id,
+        user_id: user.id,
         user_name: userData?.username || user?.user_metadata?.full_name,
         user_email: user?.email,
         whatsapp: userData?.phone,
-        halaqah_id: 'mufradat-premium',
+        halaqah_id: hId, // Now sends a valid UUID or null
         halaqah_title: 'Hi Mufradat (Infaq Bulanan)',
         is_paid: true,
         amount: parseInt(amount),
@@ -85,6 +100,7 @@ export default function MufradatBillingPage() {
         status: "pending_verification",
         payment_type: "monthly",
         billing_month: access.nextBillingMonth || new Date().toISOString().slice(0, 7),
+        metadata: {},
         created_at: new Date().toISOString()
       });
 
@@ -215,22 +231,27 @@ export default function MufradatBillingPage() {
             </div>
           </div>
 
-          {access.showSoftReminder && mode === 'view' && (
+          {access.status !== 'active' && mode === 'view' && (
             <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl space-y-3 animate-in fade-in zoom-in">
               <div className="flex items-center gap-3 text-amber-800">
                 <Heart className="w-5 h-5 fill-amber-500" />
-                <h4 className="font-black text-sm uppercase tracking-tight">Dukungan Operasional</h4>
+                <h4 className="font-black text-sm uppercase tracking-tight">Dukungan & Konfirmasi</h4>
               </div>
               <p className="text-xs text-amber-900 leading-relaxed font-medium italic">
-                "Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu."
+                {access.status === 'blocked' ? 
+                  "Selesaikan infaq Ukhti untuk terus mendukung operasional Hi AQLI dan membuka kembali akses ayat." :
+                  "Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu."
+                }
               </p>
               <div className="flex gap-2 pt-2">
                 <Button onClick={() => setMode('pay')} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-10 rounded-xl">
                   INFAQ SEKARANG
                 </Button>
-                <Button onClick={() => setMode('leave')} variant="outline" className="flex-1 border-amber-300 text-amber-700 font-black text-[10px] h-10 rounded-xl">
-                  AJUKAN CUTI
-                </Button>
+                {userData.mufradat_leave_balance > 0 && access.status !== 'blocked' && (
+                  <Button onClick={() => setMode('leave')} variant="outline" className="flex-1 border-amber-300 text-amber-700 font-black text-[10px] h-10 rounded-xl">
+                    AJUKAN CUTI
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -365,14 +386,14 @@ export default function MufradatBillingPage() {
                     </span>
                   </div>
                </div>
-               <Badge className={cn(
-                 "text-[8px] font-black border-none px-2 py-0.5",
-                 reg.status === 'active' ? "bg-emerald-500" : 
-                 reg.status === 'pending_verification' ? "bg-amber-500" : 
-                 "bg-rose-500"
-               )}>
-                 {reg.status === 'active' ? 'VERIFIED' : reg.status === 'pending_verification' ? 'PENDING' : 'REJECTED'}
-               </Badge>
+                <Badge className={cn(
+                  "text-[8px] font-black border-none px-2 py-0.5",
+                  reg.status === 'verified' ? "bg-emerald-500" : 
+                  reg.status === 'pending_verification' ? "bg-amber-500" : 
+                  "bg-rose-500"
+                )}>
+                  {reg.status === 'verified' ? 'VERIFIED' : reg.status === 'pending_verification' ? 'PENDING' : 'REJECTED'}
+                </Badge>
             </div>
           ))}
           {(!registrations || registrations.length === 0) && (

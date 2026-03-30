@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/supabase";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useCollection, useDoc } from "@/supabase/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Question {
@@ -58,6 +58,8 @@ function PageQuizContent() {
   const [wrongWords, setWrongWords] = useState<Question[]>([]);
   const [attempts, setAttempts] = useState(1);
 
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+
   // Auth Guard
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -67,9 +69,11 @@ function PageQuizContent() {
 
   const quizId = `mufradat_page_${pageNum}`;
 
-  // Fetch leaderboard data
-  const { data: allAttempts, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
-    filters: [{ column: 'quiz_id', operator: '==', value: quizId }],
+  // Fetch leaderboard data (RLS will automatically filter by group)
+  const { data: allAttempts, isLoading: isLeaderboardLoading, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
+    filters: [
+      { column: 'quiz_id', operator: '==', value: quizId }
+    ],
     orderBy: { column: 'score', ascending: false }
   });
 
@@ -206,6 +210,7 @@ function PageQuizContent() {
         .from('quiz_attempts')
         .insert({
           user_id: user.id,
+          group_id: userData?.mufradat_group_id,
           quiz_id: quizId,
           surah_id: "0", 
           verse_id: pageNum.toString(), 
@@ -252,11 +257,11 @@ function PageQuizContent() {
     setAttempts(prev => prev + 1);
   };
 
-  if (loading || isUserLoading) {
+  if (loading || isUserLoading || isUserDataLoading || isLeaderboardLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
-        <p className="text-sm font-bold opacity-60 uppercase tracking-widest text-[#800000]">Menyiapkan Kuis Halaman {pageNum}...</p>
+        <p className="text-sm font-bold opacity-60 uppercase tracking-widest text-[#800000]">Menyiapkan Kuis & Papan Juara...</p>
       </div>
     );
   }

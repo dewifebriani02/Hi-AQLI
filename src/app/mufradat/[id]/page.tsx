@@ -88,11 +88,11 @@ export default function MufradatSurahDetailPage() {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   } : undefined);
 
-  const { data: registrations } = useCollection("halaqah_registrations", {
+  const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations", {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 
-  const { data: userData } = useDoc(user?.id ? "users" : null, user?.id);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
   const access = useMemo(() => {
     return getMufradatStatus(userData, registrations || []);
@@ -316,7 +316,14 @@ export default function MufradatSurahDetailPage() {
     }
   };
 
-  if (loading || isProgressLoading) return <div className="flex justify-center py-32"><Loader2 className="animate-spin text-[#800000]" /></div>;
+  if (loading || isUserLoading || isRegLoading || isUserDataLoading || isUserProgressLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Menyiapkan Surah...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">

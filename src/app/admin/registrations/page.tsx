@@ -35,7 +35,7 @@ export default function AdminRegistrationsPage() {
     try {
       // 1. Update Registration Status with start date
       const { error: regError } = await supabase.from("halaqah_registrations").update({
-        status: "active",
+        status: "verified",
         verified_at: new Date().toISOString(),
         start_date: new Date().toISOString()
       }).eq('id', reg.id);
@@ -43,16 +43,17 @@ export default function AdminRegistrationsPage() {
       if (regError) throw regError;
 
       // 2. Update User Profile Access
-      const { data: userData } = await supabase.from("users").select("followed_halaqahs").eq('id', reg.user_id).single();
+      const { data: userData } = await supabase.from("users").select("followed_halaqahs, mufradat_group_id").eq('id', reg.user_id).single();
       const currentFollowed = userData?.followed_halaqahs || [];
+      const currentGroupId = userData?.mufradat_group_id;
 
       const updateData: any = {
         followed_halaqahs: currentFollowed.includes(reg.halaqah_id) ? currentFollowed : [...currentFollowed, reg.halaqah_id],
         updated_at: new Date().toISOString()
       };
 
-      // Special logic for Hi Mufradat Auto-Grouping
-      if (reg.halaqah_id === 'mufradat-premium' || reg.halaqah_title?.toLowerCase().includes('mufradat')) {
+      // Special logic for Hi Mufradat Auto-Grouping (Only if NO GROUP assigned yet)
+      if (!currentGroupId && (reg.halaqah_id === 'mufradat-premium' || reg.halaqah_title?.toLowerCase().includes('mufradat'))) {
         try {
           // 1. Find latest group with space (< 50)
           const { data: availableGroups } = await supabase
@@ -210,31 +211,34 @@ export default function AdminRegistrationsPage() {
         ) : (
           registrations.map((reg) => (
             <Card key={reg.id} className="overflow-hidden border-none shadow-lg bg-card transition-all hover:shadow-xl">
-              <div className="bg-muted/30 px-6 py-3 flex items-center justify-between border-b">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-[10px] font-black flex items-center gap-1.5 px-2 py-0.5 border-[#800000]/20 text-[#800000] bg-white">
+              <div className="bg-muted/30 px-4 sm:px-6 py-3 flex flex-col gap-3 border-b">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <Badge variant="outline" className="text-[10px] font-black flex items-center gap-1.5 px-2 py-0.5 border-[#800000]/20 text-[#800000] bg-white shrink-0">
                     <BookOpen className="w-3 h-3" /> {reg.halaqah_title}
                   </Badge>
-                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">
+
+                  <Badge className={cn("text-white border-none font-black text-[9px] px-3 py-1 sm:py-0.5 tracking-widest shadow-sm shrink-0", reg.is_paid ? "bg-amber-500 shadow-amber-500/20" : "bg-blue-500 shadow-blue-500/20")}>
+                    {reg.is_paid ? 'BERBAYAR' : 'GRATIS'}
+                  </Badge>
+
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter shrink-0 bg-slate-100 px-2 py-0.5 rounded-md sm:bg-transparent sm:p-0">
                     {reg.created_at ? new Date(reg.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
                   </span>
+                  
                   {reg.payment_type && (
                     <Badge variant="outline" className={cn(
-                      "text-[9px] font-black border-none px-2 py-0.5 uppercase",
+                      "text-[9px] font-black border-none px-2 py-0.5 uppercase shrink-0",
                       reg.payment_type === 'leave_request' ? "bg-indigo-100 text-indigo-700" : "bg-emerald-100 text-emerald-700"
                     )}>
                       {reg.payment_type === 'leave_request' ? 'PENGAJUAN CUTI' : `INFAQ: ${reg.payment_type}`}
                     </Badge>
                   )}
                   {reg.billing_month && (
-                    <Badge className="bg-slate-800 text-white text-[9px] font-black border-none px-2 py-0.5">
+                    <Badge className="bg-slate-800 text-white text-[9px] font-black border-none px-2 py-0.5 shrink-0">
                       PERIODE: {reg.billing_month}
                     </Badge>
                   )}
                 </div>
-                <Badge className={cn("text-white border-none font-black text-[9px] px-3 py-0.5 tracking-widest", reg.is_paid ? "bg-amber-500 shadow-sm shadow-amber-500/20" : "bg-blue-500 shadow-sm shadow-blue-500/20")}>
-                  {reg.is_paid ? 'BERBAYAR' : 'GRATIS'}
-                </Badge>
               </div>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
