@@ -86,11 +86,18 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const points = userData?.points || 0;
   const isBlacklisted = !!userData?.is_blacklisted;
 
-  // Gate content until mounted to prevent hydration mismatch
   // The server and initial client render must match. 
-  // We return a simple layout shell until mounted.
+  // We return a splash shell until mounted to avoid white flicker.
   if (!mounted) {
-    return <div className="min-h-screen bg-background" />;
+    return (
+      <div className="min-h-screen bg-[#800000] flex items-center justify-center">
+         <img 
+            src="/splash-bg.png" 
+            alt="Loading..." 
+            className="w-full h-full object-cover sm:object-contain animate-pulse"
+         />
+      </div>
+    );
   }
 
   // Blacklist Guard View
@@ -126,7 +133,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           <img 
             src="/splash-bg.png" 
             alt="Hi AQLI Splash" 
-            className="w-full h-full object-cover sm:object-contain animate-in fade-in zoom-in duration-700"
+            className="w-full h-full object-cover sm:object-contain"
           />
         </div>
       )}
