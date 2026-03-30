@@ -232,25 +232,46 @@ export default function MufradatBillingPage() {
           </div>
 
           {access.status !== 'active' && mode === 'view' && (
-            <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl space-y-3 animate-in fade-in zoom-in">
-              <div className="flex items-center gap-3 text-amber-800">
-                <Heart className="w-5 h-5 fill-amber-500" />
-                <h4 className="font-black text-sm uppercase tracking-tight">Dukungan & Konfirmasi</h4>
+            <div className={cn(
+              "p-5 rounded-2xl space-y-3 animate-in fade-in zoom-in border-2",
+              access.status === 'inactive' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+            )}>
+              <div className="flex items-center gap-3">
+                {access.status === 'inactive' ? <BookOpen className="w-5 h-5 text-emerald-600" /> : <Heart className="w-5 h-5 fill-amber-500" />}
+                <h4 className={cn(
+                  "font-black text-sm uppercase tracking-tight",
+                  access.status === 'inactive' ? "text-emerald-800" : "text-amber-800"
+                )}>
+                  {access.status === 'inactive' ? "Pendaftaran Diperlukan" : "Dukungan & Konfirmasi"}
+                </h4>
               </div>
-              <p className="text-xs text-amber-900 leading-relaxed font-medium italic">
-                {access.status === 'blocked' ? 
+              <p className={cn(
+                "text-xs leading-relaxed font-medium italic",
+                access.status === 'inactive' ? "text-emerald-900" : "text-amber-900"
+              )}>
+                {access.status === 'inactive' ? 
+                  "Ukhti belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu untuk pembukaan akses dan penempatan kelompok (halaqah)." :
+                  access.status === 'blocked' ? 
                   "Selesaikan infaq Ukhti untuk terus mendukung operasional Hi AQLI dan membuka kembali akses ayat." :
                   "Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu."
                 }
               </p>
               <div className="flex gap-2 pt-2">
-                <Button onClick={() => setMode('pay')} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-10 rounded-xl">
-                  INFAQ SEKARANG
-                </Button>
-                {userData.mufradat_leave_balance > 0 && access.status !== 'blocked' && (
-                  <Button onClick={() => setMode('leave')} variant="outline" className="flex-1 border-amber-300 text-amber-700 font-black text-[10px] h-10 rounded-xl">
-                    AJUKAN CUTI
+                {access.status === 'inactive' ? (
+                  <Button asChild className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-10 rounded-xl">
+                    <Link href="/study-circles/registration?id=mufradat-premium">DAFTAR PROGRAM SEKARANG</Link>
                   </Button>
+                ) : (
+                  <>
+                    <Button onClick={() => setMode('pay')} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-10 rounded-xl">
+                      INFAQ SEKARANG
+                    </Button>
+                    {userData.mufradat_leave_balance > 0 && access.status !== 'blocked' && (
+                      <Button onClick={() => setMode('leave')} variant="outline" className="flex-1 border-amber-300 text-amber-700 font-black text-[10px] h-10 rounded-xl">
+                        AJUKAN CUTI
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>

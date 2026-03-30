@@ -476,10 +476,13 @@ function MufradatPageContent() {
                    </p>
                 </div>
                 <div className="flex flex-col gap-3 px-4">
-                   <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black h-14 rounded-2xl text-lg shadow-lg">
-                      <Link href="/mufradat/billing">
-                         <CreditCard className="mr-2 w-6 h-6" /> 
-                         {access.status === 'on_leave' ? 'CEK STATUS CUTI' : 'KONFIRMASI PEMBAYARAN'}
+                   <Button asChild className={cn(
+                     "w-full font-black h-14 rounded-2xl text-lg shadow-lg",
+                     access.status === 'inactive' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#800000] hover:bg-[#800000]/90"
+                   )}>
+                      <Link href={access.status === 'inactive' ? "/study-circles/registration?id=mufradat-premium" : "/mufradat/billing"}>
+                         {access.status === 'inactive' ? <BookOpen className="mr-2 w-6 h-6" /> : <CreditCard className="mr-2 w-6 h-6" />} 
+                         {access.status === 'on_leave' ? 'CEK STATUS CUTI' : access.status === 'inactive' ? 'DAFTAR PROGRAM SEKARANG' : 'KONFIRMASI PEMBAYARAN'}
                       </Link>
                    </Button>
                    <Button asChild variant="ghost" className="text-muted-foreground font-bold">
