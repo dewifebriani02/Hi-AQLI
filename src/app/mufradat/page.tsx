@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Layers, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/juz-list";
-import { useUser } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
+import { supabase, useUser } from "@/supabase";
 import { useMemo, useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -42,7 +42,6 @@ import {
   Search,
   CheckCircle2,
   ArrowLeft,
-  Loader2,
   PartyPopper,
   ThumbsUp
 } from "lucide-react";
@@ -351,8 +350,52 @@ function MufradatPageContent() {
                       <p className="text-sm text-muted-foreground px-12">Ukhti belum bergabung ke dalam grup manapun untuk melihat peringkat.</p>
                     </div>
                  </div>
-               ) : (
-                 <div className="divide-y divide-slate-100">
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {groupRankings.map((u: any, idx: number) => (
+                      <div key={u.id} className="group p-4 flex items-center justify-between hover:bg-slate-50 transition-colors border-b last:border-0 border-slate-100">
+                        <div className="flex items-center gap-4">
+                          {/* Rank Display */}
+                          <div className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm transition-all",
+                            idx === 0 ? "bg-amber-400 text-white shadow-md shadow-amber-200 scale-110" : 
+                            idx === 1 ? "bg-slate-300 text-slate-700" : 
+                            idx === 2 ? "bg-amber-700/30 text-amber-900" : 
+                            "text-slate-400 bg-slate-50"
+                          )}>
+                            {idx + 1}
+                          </div>
+                          
+                          {/* User Profile Info */}
+                          <Avatar className="h-12 w-12 border-2 border-white shadow-sm ring-2 ring-slate-50 group-hover:ring-[#800000]/10 transition-all">
+                            <AvatarImage src={u.avatar_url} />
+                            <AvatarFallback className="bg-slate-100 text-slate-400 font-bold">{u.full_name?.[0] || 'U'}</AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-800 leading-tight group-hover:text-[#800000] transition-colors">{u.full_name || 'Ukhti'}</span>
+                              {user?.id === u.id && (
+                                <span className="text-[9px] bg-[#800000]/10 text-[#800000] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Saya</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1.5">
+                              <div className="flex items-center gap-1 group/stat" title="Points">
+                                <Zap className="w-3 h-3 text-amber-500 fill-amber-500 animate-pulse" />
+                                <span className="text-xs font-black text-amber-600">{u.points} <span className="text-[9px] font-medium text-slate-400">POIN</span></span>
+                              </div>
+                              <div className="flex items-center gap-1 group/stat" title="Hafalan">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                                <span className="text-xs font-black text-emerald-600">{u.verseCount} <span className="text-[9px] font-medium text-slate-400">HAFALAN</span></span>
+                              </div>
+                              <div className="flex items-center gap-1 group/stat" title="Repetisi">
+                                <Layers className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs font-black text-slate-500">{u.activityCount} <span className="text-[9px] font-medium text-slate-400">REPETISI</span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="flex flex-col items-end gap-2">
                           <div className="flex items-center gap-2">
                              {u.reactionSummary.total > 0 && (
@@ -363,28 +406,28 @@ function MufradatPageContent() {
                                  <span className="text-[9px] font-black text-amber-700 ml-1.5">{u.reactionSummary.total}</span>
                                </div>
                              )}
-                             {idx < 3 && <Star className={cn("w-5 h-5 fill-current transition-transform hover:scale-110", idx === 0 ? "text-amber-400" : idx === 1 ? "text-slate-300" : "text-amber-700/30")} />}
+                             {idx < 3 && <Star className={cn("w-5 h-5 fill-current transition-transform hover:scale-125", idx === 0 ? "text-amber-400" : idx === 1 ? "text-slate-300" : "text-amber-700/30")} />}
                           </div>
                           
                           {user?.id !== u.id && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                               <button 
                                 onClick={() => sendReaction(u.id, 'mabruk')}
-                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-amber-100 flex items-center justify-center transition-colors text-amber-600"
+                                className="w-8 h-8 rounded-full bg-slate-50 hover:bg-amber-100 border border-slate-200 hover:border-amber-200 flex items-center justify-center transition-all text-amber-600 hover:scale-110 active:scale-95"
                                 title="Kirim Mabruk!"
                               >
                                 <PartyPopper className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => sendReaction(u.id, 'semangat')}
-                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-emerald-100 flex items-center justify-center transition-colors text-emerald-600"
+                                className="w-8 h-8 rounded-full bg-slate-50 hover:bg-emerald-100 border border-slate-200 hover:border-emerald-200 flex items-center justify-center transition-all text-emerald-600 hover:scale-110 active:scale-95"
                                 title="Kirim Semangat!"
                               >
                                 <ThumbsUp className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => sendReaction(u.id, 'hebat')}
-                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-100 flex items-center justify-center transition-colors text-rose-600"
+                                className="w-8 h-8 rounded-full bg-slate-50 hover:bg-rose-100 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-all text-rose-600 hover:scale-110 active:scale-95"
                                 title="Kirim Hebat!"
                               >
                                 <Heart className="w-4 h-4" />
