@@ -179,7 +179,8 @@ export function SurahList({
           const isCompleted = passedCount >= surah.verses_count;
 
           const startPage = SURAH_START_PAGES[surah.id] || 1;
-          const isUnlocked = baseUrl !== "/mufradat" || startPage === 1 || completedPageQuizzes.has(startPage - 1) || passedCount > 0;
+          const isFreeSurah = [1, 112, 113, 114].includes(surah.id);
+          const isUnlocked = baseUrl !== "/mufradat" || isFreeSurah || startPage === 1 || completedPageQuizzes.has(startPage - 1) || passedCount > 0;
           
           const href = baseUrl === "/mufradat" 
             ? `${baseUrl}/${surah.id}` 

@@ -37,12 +37,13 @@ export function getMufradatStatus(
   const sNum = surahId ? parseInt(surahId.toString()) : null;
   const vNum = verseId ? parseInt(verseId.toString()) : null;
   
-  if (sNum === 1 && vNum !== null && vNum >= 1 && vNum <= 5) {
+  const freeSurahs = [1, 112, 113, 114];
+  if (sNum !== null && freeSurahs.includes(sNum)) {
     return {
       status: 'active',
       isBlocked: false,
       showSoftReminder: false,
-      message: "Selamat Datang! Ukhti sedang menikmati akses gratis Al-Fatihah 1-5."
+      message: "Selamat Datang! Ukhti sedang menikmati akses gratis surat pilihan."
     };
   }
 

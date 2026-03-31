@@ -36,13 +36,17 @@ const INITIAL_FORM = {
   programType: "hi_ngaji",
   title: "",
   description: "",
+  muallimah: "Admin / Menunggu Assignment",
+  musyrifah: "",
   day: "Senin",
   time: "19:00",
   startDate: "",
   durationWeeks: 4,
+  durationMonths: 1,
   juz: "1",
   level: "Semua Level",
   isPremium: false,
+  paymentType: "fixed", // 'fixed' or 'selectable'
   hasExam: true,
   hasCertificate: true,
   tag: "",
@@ -118,13 +122,17 @@ export default function AdminClassesPage() {
       programType: h.program_type || "hi_ngaji",
       title: h.title,
       description: h.description || "",
+      muallimah: h.muallimah || "Admin / Menunggu Assignment",
+      musyrifah: h.musyrifah || "",
       day: day || "Senin",
       time: time || "19:00",
       startDate: h.start_date || "",
       durationWeeks: h.duration_weeks || 4,
+      durationMonths: h.duration_months || 1,
       juz: h.juz || "1",
       level: h.level || "Semua Level",
       isPremium: h.is_premium || false,
+      paymentType: h.payment_type || "fixed",
       hasExam: h.has_exam ?? true,
       hasCertificate: h.has_certificate ?? true,
       tag: h.tag || "",
@@ -148,18 +156,18 @@ export default function AdminClassesPage() {
     const finalData = {
       program_type: form.programType,
       title: form.title,
-      muallimah: "Admin / Menunggu Assignment",
-      muallimah_id: "",
-      musyrifah: "",
-      musyrifah_id: "",
+      muallimah: form.muallimah,
+      musyrifah: form.musyrifah,
       description: form.description,
       schedule: finalSchedule,
       start_date: form.startDate,
       end_date: calculatedEndDate,
       duration_weeks: form.durationWeeks,
+      duration_months: form.durationMonths,
       juz: form.programType === 'hi_ngaji' ? null : form.juz,
       level: form.level,
       is_premium: form.isPremium,
+      payment_type: form.paymentType,
       has_exam: form.hasExam,
       has_certificate: form.hasCertificate,
       tag: form.tag,
@@ -439,6 +447,17 @@ export default function AdminClassesPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="space-y-2">
+                <Label className="text-xs font-black uppercase">Mu'allimah</Label>
+                <Input value={form.muallimah} onChange={(e) => setForm({ ...form, muallimah: e.target.value })} placeholder="Nama Mu'allimah" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase">Musyrifah</Label>
+                <Input value={form.musyrifah} onChange={(e) => setForm({ ...form, musyrifah: e.target.value })} placeholder="Nama Musyrifah (Opsional)" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className={cn("space-y-2", form.programType === 'hi_mufradat' && "sm:col-span-2")}>
                 <Label className="text-xs font-black uppercase">Judul Kelas</Label>
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Contoh: Tahsin Dasar Al-Fatihah" />
@@ -447,7 +466,7 @@ export default function AdminClassesPage() {
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase">{form.programType === 'tikrar_daily' ? 'Level Bacaan' : 'Level Program'}</Label>
                   <Select value={form.level} onValueChange={(v) => setForm({ ...form, level: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {form.programType === 'tikrar_daily' ? (
                         <>
@@ -523,15 +542,15 @@ export default function AdminClassesPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">{form.programType === 'hi_ngaji' ? 'Durasi (Pekan)' : 'Target Hafalan satu Halaman'}</Label>
+                <Label className="text-xs font-black uppercase">{form.programType === 'hi_ngaji' ? 'Durasi (Bulan)' : 'Target Hafalan satu Halaman'}</Label>
                 {form.programType === 'hi_ngaji' ? (
                   <div className="relative">
                     <Timer className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input type="number" min="1" value={form.durationWeeks} onChange={(e) => setForm({ ...form, durationWeeks: parseInt(e.target.value) || 1 })} className="pl-10" />
+                    <Input type="number" min="1" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: parseInt(e.target.value) || 1 })} className="pl-10 h-10" />
                   </div>
                 ) : form.programType === 'hi_mufradat' ? (
                   <Select value={form.durationWeeks.toString()} onValueChange={(v) => setForm({ ...form, durationWeeks: parseInt(v) })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="20">20 Pekan (5 Bulan - Standar 1 Juz)</SelectItem>
                       <SelectItem value="24">24 Pekan (6 Bulan - Khusus Juz 30)</SelectItem>
@@ -539,7 +558,7 @@ export default function AdminClassesPage() {
                   </Select>
                 ) : (
                   <Select value={form.durationWeeks.toString()} onValueChange={(v) => setForm({ ...form, durationWeeks: parseInt(v) })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1">1 Pekan (Intensif)</SelectItem>
                       <SelectItem value="2">2 Pekan (Reguler)</SelectItem>
@@ -548,7 +567,7 @@ export default function AdminClassesPage() {
                     </SelectContent>
                   </Select>
                 )}
-                {calculatedEndDate && (
+                {calculatedEndDate && form.programType !== 'hi_ngaji' && (
                   <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter mt-1">
                     Otomatis berakhir: {new Date(calculatedEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
@@ -583,10 +602,23 @@ export default function AdminClassesPage() {
             </div>
 
             {form.isPremium && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border-2 border-[#D4AF37]/20 rounded-2xl bg-[#D4AF37]/5 animate-in slide-in-from-top-2">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase">Infaq Dasar (Rp)</Label>
-                  <Input type="number" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: parseInt(e.target.value) || 0 })} />
+              <div className="grid gap-6 p-4 border-2 border-[#D4AF37]/20 rounded-2xl bg-[#D4AF37]/5 animate-in slide-in-from-top-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase">Metode Pembayaran</Label>
+                    <Select value={form.paymentType} onValueChange={(v) => setForm({ ...form, paymentType: v })}>
+                      <SelectTrigger className="bg-white h-10"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fixed">Nominal Tetap (Standar)</SelectItem>
+                        <SelectItem value="selectable">Pilihan Terbuka (Multiples)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase">{form.paymentType === 'fixed' ? 'Nominal Infaq (Rp)' : 'Min. Infaq (Level 1)'}</Label>
+                    <Input type="number" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: parseInt(e.target.value) || 0 })} />
+                    {form.paymentType === 'selectable' && <span className="text-[9px] font-bold text-amber-600 italic leading-none block">User memilih: 50k, 75k, 100k, 125k, 150k</span>}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase">Tag Promosi</Label>

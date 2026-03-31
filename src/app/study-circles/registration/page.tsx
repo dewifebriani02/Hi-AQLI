@@ -40,6 +40,8 @@ const levels = [
   { id: "3", name: "Santai", price: 50000 },
 ];
 
+const INFAQ_LEVELS = [50000, 75000, 100000, 125000, 150000];
+
 function RegistrationForm() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
@@ -127,8 +129,11 @@ function RegistrationForm() {
     if (isTikrar) {
       return levels.find(l => l.id === level)?.price || 50000;
     }
+    if (circle?.payment_type === 'selectable') {
+      return 50000; // Base minimum for selectable
+    }
     return circle?.base_price || 0;
-  }, [isMufradat, isTikrar, mufradatTarget, durationMonths, level, circle?.base_price]);
+  }, [isMufradat, isTikrar, mufradatTarget, durationMonths, level, circle?.base_price, circle?.payment_type]);
 
   useEffect(() => {
     // Ensure infaqAmount is at least the minimum
@@ -365,18 +370,40 @@ function RegistrationForm() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Nominal Infaq</Label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-3.5 text-xs font-black text-muted-foreground">Rp</div>
-                      <Input
-                        type="number"
-                        value={infaqAmount}
-                        onChange={(e) => setInfaqAmount(parseInt(e.target.value) || 0)}
-                        className="pl-10 h-14 border-2 text-xl font-black text-[#800000] focus-visible:ring-[#800000]"
-                      />
+                  {circle?.payment_type === 'selectable' ? (
+                    <div className="space-y-3">
+                       <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Pilih Level Infaq</Label>
+                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {INFAQ_LEVELS.map((lvl) => (
+                            <Button
+                              key={lvl}
+                              type="button"
+                              variant={infaqAmount === lvl ? "default" : "outline"}
+                              className={cn(
+                                "h-12 font-black text-xs transition-all rounded-xl border-2",
+                                infaqAmount === lvl ? "bg-[#800000] text-white border-[#800000] scale-105 shadow-md" : "border-[#800000]/10 text-[#800000] hover:bg-[#800000]/5"
+                              )}
+                              onClick={() => setInfaqAmount(lvl)}
+                            >
+                              Rp {lvl.toLocaleString('id-ID')}
+                            </Button>
+                          ))}
+                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Nominal Infaq</Label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-3.5 text-xs font-black text-muted-foreground">Rp</div>
+                        <Input
+                          type="number"
+                          value={infaqAmount}
+                          onChange={(e) => setInfaqAmount(parseInt(e.target.value) || 0)}
+                          className="pl-10 h-14 border-2 text-xl font-black text-[#800000] focus-visible:ring-[#800000]"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Tikrar Akad Section */}
                   <div className="p-6 bg-blue-50/50 rounded-2xl border-2 border-blue-200/50 space-y-4 animate-in fade-in zoom-in">
@@ -450,7 +477,7 @@ function RegistrationForm() {
                       />
                     </div>
                     <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
-                      <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')}
+                      <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')} {circle?.payment_type === 'selectable' && "(Pilihan Bebas)"}
                     </p>
                   </div>
 

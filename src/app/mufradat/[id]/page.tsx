@@ -179,17 +179,19 @@ export default function MufradatSurahDetailPage() {
     const hasAnyProgress = currentSurahPassedVerses.size > 0;
     const sId = Number(id);
     const startPage = SURAH_START_PAGES[sId] || 1;
+    const isFreeSurah = [1, 112, 113, 114].includes(sId);
     
     // Lenient Surah Lock: 
-    // 1. Surah 1 & 2 are always open (Fatihah & Baqarah)
-    // 2. OR User has some progress already
-    // 3. OR Previous page quiz is done
-    const isUnlocked = sId <= 2 || hasAnyProgress || completedPageQuizzes.has(startPage - 1);
+    // 1. Surah 1, 112, 113, 114 are always open (Fatihah & 3 Qul)
+    // 2. OR Surah 2 is open (Baqarah)
+    // 3. OR User has some progress already
+    // 4. OR Previous page quiz is done
+    const isUnlocked = isFreeSurah || sId === 2 || currentSurahPassedVerses.size > 0 || completedPageQuizzes.has(startPage - 1);
     
     if (!isUnlocked) {
       router.push('/mufradat');
     }
-  }, [id, userProgress, isUserProgressLoading, completedPageQuizzes, router, currentSurahPassedVerses]);
+  }, [id, isUserProgressLoading, completedPageQuizzes, router, currentSurahPassedVerses]);
 
   useEffect(() => {
     const savedReciter = localStorage.getItem('aqli_reciter_id');
@@ -423,11 +425,13 @@ export default function MufradatSurahDetailPage() {
             const isPrevVerseDone = isFirstVerse || completedVerseNumbers.has(prevVerse?.verse_number || 0);
 
             // A verse is UNLOCKED if:
-            // 1. It is the very first verse of the Quran (1:1)
-            // 2. OR It's already completed (Passed)
-            // 3. OR Previous verse is done (Linear flow)
-            const isUnlockedByContext = isPrevVerseDone;
-            const isLocked = !isQuranStart && !isCompleted && !isUnlockedByContext;
+            // 1. It is a Free Surah (Fatihah & 3 Qul)
+            // 2. OR It is the very first verse of the Quran (1:1)
+            // 3. OR It's already completed (Passed)
+            // 4. OR Previous verse is done (Linear flow)
+            const isFreeSurah = [1, 112, 113, 114].includes(Number(id));
+            const isUnlockedByContext = isFreeSurah || isPrevVerseDone;
+            const isLocked = !isFreeSurah && !isQuranStart && !isCompleted && !isUnlockedByContext;
 
             return (
               <div key={verse.id}>
@@ -570,8 +574,8 @@ export default function MufradatSurahDetailPage() {
           </Link>
         </div>
       )}
-      {/* Access Blocked Overlay - Only show if not Surah 1 (since it has free verses) or if user is logged in but blocked */}
-      {((parseInt(id) !== 1) || (user && access.isBlocked)) && access.isBlocked && (
+      {/* Access Blocked Overlay - Only show if not a Free Surah or if user is logged in but blocked */}
+      {(![1, 112, 113, 114].includes(parseInt(id)) || (user && access.isBlocked)) && access.isBlocked && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
           <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
              <div className="bg-rose-600 py-10 flex flex-col items-center gap-3 text-white">
