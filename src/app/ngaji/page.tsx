@@ -155,7 +155,7 @@ export default function NgajiPage() {
                 {circle.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4 flex items-center gap-1"><GraduationCap className="w-2 h-2" /> UJIAN</Badge>}
                 {circle.hasCertificate && <Badge variant="outline" className="text-[8px] border-blue-200 text-blue-700 bg-blue-50 h-4 flex items-center gap-1"><Award className="w-2 h-2" /> SERTIFIKAT</Badge>}
               </div>
-              {circle.isPremium && !isActive && !isPending && (
+              {user && circle.isPremium && !isActive && !isPending && (
                 <span className="text-xs font-black text-[#800000]">Rp {circle.basePrice?.toLocaleString('id-ID')}</span>
               )}
             </div>

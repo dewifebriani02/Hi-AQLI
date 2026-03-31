@@ -263,17 +263,19 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <Badge className="bg-[#800000] text-white gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider shadow-xl shadow-[#800000]/20 rounded-xl border-b-2 border-[#D4AF37]">
-            <Zap className="w-3 h-3 fill-[#D4AF37] text-[#D4AF37] animate-pulse" />
-            {points.toLocaleString()} POIN
-          </Badge>
-          <Link href="/leaderboard">
-            <Badge variant="outline" className="text-[9px] font-bold border-amber-200 text-amber-700 bg-amber-50 gap-1 uppercase tracking-tighter cursor-pointer hover:bg-amber-100 transition-colors">
-              <Trophy className="w-2.5 h-2.5" /> Peringkat Sahabat
+        {user && (
+          <div className="flex flex-col items-end gap-2">
+            <Badge className="bg-[#800000] text-white gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider shadow-xl shadow-[#800000]/20 rounded-xl border-b-2 border-[#D4AF37]">
+              <Zap className="w-3 h-3 fill-[#D4AF37] text-[#D4AF37] animate-pulse" />
+              {points.toLocaleString()} POIN
             </Badge>
-          </Link>
-        </div>
+            <Link href="/leaderboard">
+              <Badge variant="outline" className="text-[9px] font-bold border-amber-200 text-amber-700 bg-amber-50 gap-1 uppercase tracking-tighter cursor-pointer hover:bg-amber-100 transition-colors">
+                <Trophy className="w-2.5 h-2.5" /> Peringkat Sahabat
+              </Badge>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Waktu Shalat - Background Menonjol */}
@@ -332,46 +334,48 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Hi Mufradat Registration Banner - Prominent CTA */}
-      <section className="px-1 mb-6">
-        <Link href="/study-circles/registration?id=mufradat-premium" className="block group">
-          <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#800000] to-[#5a0000] p-6 shadow-xl border-2 border-[#D4AF37]/30 group-hover:shadow-2xl transition-all duration-300">
-            {/* Decorative Gold Elements */}
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-            <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-            
-            <div className="relative flex flex-col sm:flex-row items-center gap-5">
-              <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 group-hover:rotate-6 transition-transform">
-                <BookOpen className="w-8 h-8 text-[#D4AF37]" />
-              </div>
+      {/* Hi Mufradat Registration Banner - Only show for logged in users */}
+      {user && (
+        <section className="px-1 mb-6">
+          <Link href="/study-circles/registration?id=mufradat-premium" className="block group">
+            <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#800000] to-[#5a0000] p-6 shadow-xl border-2 border-[#D4AF37]/30 group-hover:shadow-2xl transition-all duration-300">
+              {/* Decorative Gold Elements */}
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+              <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
               
-              <div className="flex-1 text-center sm:text-left space-y-1">
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <h3 className="text-lg font-black text-white font-headline tracking-tight">Hi Mufradat</h3>
-                  <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[7px] h-3.5 font-black px-1.5 uppercase tracking-widest">OPEN</Badge>
+              <div className="relative flex flex-col sm:flex-row items-center gap-5">
+                <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 group-hover:rotate-6 transition-transform">
+                  <BookOpen className="w-8 h-8 text-[#D4AF37]" />
                 </div>
-                <p className="text-white/80 text-[10px] sm:text-xs font-bold leading-relaxed max-w-md">
-                  Pahami 1 hal Al-Qur'an per pekan dengan bimbingan & monitoring intensif. Mulai Rp 20rb/bln!
-                </p>
-                <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-black text-white uppercase tracking-wider">
-                    <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> TERSTRUKTUR
+                
+                <div className="flex-1 text-center sm:text-left space-y-1">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                    <h3 className="text-lg font-black text-white font-headline tracking-tight">Hi Mufradat</h3>
+                    <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[7px] h-3.5 font-black px-1.5 uppercase tracking-widest">OPEN</Badge>
                   </div>
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-black text-white uppercase tracking-wider">
-                    <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" /> MONITORING
+                  <p className="text-white/80 text-[10px] sm:text-xs font-bold leading-relaxed max-w-md">
+                    Pahami 1 hal Al-Qur'an per pekan dengan bimbingan & monitoring intensif. Mulai Rp 20rb/bln!
+                  </p>
+                  <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-black text-white uppercase tracking-wider">
+                      <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> TERSTRUKTUR
+                    </div>
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-black text-white uppercase tracking-wider">
+                      <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" /> MONITORING
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex-shrink-0 w-full sm:w-auto">
-                <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-5 py-2.5 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-transform">
-                  DAFTAR <ArrowRight className="w-3.5 h-3.5" />
+                
+                <div className="flex-shrink-0 w-full sm:w-auto">
+                  <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-5 py-2.5 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-transform">
+                    DAFTAR <ArrowRight className="w-3.5 h-3.5" />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </Link>
-      </section>
+          </Link>
+        </section>
+      )}
 
       {/* Layanan Utama - 4-Column Icon Grid */}
       <div className="space-y-4 px-1">
@@ -395,52 +399,47 @@ export default function DashboardPage() {
             <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Mufradat</span>
           </Link>
 
-          {/* Hi Tikrar (Locked) */}
-          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
-              <Award className="w-7 h-7 text-slate-400" />
-              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
+          {/* Hi Tikrar */}
+          <Link href="/tikrar" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-400 to-blue-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Award className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Tikrar</span>
-          </div>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Tikrar</span>
+          </Link>
 
-          {/* Hi Ngaji (Locked) */}
-          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
-              <BookOpen className="w-7 h-7 text-slate-400" />
-              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
+          {/* Hi Ngaji */}
+          <Link href="/ngaji" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <BookOpen className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Ngaji</span>
-          </div>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Ngaji</span>
+          </Link>
 
-          {/* Hi Berbagi (Locked) */}
-          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
-              <HeartHandshake className="w-7 h-7 text-slate-400" />
-              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
+          {/* Hi Berbagi */}
+          <Link href="/berbagi" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <HeartHandshake className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Berbagi</span>
-          </div>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Berbagi</span>
+          </Link>
 
-          {/* Hi Mutaba'ah (Locked) */}
-          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
-              <Target className="w-7 h-7 text-slate-400" />
-              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
+          {/* Hi Mutaba'ah */}
+          <Link href="/mutabaah" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Target className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Mutaba'ah</span>
-          </div>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Mutabaah</span>
+          </Link>
 
-          {/* Hi Muhasabah (Locked) */}
-          <div className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed grayscale">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
-              <Shield className="w-7 h-7 text-slate-400" />
-              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
+          {/* Hi Muhasabah */}
+          <Link href="/muhasabah" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Shield className="w-7 h-7 text-white" />
             </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Muhasabah</span>
-          </div>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Muhasabah</span>
+          </Link>
 
-          {/* AI (Locked) */}
+          {/* AI (Locked for everyone but AI is always cool) */}
           <div className="flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
             <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
               <Bot className="w-7 h-7 text-slate-400" />

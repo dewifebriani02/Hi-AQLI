@@ -538,49 +538,51 @@ export function TikrarSystem() {
             <MetaStep label="GABUNG SELURUH HALAMAN (A - D)" count={metaCounts['1_2_3_4']} isLocked={!isMetaTuntas('2_3_4')} onIncrement={() => setMetaCounts(p => ({ ...p, '1_2_3_4': p['1_2_3_4'] + 1 }))} highlight />
           </div>
 
-          <div className="flex flex-col gap-6 mt-4">
-            <div className="flex items-center gap-2 px-1">
-              <Sparkles className="w-5 h-5 text-[#D4AF37]" />
-              <h4 className="text-xl font-black font-headline text-black uppercase tracking-widest">Tahap Ujian Halaman</h4>
-            </div>
-            {!isMetaTuntas('1_2_3_4') ? (
-              <Card className="border-2 border-dashed bg-muted py-10">
-                <CardContent className="flex flex-col items-center justify-center text-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-dashed"><Lock className="w-6 h-6 text-muted-foreground" /></div>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[200px]">Selesaikan repetisi gabungan seluruh halaman untuk membuka ujian.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in duration-500">
-                <Card className="border-none bg-[#800000] text-white shadow-xl overflow-hidden group hover:scale-[1.02] transition-transform border-b-4 border-[#D4AF37]">
-                  <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
-                    <div className="space-y-2">
-                      <div className="w-12 h-12 rounded-2xl bg-[#D4AF37] flex items-center justify-center mb-4"><ClipboardCheck className="w-6 h-6 text-black" /></div>
-                      <h5 className="text-lg font-black leading-tight uppercase">Simulasi Ujian Mandiri</h5>
-                      <p className="text-[11px] opacity-80 leading-relaxed">Uji pemahaman terjemahan dan sambung ayat halaman ini.</p>
-                    </div>
-                    <Button asChild className="bg-[#D4AF37] text-black font-black w-full rounded-xl hover:bg-[#D4AF37]/90 h-12 shadow-lg">
-                      <Link href={`/tajweed/simulation?page=${page}`}>MULAI SIMULASI <ArrowRight className="ml-2 w-4 h-4" /></Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-                <Card className={cn("border-none shadow-xl overflow-hidden transition-all border-b-4", activeExam ? "bg-[#800000] text-white border-white" : "bg-white text-[#800000] hover:scale-[1.02] border-[#D4AF37] border-2")}>
-                  <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
-                    <div className="space-y-2">
-                      <div className="w-12 h-12 rounded-2xl bg-[#800000]/10 flex items-center justify-center mb-4">{activeExam ? <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" /> : <MessageSquare className="w-6 h-6 text-[#800000]" />}</div>
-                      <h5 className="text-lg font-black leading-tight uppercase">{activeExam ? "Ujian Diajukan" : "Ajukan Ujian Lisan"}</h5>
-                      <p className="text-[11px] opacity-80 leading-relaxed">{activeExam ? `Status: ${activeExam.status.toUpperCase()}. Tunggu instruksi Admin.` : "Dapatkan sertifikasi Itqan melalui ujian lisan resmi."}</p>
-                    </div>
-                    {!activeExam && (
-                      <Button onClick={handleRequestExam} disabled={isRequestingExam} className="bg-[#800000] text-white font-black w-full rounded-xl hover:bg-[#800000]/90 h-12 shadow-lg">
-                        {isRequestingExam ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 w-4 h-4 fill-current text-[#D4AF37]" /> AJUKAN SEKARANG</>}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+          {user && (
+            <div className="flex flex-col gap-6 mt-4">
+              <div className="flex items-center gap-2 px-1">
+                <Sparkles className="w-5 h-5 text-[#D4AF37]" />
+                <h4 className="text-xl font-black font-headline text-black uppercase tracking-widest">Tahap Ujian Halaman</h4>
               </div>
-            )}
-          </div>
+              {!isMetaTuntas('1_2_3_4') ? (
+                <Card className="border-2 border-dashed bg-muted py-10">
+                  <CardContent className="flex flex-col items-center justify-center text-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-dashed"><Lock className="w-6 h-6 text-muted-foreground" /></div>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[200px]">Selesaikan repetisi gabungan seluruh halaman untuk membuka ujian.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in duration-500">
+                  <Card className="border-none bg-[#800000] text-white shadow-xl overflow-hidden group hover:scale-[1.02] transition-transform border-b-4 border-[#D4AF37]">
+                    <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
+                      <div className="space-y-2">
+                        <div className="w-12 h-12 rounded-2xl bg-[#D4AF37] flex items-center justify-center mb-4"><ClipboardCheck className="w-6 h-6 text-black" /></div>
+                        <h5 className="text-lg font-black leading-tight uppercase">Simulasi Ujian Mandiri</h5>
+                        <p className="text-[11px] opacity-80 leading-relaxed">Uji pemahaman terjemahan dan sambung ayat halaman ini.</p>
+                      </div>
+                      <Button asChild className="bg-[#D4AF37] text-black font-black w-full rounded-xl hover:bg-[#D4AF37]/90 h-12 shadow-lg">
+                        <Link href={`/tajweed/simulation?page=${page}`}>MULAI SIMULASI <ArrowRight className="ml-2 w-4 h-4" /></Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  <Card className={cn("border-none shadow-xl overflow-hidden transition-all border-b-4", activeExam ? "bg-[#800000] text-white border-white" : "bg-white text-[#800000] hover:scale-[1.02] border-[#D4AF37] border-2")}>
+                    <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
+                      <div className="space-y-2">
+                        <div className="w-12 h-12 rounded-2xl bg-[#800000]/10 flex items-center justify-center mb-4">{activeExam ? <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" /> : <MessageSquare className="w-6 h-6 text-[#800000]" />}</div>
+                        <h5 className="text-lg font-black leading-tight uppercase">{activeExam ? "Ujian Diajukan" : "Ajukan Ujian Lisan"}</h5>
+                        <p className="text-[11px] opacity-80 leading-relaxed">{activeExam ? `Status: ${activeExam.status.toUpperCase()}. Tunggu instruksi Admin.` : "Dapatkan sertifikasi Itqan melalui ujian lisan resmi."}</p>
+                      </div>
+                      {!activeExam && (
+                        <Button onClick={handleRequestExam} disabled={isRequestingExam} className="bg-[#800000] text-white font-black w-full rounded-xl hover:bg-[#800000]/90 h-12 shadow-lg">
+                          {isRequestingExam ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 w-4 h-4 fill-current text-[#D4AF37]" /> AJUKAN SEKARANG</>}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </TooltipProvider>
     </div>

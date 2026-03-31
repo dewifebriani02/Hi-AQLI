@@ -20,7 +20,7 @@ import {
 import Link from "next/link";
 import { useUser, supabase } from "@/supabase";
 import { useCollection } from "@/supabase/db";
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,7 @@ export default function MuhasabahPage() {
   const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [localLogs, setLocalLogs] = useState<any[]>([]); // For guest persistence
 
   const muhasabahItems = useMemo(() => [
     { id: 'm_wanita_shalat', label: 'Menjaga Shalat 5 Waktu', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
@@ -55,13 +56,29 @@ export default function MuhasabahPage() {
     ]
   });
 
+  // Load guest logs from local storage
+  useEffect(() => {
+    if (!user) {
+      const saved = localStorage.getItem(`muhasabah_guest_logs_${todayStr}`);
+      if (saved) setLocalLogs(JSON.parse(saved));
+    }
+  }, [user, todayStr]);
+
   const toggleMutabaah = async (activityId: string) => {
     if (!user) {
+      // Guest local persistence
+      const existing = localLogs.find((l: any) => l.activity_id === activityId);
+      const newLogs = existing 
+        ? localLogs.filter((l: any) => l.activity_id !== activityId)
+        : [...localLogs, { activity_id: activityId, completed: true, date: todayStr }];
+      
+      setLocalLogs(newLogs);
+      localStorage.setItem(`muhasabah_guest_logs_${todayStr}`, JSON.stringify(newLogs));
+      
       toast({
-        title: "Pendaftaran Diperlukan",
-        description: "Masyallah, silakan masuk untuk mulai mencatat amalan harian Ukhti secara istiqomah.",
+        title: "Evaluasi Disimpan (Lokal)",
+        description: "Masyallah! Login untuk simpan permanen & raih HI Poin.",
       });
-      router.push('/login');
       return;
     }
     const existing = mutabaahLogs?.find(l => l.activity_id === activityId);
@@ -79,7 +96,11 @@ export default function MuhasabahPage() {
     if (!error) reloadMutabaah();
   };
 
-  const progressCount = muhasabahItems.filter(m => mutabaahLogs?.find(l => l.activity_id === m.id)?.completed).length;
+  const progressCount = useMemo(() => {
+    if (!user) return localLogs.length;
+    return muhasabahItems.filter(m => mutabaahLogs?.find(l => l.activity_id === m.id)?.completed).length;
+  }, [user, mutabaahLogs, localLogs, muhasabahItems]);
+  
   const progressPercent = Math.round((progressCount / muhasabahItems.length) * 100);
 
   return (
@@ -142,7 +163,9 @@ export default function MuhasabahPage() {
               
               <div className="grid grid-cols-1 gap-2">
                 {muhasabahItems.filter(m => m.sub === sub).map(item => {
-                  const isDone = mutabaahLogs?.find(l => l.activity_id === item.id)?.completed;
+                  const isDone = user
+                    ? mutabaahLogs?.find((l: any) => l.activity_id === item.id)?.completed
+                    : localLogs.find((l: any) => l.activity_id === item.id)?.completed;
 
                   return (
                     <Card 

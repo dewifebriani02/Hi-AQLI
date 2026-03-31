@@ -49,6 +49,7 @@ export default function MutabaahPage() {
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [quote, setQuote] = useState(() => getRandomQuote());
+  const [localLogs, setLocalLogs] = useState<any[]>([]); // For guest persistence
 
   const mutabaahActivities = useMemo(() => [
     { id: 'bangun', label: 'Bangun Tidur', category: 'Malam & Bangun', dalil: 'HR. Bukhari: Mengidupkan hati setelah mati', icon: 'Sun' },
@@ -101,6 +102,14 @@ export default function MutabaahPage() {
     ]
   });
 
+  // Load guest logs from local storage
+  useEffect(() => {
+    if (!user) {
+      const saved = localStorage.getItem(`mutabaah_guest_logs_${todayStr}`);
+      if (saved) setLocalLogs(JSON.parse(saved));
+    }
+  }, [user, todayStr]);
+
   const saveGoals = async () => {
     if (!user) return;
     const { error } = await supabase
@@ -116,14 +125,22 @@ export default function MutabaahPage() {
 
   const toggleMutabaah = async (activityId: string) => {
     if (!user) {
+      // Guest local persistence
+      const existing = localLogs.find((l: any) => l.activity_id === activityId);
+      const newLogs = existing 
+        ? localLogs.filter((l: any) => l.activity_id !== activityId)
+        : [...localLogs, { activity_id: activityId, completed: true, date: todayStr }];
+      
+      setLocalLogs(newLogs);
+      localStorage.setItem(`mutabaah_guest_logs_${todayStr}`, JSON.stringify(newLogs));
+      
       toast({
-        title: "Pendaftaran Diperlukan",
-        description: "Masyallah, silakan masuk untuk mulai mencatat amalan Ukhti secara istiqomah.",
+        title: "Progres Disimpan (Lokal)",
+        description: "Masyaallah! Login untuk dapatkan HI Poin & simpan permanen.",
       });
-      router.push('/login');
       return;
     }
-    const existing = mutabaahLogs?.find(l => l.activity_id === activityId);
+    const existing = mutabaahLogs?.find((l: any) => l.activity_id === activityId);
     const completed = !existing?.completed;
 
     const { error } = await supabase
@@ -152,9 +169,10 @@ export default function MutabaahPage() {
   }, [user, mutabaahActivities, selectedGoals]);
 
   const progressCount = useMemo(() => {
-    if (!user) return 0;
-    return mutabaahLogs?.filter(l => l.completed && selectedGoals.includes(l.activity_id)).length || 0;
-  }, [user, mutabaahLogs, selectedGoals]);
+    if (!user) return localLogs.length;
+    // @ts-ignore
+    return mutabaahLogs?.filter((l: any) => l.completed && selectedGoals.includes(l.activity_id)).length || 0;
+  }, [user, mutabaahLogs, selectedGoals, localLogs]);
 
   const progressPercent = activeActivities.length > 0 ? Math.round((progressCount / activeActivities.length) * 100) : 0;
 
@@ -328,7 +346,10 @@ export default function MutabaahPage() {
               
               <div className="grid grid-cols-1 gap-3">
                 {activeActivities.filter(a => a.category === category).map(activity => {
-                  const isDone = mutabaahLogs?.find(l => l.activity_id === activity.id)?.completed;
+                  const isDone = user 
+                    ? mutabaahLogs?.find((l: any) => l.activity_id === activity.id)?.completed
+                    : localLogs.find((l: any) => l.activity_id === activity.id)?.completed;
+                  
                   const IconComponent = IconMap[activity.icon] || Sparkles;
 
                   return (

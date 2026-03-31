@@ -136,13 +136,13 @@ export default function StudyCirclesPage() {
               <div className="flex flex-col gap-0.5 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className={cn("font-bold text-base leading-tight", isActive && "text-emerald-900", isPending && "text-amber-900")}>{circle.title}</h4>
-                  {isActive ? (
+                  {user && (isActive ? (
                     <Badge className="bg-emerald-600 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">AKTIF</Badge>
                   ) : isPending ? (
                     <Badge className="bg-amber-500 text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">VERIFIKASI ADMIN</Badge>
                   ) : (
                     circle.isPremium && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase tracking-widest">PREMIUM</Badge>
-                  )}
+                  ))}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                   <User className="w-3 h-3" />

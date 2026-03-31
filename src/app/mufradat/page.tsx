@@ -222,17 +222,19 @@ function MufradatPageContent() {
           "grid gap-2 shrink-0 w-full sm:w-auto",
           activeTab === 'rank' ? "grid-cols-1" : "grid-cols-2 sm:flex sm:flex-row"
         )}>
-          <Button asChild variant="outline" className="h-12 px-6 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all bg-white shadow-sm w-full sm:w-auto">
-            <Link href="/mufradat/billing" className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                <CreditCard className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col items-start leading-none gap-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Langganan</span>
-                <span className="text-xs font-bold text-slate-800">STATUS & INFAQ</span>
-              </div>
-            </Link>
-          </Button>
+          {user && (
+            <Button asChild variant="outline" className="h-12 px-6 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all bg-white shadow-sm w-full sm:w-auto">
+              <Link href="/mufradat/billing" className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col items-start leading-none gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Langganan</span>
+                  <span className="text-xs font-bold text-slate-800">STATUS & INFAQ</span>
+                </div>
+              </Link>
+            </Button>
+          )}
 
           {activeTab !== 'rank' && (
             <Dialog open={isReciterDialogOpen} onOpenChange={setIsReciterDialogOpen}>
@@ -293,8 +295,8 @@ function MufradatPageContent() {
         </div>
       </div>
 
-      {/* Soft Reminder Banner */}
-      {access.showSoftReminder && (
+      {/* Soft Reminder Banner - Only for registered users */}
+      {user && access.showSoftReminder && (
         <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
