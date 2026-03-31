@@ -19,10 +19,12 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
-export default function CheckoutPage({ params }: { params: { id: string } }) {
+export default function CheckoutPage() {
   const router = useRouter();
+  const params = useParams();
+  const idStr = typeof params.id === 'string' ? params.id : '0';
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     // Personal Info
@@ -58,7 +60,7 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
 
   // Mock package data based on ID
   const packageData = {
-    id: parseInt(params.id),
+    id: parseInt(idStr),
     name: "Paket Umrah Reguler 9 Hari",
     travel: "Al-Mabrur Travel",
     price: 28500000,

@@ -24,7 +24,8 @@ import {
   Image as ImageIcon,
   ArrowLeft,
   Coffee,
-  Heart
+  Heart,
+  BookOpen
 } from "lucide-react";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import Link from "next/link";

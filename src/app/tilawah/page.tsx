@@ -1,9 +1,9 @@
 
 'use client';
 
-import { SurahList } from "@/components/surah-list";
-import { MushafPage } from "@/components/mushaf-page";
-import { JuzList } from "@/components/juz-list";
+import { SurahList } from "@/components/tilawah/surah-list";
+import { MushafPage } from "@/components/tilawah/mushaf-page";
+import { JuzList } from "@/components/tilawah/juz-list";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";

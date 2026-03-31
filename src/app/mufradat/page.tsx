@@ -1,10 +1,10 @@
 'use client';
 
-import { SurahList } from "@/components/surah-list";
+import { SurahList } from "@/components/tilawah/surah-list";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Layers, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { JuzList } from "@/components/juz-list";
+import { JuzList } from "@/components/tilawah/juz-list";
 import { useDoc, useCollection } from "@/supabase/db";
 import { supabase, useUser } from "@/supabase";
 import { useMemo, useState, useEffect, Suspense } from "react";

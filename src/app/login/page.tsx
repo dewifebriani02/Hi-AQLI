@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { Logo } from '@/components/logo';
+import { Logo } from '@/components/common/logo';
 import { Suspense } from 'react';
 
 function LoginContent() {

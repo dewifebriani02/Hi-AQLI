@@ -3,13 +3,13 @@
 import { useFormStatus } from "react-dom";
 import { useActionState } from "react";
 import { askScholarQuestion, type ScholarState } from "@/app/actions";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useRef, useState } from "react";
 import { Bot, LoaderCircle, Send, User } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { ScrollArea } from "./ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 type Message = {

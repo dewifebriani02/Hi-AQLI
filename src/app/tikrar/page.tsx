@@ -20,10 +20,10 @@ import {
   Target
 } from "lucide-react";
 import Link from "next/link";
-import { TikrarSystem } from "@/components/tikrar-system";
-import { ProgressClient } from "@/components/progress-client";
-import { HifzProgressChart } from "@/components/hifz-progress-chart";
-import { TikrarSchedule } from "@/components/tikrar-schedule";
+import { TikrarSystem } from "@/components/tikrar/tikrar-system";
+import { ProgressClient } from "@/components/progress/progress-client";
+import { HifzProgressChart } from "@/components/progress/hifz-progress-chart";
+import { TikrarSchedule } from "@/components/tikrar/tikrar-schedule";
 
 const tajweedRules = [
   {

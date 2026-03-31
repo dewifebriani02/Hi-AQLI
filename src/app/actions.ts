@@ -62,6 +62,6 @@ export async function getVerseAnalysis(input: AnalyzeVerseInput): Promise<Analyz
     if (e.message?.includes('429') || e.message?.includes('RESOURCE_EXHAUSTED')) {
       message = "Kuota AI gratis sedang terbatas. Silakan tunggu sekitar 1 menit lalu tekan tombol 'Coba Lagi'.";
     }
-    return { context: "", error: message };
+    return { hikmah: "", tipsHafalan: "", error: message };
   }
 }

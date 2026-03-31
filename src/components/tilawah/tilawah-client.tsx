@@ -5,9 +5,9 @@ import { useState, useRef } from "react";
 import { Mic, Square, LoaderCircle, AudioLines, FileCheck2, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { submitRecitation } from "@/app/actions";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Separator } from "./ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
 type Feedback = {
   feedback: string;

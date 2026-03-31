@@ -3,10 +3,10 @@
 
 import './globals.css';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/app-sidebar';
+import { AppSidebar } from '@/components/common/app-sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
-import { BottomNav } from '@/components/bottom-nav';
+import { BottomNav } from '@/components/common/bottom-nav';
 import { SupabaseProvider, useUser, supabase } from '@/supabase';
 import { signOut } from '@/supabase/auth';
 import { useDoc, useCollection } from '@/supabase/db';
@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 
-const Logo = dynamic(() => import('@/components/logo').then(mod => mod.Logo), { 
+const Logo = dynamic(() => import('@/components/common/logo').then(mod => mod.Logo), { 
   ssr: false,
   loading: () => <div className="w-[100px] h-[28px]" /> // Placeholder with similar dimensions
 });
@@ -30,14 +30,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const [mounted, setMounted] = useState(false);
-  const [showInitialSplash, setShowInitialSplash] = useState(true);
 
   useEffect(() => {
     setMounted(true);
-    const timer = setTimeout(() => {
-      setShowInitialSplash(false);
-    }, 10000);
-    return () => clearTimeout(timer);
   }, []);
 
   const { data: isAdminDoc } = useDoc("roles_admin", user?.id);
@@ -78,28 +73,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const points = userData?.points || 0;
   const isBlacklisted = !!userData?.is_blacklisted;
 
-  // Render a consistent splash screen for loading and initial view
-  const SplashView = ({ isPersistent = false }: { isPersistent?: boolean }) => (
-    <div className={cn(
-      "fixed inset-0 z-[9999] bg-[#800000] flex flex-col items-center justify-center overscroll-none touch-none",
-      !isPersistent && "animate-out fade-out duration-1000 fill-mode-forwards ease-in-out pointer-events-none"
-    )}>
-       {/* One and Only Image: app-splash.jpg */}
-       <img 
-          src="/app-splash.jpg" 
-          alt="Hi AQLI" 
-          className="w-full h-full object-cover sm:object-contain transition-opacity duration-700" 
-          onLoad={() => {
-            // Can be used to ensure image is ready
-          }}
-       />
-    </div>
-  );
-
   // The server and initial client render must match. 
-  // We return a splash shell until mounted to avoid white flicker.
+  // We return null until mounted to avoid hydration white flicker.
   if (!mounted) {
-    return <SplashView isPersistent={true} />;
+    return null;
   }
 
   // Blacklist Guard View
@@ -130,7 +107,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {showInitialSplash && <SplashView isPersistent={false} />}
       <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
         {/* Sidebar hanya muncul untuk admin di md ke atas */}
@@ -198,13 +174,9 @@ export default function RootLayout({
         <title>Hi AQLI</title>
         <meta name="description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
         
-        {/* Preload splash assets as early as possible */}
-        <link rel="preload" href="/app-splash.jpg" as="image" />
-
         {/* PWA & iOS Optimization */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="apple-touch-startup-image" href="/app-splash.jpg" />
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
