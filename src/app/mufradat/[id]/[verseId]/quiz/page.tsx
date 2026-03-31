@@ -346,11 +346,18 @@ function MufradatQuizContent() {
             {isPerfect ? (
               <>
                 {surahInfo && parseInt(verseId) < surahInfo.verses_count ? (
-                  <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                    <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}${from ? `?from=${from}` : ''}`}>
-                      Lanjut ke Ayat {parseInt(verseId) + 1} <ChevronLeft className="w-4 h-4 rotate-180" />
-                    </Link>
-                  </Button>
+                  <div className="flex flex-col gap-3 w-full">
+                    <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-[0.1em] text-[10px] gap-2 border-b-4 border-black/10 transition-all active:translate-y-1 active:border-b-0">
+                      <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}/quiz${from ? `?from=${from}&` : '?'}success=true`}>
+                        <Zap className="w-4 h-4 fill-current" /> LANGSUNG KUIS AYAT {parseInt(verseId) + 1}
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 text-[#800000] font-black py-7 rounded-2xl uppercase tracking-widest text-[10px] gap-2 hover:bg-[#800000]/5 transition-all">
+                      <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}${from ? `?from=${from}&` : '?'}success=true`}>
+                        TADABBUR AYAT {parseInt(verseId) + 1} <ChevronLeft className="w-4 h-4 rotate-180" />
+                      </Link>
+                    </Button>
+                  </div>
                 ) : (
                   <div className="w-full p-4 bg-emerald-50 rounded-2xl text-center border border-emerald-100 mb-2">
                     <p className="text-xs font-bold text-emerald-800 uppercase tracking-widest">Ma Syaa Allah!</p>

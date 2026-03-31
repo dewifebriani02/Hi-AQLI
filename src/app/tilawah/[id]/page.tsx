@@ -5,6 +5,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import chaptersData from "@/data/chapters.json";
 import {
   Tooltip,
   TooltipContent,
@@ -65,9 +66,16 @@ export default function SurahDetailPage() {
   const { toast } = useToast();
   const { user } = useUser();
 
-  const [surah, setSurah] = useState<SurahInfo | null>(null);
+  const [surah, setSurah] = useState<SurahInfo | null>(() => {
+    const sId = Number(id);
+    if (sId) {
+      return (chaptersData.chapters as any[]).find(c => c.id === sId) || null;
+    }
+    return null;
+  });
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleLimit, setVisibleLimit] = useState(20);
   const [fontSize, setFontSize] = useState(32);
 
   const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
@@ -92,12 +100,12 @@ export default function SurahDetailPage() {
     async function fetchData() {
       if (!id) return;
 
+      // 1. Instantly set Surah metadata from local JSON for zero-latency header
+      const localSurah = (chaptersData.chapters as any[]).find(c => c.id === Number(id));
+      if (localSurah) setSurah(localSurah);
+
       try {
         setLoading(true);
-
-        const infoRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        const infoData = await infoRes.json();
-        setSurah(infoData.chapter);
 
         const verseRes = await fetch(
           `https://api.quran.com/api/v4/verses/by_chapter/${id}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani&per_page=300`
@@ -111,6 +119,11 @@ export default function SurahDetailPage() {
           const searchParams = new URLSearchParams(window.location.search);
           const verseToScroll = searchParams.get('verse');
           if (verseToScroll) {
+            const vIndex = verseData.verses.findIndex((v: any) => v.verse_number.toString() === verseToScroll);
+            if (vIndex !== -1 && vIndex >= 20) {
+              setVisibleLimit(vIndex + 5);
+            }
+            
             setTimeout(() => {
               const element = verseRefs.current[verseToScroll];
               if (element) {
@@ -250,7 +263,7 @@ export default function SurahDetailPage() {
 
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>
-          {verses.map((verse) => (
+          {verses.slice(0, visibleLimit).map((verse) => (
             <div 
               key={verse.id} 
               ref={el => { verseRefs.current[verse.verse_number.toString()] = el }}
@@ -304,6 +317,19 @@ export default function SurahDetailPage() {
             </div>
           ))}
         </TooltipProvider>
+
+        {/* Load More Observer */}
+        {verses.length > visibleLimit && (
+          <div className="py-12 flex justify-center">
+            <Button 
+              variant="outline" 
+              className="rounded-full px-8 border-2 border-[#800000]/10 text-[#800000] font-black"
+              onClick={() => setVisibleLimit(prev => prev + 30)}
+            >
+              TAMPILKAN 30 AYAT LAGI...
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

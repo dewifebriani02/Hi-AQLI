@@ -51,6 +51,8 @@ import { addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import chaptersData from "@/data/chapters.json";
+import { SURAH_START_PAGES } from "@/lib/quran-mapping";
 
 const JUZ_PAGES = [
   1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282,
@@ -160,7 +162,16 @@ export function TikrarSystem() {
         );
         if (!res.ok) throw new Error("Gagal memuat ayat");
         const data = await res.json();
-        setVerses(data.verses);
+        
+        if (data && data.verses && data.verses.length > 0) {
+          setVerses(data.verses);
+          // Point 4: Pre-fetch first audio URL instantly after loading verses
+          if (selectedReciterId) {
+            getAudioUrlByVerseKey(data.verses[0].verse_key, selectedReciterId).then(url => {
+              nextAudioUrlRef.current = url;
+            });
+          }
+        }
       } catch (error) {
         console.error("Tikrar Maqta Fetch Error:", error);
       } finally {
@@ -199,7 +210,10 @@ export function TikrarSystem() {
   }, [page]);
 
   useEffect(() => {
-    if (!loading && typeof window !== 'undefined') {
+    if (loading || typeof window === 'undefined') return;
+
+    // Debounce saving to localStorage to prevent lag during rapid increments
+    const timer = setTimeout(() => {
       const existing = localStorage.getItem(`tikrar_progress_p${page}`);
       const parsed = existing ? JSON.parse(existing) : {};
       localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify({
@@ -209,7 +223,9 @@ export function TikrarSystem() {
         blocks,
         metaCounts
       }));
-    }
+    }, 500); // Wait 500ms after last change before writing to disk
+
+    return () => clearTimeout(timer);
   }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, loading]);
 
   const blockVerses = useMemo(() => {
@@ -223,11 +239,9 @@ export function TikrarSystem() {
     };
   }, [verses]);
 
-  const getAudioUrl = async (vIndex: number) => {
-    if (vIndex < 0 || vIndex >= verses.length) return null;
-    const verseKey = verses[vIndex].verse_key;
+  const getAudioUrlByVerseKey = async (verseKey: string, reciterId: number) => {
     try {
-      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
+      const res = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/by_ayah/${verseKey}`);
       const data = await res.json();
       const audioUrl = data.audio_files[0]?.url;
       if (!audioUrl) return null;
@@ -235,6 +249,11 @@ export function TikrarSystem() {
     } catch (e) {
       return null;
     }
+  };
+
+  const getAudioUrl = async (vIndex: number) => {
+    if (vIndex < 0 || vIndex >= verses.length || !selectedReciterId) return null;
+    return getAudioUrlByVerseKey(verses[vIndex].verse_key, selectedReciterId);
   };
 
   const stopAutoPlay = () => {
@@ -350,8 +369,19 @@ export function TikrarSystem() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2">
-                <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-bold uppercase tracking-widest">HI AQLI Tikrar System</Badge>
-                <h3 className="text-2xl font-bold font-headline">Juz {juz} • Halaman {page}</h3>
+                <Badge className="bg-[#D4AF37] text-black border-none text-[10px] font-black uppercase tracking-widest">HI AQLI Tikrar System</Badge>
+                <div className="flex flex-col">
+                  <h3 className="text-2xl font-black font-headline">Halaman {page}</h3>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 decoration-[#D4AF37] decoration-2 underline-offset-4 underline">
+                    QS. {(() => {
+                      let surahId = 1;
+                      Object.entries(SURAH_START_PAGES).forEach(([id, start]) => {
+                        if (start <= page) surahId = Number(id);
+                      });
+                      return (chaptersData.chapters as any[]).find(c => c.id === surahId)?.name_simple || "Loading...";
+                    })()}
+                  </p>
+                </div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 flex flex-col items-end">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter opacity-80 mb-1">

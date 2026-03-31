@@ -5,6 +5,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart } from "lucide-react";
 import Link from "next/link";
+import chaptersData from "@/data/chapters.json";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import {
   Tooltip,
@@ -85,7 +86,10 @@ export default function MufradatSurahDetailPage() {
   // Fetch progress for the current surah to handle locking
   // Unified global progress fetch (no surah filter to avoid type/sync issues)
   const { data: userProgress, isLoading: isUserProgressLoading } = useCollection("quiz_attempts", user ? {
-    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'surah_id', operator: '==', value: Number(id) }
+    ]
   } : undefined);
 
   const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations", {
@@ -197,12 +201,14 @@ export default function MufradatSurahDetailPage() {
     async function fetchData() {
       if (!id) return;
 
+      // 1. Instantly set Surah metadata from local JSON for zero-latency header
+      const localSurah = (chaptersData.chapters as any[]).find(c => c.id === Number(id));
+      if (localSurah) setSurah(localSurah);
+
       try {
         setLoading(true);
 
-        const infoRes = await fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`);
-        const infoData = await infoRes.json();
-        setSurah(infoData.chapter);
+        // Fetch next surah info if available (can stay background)
 
         // Fetch next surah info if available
         const nextId = Number(id) + 1;

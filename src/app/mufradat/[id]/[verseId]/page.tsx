@@ -3,8 +3,9 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, ShieldAlert, CreditCard, Heart } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, ShieldAlert, CreditCard, Heart, Zap } from "lucide-react";
 import Link from "next/link";
+import chaptersData from "@/data/chapters.json";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ function VerseDetailContent() {
   const id = params.id as string;
   const verseId = params.verseId as string;
   const from = searchParams.get('from');
+  const success = searchParams.get('success');
   const currentVerseNum = parseInt(verseId);
 
   const { user, isUserLoading } = useUser();
@@ -59,9 +61,10 @@ function VerseDetailContent() {
 
   const progressOptions = useMemo(() => ({
     filters: [
-      { column: 'user_id', operator: '==', value: user?.id }
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'surah_id', operator: '==', value: Number(id) }
     ]
-  }), [user?.id]);
+  }), [user?.id, id]);
 
   const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
 
@@ -131,7 +134,8 @@ function VerseDetailContent() {
     // 2. OR It's already completed
     // 3. OR It's the first verse of a surah 
     // 4. OR Previous verse in the same surah is done
-    const isUnlocked = isFirstVerseOfQuran || isFirstVerseOfSurah || isCurrentVerseCompleted || isPrevVerseDone;
+    // 5. OR User just came from a successful quiz (Optimistic)
+    const isUnlocked = isFirstVerseOfQuran || isFirstVerseOfSurah || isCurrentVerseCompleted || isPrevVerseDone || success === 'true';
     
     if (!isUnlocked) {
       // Grace period: Wait 1500ms before redirecting to allow DB sync
@@ -183,11 +187,18 @@ function VerseDetailContent() {
   useEffect(() => {
     async function fetchAll() {
       if (!id || !verseId) return;
+
+      // 1. Instantly set Surah metadata from local JSON for zero-latency header
+      const localSurah = (chaptersData.chapters as any[]).find(c => c.id === Number(id));
+      if (localSurah) {
+        setSurahName(localSurah.name_simple);
+        setTotalVerses(localSurah.verses_count);
+      }
+
       try {
         setLoading(true);
-        // Parallel fetch for Chapter and Verse data
         const [sRes, vRes] = await Promise.all([
-          fetch(`https://api.quran.com/api/v4/chapters/${id}?language=id`),
+          Promise.resolve({ ok: true, json: () => ({ chapter: localSurah }) }), // Use localSurah if available
           fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`)
         ]);
 
@@ -393,12 +404,19 @@ function VerseDetailContent() {
             </Button>
 
             {isCurrentVerseCompleted && currentVerseNum < totalVerses && (
-              <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 hover:bg-[#800000]/5 text-[#800000] font-black gap-2 py-6 h-14 text-lg rounded-xl transition-all">
-                <Link href={`/mufradat/${id}/${currentVerseNum + 1}${from ? `?from=${from}` : ''}`}>
-                  LANJUT KE AYAT {currentVerseNum + 1}
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-              </Button>
+              <div className="flex flex-col gap-3 w-full">
+                <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black py-6 h-14 text-lg rounded-xl shadow-lg border-b-4 border-black/10 transition-all active:translate-y-1 active:border-b-0 uppercase tracking-widest gap-2">
+                  <Link href={`/mufradat/${id}/${currentVerseNum + 1}/quiz${from ? `?from=${from}` : ''}`}>
+                    <Zap className="w-5 h-5 fill-current underline" /> MULAI KUIS AYAT {currentVerseNum + 1}
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 hover:bg-[#800000]/5 text-[#800000] font-black gap-2 py-6 h-14 text-lg rounded-xl transition-all uppercase tracking-widest">
+                  <Link href={`/mufradat/${id}/${currentVerseNum + 1}${from ? `?from=${from}` : ''}`}>
+                    TADABBUR AYAT {currentVerseNum + 1}
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                </Button>
+              </div>
             )}
           </CardFooter>
         </Card>

@@ -44,6 +44,7 @@ export function MushafPage() {
   const [page, setPage] = useState(1);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageCache, setPageCache] = useState<Record<number, Verse[]>>({});
   const [inputPage, setInputPage] = useState("1");
   const [showTranslation, setShowTranslation] = useState(false);
   const [fontSize, setFontSize] = useState(32); // Default font size
@@ -65,22 +66,38 @@ export function MushafPage() {
     const savedSize = localStorage.getItem('aqli_mushaf_font_size');
     if (savedSize) setFontSize(parseInt(savedSize));
 
-    async function fetchPageVerses() {
-      setLoading(true);
+    async function fetchPageVerses(p: number, isPrefetch = false) {
+      if (!isPrefetch && pageCache[p]) {
+        setVerses(pageCache[p]);
+        setLoading(false);
+        // Trigger prefetch for next page even if we use cache
+        if (p < 604) fetchPageVerses(p + 1, true);
+        return;
+      }
+
+      if (!isPrefetch) setLoading(true);
       try {
         const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`
+          `https://api.quran.com/api/v4/verses/by_page/${p}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`
         );
         if (!res.ok) throw new Error("Gagal memuat halaman");
         const data = await res.json();
-        setVerses(data.verses);
+        
+        if (isPrefetch) {
+          setPageCache(prev => ({ ...prev, [p]: data.verses }));
+        } else {
+          setVerses(data.verses);
+          setPageCache(prev => ({ ...prev, [p]: data.verses }));
+          // After valid current page, prefetch next
+          if (p < 604) fetchPageVerses(p + 1, true);
+        }
       } catch (error) {
         console.error("Quran API Error:", error);
       } finally {
-        setLoading(false);
+        if (!isPrefetch) setLoading(false);
       }
     }
-    fetchPageVerses();
+    fetchPageVerses(page);
     setInputPage(page.toString());
     setActiveWordKey(null); // Reset when page changes
     

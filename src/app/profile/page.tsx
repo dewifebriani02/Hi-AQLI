@@ -2,7 +2,7 @@
 'use client';
 
 import { useUser, signOut, supabase } from '@/supabase';
-import { useDoc, useCollection } from '@/supabase/db';
+import { useDoc, useCollection, useCount } from '@/supabase/db';
 import { updateDocumentNonBlocking } from '@/supabase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -66,15 +66,11 @@ export default function ProfilePage() {
   const isPaid = userData?.is_tikrar_paid;
   const paidJuz = userData?.paid_juz;
   const points = userData?.points || 0;
-
-  // Fetch all users to calculate rank
-  const rankOptions = useMemo(() => ({
-    orderBy: { column: 'points', ascending: false }
-  }), []);
-
-  const { data: allUsers } = useCollection("users", rankOptions);
-  const userIndex = allUsers?.findIndex(u => u.id === user?.id);
-  const rank = userIndex !== -1 && userIndex !== undefined ? userIndex + 1 : '-';
+  const { count: higherPointsCount } = useCount("users", useMemo(() => ({
+    filters: [{ column: 'points', operator: '>', value: points }]
+  }), [points]));
+  
+  const rank = points > 0 ? (higherPointsCount !== null ? higherPointsCount + 1 : '-') : '-';
 
   useEffect(() => {
     if (!isUserLoading && !user) {

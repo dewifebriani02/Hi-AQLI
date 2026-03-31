@@ -100,6 +100,8 @@ export function useCollection<T = any>(
             }
             options.filters.forEach(f => {
                 if (f.operator === '==') q = q.eq(f.column, f.value);
+                if (f.operator === '>') q = q.gt(f.column, f.value);
+                if (f.operator === '<') q = q.lt(f.column, f.value);
                 if (f.operator === '>=') q = q.gte(f.column, f.value);
                 if (f.operator === '<=') q = q.lte(f.column, f.value);
                 if (f.operator === 'in') q = q.in(f.column, f.value);
@@ -146,4 +148,51 @@ export function useCollection<T = any>(
     }, [table, fetchData]);
 
     return { data, isLoading, error, refresh: fetchData };
+}
+
+export function useCount(
+    table: string | null | undefined,
+    options?: {
+        filters?: { column: string; operator: string; value: any }[];
+    }
+) {
+    const [count, setCount] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(!!table);
+    const [error, setError] = useState<Error | null>(null);
+
+    const optionsKey = JSON.stringify(options);
+
+    const fetchCount = useCallback(async () => {
+        if (!table) return;
+        setIsLoading(true);
+        setError(null);
+
+        let q = supabase.from(table).select('*', { count: 'exact', head: true });
+
+        if (options?.filters) {
+            options.filters.forEach(f => {
+                if (f.operator === '==') q = q.eq(f.column, f.value);
+                if (f.operator === '>') q = q.gt(f.column, f.value);
+                if (f.operator === '<') q = q.lt(f.column, f.value);
+                if (f.operator === '>=') q = q.gte(f.column, f.value);
+                if (f.operator === '<=') q = q.lte(f.column, f.value);
+            });
+        }
+
+        const { count, error } = await q;
+
+        if (error) {
+            setError(error);
+        } else {
+            setCount(count);
+        }
+        setIsLoading(false);
+    }, [table, optionsKey]);
+
+    useEffect(() => {
+        if (!table) return;
+        fetchCount();
+    }, [table, fetchCount]);
+
+    return { count, isLoading, error, refresh: fetchCount };
 }

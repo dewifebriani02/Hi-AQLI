@@ -60,6 +60,9 @@ const RECITERS = [
 
 function MufradatPageContent() {
   const { user, isUserLoading } = useUser();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("surah");
 
   // Fetch all passed attempts for the current user
   const progressOptions = useMemo(() => ({
@@ -79,25 +82,45 @@ function MufradatPageContent() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
-  // GROUP LEADERBOARD DATA
-  const { data: allGroupUsers, isLoading: isGroupUsersLoading } = useCollection(userData?.mufradat_group_id ? "users" : null, {
-    filters: [{ column: 'mufradat_group_id', operator: '==', value: userData?.mufradat_group_id }]
+  const isRankTab = activeTab === 'rank';
+  const group_id = userData?.mufradat_group_id;
+
+  // GROUP LEADERBOARD DATA (Lazy load only when on rank tab)
+  const { data: allGroupUsers, isLoading: isGroupUsersLoading } = useCollection(isRankTab && group_id ? "users" : null, {
+    filters: [{ column: 'mufradat_group_id', operator: '==', value: group_id }]
   });
 
-  const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(userData?.mufradat_group_id ? "quiz_attempts" : null, {
+  const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(isRankTab && group_id ? "quiz_attempts" : null, {
     filters: [
-      { column: 'group_id', operator: '==', value: userData?.mufradat_group_id },
+      { column: 'group_id', operator: '==', value: group_id },
       { column: 'is_passed', operator: '==', value: true }
     ]
   });
 
-  const { data: allReactions, refresh: refreshReactions } = useCollection("mufradat_reactions");
+  const { data: allReactions, refresh: refreshReactions } = useCollection(isRankTab && group_id ? "mufradat_reactions" : null, {
+    filters: [{ column: 'group_id', operator: '==', value: group_id }]
+  });
 
   const groupRankings = useMemo(() => {
-    if (!allGroupUsers) return [];
+    if (!allGroupUsers || !isRankTab) return [];
     
+    // O(M) Pre-processing attempts into Map
+    const attemptsByUserId = new Map<string, any[]>();
+    (allGroupAttempts || []).forEach(a => {
+      if (!attemptsByUserId.has(a.user_id)) attemptsByUserId.set(a.user_id, []);
+      attemptsByUserId.get(a.user_id)!.push(a);
+    });
+
+    // O(K) Pre-processing reactions into Map
+    const reactionsByUserId = new Map<string, any[]>();
+    (allReactions || []).forEach(r => {
+      if (!reactionsByUserId.has(r.to_user_id)) reactionsByUserId.set(r.to_user_id, []);
+      reactionsByUserId.get(r.to_user_id)!.push(r);
+    });
+
+    // O(N) processing users
     return allGroupUsers.map(u => {
-      const userAttempts = (allGroupAttempts || []).filter(a => a.user_id === u.id);
+      const userAttempts = attemptsByUserId.get(u.id) || [];
       
       // UNIQUE VERSES (Hafalan)
       const uniqueVerses = new Set(userAttempts.map(a => `${a.surah_id}:${a.verse_id}`)).size;
@@ -106,7 +129,7 @@ function MufradatPageContent() {
       const totalPassed = userAttempts.length;
       
       // REACTION SUMMARY
-      const userReactions = (allReactions || []).filter(r => r.to_user_id === u.id);
+      const userReactions = reactionsByUserId.get(u.id) || [];
       const reactionSummary = {
         mabruk: userReactions.filter(r => r.reaction_type === 'mabruk').length,
         semangat: userReactions.filter(r => r.reaction_type === 'semangat').length,
@@ -123,7 +146,7 @@ function MufradatPageContent() {
       };
     }).sort((a: any, b: any) => b.verseCount - a.verseCount || b.points - a.points)
       .slice(0, 20); // Top 20
-  }, [allGroupUsers, allGroupAttempts, allReactions]);
+  }, [allGroupUsers, allGroupAttempts, allReactions, isRankTab]);
 
   const sendReaction = async (toUserId: string, type: string) => {
     if (!user) return;
@@ -144,9 +167,6 @@ function MufradatPageContent() {
     return getMufradatStatus(userData, registrations || []);
   }, [userData, registrations]);
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState("surah");
   const [selectedReciterId, setSelectedReciterId] = useState<number>(7);
   const [isReciterDialogOpen, setIsReciterDialogOpen] = useState(false);
 

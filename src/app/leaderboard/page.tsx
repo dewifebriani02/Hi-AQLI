@@ -59,16 +59,18 @@ export default function LeaderboardPage() {
 
   const { data: allUsers, isLoading } = useCollection("users", leaderboardOptions);
   
-  // Filter out 0-point accounts to keep the leaderboard "juara" (champions) only,
-  // but keep the current user in the list if they are in the top 50
   const users = useMemo(() => {
     return allUsers?.filter(u => (u.points || 0) > 0 || u.id === user?.id) || [];
   }, [allUsers, user?.id]);
 
-  // Use a separate useDoc for current user to ensure sticky footer is always accurate
-  const { data: currentUserDoc } = useDoc("users", user?.id);
-  const currentUserData = currentUserDoc || users?.find(u => u.id === user?.id);
-  const currentUserRank = allUsers?.findIndex(u => u.id === user?.id) + 1 || 0;
+  const userInTop50 = useMemo(() => allUsers?.find(u => u.id === user?.id), [allUsers, user?.id]);
+  const { data: backupUserDoc } = useDoc(user && !userInTop50 ? "users" : null, user?.id);
+  
+  const currentUserData = userInTop50 || backupUserDoc;
+  const currentUserRank = useMemo(() => {
+    if (userInTop50) return allUsers.findIndex(u => u.id === user?.id) + 1;
+    return 0; // Will be handled by the count-based rank if we want to be 100% precise, but for the sticky footer, 0/None is fine for now or we can use the Profile logic.
+  }, [allUsers, user?.id, userInTop50]);
 
   if (isLoading) {
     return (

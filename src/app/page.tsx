@@ -51,6 +51,8 @@ export default function DashboardPage() {
 
   // Mutaba'ah Progress Calculation - only fetch if user is logged in
   const todayStr = new Date().toISOString().split('T')[0];
+  const thirtyDaysAgoStr = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  
   const { data: mutabaahLogs } = useCollection(
     "mutabaah_logs",
     user?.id ? {
@@ -67,7 +69,8 @@ export default function DashboardPage() {
     user?.id ? {
       filters: [
         { column: 'user_id', operator: '==', value: user.id },
-        { column: 'is_passed', operator: '==', value: true }
+        { column: 'is_passed', operator: '==', value: true },
+        { column: 'created_at', operator: '>=', value: thirtyDaysAgoStr }
       ],
       orderBy: { column: 'created_at', ascending: false }
     } : undefined
@@ -97,6 +100,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchPrayerTimes = async (lat: number, lon: number) => {
       try {
+        const cacheKey = `prayer_times_${todayStr}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+        const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+        if (cached) {
+          setNextPrayer(JSON.parse(cached));
+          return;
+        }
+
         let locationName = "Jakarta";
         try {
           const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
@@ -130,6 +140,7 @@ export default function DashboardPage() {
           }
           if (!next) next = { name: "Subuh", time: timings["Fajr"], location: locationName };
           setNextPrayer(next);
+          if (typeof window !== 'undefined') localStorage.setItem(cacheKey, JSON.stringify(next));
         }
       } catch (err) {
         console.error("Failed to fetch prayer times", err);
@@ -208,20 +219,29 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchHijri = async () => {
       try {
+        const cacheKey = `hijri_date_${todayStr}`;
+        const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+        if (cached) {
+          setHijriDate(cached);
+          return;
+        }
+
         const today = new Date();
         const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
         const res = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}`);
         const result = await res.json();
         if (result.data && result.data.hijri) {
           const h = result.data.hijri;
-          setHijriDate(`${h.day} ${h.month.en} ${h.year} H`);
+          const formatted = `${h.day} ${h.month.en} ${h.year} H`;
+          setHijriDate(formatted);
+          if (typeof window !== 'undefined') localStorage.setItem(cacheKey, formatted);
         }
       } catch (e) {
         console.error("Failed to fetch Hijri date", e);
       }
     };
     fetchHijri();
-  }, []);
+  }, [todayStr]);
 
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">

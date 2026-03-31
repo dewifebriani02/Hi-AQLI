@@ -65,14 +65,24 @@ export function TikrarSchedule() {
   const scheduleData = useMemo(() => {
     const startPage = JUZ_PAGES[juz - 1] || 1;
     const endPage = juz < 30 ? (JUZ_PAGES[juz] || 604) - 1 : 604;
-    const items = [];
-
     const adminStartDate = userData?.tikrarStartDate ? new Date(userData.tikrarStartDate) :
       userData?.created_at ? new Date(userData.created_at) :
-        new Date();
+      new Date();
 
+    const items: any[] = [];
     let currentDate = new Date(adminStartDate);
     const dayAllocation = [0.05, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.15];
+
+    // Pre-load all progress from localStorage for the current range to avoid repeated disk reads
+    const progressMap = new Map<number, any>();
+    if (typeof window !== 'undefined') {
+      for (let p = startPage; p <= endPage; p++) {
+        const saved = localStorage.getItem(`tikrar_progress_p${p}`);
+        if (saved) {
+          try { progressMap.set(p, JSON.parse(saved)); } catch (e) {}
+        }
+      }
+    }
 
     for (let p = startPage; p <= endPage; p++) {
       const pageStart = new Date(currentDate);
@@ -94,34 +104,29 @@ export function TikrarSchedule() {
       let metaProgress: Record<string, boolean> = {};
       let isAllDone = false;
 
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem(`tikrar_progress_p${p}`);
-        if (saved) {
-          try {
-            const data = JSON.parse(saved);
-            const b = data.blocks || {};
-            const m = data.metaCounts || {};
+      const data = progressMap.get(p);
+      if (data) {
+        const b = data.blocks || {};
+        const m = data.metaCounts || {};
 
-            isPrepDone = (data.prepListenCount || 0) >= PREP_LISTEN_THRESHOLD && (data.prepTranslationDone || false);
+        isPrepDone = (data.prepListenCount || 0) >= PREP_LISTEN_THRESHOLD && (data.prepTranslationDone || false);
 
-            const letters = ["A", "B", "C", "D"];
-            for (let i = 0; i < 4; i++) {
-              const l = letters[i];
-              tmProgress[l] = (b[i + 1]?.a?.count || 0) >= PASS_THRESHOLD &&
-                (b[i + 1]?.b?.count || 0) >= PASS_THRESHOLD &&
-                (b[i + 1]?.combined?.count || 0) >= PASS_THRESHOLD;
-            }
-
-            metaProgress['1_2'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['2_3'] = (m['2_3'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['1_2_3'] = (m['1_2_3'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['3_4'] = (m['3_4'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['2_3_4'] = (m['2_3_4'] || 0) >= META_PASS_THRESHOLD;
-            metaProgress['1_2_3_4'] = (m['1_2_3_4'] || 0) >= META_PASS_THRESHOLD;
-
-            isAllDone = metaProgress['1_2_3_4'];
-          } catch (e) { }
+        const letters = ["A", "B", "C", "D"];
+        for (let i = 0; i < 4; i++) {
+          const l = letters[i];
+          tmProgress[l] = (b[i + 1]?.a?.count || 0) >= PASS_THRESHOLD &&
+            (b[i + 1]?.b?.count || 0) >= PASS_THRESHOLD &&
+            (b[i + 1]?.combined?.count || 0) >= PASS_THRESHOLD;
         }
+
+        metaProgress['1_2'] = (m['1_2'] || 0) >= META_PASS_THRESHOLD;
+        metaProgress['2_3'] = (m['2_3'] || 0) >= META_PASS_THRESHOLD;
+        metaProgress['1_2_3'] = (m['1_2_3'] || 0) >= META_PASS_THRESHOLD;
+        metaProgress['3_4'] = (m['3_4'] || 0) >= META_PASS_THRESHOLD;
+        metaProgress['2_3_4'] = (m['2_3_4'] || 0) >= META_PASS_THRESHOLD;
+        metaProgress['1_2_3_4'] = (m['1_2_3_4'] || 0) >= META_PASS_THRESHOLD;
+
+        isAllDone = metaProgress['1_2_3_4'];
       }
 
       items.push({
@@ -162,7 +167,7 @@ export function TikrarSchedule() {
     );
   }
 
-  const completedCount = scheduleData.filter(i => i.isDone).length;
+  const completedCount = scheduleData.filter((i: any) => i.isDone).length;
 
   return (
     <div className="space-y-8">
@@ -188,7 +193,7 @@ export function TikrarSchedule() {
       </div>
 
       <div className="relative pl-4 ml-3 border-l-2 border-dashed border-[#800000]/20 space-y-6">
-        {scheduleData.map((item, idx) => {
+        {scheduleData.map((item: any, idx: number) => {
           const isActive = !item.isDone && (idx === 0 || scheduleData[idx - 1].isDone);
           const isExpanded = expandedPage === item.page;
 
