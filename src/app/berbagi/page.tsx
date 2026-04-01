@@ -45,11 +45,39 @@ type Campaign = {
   days_left: number;
   image_url: string | null;
   is_active: boolean;
+  beneficiaries_count?: number;
+  created_at?: string;
+};
+
+type Donation = {
+  id: string;
+  campaign_title: string;
+  amount: number;
+  sender_name: string;
+  status: string;
+  transfer_date: string;
+  is_anonymous?: boolean;
+  created_at: string;
 };
 
 const paymentMethods = [
   { id: 'transfer', label: 'Transfer Bank (BSI)', icon: Landmark, detail: 'Bank Syariah Indonesia - 7123456789 a.n. HI AQLI' },
 ];
+
+const normalizeTitle = (title: string) => (title || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const maskName = (name: string) => {
+  if (!name) return "Hamba Allah";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) {
+    const s = parts[0];
+    if (s.length <= 3) return s;
+    return s.substring(0, 2) + "xxx" + s.substring(s.length - 1);
+  }
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  return first.substring(0, 2) + "xxx " + "xxx" + last.substring(last.length - 2);
+};
 
 export default function BerbagiPage() {
   const { user } = useUser();
@@ -62,30 +90,71 @@ export default function BerbagiPage() {
   }), []);
   const { data: campaignsRaw, isLoading: isCampaignsLoading } = useCollection("campaigns", campaignOptions);
   const campaigns = campaignsRaw as Campaign[];
-
-  // Optimized Stats Fetch: Use useCount for donor count
-  const { count: totalDonorsCount } = useCount("donations", useMemo(() => ({
-    filters: [{ column: 'status', operator: '==', value: 'verified' }]
+  
+  // Real-time stats from users
+  const { count: learnersCount } = useCount("users", useMemo(() => ({
+    filters: [{ column: 'role_id', operator: '==', value: 'learner' }]
   }), []));
 
+  // Fetch real donations
+  const donationOptions = useMemo(() => ({
+    filters: [{ column: 'status', operator: 'in', value: ['verified', 'pending_verification'] }],
+    orderBy: { column: 'created_at', ascending: false }
+  }), []);
+  const { data: allDonationsRaw, isLoading: isDonationsLoading } = useCollection("donations", donationOptions);
+  const allDonations = (allDonationsRaw || []) as Donation[];
+  const verifiedDonations = allDonations.filter(d => d.status === 'verified');
+
+  // Aggregation Logic
+  const { donationStats, totalDonated, totalDonorsCount } = useMemo(() => {
+    const stats: Record<string, { total: number; count: number }> = {};
+    let total = 0;
+    const uniqueDonors = new Set();
+
+    verifiedDonations.forEach(d => {
+      const amount = d.amount || 0;
+      total += amount;
+      uniqueDonors.add((d.sender_name || "Hamba Allah") + d.amount + d.created_at);
+
+      const titleKey = normalizeTitle(d.campaign_title);
+      if (!stats[titleKey]) {
+        stats[titleKey] = { total: 0, count: 0 };
+      }
+      stats[titleKey].total += amount;
+      stats[titleKey].count += 1;
+    });
+
+    return { donationStats: stats, totalDonated: total, totalDonorsCount: uniqueDonors.size };
+  }, [verifiedDonations]);
+
   const totalDonors = totalDonorsCount || 0;
-  // Note: For totalDonated (sum), in a real project we use a Supabase RPC function.
-  // For now, we use a placeholder or the sum of active campaign data.
-  const totalDonated = 75400000; 
 
-  // To keep campaign progress bars working without fetching ALL history:
-  // In a real app, campaign progress should be a field in the 'campaigns' table.
-  // For this demonstration, we'll use the data from the campaigns fetched.
-  const donationStats: Record<string, { total: number; count: number }> = {};
+  const { totalBeneficiaries, enrichedCampaigns } = useMemo(() => {
+    let manualBeneficiaries = 0;
+    const enriched = campaigns?.map(camp => {
+      manualBeneficiaries += (camp.beneficiaries_count || 0);
+      let realDaysLeft = camp.days_left;
+      if (camp.created_at && camp.days_left > 0) {
+        const created = new Date(camp.created_at).getTime();
+        const now = new Date().getTime();
+        const diffDays = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+        realDaysLeft = Math.max(0, camp.days_left - diffDays);
+      }
 
-  // Enrich campaigns with real donation data
-  const enrichedCampaigns = useMemo(() => {
-    return campaigns?.map(camp => ({
-      ...camp,
-      current: donationStats[camp.title]?.total || 0,
-      donors: donationStats[camp.title]?.count || 0,
-    })) || [];
-  }, [campaigns, donationStats]);
+      const titleKey = normalizeTitle(camp.title);
+      return {
+        ...camp,
+        current: donationStats[titleKey]?.total || 0,
+        donors: donationStats[titleKey]?.count || 0,
+        days_left: realDaysLeft
+      };
+    }) || [];
+
+    return { 
+      totalBeneficiaries: manualBeneficiaries + (learnersCount || 0),
+      enrichedCampaigns: enriched 
+    };
+  }, [campaigns, donationStats, learnersCount]);
 
   const [step, setStep] = useState(1);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
@@ -96,6 +165,7 @@ export default function BerbagiPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [senderName, setSenderName] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
   const [proofFile, setProofFile] = useState<File | null>(null);
 
@@ -160,15 +230,17 @@ export default function BerbagiPage() {
       const finalAmount = baseAmount + uniqueCode;
 
       addDocumentNonBlocking("donations", {
-        userId: user?.id || null,
-        campaignTitle: selectedCampaign?.title,
+        user_id: user?.id || null,
+        campaign_title: selectedCampaign?.title,
         amount: finalAmount,
-        uniqueCode: uniqueCode,
-        paymentMethod: method,
-        senderName: senderName,
-        transferDate: transferDate,
+        unique_code: uniqueCode,
+        payment_method: method,
+        sender_name: senderName,
+        is_anonymous: isAnonymous,
+        transfer_date: transferDate,
         status: "pending_verification",
-        proofFileName: uploadedFilePath,
+        proof_file_name: uploadedFilePath,
+        created_at: new Date().toISOString()
       });
 
       setSubmitted(true);
@@ -267,8 +339,8 @@ export default function BerbagiPage() {
                     <Progress value={progress} className="h-1.5 bg-muted [&>div]:bg-[#D4AF37]" />
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground">
-                        <Users className="w-3 h-3 text-[#800000]" />
-                        <span>{camp.donors || 0} Donatur</span>
+                        <Users className="w-3 h-3 text-[#D4AF37]" />
+                        <span>{camp.beneficiaries_count || 0} Penerima</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground">
                         <Clock className="w-3 h-3 text-[#800000]" />
@@ -421,6 +493,18 @@ export default function BerbagiPage() {
                       <Input placeholder="Contoh: Fulanah binti Fulan" className="pl-11 h-12 font-bold border-2 rounded-xl focus-visible:ring-[#800000]" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
                     </div>
                   </div>
+                  <div className="flex items-center gap-3 py-1">
+                    <div 
+                      onClick={() => setIsAnonymous(!isAnonymous)}
+                      className={cn(
+                        "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all",
+                        isAnonymous ? "bg-[#800000] border-[#800000]" : "bg-white border-muted-foreground/30"
+                      )}
+                    >
+                      {isAnonymous && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                    </div>
+                    <Label className="text-[10px] font-bold text-muted-foreground cursor-pointer" onClick={() => setIsAnonymous(!isAnonymous)}>Infaq sebagai "Hamba Allah" (Sembunyikan Nama di Feed Publik)</Label>
+                  </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Tanggal Transfer</Label>
                     <div className="relative">
@@ -455,10 +539,18 @@ export default function BerbagiPage() {
 
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 px-1">
         {[
-          { label: "Infaq Terkumpul", value: totalDonated > 0 ? `Rp ${(totalDonated / 1000000).toFixed(1)}M` : 'Rp 0', icon: TrendingUp },
-          { label: "Total Donatur", value: totalDonors.toString(), icon: Users },
+          { 
+            label: "Infaq Terkumpul", 
+            value: totalDonated >= 1000000 
+              ? `Rp ${(totalDonated / 1000000).toFixed(1)}M` 
+              : totalDonated > 0 
+                ? `Rp ${totalDonated.toLocaleString('id-ID')}`
+                : 'Rp 0', 
+            icon: TrendingUp 
+          },
+          { label: "Total Donatur", value: totalDonors.toLocaleString('id-ID'), icon: Users },
           { label: "Kampanye Aktif", value: (enrichedCampaigns?.length || 0).toString(), icon: Target },
-          { label: "Pemanfaat AI", value: "1.2K", icon: Zap },
+          { label: "Pemanfaat Program", value: totalBeneficiaries.toLocaleString('id-ID'), icon: Zap },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-[#800000]/10 flex flex-col items-center text-center gap-1">
             <stat.icon className="w-5 h-5 text-[#D4AF37] mb-1" />
@@ -466,6 +558,59 @@ export default function BerbagiPage() {
             <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</span>
           </div>
         ))}
+      </div>
+
+      {/* Donasi Terbaru Section */}
+      <div className="mt-12 space-y-6 px-1">
+        <div className="flex items-center justify-between border-b-2 border-dashed pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#800000] rounded-lg">
+              <HeartHandshake className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black font-headline text-[#800000] uppercase tracking-tight">Donatur Terbaru</h2>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Aktivitas Kebaikan Thalibah</p>
+            </div>
+          </div>
+          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[9px] uppercase tracking-tighter">Real-time Feed</Badge>
+        </div>
+
+        <div className="space-y-3">
+          {isDonationsLoading ? (
+            <div className="py-10 flex flex-col items-center gap-2">
+              <Loader2 className="animate-spin h-6 w-6 text-muted-foreground opacity-30" />
+              <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">Sinkronisasi Riwayat...</span>
+            </div>
+          ) : verifiedDonations.length === 0 ? (
+            <div className="py-10 text-center border-2 border-dashed rounded-3xl bg-muted/5">
+              <p className="text-xs text-muted-foreground italic">Belum ada donasi terverifikasi untuk ditampilkan.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {verifiedDonations.slice(0, 10).map((don) => (
+                <div key={don.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-[#800000]/5 hover:border-[#800000]/20 transition-all shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#800000]/5 flex items-center justify-center text-[#800000]">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-black text-[#800000] uppercase truncate max-w-[120px]">
+                        {don.is_anonymous ? "Hamba Allah" : maskName(don.sender_name)}
+                      </span>
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter truncate max-w-[120px]">{don.campaign_title || "Infaq Umum"}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs font-black text-emerald-600">Rp {don.amount.toLocaleString('id-ID')}</span>
+                    <span className="text-[8px] font-bold text-muted-foreground flex items-center gap-1 uppercase tracking-tighter">
+                      <Calendar className="w-2 h-2" /> {new Date(don.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

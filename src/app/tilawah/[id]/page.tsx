@@ -5,7 +5,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import chaptersData from "@/data/chapters.json";
+import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import {
   Tooltip,
   TooltipContent,
@@ -47,7 +47,7 @@ interface SurahInfo {
   id: number;
   name_simple: string;
   name_arabic: string;
-  translated_name: { name: string };
+  translated_name: string;
   verses_count: number;
 }
 
@@ -69,7 +69,7 @@ export default function SurahDetailPage() {
   const [surah, setSurah] = useState<SurahInfo | null>(() => {
     const sId = Number(id);
     if (sId) {
-      return (chaptersData.chapters as any[]).find(c => c.id === sId) || null;
+      return QURAN_CHAPTERS.find(c => c.id === sId) || null;
     }
     return null;
   });
@@ -100,8 +100,8 @@ export default function SurahDetailPage() {
     async function fetchData() {
       if (!id) return;
 
-      // 1. Instantly set Surah metadata from local JSON for zero-latency header
-      const localSurah = (chaptersData.chapters as any[]).find(c => c.id === Number(id));
+      // 1. Instantly set Surah metadata from local data for zero-latency header
+      const localSurah = QURAN_CHAPTERS.find(c => c.id === Number(id));
       if (localSurah) setSurah(localSurah);
 
       try {
@@ -219,7 +219,7 @@ export default function SurahDetailPage() {
           <Button asChild variant="ghost" size="icon"><Link href="/tilawah"><ChevronLeft className="h-6 w-6" /></Link></Button>
           <div className="flex-1">
             <h1 className="text-lg font-bold font-headline">{surah?.id}. {surah?.name_simple}</h1>
-            <p className="text-[10px] uppercase font-semibold text-muted-foreground">{surah?.translated_name.name}</p>
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground">{surah?.translated_name}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-1 bg-muted/30 p-1 rounded-lg border mr-2">

@@ -281,7 +281,7 @@ export default function ProfilePage() {
                           <BookOpen className="w-5 h-5" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-sm font-bold uppercase truncate">{hid.replace(/-/g, ' ')}</h4>
+                          <h4 className="text-sm font-bold uppercase truncate">{hid?.replace(/-/g, ' ') || 'Halaqah'}</h4>
                           <p className="text-[10px] text-muted-foreground font-medium">Halaqah Aktif</p>
                         </div>
                       </div>

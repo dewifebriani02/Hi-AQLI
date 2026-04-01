@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useUser, supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useCollection, useCount } from "@/supabase/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -32,6 +32,13 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { useMemo } from "react";
 
 export default function AdminDonationsPage() {
@@ -45,11 +52,38 @@ export default function AdminDonationsPage() {
   }), []);
 
   const { data: donations, isLoading } = useCollection("donations", donationOptions);
+  const { data: campaigns } = useCollection("campaigns", {
+    filters: [{ column: 'is_active', operator: '==', value: true }],
+    orderBy: { column: 'title', ascending: true }
+  });
 
-  const filteredDonations = donations?.filter(d =>
-    d.senderName?.toLowerCase().includes(search.toLowerCase()) ||
-    d.campaignTitle?.toLowerCase().includes(search.toLowerCase())
-  );
+  const { count: learnersCount } = useCount("users", useMemo(() => ({
+    filters: [{ column: 'role_id', operator: '==', value: 'learner' }]
+  }), []));
+
+  const filteredDonations = donations?.filter(d => {
+    const sender = (d?.sender_name || "").toLowerCase();
+    const campaign = (d?.campaign_title || "").toLowerCase();
+    const s = search.toLowerCase();
+    return sender.includes(s) || campaign.includes(s);
+  });
+
+  const handleUpdateCampaign = async (donationId: string, campaignTitle: string) => {
+    try {
+      const { error } = await supabase.from("donations").update({
+        campaign_title: campaignTitle,
+      }).eq('id', donationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Kampanye Diperbarui",
+        description: `Donasi telah ditautkan ke: ${campaignTitle}`,
+      });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal memperbarui kampanye." });
+    }
+  };
 
   const handleVerify = async (donationId: string) => {
     setProcessingId(donationId);
@@ -108,17 +142,19 @@ export default function AdminDonationsPage() {
 
         <Card className="border-none shadow-sm bg-white overflow-hidden border-l-4 border-amber-500">
           <CardContent className="p-6">
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Menunggu Verifikasi</p>
-            <p className="text-3xl font-black mt-1">{stats.pending}</p>
-            <p className="text-[10px] font-bold text-amber-600 mt-4 uppercase">Butuh Konfirmasi Admin</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Thalibah</p>
+            <p className="text-3xl font-black mt-1">{(learnersCount || 0).toLocaleString('id-ID')}</p>
+            <p className="text-[10px] font-bold text-[#800000] mt-4 uppercase">Aktif Beasiswa</p>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-sm bg-white overflow-hidden border-l-4 border-[#D4AF37]">
           <CardContent className="p-6">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Kampanye Aktif</p>
-            <p className="text-3xl font-black mt-1">3</p>
-            <p className="text-[10px] font-bold text-[#800000] mt-4 uppercase">Infrastruktur & Beasiswa</p>
+            <p className="text-3xl font-black mt-1">{campaigns?.length || 0}</p>
+            <p className="text-[10px] font-bold text-[#800000] mt-4 uppercase truncate">
+              {campaigns?.slice(0, 2).map(c => c.title).join(' & ') || 'Belum Ada Kampanye'}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -164,16 +200,34 @@ export default function AdminDonationsPage() {
                   filteredDonations.map((d) => (
                     <TableRow key={d.id} className="hover:bg-muted/5 transition-colors group">
                       <TableCell className="py-4">
-                        <div className="flex flex-col">
+                        <div className="flex flex-col gap-1 z-50">
                           <span className="text-[10px] font-bold text-muted-foreground">
                             {d.created_at ? new Date(d.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
                           </span>
-                          <span className="text-xs font-black text-[#800000] uppercase mt-0.5">{d.campaignTitle}</span>
+                          <Select 
+                            defaultValue={d.campaign_title || "Infaq Umum"} 
+                            onValueChange={(val) => handleUpdateCampaign(d.id, val === "Infaq Umum" ? "" : val)}
+                          >
+                            <SelectTrigger className={cn(
+                              "h-7 w-[180px] text-[10px] font-black uppercase border-none bg-muted/50 hover:bg-muted focus:ring-0 px-2",
+                              !d.campaign_title && "text-amber-600 bg-amber-50"
+                            )}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Infaq Umum" className="text-[10px] font-bold uppercase">Infaq Umum (Tanpa Kampanye)</SelectItem>
+                              {campaigns?.map((c) => (
+                                <SelectItem key={c.id} value={c.title} className="text-[10px] font-bold uppercase">
+                                  {c.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold">{d.senderName || 'Hamba Allah'}</span>
+                          <span className="text-xs font-bold">{d.sender_name || 'Hamba Allah'}</span>
                           <span className="text-[9px] text-muted-foreground">
                             {d.created_at ? new Date(d.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'} • Rp {d.amount?.toLocaleString('id-ID') || '0'}
                           </span>
@@ -181,18 +235,18 @@ export default function AdminDonationsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {d.paymentMethod === 'transfer' ? (
+                          {d.payment_method === 'transfer' ? (
                             <Landmark className="w-3.5 h-3.5 text-blue-600" />
                           ) : (
                             <QrCode className="w-3.5 h-3.5 text-emerald-600" />
                           )}
-                          <span className="text-[10px] font-bold uppercase">{d.paymentMethod === 'transfer' ? 'BSI' : 'QRIS'}</span>
+                          <span className="text-[10px] font-bold uppercase">{d.payment_method === 'transfer' ? 'BSI' : 'QRIS'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="text-xs font-black text-[#800000]">Rp {d.amount?.toLocaleString('id-ID')}</span>
-                          {d.uniqueCode && <span className="text-[8px] font-bold text-amber-600 uppercase">Kode Unik: {d.uniqueCode}</span>}
+                          {d.unique_code && <span className="text-[8px] font-bold text-amber-600 uppercase">Kode Unik: {d.unique_code}</span>}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -205,14 +259,14 @@ export default function AdminDonationsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {d.proofFileName && (
+                          {d.proof_file_name && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="h-8 font-bold text-[9px] gap-1.5"
                               asChild
                             >
-                              <a href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/bukti_transfer/${d.proofFileName}`} target="_blank" rel="noopener noreferrer">
+                              <a href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/bukti_transfer/${d.proof_file_name}`} target="_blank" rel="noopener noreferrer">
                                 <ArrowUpRight className="w-3 h-3" /> BUKTI
                               </a>
                             </Button>

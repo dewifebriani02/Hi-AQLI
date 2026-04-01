@@ -35,7 +35,7 @@ export default function MuhasabahPage() {
     { id: 'm_wanita_shalat', label: 'Menjaga Shalat 5 Waktu', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
     { id: 'm_wanita_puasa', label: 'Berpuasa di bulan Ramadhan', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
     { id: 'm_wanita_kehormatan', label: 'Menjaga Kehormatan (Kemaluan)', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
-    { id: 'm_wanita_taat', label: 'Taat kepada Suami', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
+    { id: 'm_wanita_taat', label: 'Mentaati Suami', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
     { id: 'm_dosa_syirik', label: 'Menjauhi Syirik (Percaya ramalan/zodiak, jimat, dukun)', sub: 'Dosa2 besar yang biasa dilakukan wanita', dalil: 'Dosa pembinasa' },
     { id: 'm_dosa_sihir', label: 'Menjauhi Sihir', sub: 'Dosa2 besar yang biasa dilakukan wanita', dalil: 'Dosa pembinasa' },
     { id: 'm_dosa_riba', label: 'Menjauhi Riba', sub: 'Dosa2 besar yang biasa dilakukan wanita', dalil: 'Dosa besar diperangi Allah' },
@@ -43,9 +43,9 @@ export default function MuhasabahPage() {
     { id: 'm_lisan_suami', label: 'Menghindari Kufur Nikmat pada Suami', sub: 'Dosa2 besar yang biasa dilakukan wanita', dalil: 'HR. Bukhari: Mengeluh/Mencela pemberian' },
     { id: 'm_akhlak_tabarruj', label: 'Menghindari Tabarruj', sub: 'Dosa2 besar yang biasa dilakukan wanita', dalil: 'Tidak berhias berlebihan di luar' },
     { id: 'm_akhlak_niyahah', label: 'Menghindari Niyahah', sub: 'Dosa2 besar yang biasa dilakukan wanita', dalil: 'Ridha takdir, tidak meratapi berlebihan' },
-    { id: 'm_akhlak_sabar', label: 'Sabar & Syukur Hari Ini', sub: 'Kebaikan & Akhlak', dalil: 'Muhasabah Qolbu' },
-    { id: 'm_akhlak_birrul', label: 'Birrul Walidain', sub: 'Kebaikan & Akhlak', dalil: 'Berbakti/Mendoakan Orang Tua' },
-    { id: 'm_akhlak_infaq', label: 'Infaq/Sedekah Hari Ini', sub: 'Kebaikan & Akhlak', dalil: 'HR. Bukhari: Malaikat mendoakan' },
+    { id: 'm_akhlak_sabar', label: 'Bersabar & Bersyukur Hari Ini', sub: 'Kebaikan & Akhlak', dalil: 'Muhasabah Qolbu' },
+    { id: 'm_akhlak_birrul', label: 'Berbakti kepada Orang Tua (Birrul Walidain)', sub: 'Kebaikan & Akhlak', dalil: 'Berbakti/Mendoakan Orang Tua' },
+    { id: 'm_akhlak_infaq', label: 'Berinfaq/Sedekah Hari Ini', sub: 'Kebaikan & Akhlak', dalil: 'HR. Bukhari: Malaikat mendoakan' },
   ], []);
 
   const todayStr = new Date().toISOString().split('T')[0];

@@ -36,12 +36,28 @@ export default function AdminCampaignsPage() {
   const [goal, setGoal] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [daysLeft, setDaysLeft] = useState("");
+  const [beneficiariesCount, setBeneficiariesCount] = useState("");
 
   const campaignOptions = useMemo(() => ({
     orderBy: { column: 'created_at', ascending: false }
   }), []);
 
   const { data: campaigns, isLoading, refresh } = useCollection("campaigns", campaignOptions);
+  
+  // Fetch donations for real-time stats
+  const { data: allDonations } = useCollection("donations", useMemo(() => ({
+    filters: [{ column: 'status', operator: '==', value: 'verified' }]
+  }), []));
+
+  const donationStats = useMemo(() => {
+    const stats: Record<string, { total: number; count: number }> = {};
+    (allDonations || []).forEach((d: any) => {
+      if (!stats[d.campaign_title]) stats[d.campaign_title] = { total: 0, count: 0 };
+      stats[d.campaign_title].total += d.amount || 0;
+      stats[d.campaign_title].count += 1;
+    });
+    return stats;
+  }, [allDonations]);
 
   const resetForm = () => {
     setTitle("");
@@ -50,6 +66,7 @@ export default function AdminCampaignsPage() {
     setGoal("");
     setImageUrl("");
     setDaysLeft("");
+    setBeneficiariesCount("");
     setEditingId(null);
     setShowForm(false);
   };
@@ -61,6 +78,7 @@ export default function AdminCampaignsPage() {
     setGoal(camp.goal?.toString() || "");
     setImageUrl(camp.image_url || "");
     setDaysLeft(camp.days_left?.toString() || "0");
+    setBeneficiariesCount(camp.beneficiaries_count?.toString() || "0");
     setEditingId(camp.id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -81,6 +99,7 @@ export default function AdminCampaignsPage() {
         goal: parseFloat(goal) || 0,
         image_url: imageUrl.trim() || null,
         days_left: parseInt(daysLeft) || 0,
+        beneficiaries_count: parseInt(beneficiariesCount) || 0,
         is_active: true,
       };
 
@@ -198,6 +217,10 @@ export default function AdminCampaignsPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sisa Hari (0 = Ongoing)</Label>
                 <Input type="number" value={daysLeft} onChange={(e) => setDaysLeft(e.target.value)} placeholder="30" className="h-12 font-bold border-2 rounded-xl" />
               </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Penerima Manfaat</Label>
+                <Input type="number" value={beneficiariesCount} onChange={(e) => setBeneficiariesCount(e.target.value)} placeholder="0" className="h-12 font-bold border-2 rounded-xl" />
+              </div>
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">URL Gambar (Opsional)</Label>
                 <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.jpg" className="h-12 font-medium border-2 rounded-xl" />
@@ -233,6 +256,7 @@ export default function AdminCampaignsPage() {
                   <TableHead className="text-[10px] font-black uppercase">Kategori</TableHead>
                   <TableHead className="text-[10px] font-black uppercase">Target</TableHead>
                   <TableHead className="text-[10px] font-black uppercase">Terkumpul</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase">Penerima</TableHead>
                   <TableHead className="text-[10px] font-black uppercase">Status</TableHead>
                   <TableHead className="text-[10px] font-black uppercase text-right">Aksi</TableHead>
                 </TableRow>
@@ -263,9 +287,12 @@ export default function AdminCampaignsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-xs font-black text-emerald-600">Rp {(camp.current || 0).toLocaleString('id-ID')}</span>
-                            <span className="text-[8px] font-bold text-muted-foreground">{progress}%</span>
+                            <span className="text-xs font-black text-emerald-600">Rp {(donationStats[camp.title]?.total || 0).toLocaleString('id-ID')}</span>
+                            <span className="text-[8px] font-bold text-muted-foreground">{camp.goal > 0 ? Math.round(((donationStats[camp.title]?.total || 0) / camp.goal) * 100) : 0}% • {donationStats[camp.title]?.count || 0} Donatur</span>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-black">{(camp.beneficiaries_count || 0).toLocaleString('id-ID')}</span>
                         </TableCell>
                         <TableCell>
                           <Badge

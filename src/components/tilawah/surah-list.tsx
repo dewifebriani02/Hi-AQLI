@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import chaptersData from "@/data/chapters.json";
+import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +17,7 @@ interface Surah {
   name_arabic: string;
   verses_count: number;
   revelation_place: string;
-  translated_name: string | { name: string };
+  translated_name: string;
 }
 
 interface SurahListProps {
@@ -31,7 +31,7 @@ export function SurahList({
   userProgress = [], 
   selectedReciterId = 7 
 }: SurahListProps) {
-  const [surahs, setSurahs] = useState<Surah[]>(chaptersData.chapters as Surah[]);
+  const [surahs, setSurahs] = useState<Surah[]>(QURAN_CHAPTERS as Surah[]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   
@@ -40,7 +40,7 @@ export function SurahList({
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Surahs are now loaded from local chapters.json for instant performance
+    // Surahs are now loaded from local QURAN_CHAPTERS for instant performance
     setLoading(false);
   }, []);
 
@@ -138,7 +138,7 @@ export function SurahList({
     if (!userProgress) return pageSet;
     userProgress.forEach(p => {
       const isPassed = p.is_passed || Number(p.score) === Number(p.total_questions);
-      if (isPassed && p.quiz_id.startsWith('mufradat_page_')) {
+      if (isPassed && p.quiz_id?.startsWith('mufradat_page_')) {
         const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
         pageSet.add(pNum);
       }
@@ -148,7 +148,7 @@ export function SurahList({
 
   const filteredSurahs = surahs.filter((s) =>
     s.name_simple.toLowerCase().includes(search.toLowerCase()) ||
-    (typeof s.translated_name === 'string' ? s.translated_name.toLowerCase() : s.translated_name.name.toLowerCase()).includes(search.toLowerCase())
+    s.translated_name.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) {
@@ -226,7 +226,7 @@ export function SurahList({
                       "text-xs text-muted-foreground",
                       isCompleted ? "text-emerald-700/70" : "group-hover:text-accent-foreground/80"
                     )}>
-                      {typeof surah.translated_name === 'string' ? surah.translated_name : surah.translated_name.name} • {surah.verses_count} Ayat
+                      {surah.translated_name} • {surah.verses_count} Ayat
                     </p>
                   </div>
                 </div>

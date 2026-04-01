@@ -5,7 +5,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart } from "lucide-react";
 import Link from "next/link";
-import chaptersData from "@/data/chapters.json";
+import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import {
   Tooltip,
@@ -51,7 +51,7 @@ interface SurahInfo {
   id: number;
   name_simple: string;
   name_arabic: string;
-  translated_name: { name: string };
+  translated_name: string;
   verses_count: number;
 }
 
@@ -85,14 +85,14 @@ export default function MufradatSurahDetailPage() {
 
   // Fetch progress for the current surah to handle locking
   // Unified global progress fetch (no surah filter to avoid type/sync issues)
-  const { data: userProgress, isLoading: isUserProgressLoading } = useCollection("quiz_attempts", user ? {
+  const { data: userProgress, isLoading: isUserProgressLoading } = useCollection(user ? "quiz_attempts" : null, {
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
       { column: 'surah_id', operator: '==', value: Number(id) }
     ]
-  } : undefined);
+  });
 
-  const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations", {
+  const { data: registrations, isLoading: isRegLoading } = useCollection(user ? "halaqah_registrations" : null, {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 
@@ -118,7 +118,7 @@ export default function MufradatSurahDetailPage() {
         const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
 
         // 1. Process Page Quizzes
-        if (p.quiz_id.startsWith('mufradat_page_')) {
+        if (p.quiz_id?.startsWith('mufradat_page_')) {
           if (isPassed) {
             const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
             if (!isNaN(pNum)) pageQuizzes.add(pNum);
@@ -203,8 +203,8 @@ export default function MufradatSurahDetailPage() {
     async function fetchData() {
       if (!id) return;
 
-      // 1. Instantly set Surah metadata from local JSON for zero-latency header
-      const localSurah = (chaptersData.chapters as any[]).find(c => c.id === Number(id));
+      // 1. Instantly set Surah metadata from local data for zero-latency header
+      const localSurah = QURAN_CHAPTERS.find(c => c.id === Number(id));
       if (localSurah) setSurah(localSurah);
 
       try {

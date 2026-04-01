@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "rea
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, ShieldAlert, CreditCard, Heart, Zap } from "lucide-react";
 import Link from "next/link";
-import chaptersData from "@/data/chapters.json";
+import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,9 +66,9 @@ function VerseDetailContent() {
     ]
   }), [user?.id, id]);
 
-  const { data: progress, isLoading: isProgressLoading } = useCollection("quiz_attempts", user ? progressOptions : undefined);
+  const { data: progress, isLoading: isProgressLoading } = useCollection(user ? "quiz_attempts" : null, progressOptions);
 
-  const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations", {
+  const { data: registrations, isLoading: isRegLoading } = useCollection(user ? "halaqah_registrations" : null, {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 
@@ -107,7 +107,7 @@ function VerseDetailContent() {
     const pageSet = new Set<number>();
     if (!progress) return pageSet;
     progress.forEach(p => {
-      if (!p.quiz_id.startsWith('mufradat_page_')) return;
+      if (!p.quiz_id?.startsWith('mufradat_page_')) return;
 
       // Robust Passed Check
       const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
@@ -157,7 +157,7 @@ function VerseDetailContent() {
     limit: 1
   }), [user?.id, id, verseId]);
 
-  const { data: lastAttempts } = useCollection("quiz_attempts", user ? lastAttemptOptions : undefined);
+  const { data: lastAttempts } = useCollection(user ? "quiz_attempts" : null, lastAttemptOptions);
   const lastAttempt = useMemo(() => lastAttempts?.[0], [lastAttempts]);
   const wrongWordIds = useMemo(() => new Set<number>(lastAttempt?.wrong_words || []), [lastAttempt]);
 
@@ -188,8 +188,8 @@ function VerseDetailContent() {
     async function fetchAll() {
       if (!id || !verseId) return;
 
-      // 1. Instantly set Surah metadata from local JSON for zero-latency header
-      const localSurah = (chaptersData.chapters as any[]).find(c => c.id === Number(id));
+      // 1. Instantly set Surah metadata from local data for zero-latency header
+      const localSurah = QURAN_CHAPTERS.find(c => c.id === Number(id));
       if (localSurah) {
         setSurahName(localSurah.name_simple);
         setTotalVerses(localSurah.verses_count);
@@ -204,8 +204,10 @@ function VerseDetailContent() {
 
         const [sData, vData] = await Promise.all([sRes.json(), vRes.json()]);
         
-        setSurahName(sData.chapter.name_simple);
-        setTotalVerses(sData.chapter.verses_count);
+        if (sData.chapter) {
+          setSurahName(sData.chapter.name_simple);
+          setTotalVerses(sData.chapter.verses_count);
+        }
         setVerse(vData.verse);
 
         if (vData.verse) setTimeout(() => fetchOfficialTafsir(id, verseId), 300);

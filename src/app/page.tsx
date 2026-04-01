@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Clock,
   CheckCircle2,
+  XCircle,
   Trophy,
   Zap,
   Star,
@@ -33,11 +34,13 @@ import {
   Plane,
   Utensils,
   HeartPulse,
+  Search,
+  Users,
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
-import React, { useEffect, useState } from "react";
+import { QURAN_CHAPTERS, SURAH_MAP_STR } from "@/lib/quran-data";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -69,10 +72,46 @@ export default function DashboardPage() {
     user?.id ? {
       filters: [
         { column: 'user_id', operator: '==', value: user.id },
-        { column: 'is_passed', operator: '==', value: true },
         { column: 'created_at', operator: '>=', value: thirtyDaysAgoStr }
       ],
       orderBy: { column: 'created_at', ascending: false }
+    } : undefined
+  );
+
+  // Get user's recent donations
+  const { data: userDonations } = useCollection(
+    "donations",
+    user?.id ? {
+      filters: [
+        { column: 'user_id', operator: '==', value: user.id }
+      ],
+      orderBy: { column: 'created_at', ascending: false },
+      limit: 10
+    } : undefined
+  );
+
+  // Get user's recent mutabaah history (last 20 logs)
+  const { data: mutabaahHistory } = useCollection(
+    "mutabaah_logs",
+    user?.id ? {
+      filters: [
+        { column: 'user_id', operator: '==', value: user.id },
+        { column: 'completed', operator: '==', value: true }
+      ],
+      orderBy: { column: 'created_at', ascending: false },
+      limit: 20
+    } : undefined
+  );
+
+  // Get user's class registration history
+  const { data: ngajiRegs } = useCollection(
+    "halaqah_registrations",
+    user?.id ? {
+      filters: [
+        { column: 'userId', operator: '==', value: user.id }
+      ],
+      orderBy: { column: 'createdAt', ascending: false },
+      limit: 10
     } : undefined
   );
 
@@ -242,6 +281,106 @@ export default function DashboardPage() {
     };
     fetchHijri();
   }, [todayStr]);
+
+  // Combine activities for "Riwayat Terkini"
+  const recentActivities = useMemo(() => {
+    const activities: any[] = [];
+    
+    // 1. Add Quiz Attempts (Mufradat / Irab)
+    quizAttempts?.forEach((q: any) => {
+      const isMufradat = q.quiz_id?.startsWith('mufradat');
+      const isIrab = q.quiz_id?.startsWith('irab');
+      
+      let programName = isMufradat ? 'Hi Mufradat' : isIrab ? 'Hi Irab' : 'Kuis';
+      let statusLabel = q.is_passed ? 'Lulus' : 'Kuis';
+      
+      let title = "";
+      let subtitle = "";
+
+      if (q.quiz_id?.startsWith('mufradat_page_')) {
+        const pageId = q.quiz_id.replace('mufradat_page_', '');
+        title = `Halaman ${pageId}`;
+      } else if (q.surah_id && q.surah_id !== '0') {
+        const surahName = SURAH_MAP_STR.get(String(q.surah_id)) || `Surat ${q.surah_id}`;
+        title = surahName;
+        if (q.verse_id && q.verse_id !== '0') {
+          title = `${surahName} Ayat ${q.verse_id}`;
+        }
+      } else {
+        title = "Uji Hafalan";
+      }
+
+      subtitle = `Skor ${q.score}/${q.total_questions}`;
+
+      activities.push({
+        id: q.id,
+        type: 'quiz',
+        program: programName,
+        status: statusLabel,
+        title,
+        subtitle,
+        timestamp: q.created_at,
+        is_passed: q.is_passed,
+        icon: isMufradat ? Book : isIrab ? Search : Activity,
+        color: q.is_passed ? 'text-emerald-600' : 'text-[#800000]'
+      });
+    });
+
+    // 2. Add Donations (Hi Berbagi)
+    userDonations?.forEach((d: any) => {
+      activities.push({
+        id: d.id,
+        type: 'donation',
+        program: 'Hi Berbagi',
+        status: d.status === 'verified' ? 'Berhasil' : 'Pending',
+        title: d.campaign_title || 'Infaq Umum',
+        subtitle: `Rp ${d.amount.toLocaleString('id-ID')}`,
+        timestamp: d.created_at,
+        icon: HeartPulse,
+        color: d.status === 'verified' ? 'text-blue-600' : 'text-amber-500'
+      });
+    });
+
+    // 3. Add Mutabaah Activity (Hi Mutabaah)
+    mutabaahHistory?.forEach((m: any) => {
+      const activityLabels: Record<string, string> = {
+        'bangun': 'Bangun Tidur', 'siwak': 'Siwak', 'tahajjud': 'Tahajjud',
+        'subuh': 'Shalat Subuh', 'dhuha': 'Shalat Dhuha', 'quran': 'Tilawah Quran',
+        'al_mulk': 'Baca Al-Mulk', 'dzikir_pagi': 'Dzikir Pagi', 'dzikir_petang': 'Dzikir Petang'
+      };
+      
+      activities.push({
+        id: m.id,
+        type: 'mutabaah',
+        program: 'Hi Mutabaah',
+        status: 'Selesai',
+        title: activityLabels[m.activity_id] || m.activity_id.replace(/_/g, ' '),
+        subtitle: new Date(m.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+        timestamp: m.created_at || m.date,
+        icon: Sun,
+        color: 'text-emerald-500'
+      });
+    });
+
+    // 4. Add Ngaji Registration (Hi Ngaji)
+    ngajiRegs?.forEach((n: any) => {
+      activities.push({
+        id: n.id,
+        type: 'ngaji',
+        program: 'Hi Ngaji',
+        status: n.status === 'active' ? 'Aktif' : 'Terdaftar',
+        title: 'Pendaftaran Kelas',
+        subtitle: n.status === 'pending_verification' ? 'Menunggu Verifikasi' : 'Siap Mulai Belajar',
+        timestamp: n.createdAt,
+        icon: Users,
+        color: n.status === 'active' ? 'text-emerald-600' : 'text-amber-500'
+      });
+    });
+
+    return activities
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 10);
+  }, [quizAttempts, userDonations, mutabaahHistory, ngajiRegs]);
 
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
@@ -449,6 +588,58 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Riwayat Terkini Section - Moved below Layanan Utama */}
+      {user && recentActivities.length > 0 && (
+        <section className="px-1 mb-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-black">
+              <Clock className="w-5 h-5 text-[#800000]" /> Riwayat Terkini
+            </h2>
+          </div>
+          <div className="space-y-4">
+            {recentActivities.map((activity) => (
+              <div key={`${activity.type}-${activity.id}`} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-[#800000]/10 hover:bg-[#800000]/[0.02] transition-all group shadow-sm">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110",
+                    activity.type === 'quiz' && activity.is_passed ? "bg-emerald-50 text-emerald-600" :
+                    activity.type === 'quiz' && !activity.is_passed ? "bg-rose-50 text-rose-600" :
+                    activity.type === 'donation' ? "bg-blue-50 text-blue-600" :
+                    activity.type === 'mutabaah' ? "bg-amber-50 text-amber-600" : "bg-primary/5 text-primary"
+                  )}>
+                    <activity.icon className="w-6 h-6" />
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={cn(
+                        "text-[9px] font-black uppercase tracking-[0.15em]",
+                        activity.type === 'quiz' && activity.is_passed ? "text-emerald-600" :
+                        activity.type === 'quiz' && !activity.is_passed ? "text-rose-600" :
+                        activity.type === 'donation' ? "text-blue-600" :
+                        "text-[#800000]"
+                      )}>
+                        {activity.status} • {activity.program}
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-800 truncate uppercase mt-0.5">
+                      {activity.title}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight opacity-70">
+                      {activity.subtitle}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                    {new Date(activity.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

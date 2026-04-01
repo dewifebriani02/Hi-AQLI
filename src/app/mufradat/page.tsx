@@ -72,11 +72,11 @@ function MufradatPageContent() {
   }), [user?.id]);
 
   const { data: progress, isLoading: isProgressLoading } = useCollection(
-    "quiz_attempts", 
-    user ? progressOptions : undefined
+    user ? "quiz_attempts" : null, 
+    progressOptions
   );
 
-  const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations", {
+  const { data: registrations, isLoading: isRegLoading } = useCollection(user ? "halaqah_registrations" : null, {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 

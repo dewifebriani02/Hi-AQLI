@@ -51,7 +51,7 @@ import { addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import chaptersData from "@/data/chapters.json";
+import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { SURAH_START_PAGES } from "@/lib/quran-mapping";
 
 const JUZ_PAGES = [
@@ -378,7 +378,7 @@ export function TikrarSystem() {
                       Object.entries(SURAH_START_PAGES).forEach(([id, start]) => {
                         if (start <= page) surahId = Number(id);
                       });
-                      return (chaptersData.chapters as any[]).find(c => c.id === surahId)?.name_simple || "Loading...";
+                      return QURAN_CHAPTERS.find(c => c.id === surahId)?.name_simple || "Loading...";
                     })()}
                   </p>
                 </div>
