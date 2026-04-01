@@ -34,7 +34,17 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle, Phone, ShieldAlert, GraduationCap } from "lucide-react";
+import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle, Phone, ShieldAlert, GraduationCap, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -44,13 +54,6 @@ const ROLES = [
   { id: "muallimah", name: "Mu'allimah" },
   { id: "musyrifah", name: "Musyrifah" },
   { id: "admin", name: "Administrator" },
-];
-
-const TIKRAR_LEVELS = [
-  { id: "1", name: "Intensif" },
-  { id: "2", name: "Reguler" },
-  { id: "3", name: "Santai" },
-  { id: "4", name: "Pemula" },
 ];
 
 const INITIAL_ADD_FORM = {
@@ -66,13 +69,14 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
 
   // Add User States
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState(INITIAL_ADD_FORM);
 
   const { data: users, isLoading, refresh: refreshUsers } = useCollection("users");
-  const { data: mufradatGroups } = useCollection("mufradat_groups");
 
   const filteredUsers = users?.filter(u =>
     u.username?.toLowerCase().includes(search.toLowerCase()) ||
@@ -82,40 +86,17 @@ export default function AdminUsersPage() {
   const handleUpdateUser = async () => {
     if (!editingUser?.id) return;
 
-    const oldGroupId = users?.find(u => u.id === editingUser.id)?.mufradat_group_id;
-    const newGroupId = editingUser.mufradat_group_id;
-
     const updateData: any = {
       username: editingUser.username,
       role_id: editingUser.role_id,
       phone: editingUser.phone || "",
-      paid_juz: editingUser.paid_juz ? parseInt(editingUser.paid_juz) : null,
-      tikrar_level: editingUser.tikrar_level ? parseInt(editingUser.tikrar_level) : null,
-      is_tikrar_paid: editingUser.is_tikrar_paid || false,
       is_blacklisted: editingUser.is_blacklisted || false,
-      mufradat_group_id: newGroupId || null,
       updated_at: new Date().toISOString(),
     };
-
-    if (editingUser.tempDate) {
-      updateData.tikrarStartDate = new Date(editingUser.tempDate).toISOString();
-    }
 
     try {
       const { error } = await supabase.from('users').update(updateData).eq('id', editingUser.id);
       if (error) throw error;
-
-      // Update member counts if group changed
-      if (oldGroupId !== newGroupId) {
-        if (oldGroupId) {
-          const { data: members } = await supabase.from('users').select('id').eq('mufradat_group_id', oldGroupId);
-          await supabase.from('mufradat_groups').update({ member_count: members?.length || 0 }).eq('id', oldGroupId);
-        }
-        if (newGroupId) {
-          const { data: members } = await supabase.from('users').select('id').eq('mufradat_group_id', newGroupId);
-          await supabase.from('mufradat_groups').update({ member_count: members?.length || 0 }).eq('id', newGroupId);
-        }
-      }
 
       if (editingUser.role_id === 'admin') {
         await supabase.from('roles_admin').upsert({ id: editingUser.id });
@@ -129,6 +110,28 @@ export default function AdminUsersPage() {
       refreshUsers();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Gagal update", description: err.message });
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete?.id) return;
+
+    try {
+      const { error } = await supabase.from('users').delete().eq('id', userToDelete.id);
+      if (error) throw error;
+      
+      // Also try to remove from roles_admin if they were an admin
+      await supabase.from('roles_admin').delete().eq('id', userToDelete.id);
+
+      toast({
+        title: "User Dihapus",
+        description: `Profil ${userToDelete.username} telah dihapus dari database.`,
+      });
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+      refreshUsers();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal menghapus", description: err.message });
     }
   };
 
@@ -313,7 +316,8 @@ export default function AdminUsersPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Dialog open={isEditDialogOpen && editingUser?.id === u.id} onOpenChange={(open) => {
+                      <div className="flex items-center justify-end gap-2">
+                        <Dialog open={isEditDialogOpen && editingUser?.id === u.id} onOpenChange={(open) => {
                         if (!open) setEditingUser(null);
                         setIsEditDialogOpen(open);
                       }}>
@@ -322,10 +326,7 @@ export default function AdminUsersPage() {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 hover:bg-[#800000]/10 hover:text-[#800000]"
-                            onClick={() => setEditingUser({
-                              ...u,
-                              tempDate: u.tikrar_start_date?.toDate ? u.tikrar_start_date.toDate().toISOString().split('T')[0] : ""
-                            })}
+                            onClick={() => setEditingUser(u)}
                           >
                             <UserCog className="h-4 w-4" />
                           </Button>
@@ -391,87 +392,6 @@ export default function AdminUsersPage() {
                                   {editingUser?.is_blacklisted ? 'BLACKLISTED' : 'AKTIF'}
                                 </Button>
                             </div>
-
-                            {/* Hi Mufradat Group Assignment */}
-                            <div className="border-t pt-4 space-y-4">
-                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                <GraduationCap className="w-3.5 h-3.5 text-[#800000]" /> Manajemen Grup Hi Mufradat
-                              </p>
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-muted-foreground">Pilih Grup / Batch</Label>
-                                <Select
-                                  value={editingUser?.mufradat_group_id || "none"}
-                                  onValueChange={(val) => setEditingUser({ ...editingUser, mufradat_group_id: val === "none" ? null : val })}
-                                >
-                                  <SelectTrigger className="h-11">
-                                    <SelectValue placeholder="Belum ada grup" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">Tanpa Grup (Keluar dari Grup)</SelectItem>
-                                    {mufradatGroups?.map(g => (
-                                      <SelectItem key={g.id} value={g.id}>
-                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold">{g.name}</span>
-                                            <span className="text-[10px] opacity-50">({g.member_count || 0}/50)</span>
-                                         </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <div className="border-t pt-4 space-y-4">
-                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Detail Khusus Tikrar (Jika Ada)</p>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label className="text-xs font-bold uppercase text-muted-foreground">Target Juz</Label>
-                                  <Select
-                                    value={editingUser?.paid_juz?.toString() || "none"}
-                                    onValueChange={(val) => setEditingUser({ ...editingUser, paid_juz: val === "none" ? null : val })}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="-" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">Belum diatur</SelectItem>
-                                      {Array.from({ length: 30 }, (_, i) => (
-                                        <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className="text-xs font-bold uppercase text-muted-foreground">Level Tikrar</Label>
-                                  <Select
-                                    value={editingUser?.tikrar_level?.toString() || "none"}
-                                    onValueChange={(val) => setEditingUser({ ...editingUser, tikrar_level: val === "none" ? null : val })}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="-" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">Belum diatur</SelectItem>
-                                      {TIKRAR_LEVELS.map(l => (
-                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
-                                <div className="space-y-0.5">
-                                  <Label className="text-sm font-bold">Status Premium Tikrar</Label>
-                                  <p className="text-[10px] text-muted-foreground">Aktifkan akses counter repetisi.</p>
-                                </div>
-                                <Button
-                                  variant={editingUser?.is_tikrar_paid ? "default" : "outline"}
-                                  className={cn("font-black text-[10px]", editingUser?.is_tikrar_paid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
-                                  onClick={() => setEditingUser({ ...editingUser, is_tikrar_paid: !editingUser.is_tikrar_paid })}
-                                >
-                                  {editingUser?.is_tikrar_paid ? 'AKTIF' : 'NON-AKTIF'}
-                                </Button>
-                              </div>
-                            </div>
                           </div>
                           <DialogFooter>
                             <Button onClick={handleUpdateUser} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black gap-2">
@@ -480,6 +400,19 @@ export default function AdminUsersPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-rose-100 hover:text-rose-600"
+                        onClick={() => {
+                          setUserToDelete(u);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -488,6 +421,28 @@ export default function AdminUsersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600">
+              <ShieldAlert className="w-5 h-5" /> Konfirmasi Hapus User
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus <strong>{userToDelete?.username}</strong>? Tindakan ini permanen dan tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+            >
+              Ya, Hapus Permanen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

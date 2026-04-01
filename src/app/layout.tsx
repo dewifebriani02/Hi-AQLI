@@ -116,7 +116,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col flex-1 w-full pb-20">
             <header className="sticky top-0 z-40 flex h-24 items-center justify-between px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
               <div className="flex items-center gap-4">
-                {/* Sidebar trigger removed here as it is already present in AppSidebar */}
+                {showAdminUI && <SidebarTrigger className="md:hidden text-[#800000]" />}
                 <Link href="/" className="transition-transform hover:scale-105 active:scale-95">
                   <Logo variant="default" showText={true} className="scale-110 md:scale-125 origin-left" textClassName="text-2xl md:text-3xl font-black tracking-tight" imageSize={48} />
                 </Link>

@@ -30,8 +30,12 @@ import {
   MessageCircle, 
   AlertCircle,
   CheckCircle,
+  CheckCircle2,
   Phone,
-  ChevronRight
+  ChevronRight,
+  UserCog,
+  ShieldCheck,
+  GraduationCap
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -41,6 +45,19 @@ import { id as idLocale } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { supabase } from "@/supabase";
+import { useToast } from "@/hooks/use-toast";
+
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 import { 
   Select, 
@@ -53,10 +70,20 @@ import {
 const TOTAL_QURAN_VERSES = 6236;
 const WEEKLY_TARGET_VERSES = 15; // Roughly 1 page
 
+const TIKRAR_LEVELS = [
+  { id: "1", name: "Intensif" },
+  { id: "2", name: "Reguler" },
+  { id: "3", name: "Santai" },
+  { id: "4", name: "Pemula" },
+];
+
 function MufradatMonitoringContent() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+  const { toast } = useToast();
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     const gid = searchParams.get('groupId');
@@ -108,7 +135,7 @@ function MufradatMonitoringContent() {
       });
       
       const uniqueVersesWeekly = new Set(
-        weeklyPassedAttempts.map(a => `${a.surah_id || a.surah_id}:${a.verse_id || a.verse_id}`)
+        weeklyPassedAttempts.map(a => `${a.surah_id}:${a.verse_id}`)
       );
       
       const weeklyCount = uniqueVersesWeekly.size;
@@ -116,7 +143,7 @@ function MufradatMonitoringContent() {
 
       // Overall progress
       const uniqueVerses = new Set(
-        userPassedAttempts.map(a => `${a.surah_id || a.surah_id}:${a.verse_id || a.verse_id}`)
+        userPassedAttempts.map(a => `${a.surah_id}:${a.verse_id}`)
       );
       
       const passedCount = uniqueVerses.size;
@@ -150,7 +177,7 @@ function MufradatMonitoringContent() {
 
   const sendWhatsAppReminder = (u: any) => {
     if (!u.phone) {
-      alert(`Nomor WhatsApp ${u.username} belum terdaftar di database. Silakan isi di Manajemen Peserta.`);
+      alert(`Nomor WhatsApp ${u.username} belum terdaftar di database. Silakan isi di Manajemen User.`);
       return;
     }
 
@@ -158,6 +185,46 @@ function MufradatMonitoringContent() {
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${u.phone.replace(/[^0-9]/g, '')}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
+  };
+
+  const handleUpdateParticipant = async () => {
+    if (!editingUser?.id) return;
+
+    const oldGroupId = users?.find(u => u.id === editingUser.id)?.mufradat_group_id;
+    const newGroupId = editingUser.mufradat_group_id;
+
+    const updateData: any = {
+      paid_juz: editingUser.paid_juz ? parseInt(editingUser.paid_juz) : null,
+      tikrar_level: editingUser.tikrar_level ? parseInt(editingUser.tikrar_level) : null,
+      is_tikrar_paid: editingUser.is_tikrar_paid || false,
+      mufradat_group_id: newGroupId === "none" ? null : newGroupId,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      const { error } = await supabase.from('users').update(updateData).eq('id', editingUser.id);
+      if (error) throw error;
+
+      // Update member counts if group changed
+      if (oldGroupId !== newGroupId) {
+        if (oldGroupId) {
+          const { data: members } = await supabase.from('users').select('id').eq('mufradat_group_id', oldGroupId);
+          await supabase.from('mufradat_groups').update({ member_count: members?.length || 0 }).eq('id', oldGroupId);
+        }
+        if (newGroupId && newGroupId !== "none") {
+          const { data: members } = await supabase.from('users').select('id').eq('mufradat_group_id', newGroupId);
+          await supabase.from('mufradat_groups').update({ member_count: members?.length || 0 }).eq('id', newGroupId);
+        }
+      }
+
+      toast({
+        title: "Peserta Diperbarui",
+        description: `Pengaturan program untuk ${editingUser.username} telah disimpan.`,
+      });
+      setIsEditDialogOpen(false);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal update", description: err.message });
+    }
   };
 
   if (isUsersLoading || isAttemptsLoading) {
@@ -177,14 +244,8 @@ function MufradatMonitoringContent() {
         </div>
         <h2 className="text-2xl font-black text-rose-900 font-headline uppercase">Gagal Memuat Data Monitoring</h2>
         <p className="text-sm text-rose-700/80 max-w-md font-medium leading-relaxed">
-          Supabase menolak permintaan data ini. Hal ini biasanya terjadi jika pengaturan Keamanan (RLS) di database belum mengizinkan role Admin untuk melihat data peserta lain.
+          Supabase menolak permintaan data ini.
         </p>
-        <div className="flex flex-col gap-2 bg-white/80 p-4 rounded-xl shadow-inner border border-rose-200 mt-4">
-            <span className="text-[10px] font-black uppercase text-rose-400 text-left">Internal Debugging Log:</span>
-            <code className="text-[11px] font-mono text-rose-600 bg-rose-50 px-3 py-2 rounded-lg text-left break-all">
-                {usersError?.message || attemptsError?.message || 'Unknown RLS Error'}
-            </code>
-        </div>
         <Button onClick={() => window.location.reload()} className="mt-6 bg-rose-600 hover:bg-rose-700 text-white font-bold h-12 px-8 rounded-full shadow-lg transition-all active:scale-95">
             RETRY CONNECTION
         </Button>
@@ -207,10 +268,6 @@ function MufradatMonitoringContent() {
             <h1 className="text-4xl font-black font-headline tracking-tighter text-[#800000]">PROGRESS & REMINDER</h1>
             <p className="text-muted-foreground font-medium text-sm">Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
         </div>
-        <div className="bg-muted/50 p-2 rounded-lg border border-dashed text-[9px] font-mono text-muted-foreground flex flex-col gap-0.5">
-            <span>Project: {process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] || 'Unknown'}</span>
-            <span>Auth ID: {users?.length > 0 ? 'Connected' : 'No Data Returned'}</span>
-        </div>
       </div>
 
       {/* Summary Cards */}
@@ -221,10 +278,7 @@ function MufradatMonitoringContent() {
             <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-[#800000] transition-colors">Total Peserta Terdaftar</CardDescription>
             <CardTitle className="text-3xl font-black flex items-center justify-between">
               {users?.length || 0}
-              <div className="flex flex-col items-end">
-                <Users className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
-                <span className="text-[10px] font-mono opacity-50 font-normal">Raw: {users?.length}</span>
-              </div>
+              <Users className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
             </CardTitle>
           </CardHeader>
         </Card>
@@ -257,7 +311,7 @@ function MufradatMonitoringContent() {
         <CardHeader className="border-b bg-muted/30">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <CardTitle className="text-xl font-black font-headline text-[#800000]">DAFTAR PROGRESS & JAPRI WA</CardTitle>
+              <CardTitle className="text-xl font-black font-headline text-[#800000]">DAFTAR PROGRESS & MANAJEMEN</CardTitle>
               <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-70">Target: Minimal {WEEKLY_TARGET_VERSES} ayat / pekan</CardDescription>
             </div>
             
@@ -298,9 +352,9 @@ function MufradatMonitoringContent() {
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="w-[280px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Peserta</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest">Status Pekanan</TableHead>
-                <TableHead className="text-[10px) font-black uppercase tracking-widest">Ayat Lulus</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest">Ayat Lulus</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest w-[160px]">Progres (%)</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">Aksi Reminder</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -345,19 +399,132 @@ function MufradatMonitoringContent() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right pr-6">
-                    <Button 
-                      size="sm" 
-                      className={cn(
-                        "h-9 gap-2 font-black text-[10px] rounded-full transition-all active:scale-[0.9] shadow-md",
-                        u.reachedWeeklyTarget 
-                          ? "bg-muted text-muted-foreground" 
-                          : "bg-[#25D366] hover:bg-[#128C7E] text-white"
-                      )}
-                      onClick={() => sendWhatsAppReminder(u)}
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      REMINDER WA
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Dialog open={isEditDialogOpen && editingUser?.id === u.id} onOpenChange={(open) => {
+                        if (!open) setEditingUser(null);
+                        setIsEditDialogOpen(open);
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-[#800000]/10 hover:text-[#800000]"
+                            onClick={() => setEditingUser(u)}
+                          >
+                            <UserCog className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <ShieldCheck className="w-5 h-5 text-[#800000]" />
+                              Manajemen Peserta
+                            </DialogTitle>
+                            <DialogDescription>Atur grup dan progres program untuk {u.username}.</DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-6 py-4">
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Pilih Grup / Batch</Label>
+                                <Select
+                                  value={editingUser?.mufradat_group_id || "none"}
+                                  onValueChange={(val) => setEditingUser({ ...editingUser, mufradat_group_id: val })}
+                                >
+                                  <SelectTrigger className="h-11">
+                                    <SelectValue placeholder="Belum ada grup" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Tanpa Grup (Keluar dari Grup)</SelectItem>
+                                    {groups?.map(g => (
+                                      <SelectItem key={g.id} value={g.id}>
+                                         <div className="flex items-center gap-2">
+                                            <span className="font-bold">{g.name}</span>
+                                            <span className="text-[10px] opacity-50">({g.member_count || 0}/50)</span>
+                                         </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            
+                            <div className="border-t pt-4 space-y-4">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                                <GraduationCap className="w-3.5 h-3.5 text-[#800000]" /> Detail Khusus Tikrar (Jika Ada)
+                              </p>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2 text-left">
+                                  <Label className="text-xs font-bold uppercase text-muted-foreground">Target Juz</Label>
+                                  <Select
+                                    value={editingUser?.paid_juz?.toString() || "none"}
+                                    onValueChange={(val) => setEditingUser({ ...editingUser, paid_juz: val === "none" ? null : val })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="-" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">Belum diatur</SelectItem>
+                                      {Array.from({ length: 30 }, (_, i) => (
+                                        <SelectItem key={i + 1} value={(i + 1).toString()}>Juz {i + 1}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2 text-left">
+                                  <Label className="text-xs font-bold uppercase text-muted-foreground">Level Tikrar</Label>
+                                  <Select
+                                    value={editingUser?.tikrar_level?.toString() || "none"}
+                                    onValueChange={(val) => setEditingUser({ ...editingUser, tikrar_level: val === "none" ? null : val })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="-" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">Belum diatur</SelectItem>
+                                      {TIKRAR_LEVELS.map(l => (
+                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border-2 border-dashed">
+                                <div className="space-y-0.5 text-left">
+                                  <Label className="text-sm font-bold">Status Premium Tikrar</Label>
+                                  <p className="text-[10px] text-muted-foreground">Aktifkan akses counter repetisi.</p>
+                                </div>
+                                <Button
+                                  variant={editingUser?.is_tikrar_paid ? "default" : "outline"}
+                                  className={cn("font-black text-[10px]", editingUser?.is_tikrar_paid ? "bg-emerald-600" : "text-rose-600 border-rose-600")}
+                                  onClick={() => setEditingUser({ ...editingUser, is_tikrar_paid: !editingUser.is_tikrar_paid })}
+                                >
+                                  {editingUser?.is_tikrar_paid ? 'AKTIF' : 'NON-AKTIF'}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button onClick={handleUpdateParticipant} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black gap-2">
+                              <CheckCircle2 className="w-4 h-4" /> SIMPAN PERUBAHAN
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Button 
+                        size="sm" 
+                        className={cn(
+                          "h-9 gap-2 font-black text-[10px] rounded-full transition-all active:scale-[0.9] shadow-md",
+                          u.reachedWeeklyTarget 
+                            ? "bg-muted text-muted-foreground" 
+                            : "bg-[#25D366] hover:bg-[#128C7E] text-white"
+                        )}
+                        onClick={() => sendWhatsAppReminder(u)}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        JAPRI WA
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
