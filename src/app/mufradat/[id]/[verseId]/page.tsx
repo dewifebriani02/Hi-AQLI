@@ -120,10 +120,13 @@ function VerseDetailContent() {
     return pageSet;
   }, [progress]);
 
-  // Strict Sequential Guard: Redirect if Verse is locked
+  // Sequential Learning Guard
   useEffect(() => {
     if (isUserLoading || isProgressLoading || !user || !verse || !progress) return;
     
+    // 1. BYPASS for Free Surahs (Al-Fatihah, etc.)
+    if (access.isFree) return;
+
     const vIdx = parseInt(verseId);
     const isFirstVerseOfQuran = parseInt(id) === 1 && vIdx === 1;
     const isFirstVerseOfSurah = vIdx === 1;
@@ -145,7 +148,7 @@ function VerseDetailContent() {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [verse, progress, isProgressLoading, isUserLoading, user, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers]);
+  }, [verse, progress, isProgressLoading, isUserLoading, user, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers, access.isFree]);
   
   // Fetch latest attempt for THIS specific verse to get wrong_words
   const lastAttemptOptions = useMemo(() => ({
@@ -476,9 +479,9 @@ function VerseDetailContent() {
                 </div>
                 <div className="flex flex-col gap-3 px-4">
                    <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black h-14 rounded-2xl text-lg shadow-lg">
-                      <Link href="/mufradat/billing">
-                         <CreditCard className="mr-2 w-6 h-6" /> 
-                         {access.status === 'on_leave' ? 'CEK STATUS CUTI' : 'KONFIRMASI PEMBAYARAN'}
+                      <Link href={access.redirectTo || "/mufradat/billing"}>
+                         {access.redirectTo?.includes('billing') || !access.redirectTo ? <CreditCard className="mr-2 w-6 h-6" /> : <GraduationCap className="mr-2 w-6 h-6" />}
+                         {access.buttonText || (access.status === 'on_leave' ? 'CEK STATUS CUTI' : 'KONFIRMASI PEMBAYARAN')}
                       </Link>
                    </Button>
                    <Button asChild variant="ghost" className="text-muted-foreground font-bold">

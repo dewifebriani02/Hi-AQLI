@@ -42,6 +42,10 @@ export default function MufradatBillingPage() {
   const { data: registrations, refresh: refreshRegs } = useCollection("halaqah_registrations", {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
+  const { data: redemptions, refresh: refreshRedemptions } = useCollection("voucher_redemptions", {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }],
+    select: "*, vouchers(*)"
+  });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mode, setMode] = useState<'view' | 'pay' | 'leave'>('view');
@@ -52,8 +56,11 @@ export default function MufradatBillingPage() {
   const [amount, setAmount] = useState<string>("50000");
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || []);
-  }, [userData, registrations]);
+    return getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
+  }, [userData, registrations, redemptions]);
+
+  const [voucherCode, setVoucherCode] = useState("");
+  const [isRedeeming, setIsRedeeming] = useState(false);
 
   // Auto-set sender name from profile
   useEffect(() => {
@@ -168,6 +175,83 @@ export default function MufradatBillingPage() {
     }
   };
 
+  const handleRedeemVoucher = async () => {
+    if (!voucherCode.trim()) {
+      toast({ variant: "destructive", title: "Kode voucher kosong." });
+      return;
+    }
+
+    setIsRedeeming(true);
+    try {
+      // 1. Find the voucher
+      const { data: voucher, error: vError } = await supabase
+        .from("vouchers")
+        .select("*")
+        .eq("code", voucherCode.trim().toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (vError || !voucher) {
+        throw new Error("Voucher tidak valid atau sudah tidak aktif.");
+      }
+
+      // 2. Check Expiry
+      if (voucher.expiry_date && new Date(voucher.expiry_date) < new Date()) {
+        throw new Error("Voucher sudah kadaluarsa.");
+      }
+
+      // 3. Check Program ID
+      if (voucher.program_id !== 'all' && voucher.program_id !== 'mufradat') {
+        throw new Error(`Voucher ini hanya berlaku untuk program ${voucher.program_id.toUpperCase()}.`);
+      }
+
+      // 4. Check if already redeemed by this user
+      const { data: existing } = await supabase
+        .from("voucher_redemptions")
+        .select("id")
+        .eq("voucher_id", voucher.id)
+        .eq("user_id", user?.id)
+        .maybeSingle();
+
+      if (existing) {
+        throw new Error("Ukhti sudah pernah menggunakan voucher ini sebelumnya.");
+      }
+
+      // 5. Check Usage Limit
+      if (voucher.usage_limit) {
+        const { count } = await supabase
+          .from("voucher_redemptions")
+          .select("id", { count: 'exact', head: true })
+          .eq("voucher_id", voucher.id);
+        
+        if (count !== null && count >= voucher.usage_limit) {
+          throw new Error("Kuota penggunaan voucher ini sudah habis.");
+        }
+      }
+
+      // 6. Redeem
+      const { error: rError } = await supabase
+        .from("voucher_redemptions")
+        .insert({
+          voucher_id: voucher.id,
+          user_id: user?.id
+        });
+
+      if (rError) throw rError;
+
+      toast({ 
+        title: "Voucher Berhasil!", 
+        description: `Alhamdulillah, voucher ${voucher.code} berhasil diaktifkan.` 
+      });
+      setVoucherCode("");
+      refreshRedemptions();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal klaim voucher", description: e.message });
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
+
   if (isUserLoading || !userData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -230,6 +314,32 @@ export default function MufradatBillingPage() {
                   {userData.mufradat_leave_balance || 3} Bulan
                </span>
             </div>
+          </div>
+
+          {/* Voucher Section */}
+          <div className="p-5 bg-slate-50 rounded-2xl border-2 border-dashed space-y-3">
+             <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-slate-500" />
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Punya Kode Voucher?</h4>
+             </div>
+             <div className="flex gap-2">
+                <Input 
+                   placeholder="KODE VOUCHER" 
+                   value={voucherCode}
+                   onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                   className="h-10 border-2 rounded-xl font-bold text-xs"
+                />
+                <Button 
+                   onClick={handleRedeemVoucher}
+                   disabled={isRedeeming || !voucherCode.trim()}
+                   className="bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] h-10 px-6 rounded-xl"
+                >
+                   {isRedeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
+                </Button>
+             </div>
+             <p className="text-[9px] text-muted-foreground font-black italic mt-1">
+                *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
+             </p>
           </div>
 
           {access.status !== 'active' && mode === 'view' && (
@@ -310,9 +420,7 @@ export default function MufradatBillingPage() {
                       onChange={(e) => setSenderName(e.target.value)}
                       className="h-12 border-2 rounded-xl font-bold"
                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                </div>                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Nominal (Tanpa Titik)</Label>
                     <Input 
@@ -323,7 +431,7 @@ export default function MufradatBillingPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Satu Pilihan</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Bukti Transfer</Label>
                     <div 
                       onClick={() => document.getElementById('billing-file')?.click()}
                       className={cn(
@@ -333,11 +441,37 @@ export default function MufradatBillingPage() {
                     >
                       <ImageIcon className="w-4 h-4" />
                       <span className="text-[10px] font-black uppercase truncate max-w-[80px]">
-                        {proofFile ? proofFile.name : "Bukti"}
+                        {proofFile ? proofFile.name : "Pilih File"}
                       </span>
                     </div>
                     <input type="file" id="billing-file" className="hidden" accept="image/*" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
                   </div>
+                </div>
+
+                {/* Voucher inside Payment Confirmation */}
+                <div className="p-5 bg-amber-50 rounded-2xl border-2 border-dashed border-amber-200 space-y-3 mt-4">
+                   <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-amber-600" />
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-700">Punya Kode Voucher?</h4>
+                   </div>
+                   <div className="flex gap-2">
+                      <Input 
+                         placeholder="KODE VOUCHER" 
+                         value={voucherCode}
+                         onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                         className="h-10 border-2 rounded-xl font-bold text-xs bg-white"
+                      />
+                      <Button 
+                         onClick={handleRedeemVoucher}
+                         disabled={isRedeeming || !voucherCode.trim()}
+                         className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-10 px-6 rounded-xl shadow-sm"
+                      >
+                         {isRedeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
+                      </Button>
+                   </div>
+                   <p className="text-[9px] text-amber-800/60 font-bold italic">
+                     *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
+                   </p>
                 </div>
              </div>
           </CardContent>

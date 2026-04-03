@@ -109,17 +109,38 @@ function MufradatMonitoringContent() {
   }, [selectedGroupId]);
 
   const { data: attempts, isLoading: isAttemptsLoading, error: attemptsError } = useCollection("quiz_attempts", attemptOptions);
+  const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations", {
+    filters: [{ column: 'status', operator: '==', value: 'verified' }],
+    orderBy: { column: 'created_at', ascending: false }
+  });
 
   // Process data to get per-user stats
   const userStats = useMemo(() => {
     if (!users) return [];
     // attempts can be empty array
     const safeAttempts = attempts || [];
+    const safeRegs = registrations || [];
 
     const sevenDaysAgo = subDays(new Date(), 7);
 
     return users.map(user => {
       if (!user?.id) return null;
+
+      // Find the latest registration for this user
+      const userReg = safeRegs.find(r => r.user_id === user.id);
+      const meta = userReg?.metadata || {};
+      
+      const targetStr = meta.target || "1-halaman";
+      const schedule = meta.schedule || "harian";
+      
+      // Calculate dynamic target verses (1 page = 15 verses)
+      let pages = 1;
+      if (targetStr.includes("2")) pages = 2;
+      else if (targetStr.includes("3")) pages = 3;
+      else if (targetStr.includes("5")) pages = 5;
+      else if (targetStr.includes("10")) pages = 10;
+      
+      const userTargetVerses = pages * 15;
 
       // Filter unique passed verses for this user
       const userPassedAttempts = safeAttempts.filter(a => a.user_id === user.id);
@@ -139,7 +160,7 @@ function MufradatMonitoringContent() {
       );
       
       const weeklyCount = uniqueVersesWeekly.size;
-      const reachedWeeklyTarget = weeklyCount >= WEEKLY_TARGET_VERSES;
+      const reachedWeeklyTarget = weeklyCount >= userTargetVerses;
 
       // Overall progress
       const uniqueVerses = new Set(
@@ -159,13 +180,16 @@ function MufradatMonitoringContent() {
         passedCount,
         weeklyCount,
         reachedWeeklyTarget,
+        userTargetVerses,
+        targetStr,
+        schedule,
         progressPercent,
         lastActivity: lastAttempt ? new Date(lastAttempt.created_at) : null,
         totalPoints: user.points || 0,
         groupName: groups?.find(g => g.id === user.mufradat_group_id)?.name || "Grup Tidak Diketahui"
       };
     }).filter(Boolean) as any[];
-  }, [users, attempts, groups]);
+  }, [users, attempts, groups, registrations]);
 
   const filteredStats = useMemo(() => {
     const s = search.toLowerCase();
@@ -181,7 +205,8 @@ function MufradatMonitoringContent() {
       return;
     }
 
-    const message = `Assalamualaikum Ukhti ${u.username}, ini dari Admin Hi AQLI. Kami melihat progres Mufradat pekan ini (${u.weeklyCount} ayat) belum mencapai target minimal 1 halaman (15 ayat). Semangat ya, yuk dicicil lagi hafalan kosa-katanya agar istiqomah! Jzk.`;
+    const targetDesc = u.targetStr?.replace('-', ' ') || '1 halaman';
+    const message = `Assalamualaikum Ukhti ${u.username}, ini dari Admin Hi AQLI. Kami melihat progres Mufradat pekan ini (${u.weeklyCount} ayat) belum mencapai target Ukhti yaitu ${targetDesc} (${u.userTargetVerses} ayat). Yuk dicicil lagi hafalan kosa-katanya agar istiqomah! Jzk.`;
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${u.phone.replace(/[^0-9]/g, '')}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
@@ -351,8 +376,8 @@ function MufradatMonitoringContent() {
             <TableHeader className="bg-muted/10">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="w-[280px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Peserta</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest">Kontrak Belajar</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest">Status Pekanan</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">Ayat Lulus</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest w-[160px]">Progres (%)</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">Aksi</TableHead>
               </TableRow>
@@ -376,6 +401,12 @@ function MufradatMonitoringContent() {
                     </div>
                   </TableCell>
                   <TableCell>
+                     <div className="flex flex-col gap-1">
+                        <Badge variant="outline" className="bg-slate-50 font-black text-[9px] uppercase border-slate-200 text-slate-700 h-6 px-3">{u.targetStr?.replace('-',' ') || '1 Halaman'}</Badge>
+                        <span className="text-[8px] font-bold text-muted-foreground uppercase pl-1">{u.schedule || 'Harian'}</span>
+                     </div>
+                  </TableCell>
+                  <TableCell>
                     {u.reachedWeeklyTarget ? (
                       <Badge className="bg-emerald-500 hover:bg-emerald-600 font-black text-[9px] gap-1 px-2">
                         <CheckCircle className="w-3 h-3" /> AMAN (TARGET)
@@ -385,17 +416,18 @@ function MufradatMonitoringContent() {
                         <AlertCircle className="w-3 h-3" /> DI BAWAH TARGET
                       </Badge>
                     )}
-                    <div className="text-[8px] mt-1 font-bold text-muted-foreground uppercase">+ {u.weeklyCount} ayat pekan ini</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-black text-xs border-[#800000]/20 text-[#800000]">
-                      {u.passedCount} / {TOTAL_QURAN_VERSES}
-                    </Badge>
+                    <div className="text-[8px] mt-1 font-bold text-muted-foreground uppercase flex items-center gap-1">
+                      <span className={cn(u.reachedWeeklyTarget ? "text-emerald-700" : "text-rose-700")}>{u.weeklyCount}</span>
+                      <span className="opacity-50">/ {u.userTargetVerses} ayat pekan ini</span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1.5">
                       <Progress value={u.progressPercent} className="h-2 bg-muted transition-all" />
-                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{u.progressPercent.toFixed(2)}% Hafal</span>
+                      <div className="flex items-center justify-between">
+                         <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{u.progressPercent.toFixed(2)}% Hafal</span>
+                         <span className="text-[8px] font-bold opacity-30">{u.passedCount}/{TOTAL_QURAN_VERSES}</span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right pr-6">

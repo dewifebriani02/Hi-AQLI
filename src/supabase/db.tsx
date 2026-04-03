@@ -75,6 +75,7 @@ export function useCollection<T = any>(
         filters?: { column: string; operator: string; value: any }[];
         orderBy?: { column: string; ascending?: boolean };
         limit?: number;
+        select?: string;
     }
 ) {
     const [data, setData] = useState<(T & { id: string })[]>([]);
@@ -88,7 +89,7 @@ export function useCollection<T = any>(
         setIsLoading(true);
         setError(null);
 
-        let q = supabase.from(table).select('*');
+        let q = supabase.from(table).select(options?.select || '*');
 
         if (options?.filters) {
             // Skip if any filter value is undefined
@@ -121,7 +122,7 @@ export function useCollection<T = any>(
         if (error) {
             setError(error);
         } else {
-            setData(data as (T & { id: string })[]);
+            setData(data as unknown as (T & { id: string })[]);
         }
         setIsLoading(false);
     }, [table, optionsKey]);

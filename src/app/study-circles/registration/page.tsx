@@ -107,10 +107,15 @@ function RegistrationForm() {
   const [proofFile, setProofFile] = useState<File | null>(null);
 
   // Hi Mufradat specific states
-  const [durationMonths, setDurationMonths] = useState("1");
-  const [mufradatTarget, setMufradatTarget] = useState("page"); // 'page' or 'juz'
+  const [durationMonths, setDurationMonths] = useState("harian");
+  const [mufradatTarget, setMufradatTarget] = useState("1-halaman"); // 'page' or 'juz'
   const [infaqAmount, setInfaqAmount] = useState<number>(0);
   const [akadAccepted, setAkadAccepted] = useState(false);
+
+  // Voucher States
+  const [voucherCode, setVoucherCode] = useState("");
+  const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
+  const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
 
   // Program Detection
   const isMufradat = (circle?.program_type === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
@@ -123,8 +128,7 @@ function RegistrationForm() {
   // Minimum Infaq Calculation
   const minInfaq = useMemo(() => {
     if (isMufradat) {
-      const rate = mufradatTarget === 'page' ? 20000 : 50000;
-      return rate * parseInt(durationMonths);
+      return 50000; // Standard minimum infaq for Hi Mufradat
     }
     if (isTikrar) {
       return levels.find(l => l.id === level)?.price || 50000;
@@ -133,7 +137,7 @@ function RegistrationForm() {
       return 50000; // Base minimum for selectable
     }
     return circle?.base_price || 0;
-  }, [isMufradat, isTikrar, mufradatTarget, durationMonths, level, circle?.base_price, circle?.payment_type]);
+  }, [isMufradat, isTikrar, level, circle?.base_price, circle?.payment_type]);
 
   useEffect(() => {
     // Ensure infaqAmount is at least the minimum
@@ -151,10 +155,75 @@ function RegistrationForm() {
   }, [user, isUserLoading, router, name, halaqahId]);
 
   useEffect(() => {
-    if (step === 2 && isPremiumProgram) {
+    if (step === 2 && isPremiumProgram && !appliedVoucher) {
       setUniqueCode(Math.floor(100 + Math.random() * 899));
     }
-  }, [step, isPremiumProgram]);
+  }, [step, isPremiumProgram, appliedVoucher]);
+
+  const handleValidateVoucher = async () => {
+    if (!voucherCode.trim()) return;
+    
+    setIsValidatingVoucher(true);
+    try {
+      // 1. Find Voucher
+      const { data: voucher, error: vError } = await supabase
+        .from("vouchers")
+        .select("*")
+        .eq("code", voucherCode.trim().toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (vError || !voucher) {
+        throw new Error("Voucher tidak ditemukan atau sudah tidak aktif.");
+      }
+
+      // 2. Check Expiry
+      if (voucher.expiry_date && new Date(voucher.expiry_date) < new Date()) {
+        throw new Error("Voucher sudah kadaluarsa.");
+      }
+
+      // 3. Check Program ID
+      const programType = circle?.program_type || (isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : ''));
+      if (voucher.program_id !== 'all' && !programType.includes(voucher.program_id) && voucher.program_id !== 'mufradat') {
+         // Fallback check for mufradat-premium id
+         if (!(selectedHalaqahId === 'mufradat-premium' && voucher.program_id === 'mufradat')) {
+            throw new Error(`Voucher ini hanya berlaku untuk program ${voucher.program_id.toUpperCase()}.`);
+         }
+      }
+
+      // 4. Check If Already Redeemed by this user
+      const { data: existing } = await supabase
+        .from("voucher_redemptions")
+        .select("id")
+        .eq("voucher_id", voucher.id)
+        .eq("user_id", user?.id)
+        .maybeSingle();
+
+      if (existing) {
+        throw new Error("Ukhti sudah pernah menggunakan voucher ini sebelumnya.");
+      }
+
+      // 5. Check Usage Limit
+      if (voucher.usage_limit) {
+        const { count } = await supabase
+          .from("voucher_redemptions")
+          .select("id", { count: 'exact', head: true })
+          .eq("voucher_id", voucher.id);
+        
+        if (count !== null && count >= voucher.usage_limit) {
+          throw new Error("Kuota penggunaan voucher ini sudah habis.");
+        }
+      }
+
+      setAppliedVoucher(voucher);
+      toast({ title: "Voucher Berhasil!", description: `Kode ${voucher.code} berhasil dipasang.` });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Voucher Gagal", description: err.message });
+      setAppliedVoucher(null);
+    } finally {
+      setIsValidatingVoucher(false);
+    }
+  };
 
   const handleNext = () => {
     if (!selectedHalaqahId) {
@@ -173,12 +242,19 @@ function RegistrationForm() {
         toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Commitment Tikrar" });
         return;
       }
-    if (isPremiumProgram && infaqAmount < minInfaq) {
+    if (isPremiumProgram && infaqAmount < minInfaq && !appliedVoucher) {
       toast({ variant: "destructive", title: `Minimal infaq untuk target ini adalah Rp ${minInfaq.toLocaleString('id-ID')}` });
       return;
     }
-    if (isPremiumProgram) setStep(2);
-    else setStep(3);
+    
+    if (appliedVoucher) {
+      // If voucher applied, skip payment info and go straight to final confirmation/submit
+      setStep(3);
+    } else if (isPremiumProgram) {
+      setStep(2);
+    } else {
+      setStep(3);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,45 +265,72 @@ function RegistrationForm() {
   };
 
   const handleConfirm = async () => {
-    if (isPremiumProgram && (!senderName || !proofFile)) {
+    if (isPremiumProgram && !appliedVoucher && (!senderName || !proofFile)) {
       toast({ variant: "destructive", title: "Lengkapi data pembayaran" });
       return;
     }
 
     setLoading(true);
     try {
+      let finalHalaqahId = selectedHalaqahId;
+
+      // Ensure we have a valid UUID for the database if using virtual IDs
+      if (selectedHalaqahId === 'mufradat-premium' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1') {
+        const programType = selectedHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
+        const { data: hData } = await supabase
+          .from("halaqahs")
+          .select("id")
+          .eq("program_type", programType)
+          .limit(1)
+          .maybeSingle();
+        
+        if (hData?.id) {
+          finalHalaqahId = hData.id;
+        }
+      }
+
       const { error } = await supabase.from("halaqah_registrations").insert({
         user_id: user?.id,
         user_name: name,
         user_email: user?.email,
         whatsapp: whatsapp,
-        halaqah_id: selectedHalaqahId,
+        halaqah_id: finalHalaqahId,
         halaqah_title: circle?.title || (isMufradat ? 'Hi Mufradat' : 'Halaqah'),
-        is_paid: isPremiumProgram,
+        is_paid: isPremiumProgram || !!appliedVoucher,
         level: isTikrar ? parseInt(level) : null,
         target_juz: isTikrar ? parseInt(targetJuz) : null,
-        amount: isPremiumProgram ? infaqAmount + uniqueCode : 0,
-        payment_method: isPremiumProgram ? "transfer" : "free",
-        sender_name: isPremiumProgram ? senderName : null,
-        proof_file_name: proofFile?.name || null,
-        status: "pending_verification",
+        amount: appliedVoucher ? 0 : (isPremiumProgram ? infaqAmount + uniqueCode : 0),
+        payment_method: appliedVoucher ? "voucher" : (isPremiumProgram ? "transfer" : "free"),
+        sender_name: appliedVoucher ? `VOUCHER: ${appliedVoucher.code}` : (isPremiumProgram ? senderName : null),
+        proof_file_name: appliedVoucher ? "VOUCHER_ACTIVATED" : (proofFile?.name || null),
+        status: appliedVoucher ? "verified" : "pending_verification",
         created_at: new Date().toISOString(),
         // Extra metadata for Hi Mufradat
         metadata: isMufradat ? {
-          months: parseInt(durationMonths),
+          schedule: durationMonths,
           target: mufradatTarget,
           akadAccepted: true,
-          unitPrice: mufradatTarget === 'page' ? 20000 : 50000,
-          infaqBase: infaqAmount
-        } : null
+          unitPrice: 0,
+          infaqBase: infaqAmount,
+          voucher_code: appliedVoucher?.code || null
+        } : (appliedVoucher ? { voucher_code: appliedVoucher.code } : null)
       });
 
       if (error) throw error;
 
+      // RECORD VOUCHER REDEMPTION
+      if (appliedVoucher) {
+        await supabase.from("voucher_redemptions").insert({
+          voucher_id: appliedVoucher.id,
+          user_id: user?.id
+        });
+      }
+
       setSubmitted(true);
       toast({ title: "Pendaftaran Dikirim" });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Gagal mengirim pendaftaran" });
+    } catch (error: any) {
+      console.error("REGISTRATION ERROR:", error);
+      toast({ variant: "destructive", title: "Gagal mengirim pendaftaran", description: error.message });
     } finally {
       setLoading(false);
     }
@@ -442,24 +545,26 @@ function RegistrationForm() {
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 bg-[#800000]/5 rounded-2xl border-2 border-[#800000]/10">
                     <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Pilihan Target</Label>
+                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Target Hafalan (per Pekan)</Label>
                       <Select value={mufradatTarget} onValueChange={setMufradatTarget}>
                         <SelectTrigger className="h-12 border-2 font-bold bg-white"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="page">Min. 1 Halaman / Pekan (Rp 20rb)</SelectItem>
-                          <SelectItem value="juz">Min. 1 Juz / Bulan (Rp 50rb)</SelectItem>
+                          <SelectItem value="1-halaman">1 Halaman</SelectItem>
+                          <SelectItem value="2-halaman">2 Halaman</SelectItem>
+                          <SelectItem value="3-halaman">3 Halaman</SelectItem>
+                          <SelectItem value="5-halaman">5 Halaman (Setengah Juz)</SelectItem>
+                          <SelectItem value="10-halaman">10 Halaman (Satu Juz)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Durasi Belajar</Label>
+                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Jadwal Belajar</Label>
                       <Select value={durationMonths} onValueChange={setDurationMonths}>
                         <SelectTrigger className="h-12 border-2 font-bold bg-white"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">1 Bulan</SelectItem>
-                          <SelectItem value="3">3 Bulan</SelectItem>
-                          <SelectItem value="6">6 Bulan</SelectItem>
-                          <SelectItem value="12">12 Bulan</SelectItem>
+                          <SelectItem value="harian">Harian (Senin - Jumat)</SelectItem>
+                          <SelectItem value="pekanan">Pekanan (Sabtu - Ahad)</SelectItem>
+                          <SelectItem value="fleksibel">Fleksibel (Senin - Ahad)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -511,6 +616,52 @@ function RegistrationForm() {
                       </Label>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Voucher Section */}
+              {isPremiumProgram && (
+                <div className={cn(
+                  "p-6 rounded-2xl border-2 border-dashed space-y-4 animate-in fade-in transition-all",
+                  appliedVoucher ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"
+                )}>
+                   <div className="flex items-center gap-2">
+                       <ShieldCheck className={cn("w-5 h-5", appliedVoucher ? "text-emerald-600" : "text-slate-400")} />
+                       <h4 className={cn("font-black text-[10px] uppercase tracking-widest", appliedVoucher ? "text-emerald-800" : "text-slate-500")}>
+                          Punya Kode Voucher?
+                       </h4>
+                   </div>
+                   
+                   {appliedVoucher ? (
+                     <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100">
+                        <div className="flex flex-col">
+                           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Voucher Aktif</span>
+                           <span className="text-sm font-black text-[#800000]">{appliedVoucher.code}</span>
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-8 text-rose-500 font-bold text-[10px]" onClick={() => {setAppliedVoucher(null); setVoucherCode("");}}>HAPUS</Button>
+                     </div>
+                   ) : (
+                     <>
+                        <div className="flex gap-2">
+                            <Input 
+                            placeholder="KODE VOUCHER" 
+                            value={voucherCode}
+                            onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                            className="h-12 border-2 rounded-xl font-bold uppercase"
+                            />
+                            <Button 
+                            onClick={handleValidateVoucher}
+                            disabled={isValidatingVoucher || !voucherCode.trim()}
+                            className="bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] h-12 px-6 rounded-xl"
+                            >
+                            {isValidatingVoucher ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
+                            </Button>
+                        </div>
+                        <p className="text-[9px] text-slate-500 font-bold italic mt-1">
+                            *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
+                        </p>
+                     </>
+                   )}
                 </div>
               )}
 

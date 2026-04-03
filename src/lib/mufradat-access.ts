@@ -15,6 +15,7 @@ export interface MufradatAccessSummary {
   nextBillingMonth?: string;
   redirectTo?: string;
   buttonText?: string;
+  isFree?: boolean; // New: True for Al-Fatihah etc.
 }
 
 /**
@@ -31,19 +32,53 @@ export function getMufradatStatus(
   user: any, 
   registrations: any[] = [], 
   surahId?: string | number, 
-  verseId?: string | number
+  verseId?: string | number,
+  redemptions: any[] = []
 ): MufradatAccessSummary {
   // 0. FREE ACCESS OVERRIDE: Al-Fatihah (1) Verses 1-5
   const sNum = surahId ? parseInt(surahId.toString()) : null;
   const vNum = verseId ? parseInt(verseId.toString()) : null;
   
+  const today = new Date();
+  const currentMonthStr = format(today, 'yyyy-MM');
+
+  // SPECIAL: FREE APRIL 2026 PROMOTION
+  // All logged in users get free access to Hi Mufradat in April 2026
+  const isFreeApril = currentMonthStr === '2026-04';
+
   const freeSurahs = [1, 112, 113, 114];
   if (sNum !== null && freeSurahs.includes(sNum)) {
     return {
       status: 'active',
       isBlocked: false,
+      isFree: true,
       showSoftReminder: false,
       message: "Selamat Datang! Ukhti sedang menikmati akses gratis surat pilihan."
+    };
+  }
+
+  // Handle Vouchers - CRITICAL: PRIORITIZE VOUCHERS FIRST FOR INSTANT ACTIVATION
+  const hasVoucher = redemptions?.some(r => 
+    r.vouchers?.program_id === 'mufradat' || r.vouchers?.program_id === 'all'
+  );
+
+  if (hasVoucher) {
+    return {
+      status: 'active',
+      isBlocked: false,
+      showSoftReminder: false,
+      message: "Akses Aktif (Promo/Voucher). Selamat mempelajari mufradat Qur'an!"
+    };
+  }
+
+
+  // Handle Global Promotions (e.g. Free April)
+  if (isFreeApril && user) {
+    return {
+      status: 'active',
+      isBlocked: false,
+      showSoftReminder: false,
+      message: "🎉 BERKAH RAMADAN: Akses Hi Mufradat GRATIS untuk seluruh peserta selama bulan April! Selamat menghafal, Ukhti."
     };
   }
 
@@ -65,7 +100,9 @@ export function getMufradatStatus(
       status: 'inactive',
       isBlocked: true,
       showSoftReminder: false,
-      message: "Ukhti belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu."
+      message: "Ukhti belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu.",
+      redirectTo: '/study-circles/registration?id=mufradat-premium',
+      buttonText: 'DAFTAR SEKARANG'
     };
   }
 
@@ -84,9 +121,7 @@ export function getMufradatStatus(
     }
   }
 
-  const today = new Date();
   const dayOfMonth = getDate(today);
-  const currentMonthStr = format(today, 'yyyy-MM');
   const nextMonthStr = format(subMonths(today, -1), 'yyyy-MM');
 
   // Logic: 
