@@ -43,6 +43,7 @@ const adminItems = [
   { href: "/admin/campaigns", label: "Manajemen Kampanye", icon: LayoutGrid },
   { href: "/admin/users", label: "Manajemen Users", icon: UserCog },
   { href: "/admin/classes", label: "Manajemen Kelas", icon: Library },
+  { href: "/admin/vouchers", label: "Manajemen Voucher", icon: ShieldCheck },
   { 
     label: "Kelola Hi Mufradat", 
     icon: GraduationCap,

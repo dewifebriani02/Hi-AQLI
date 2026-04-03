@@ -218,7 +218,7 @@ export default function AdminRegistrationsPage() {
                   </Badge>
 
                   <Badge className={cn("text-white border-none font-black text-[9px] px-3 py-1 sm:py-0.5 tracking-widest shadow-sm shrink-0", reg.is_paid ? "bg-amber-500 shadow-amber-500/20" : "bg-blue-500 shadow-blue-500/20")}>
-                    {reg.is_paid ? 'BERBAYAR' : 'GRATIS'}
+                    {reg.is_paid ? (reg.payment_method === 'voucher' ? 'VOUCHER' : 'BERBAYAR') : 'GRATIS'}
                   </Badge>
 
                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter shrink-0 bg-slate-100 px-2 py-0.5 rounded-md sm:bg-transparent sm:p-0">

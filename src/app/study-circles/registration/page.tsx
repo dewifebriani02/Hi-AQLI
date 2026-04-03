@@ -303,7 +303,7 @@ function RegistrationForm() {
         payment_method: appliedVoucher ? "voucher" : (isPremiumProgram ? "transfer" : "free"),
         sender_name: appliedVoucher ? `VOUCHER: ${appliedVoucher.code}` : (isPremiumProgram ? senderName : null),
         proof_file_name: appliedVoucher ? "VOUCHER_ACTIVATED" : (proofFile?.name || null),
-        status: appliedVoucher ? "verified" : "pending_verification",
+        status: "pending_verification",
         created_at: new Date().toISOString(),
         // Extra metadata for Hi Mufradat
         metadata: isMufradat ? {
