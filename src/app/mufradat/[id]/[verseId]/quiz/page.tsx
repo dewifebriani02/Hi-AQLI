@@ -62,12 +62,12 @@ function MufradatQuizContent() {
 
   const verseKey = `${id}:${verseId}`;
 
-  // Auth Guard: Redirect if not logged in
+  // Auth Guard: Redirect if not logged in (unless it's Al-Fatihah)
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    if (!isUserLoading && !user && id !== '1' && id !== '112' && id !== '113' && id !== '114') {
       router.push('/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, id]);
 
   // Fetch leaderboard data (RLS will automatically filter by group)
   const { data: allAttempts, isLoading: isLeaderboardLoading, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
@@ -172,11 +172,11 @@ function MufradatQuizContent() {
   // Timer logic
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (!isFinished && !loading && user) {
+    if (!isFinished && !loading && (user || id === '1' || id === '112' || id === '113' || id === '114')) {
       interval = setInterval(() => setTotalTime(t => t + 1), 1000);
     }
     return () => clearInterval(interval);
-  }, [isFinished, loading, user]);
+  }, [isFinished, loading, user, id]);
 
   const handleAnswer = (answer: string) => {
     if (selectedAnswer || isFinished) return;
@@ -364,6 +364,15 @@ function MufradatQuizContent() {
                     <p className="text-[10px] text-emerald-600 font-medium">Anda telah menyelesaikan surat ini.</p>
                   </div>
                 )}
+                
+                {!user && (
+                    <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
+                        <Link href={`/login?mode=register&redirectTo=/mufradat/${id}/${verseId}`}>
+                            <Trophy className="w-4 h-4" /> DAFTAR UNTUK SIMPAN SKOR
+                        </Link>
+                    </Button>
+                )}
+
                 <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
                   <Link href={from === 'surah' ? `/mufradat/${id}` : "/mufradat"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR SURAT'}</Link>
                 </Button>
@@ -373,6 +382,15 @@ function MufradatQuizContent() {
                 <Button onClick={handleReset} className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
                    <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
                 </Button>
+                
+                {!user && (
+                    <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 text-[#800000] font-black py-7 rounded-2xl uppercase tracking-widest text-[10px] gap-2">
+                        <Link href="/login?mode=register">
+                            DAFTAR AKUN HI AQLI
+                        </Link>
+                    </Button>
+                )}
+
                 <Button asChild variant="ghost" className="w-full font-bold text-slate-500">
                   <Link href={from === 'surah' ? `/mufradat/${id}` : "/mufradat"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR SURAT'}</Link>
                 </Button>

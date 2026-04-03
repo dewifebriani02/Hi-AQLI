@@ -261,8 +261,8 @@ function VerseDetailContent() {
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Hi Mufradat • Tadabbur Ayat</p>
         </div>
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="icon" className="text-[#D4AF37]">
-            <Link href={`/mufradat/${id}/${verseId}/quiz${from ? `?from=${from}` : ''}`}>
+          <Button asChild={(user || access.isFree)} variant="ghost" size="icon" className="text-[#D4AF37]">
+            <Link href={(user || access.isFree) ? `/mufradat/${id}/${verseId}/quiz${from ? `?from=${from}` : ''}` : `/login?redirectTo=/mufradat/${id}/${verseId}${from ? `?from=${from}` : ''}`}>
               <GraduationCap className="h-5 w-5" />
             </Link>
           </Button>
@@ -402,9 +402,9 @@ function VerseDetailContent() {
           </CardContent>
           <CardFooter className="pt-6 border-t bg-muted/10 p-4 flex flex-col gap-3">
             <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black gap-2 py-6 h-14 text-lg rounded-xl shadow-lg border-b-4 border-[#800000]/20">
-              <Link href={user ? `/mufradat/${id}/${verseId}/quiz${from ? `?from=${from}` : ''}` : `/login?redirectTo=/mufradat/${id}/${verseId}${from ? `?from=${from}` : ''}`}>
+              <Link href={(user || access.isFree) ? `/mufradat/${id}/${verseId}/quiz${from ? `?from=${from}` : ''}` : `/login?redirectTo=/mufradat/${id}/${verseId}${from ? `?from=${from}` : ''}`}>
                 <GraduationCap className="w-5 h-5" />
-                {user ? (isCurrentVerseCompleted ? "ULANGI UJI HAFALAN" : "MULAI UJI HAFALAN") : "MASUK UNTUK UJI HAFALAN"}
+                {(user || access.isFree) ? (isCurrentVerseCompleted ? "ULANGI UJI HAFALAN" : "MULAI UJI HAFALAN") : "MASUK UNTUK UJI HAFALAN"}
               </Link>
             </Button>
 
