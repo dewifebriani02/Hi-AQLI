@@ -73,7 +73,8 @@ export function getMufradatStatus(
 
 
   // Handle Global Promotions (e.g. Free April)
-  if (isFreeApril && user) {
+  // ONLY for users who have at least registered (joined a group)
+  if (isFreeApril && user?.mufradat_group_id) {
     return {
       status: 'active',
       isBlocked: false,
@@ -91,7 +92,7 @@ export function getMufradatStatus(
         isBlocked: true,
         showSoftReminder: false,
         message: "Program ini membutuhkan pendaftaran untuk mengakses seluruh ayat. Mari bergabung menjadi peserta Hi Mufradat!",
-        redirectTo: '/login?mode=register',
+        redirectTo: '/study-circles/registration?id=mufradat-premium',
         buttonText: 'DAFTAR SEKARANG'
       };
     }

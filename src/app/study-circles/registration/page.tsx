@@ -25,7 +25,8 @@ import {
   Check,
   Clock,
   BookOpen,
-  PlayCircle
+  PlayCircle,
+  Plus
 } from "lucide-react";
 import { useUser, supabase } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
@@ -128,7 +129,7 @@ function RegistrationForm() {
   // Minimum Infaq Calculation
   const minInfaq = useMemo(() => {
     if (isMufradat) {
-      return 50000; // Standard minimum infaq for Hi Mufradat
+      return 20000; // Standard minimum infaq for Hi Mufradat
     }
     if (isTikrar) {
       return levels.find(l => l.id === level)?.price || 50000;
@@ -552,8 +553,9 @@ function RegistrationForm() {
                           <SelectItem value="1-halaman">1 Halaman</SelectItem>
                           <SelectItem value="2-halaman">2 Halaman</SelectItem>
                           <SelectItem value="3-halaman">3 Halaman</SelectItem>
-                          <SelectItem value="5-halaman">5 Halaman (Setengah Juz)</SelectItem>
-                          <SelectItem value="10-halaman">10 Halaman (Satu Juz)</SelectItem>
+                          <SelectItem value="5-halaman">5 Halaman (1/4 Juz)</SelectItem>
+                          <SelectItem value="10-halaman">10 Halaman (1/2 Juz)</SelectItem>
+                          <SelectItem value="20-halaman">20 Halaman (1 Juz)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -569,17 +571,25 @@ function RegistrationForm() {
                       </Select>
                     </div>
                   </div>
-
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Nominal Infaq</Label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-3.5 text-xs font-black text-muted-foreground">Rp</div>
-                      <Input
-                        type="number"
-                        value={infaqAmount}
-                        onChange={(e) => setInfaqAmount(parseInt(e.target.value) || 0)}
-                        className="pl-10 h-14 border-2 text-xl font-black text-[#800000] focus-visible:ring-[#800000]"
-                      />
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <div className="absolute left-3 top-3.5 text-xs font-black text-muted-foreground">Rp</div>
+                        <Input
+                          type="number"
+                          value={infaqAmount}
+                          onChange={(e) => setInfaqAmount(parseInt(e.target.value) || 0)}
+                          className="pl-10 h-14 border-2 text-xl font-black text-[#800000] focus-visible:ring-[#800000]"
+                        />
+                      </div>
+                      <Button 
+                        type="button"
+                        onClick={() => setInfaqAmount(prev => prev + 10000)}
+                        className="h-14 w-14 rounded-xl border-2 border-[#800000]/20 bg-[#800000]/5 text-[#800000] hover:bg-[#800000] hover:text-white transition-all shadow-sm"
+                      >
+                        <Plus className="w-6 h-6" />
+                      </Button>
                     </div>
                     <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
                       <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')} {circle?.payment_type === 'selectable' && "(Pilihan Bebas)"}
@@ -688,7 +698,7 @@ function RegistrationForm() {
             </div>
           ) : (
             <div className="space-y-8 animate-in fade-in duration-500">
-              {isPremiumProgram ? (
+              {isPremiumProgram && !appliedVoucher ? (
                 <div className="grid gap-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nama Pengirim Sesuai Rekening</Label>
