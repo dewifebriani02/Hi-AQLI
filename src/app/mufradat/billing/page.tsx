@@ -25,7 +25,8 @@ import {
   ArrowLeft,
   Coffee,
   Heart,
-  BookOpen
+  BookOpen,
+  Info
 } from "lucide-react";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import Link from "next/link";
@@ -348,9 +349,9 @@ export default function MufradatBillingPage() {
                    {isRedeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
                 </Button>
              </div>
-             <p className="text-[9px] text-muted-foreground font-black italic mt-1">
-                *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
-             </p>
+              <p className="text-[9px] text-muted-foreground font-black italic mt-1">
+                 *Hubungi admin untuk mendapatkan kode voucher atau aktivasi manual.
+              </p>
           </div>
 
           {access.status !== 'active' && mode === 'view' && (
@@ -375,7 +376,7 @@ export default function MufradatBillingPage() {
                   "Ukhti belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu untuk pembukaan akses dan penempatan kelompok (halaqah)." :
                   access.status === 'blocked' ? 
                   "Selesaikan infaq Ukhti untuk terus mendukung operasional Hi AQLI dan membuka kembali akses ayat." :
-                  "Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu."
+                  "Status Infaq Ukhti belum terverifikasi untuk periode ini. Silakan lakukan konfirmasi di bawah guna mendukung operasional Hi AQLI."
                 }
               </p>
               <div className="flex gap-2 pt-2">
@@ -416,10 +417,13 @@ export default function MufradatBillingPage() {
                    <span className="text-muted-foreground">Tujuan Transfer:</span>
                    <Badge className="bg-[#800000]">BSI (BANK SYARIAH INDONESIA)</Badge>
                 </div>
-                 <div className="flex items-center justify-between text-lg font-black">
-                    <span>7209432468</span>
-                    <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. Dewi Febriani</span>
-                 </div>
+                  <div className="flex items-center justify-between text-lg font-black">
+                     <span>7209432468</span>
+                     <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. Dewi Febriani</span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground font-medium italic mt-2 leading-relaxed">
+                    Selisih nominal dari kode unik verifikasi akan disalurkan sebagai infaq melalui program Hi Berbagi di Hi AQLI.
+                  </p>
              </div>
 
              <div className="space-y-4">
@@ -434,12 +438,20 @@ export default function MufradatBillingPage() {
                 </div>                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Nominal (Tanpa Titik)</Label>
-                    <Input 
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="h-12 border-2 rounded-xl font-black text-[#800000]"
-                    />
+                     <Input 
+                         type="number"
+                         value={amount}
+                         onChange={(e) => setAmount(e.target.value)}
+                         className="h-12 border-2 rounded-xl font-black text-[#800000]"
+                     />
+                     <div className="space-y-1">
+                       <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
+                         <Info className="w-3 h-3" /> Minimal infaq: Rp 20.000 (Mendukung Operasional)
+                       </p>
+                       <p className="text-[9px] text-[#800000] font-medium opacity-70 italic leading-relaxed">
+                         Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu.
+                       </p>
+                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Bukti Transfer</Label>

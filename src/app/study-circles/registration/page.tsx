@@ -26,14 +26,16 @@ import {
   Clock,
   BookOpen,
   PlayCircle,
-  Plus
+  Plus,
+  Info,
+  ShieldCheck,
+  AlertCircle
 } from "lucide-react";
 import { useUser, supabase } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { ShieldCheck, AlertCircle, Info } from "lucide-react";
 
 const levels = [
   { id: "1", name: "Intensif", price: 100000 },
@@ -576,7 +578,7 @@ function RegistrationForm() {
                             </Button>
                           </div>
                           <p className="text-[9px] text-slate-500 font-bold italic mt-1">
-                            *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
+                            *Hubungi admin untuk mendapatkan kode voucher atau aktivasi manual.
                           </p>
                         </>
                       )}
@@ -665,8 +667,9 @@ function RegistrationForm() {
                         <Plus className="w-6 h-6" />
                       </Button>
                     </div>
-                    <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
-                      <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')} {circle?.payment_type === 'selectable' && "(Pilihan Bebas)"}
+                    <p className="text-[10px] text-muted-foreground font-bold italic flex flex-col gap-1">
+                      <span className="flex items-center gap-1"><Info className="w-3 h-3" /> Minimal infaq: Rp 20.000 {circle?.payment_type === 'selectable' && "(Pilihan Bebas)"}</span>
+                      <span className="text-[9px] text-[#800000] opacity-70">Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu.</span>
                     </p>
                   </div>
 
@@ -709,7 +712,7 @@ function RegistrationForm() {
                             </Button>
                           </div>
                           <p className="text-[9px] text-slate-500 font-bold italic mt-1">
-                            *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
+                            *Hubungi admin untuk mendapatkan kode voucher atau aktivasi manual.
                           </p>
                         </>
                       )}
@@ -758,7 +761,10 @@ function RegistrationForm() {
               <div className="text-center space-y-2 bg-muted/30 p-8 rounded-3xl border-2 border-dashed border-[#800000]/20 animate-in fade-in slide-in-from-bottom-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Infaq Pendaftaran</p>
                 <div className="text-4xl font-black text-[#800000]">Rp {(infaqAmount + uniqueCode).toLocaleString('id-ID')}</div>
-                <p className="text-[10px] text-amber-700 font-bold italic bg-amber-50 py-1 px-3 rounded-full inline-block mt-2 border border-amber-100">*Termasuk kode unik verifikasi {uniqueCode}</p>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-amber-700 font-bold italic bg-amber-50 py-1 px-3 rounded-full inline-block border border-amber-100">*Termasuk kode unik verifikasi {uniqueCode}</p>
+                  <p className="text-[9px] text-muted-foreground font-medium max-w-[280px] mx-auto italic leading-relaxed">Selisih nominal dari kode unik verifikasi akan disalurkan sebagai infaq melalui program Hi Berbagi di Hi AQLI.</p>
+                </div>
               </div>
               <div className="bg-[#800000]/5 p-6 rounded-2xl border-2 border-[#800000]/10 space-y-4">
                 <p className="text-xs font-black text-[#800000] uppercase tracking-widest">Rekening Tujuan (BSI)</p>
