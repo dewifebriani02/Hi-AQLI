@@ -101,15 +101,21 @@ function RegistrationForm() {
     };
   }, [user?.id, resolvedHalaqahId]);
 
+  const { data: registrationsHistory, isLoading: isAllRegLoading } = useCollection("halaqah_registrations", {
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id }
+    ]
+  });
+
   const { data: existingRegs, isLoading: isRegLoading } = useCollection("halaqah_registrations", regOptions);
 
   const [isProcessingAccess, setIsProcessingAccess] = useState(true);
 
   useEffect(() => {
-    if (!isUserLoading && !isUserDocLoading && !isRegLoading && !isHalaqahsLoading) {
+    if (!isUserLoading && !isUserDocLoading && !isRegLoading && !isHalaqahsLoading && !isAllRegLoading) {
       setIsProcessingAccess(false);
     }
-  }, [isUserLoading, isUserDocLoading, isRegLoading, isHalaqahsLoading]);
+  }, [isUserLoading, isUserDocLoading, isRegLoading, isHalaqahsLoading, isAllRegLoading]);
 
   const isProfileActive = (
     (selectedHalaqahId && userData?.followed_halaqahs?.includes(selectedHalaqahId))
@@ -174,13 +180,13 @@ function RegistrationForm() {
   }, [isMufradat, isTikrar, level, circle, isMufradat, isTikrar]);
 
   const isFirstRegistration = useMemo(() => {
-    if (!user || !allRegistrations || !circle) return true;
-    const sameProgramRegs = allRegistrations.filter(r => 
+    if (!user || !registrationsHistory || !circle) return true;
+    const sameProgramRegs = registrationsHistory.filter(r => 
       r.user_id === user.id && 
       (r.halaqah_id === circle.id || r.halaqah_title?.toLowerCase().includes(isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : '---')))
     );
     return sameProgramRegs.length === 0;
-  }, [user, allRegistrations, circle, isMufradat, isTikrar]);
+  }, [user, registrationsHistory, circle, isMufradat, isTikrar]);
 
   const registrationFee = isFirstRegistration ? 10000 : 0;
   const referralDiscount = appliedReferral ? 5000 : 0;
@@ -199,7 +205,7 @@ function RegistrationForm() {
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.push(`/login?redirect=/study-circles/registration?id=${halaqahId || ''}`);
+      router.push(`/login?redirectTo=/study-circles/registration?id=${halaqahId || ''}`);
       return;
     }
     if (user && !name) setName(user.user_metadata?.full_name || "");
