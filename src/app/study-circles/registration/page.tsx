@@ -22,16 +22,21 @@ import {
   ArrowRight,
   User,
   Phone,
-  Image as ImageIcon,
-  Check,
+  FileText,
+  Upload,
+  Calendar,
+  AlertTriangle,
+  HeartHandshake,
+  Zap,
   Clock,
-  BookOpen,
   PlayCircle,
+  BookOpen,
+  ShieldCheck,
+  Check,
   Plus,
   Info,
-  ShieldCheck,
   AlertCircle,
-  HeartHandshake
+  Image as ImageIcon,
 } from "lucide-react";
 import { useUser, supabase } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
@@ -159,6 +164,14 @@ function RegistrationForm() {
   useEffect(() => {
     if (userData?.referred_by_id && !appliedReferral) {
       const fetchReferrer = async () => {
+        // Only apply persistent referral if this is truly the user's first registration ever
+        const isActuallyFirstTime = !registrationsHistory || registrationsHistory.length === 0;
+        
+        if (!isActuallyFirstTime) {
+           console.log("Not a first-time registration, persistent referral ignored.");
+           return;
+        }
+
         const { data: referrer } = await supabase
           .from("users")
           .select("id, referral_code, username")
@@ -435,22 +448,6 @@ function RegistrationForm() {
 
       if (error) throw error;
 
-      // UPDATE REFERRER BALANCE (+5000)
-      if (appliedReferral) {
-        const { data: currentReferrer } = await supabase
-          .from("users")
-          .select("referral_balance")
-          .eq("id", appliedReferral.id)
-          .single();
-        
-        const newBalance = (currentReferrer?.referral_balance || 0) + 5000;
-        
-        await supabase
-          .from("users")
-          .update({ referral_balance: newBalance })
-          .eq("id", appliedReferral.id);
-      }
-
       // RECORD VOUCHER REDEMPTION
       if (appliedVoucher) {
         await supabase.from("voucher_redemptions").insert({
@@ -596,31 +593,45 @@ function RegistrationForm() {
                 </div>
                 
                 {appliedReferral ? (
-                  <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-amber-100 shadow-sm">
+                  <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100 shadow-sm animate-in zoom-in duration-300">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-amber-600 uppercase tracking-tighter">Referral Aktif (-Rp 5.000)</span>
+                      <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter flex items-center gap-1">
+                        <Zap className="w-2 h-2 fill-current" /> Hadiah Referral Aktif (-Rp 5.000)
+                      </span>
                       <span className="text-sm font-black text-[#800000]">{appliedReferral.referral_code}</span>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-8 text-rose-500 font-bold text-[10px]" onClick={() => {setAppliedReferral(null); setReferralCodeInput("");}}>HAPUS</Button>
+                    {/* Only show Hapus button if NOT a persistent referral from profile */}
+                    {!(userData?.referred_by_id) && (
+                      <Button variant="ghost" size="sm" className="h-8 text-rose-500 font-bold text-[10px]" onClick={() => {setAppliedReferral(null); setReferralCodeInput("");}}>HAPUS</Button>
+                    )}
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <Input 
-                      placeholder="CONTOH: AQLI-DEWI01" 
-                      value={referralCodeInput}
-                      onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
-                      className="h-12 border-2 rounded-xl font-bold uppercase placeholder:text-slate-300"
-                    />
-                    <Button 
-                      onClick={handleValidateReferral}
-                      disabled={isValidatingReferral || !referralCodeInput.trim()}
-                      className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] h-12 px-6 rounded-xl shadow-lg shadow-amber-500/20"
-                    >
-                      {isValidatingReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : "Gunakan"}
-                    </Button>
-                  </div>
+                  userData?.referred_by_id ? (
+                    <div className="flex items-center gap-2 py-2">
+                       <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                       <span className="text-[10px] font-bold text-amber-700 uppercase animate-pulse">Menghubungkan Hadiah Ukhti...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="CONTOH: AQLI-DEWI01" 
+                          value={referralCodeInput}
+                          onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                          className="h-12 border-2 rounded-xl font-bold uppercase placeholder:text-slate-300"
+                        />
+                        <Button 
+                          onClick={handleValidateReferral}
+                          disabled={isValidatingReferral || !referralCodeInput.trim()}
+                          className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] h-12 px-6 rounded-xl shadow-lg shadow-amber-500/20"
+                        >
+                          {isValidatingReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : "Gunakan"}
+                        </Button>
+                      </div>
+                      <p className="text-[9px] text-slate-500 font-bold italic mt-1 font-sans">*Gunakan kode teman untuk mendapatkan diskon Rp 5.000.</p>
+                    </>
+                  )
                 )}
-                {!appliedReferral && <p className="text-[9px] text-slate-500 font-bold italic mt-1 font-sans">*Gunakan kode teman untuk mendapatkan diskon Rp 5.000.</p>}
               </div>
 
               {isTikrar && (

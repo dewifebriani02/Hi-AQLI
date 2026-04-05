@@ -145,6 +145,35 @@ export default function AdminRegistrationsPage() {
       }
       // --- END HI MUFRADAT ---
 
+      // --- REFERRAL BONUS LOGIC ---
+      if (reg.referral_code_used) {
+        const { data: referrer } = await supabase
+          .from("users")
+          .select("id, referral_balance")
+          .eq("referral_code", reg.referral_code_used)
+          .maybeSingle();
+        
+        if (referrer) {
+          // Check if this is the user's FIRST EVER verified registration
+          // We check the count of verified registrations for this user_id
+          const { count } = await supabase
+            .from("halaqah_registrations")
+            .select("*", { count: 'exact', head: true })
+            .eq("user_id", reg.user_id)
+            .eq("status", "verified");
+          
+          // If count is 1 (this one), award bonus to referrer
+          if (count === 1) {
+            const newBal = (referrer.referral_balance || 0) + 5000;
+            await supabase
+              .from("users")
+              .update({ referral_balance: newBal })
+              .eq("id", referrer.id);
+            console.log("Referral bonus awarded to:", referrer.id);
+          }
+        }
+      }
+
       toast({
         title: "Akses Diaktifkan",
         description: `Masyallah, akses ${reg.halaqah_title} untuk ${reg.user_name} telah aktif mulai hari ini.`,

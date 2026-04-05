@@ -66,14 +66,7 @@ function RegisterContent() {
             
             if (referrer) {
               referrerId = referrer.id;
-
-              // 2. Award Sign-up Bonus to Referrer (+5000)
-              await supabase
-                .from('users')
-                .update({ referral_balance: (referrer.referral_balance || 0) + 5000 })
-                .eq('id', referrerId);
-              
-              console.log('Referral bonus awarded to:', referrerId);
+              console.log('Detected persistent referral from:', referrerId);
             }
           }
 
