@@ -26,7 +26,10 @@ import {
   Coffee,
   Heart,
   BookOpen,
-  Info
+  Info,
+  Users,
+  Target,
+  ChevronRight
 } from "lucide-react";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import Link from "next/link";
@@ -46,6 +49,14 @@ export default function MufradatBillingPage() {
   const { data: redemptions, refresh: refreshRedemptions } = useCollection("voucher_redemptions", {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }],
     select: "*, vouchers(*)"
+  });
+
+  const { data: groupData } = useDoc(userData?.mufradat_group_id ? "mufradat_groups" : null, userData?.mufradat_group_id);
+  const { data: progress } = useCollection(user ? "quiz_attempts" : null, {
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'is_passed', operator: '==', value: true }
+    ]
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,6 +146,33 @@ export default function MufradatBillingPage() {
   const activeVoucher = useMemo(() => {
     return redemptions?.find(r => r.vouchers?.program_id === 'mufradat' || r.vouchers?.program_id === 'all');
   }, [redemptions]);
+
+  const targetEstimations = useMemo(() => {
+    const totalVerses = 6236;
+    const passedVerses = new Set(progress?.map(p => `${p.surah_id}:${p.verse_id}`) || []).size;
+    const remainingVerses = Math.max(0, totalVerses - passedVerses);
+    
+    // User Weekly Target
+    const weeklyTarget = userData?.mufradat_target_verses || 5;
+    const weeksToFinishByAyat = Math.ceil(remainingVerses / (weeklyTarget || 5));
+    
+    const targetAyatDate = new Date();
+    targetAyatDate.setDate(targetAyatDate.getDate() + (weeksToFinishByAyat * 7));
+
+    // Target by Page (1 page per week - Request: Konsisten 1 Halaman Sepekan)
+    // 604 pages total
+    const startDate = groupData?.start_date ? new Date(groupData.start_date) : new Date();
+    const targetPageDate = new Date(startDate);
+    targetPageDate.setDate(targetPageDate.getDate() + (604 * 7));
+
+    return {
+      passedVerses,
+      remainingVerses,
+      targetAyatDate,
+      targetPageDate,
+      weeklyTarget
+    };
+  }, [progress, userData, groupData]);
 
   // Auto-set sender name from profile
   useEffect(() => {
@@ -368,6 +406,91 @@ export default function MufradatBillingPage() {
           <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Hi Mufradat • Billing & Cuti</p>
         </div>
       </div>
+
+      {userData?.mufradat_group_id && groupData && (
+        <Card className="border-none shadow-xl border-amber-200 bg-amber-50/50 overflow-hidden rounded-3xl">
+          <CardHeader className="bg-gradient-to-r from-amber-100 to-amber-50 border-b border-amber-200/50">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-black uppercase tracking-tight text-amber-900">Informasi Halaqah</CardTitle>
+                    <p className="text-[10px] font-bold text-amber-700/70">{groupData.name}</p>
+                  </div>
+                </div>
+                {groupData.whatsapp_link && (
+                  <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-4 rounded-xl shadow-md gap-2">
+                    <a href={groupData.whatsapp_link} target="_blank" rel="noopener noreferrer">
+                      <CreditCard className="w-4 h-4" /> GRUP WHATSAPP
+                    </a>
+                  </Button>
+                )}
+             </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                   <span className="text-[9px] font-black text-amber-800/50 uppercase tracking-widest">Musyrifah</span>
+                   <p className="text-sm font-black text-amber-900">{groupData.musyrifah_name || '-'}</p>
+                   {groupData.musyrifah_phone && (
+                     <a href={`https://wa.me/${groupData.musyrifah_phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                        <CreditCard className="w-3 h-3" /> {groupData.musyrifah_phone}
+                     </a>
+                   )}
+                </div>
+                <div className="space-y-1">
+                   <span className="text-[9px] font-black text-amber-800/50 uppercase tracking-widest">Mulai Program</span>
+                   <p className="text-sm font-black text-amber-900">
+                      {groupData.start_date ? new Date(groupData.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                   </p>
+                </div>
+             </div>
+
+             <div className="pt-4 border-t border-amber-200/50 space-y-4">
+                <div className="flex items-center gap-2">
+                   <Target className="w-4 h-4 text-amber-600" />
+                   <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-800">Estimasi Target Selesai</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                   <div className="p-4 bg-white rounded-2xl border border-amber-200 shadow-sm space-y-2">
+                      <div className="flex items-center justify-between">
+                         <span className="text-[9px] font-black text-muted-foreground uppercase">Mode Ayat ({targetEstimations?.weeklyTarget}/Pekan)</span>
+                         <Badge variant="outline" className="text-[8px] font-bold">MODE DETAIL</Badge>
+                      </div>
+                      <p className="text-sm font-black text-slate-800">
+                         {targetEstimations?.targetAyatDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground italic font-medium leading-tight">
+                         *Dihitung dari sisa {targetEstimations?.remainingVerses} ayat.
+                      </p>
+                   </div>
+
+                   <div className="p-4 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-100 space-y-2">
+                      <div className="flex items-center justify-between">
+                         <span className="text-[9px] font-black text-emerald-100 uppercase">Mode Halaman (1/Pekan)</span>
+                         <Badge variant="secondary" className="text-[8px] font-bold bg-white/20 text-white border-none">TARGET PROGRAM</Badge>
+                      </div>
+                      <p className="text-sm font-black">
+                         {targetEstimations?.targetPageDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                      </p>
+                      <p className="text-[9px] text-emerald-100/70 italic font-medium leading-tight">
+                         *Estimasi jika konsisten lulus 1 halaman mushaf sepekan.
+                      </p>
+                   </div>
+                </div>
+                
+                <Button asChild variant="ghost" className="w-full text-[10px] font-black text-amber-700 hover:text-amber-900 hover:bg-amber-100 rounded-xl gap-2 h-10">
+                   <Link href="/mufradat?tab=juz">
+                      KEJAR TARGET HALAMAN LEWAT KUIS MURAJAAH <ChevronRight className="w-3 h-3" />
+                   </Link>
+                </Button>
+             </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Status Card */}
       <Card className="border-none shadow-2xl overflow-hidden bg-white">

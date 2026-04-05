@@ -84,15 +84,62 @@ export default function MufradatJuzAccessPage() {
     }
   };
 
-  const grantAll = async (userId: string) => {
-    const user = users?.find(u => u.id === userId);
-    if (!user) return;
-    setIsSaving(userId);
+  const handleSyncJuz1All = async () => {
+    setIsSaving("bulk-sync");
     try {
-      const allJuz = Array.from({ length: 30 }, (_, i) => i + 1);
-      await supabase.from('users').update({ mufradat_accessible_juz: allJuz }).eq('id', userId);
+      // 1. Fetch all users who have registered (have mufradat_group_id)
+      const { data: mufradatUsers, error: fetchError } = await supabase
+        .from('users')
+        .select('id, mufradat_accessible_juz, username')
+        .not('mufradat_group_id', 'is', null);
+
+      if (fetchError) throw fetchError;
+      if (!mufradatUsers) return;
+
+      // 2. Identify users who DON'T have Juz 1 in their access list
+      const usersToUpdate = mufradatUsers.filter(u => {
+        const juzArray = Array.isArray(u.mufradat_accessible_juz) ? u.mufradat_accessible_juz : [];
+        return !juzArray.includes(1);
+      });
+
+      if (usersToUpdate.length === 0) {
+        toast({ 
+          title: "Sudah Sinkron", 
+          description: "Masyallah, semua thalibah terdaftar sudah memiliki akses Juz 1." 
+        });
+        return;
+      }
+
+      // 3. Batch perform updates
+      let successCount = 0;
+      for (const u of usersToUpdate) {
+        const current = Array.isArray(u.mufradat_accessible_juz) ? u.mufradat_accessible_juz : [];
+        const { error: upError } = await supabase
+          .from('users')
+          .update({ 
+            mufradat_accessible_juz: [1, ...current].sort((a,b) => a-b),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', u.id);
+        
+        if (!upError) successCount++;
+      }
+
       refresh();
-    } finally { setIsSaving(null); }
+      toast({ 
+        title: "Sinkronisasi Berhasil", 
+        description: `Alhamdulillah, ${successCount} thalibah kini telah memiliki akses ke Juz 1.` 
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({ 
+        variant: "destructive", 
+        title: "Gagal Sinkronisasi", 
+        description: err.message 
+      });
+    } finally {
+      setIsSaving(null);
+    }
   };
 
   const revokeAll = async (userId: string) => {
@@ -122,13 +169,22 @@ export default function MufradatJuzAccessPage() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* User Sidebar */}
         <div className="md:col-span-4 space-y-4 text-left">
+          <Button 
+            onClick={handleSyncJuz1All}
+            disabled={isSaving === "bulk-sync"}
+            className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-[10px] h-12 rounded-2xl shadow-lg shadow-[#800000]/10 gap-2 mb-2"
+          >
+            {isSaving === "bulk-sync" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings2 className="w-4 h-4" />}
+            SINKRONISASI JUZ 1 (SEMUA)
+          </Button>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
               placeholder="Cari thalibah..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-12 rounded-2xl bg-white border-2 border-slate-100 focus:border-[#800000]/20"
+              className="pl-10 h-10 rounded-2xl bg-white border-2 border-slate-100 focus:border-[#800000]/20"
             />
           </div>
 

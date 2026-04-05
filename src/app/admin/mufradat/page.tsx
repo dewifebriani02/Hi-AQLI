@@ -391,13 +391,26 @@ function MufradatMonitoringContent() {
                         <AvatarImage src={u.photo_url || u.photoURL} />
                         <AvatarFallback className="bg-[#800000] text-white font-bold">{u.username?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                       </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-sm text-[#800000] group-hover:underline cursor-pointer">{u.username || 'Hamba Allah'}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground lowercase">{u.email}</span>
-                          {u.phone && <span className="text-[9px] font-bold text-emerald-600 flex items-center gap-0.5"><Phone className="w-2 h-2" /> WA Aktif</span>}
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-[#800000] group-hover:underline cursor-pointer">{u.username || 'Hamba Allah'}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground lowercase">{u.email}</span>
+                            {u.phone && <span className="text-[9px] font-bold text-emerald-600 flex items-center gap-0.5"><Phone className="w-2 h-2" /> WA Aktif</span>}
+                          </div>
+                          
+                          {/* JUZ ACCESS LIST */}
+                          <div className="flex flex-wrap gap-1 mt-1.5 focus-within:ring-1">
+                             {Array.isArray(u.mufradat_accessible_juz) && u.mufradat_accessible_juz.length > 0 ? (
+                               u.mufradat_accessible_juz.map((j: number) => (
+                                 <Badge key={j} variant="outline" className="text-[8px] h-4 font-black px-1.5 py-0 bg-slate-50 border-slate-200 text-slate-600 shadow-sm">
+                                   J{j}
+                                 </Badge>
+                               ))
+                             ) : (
+                               <span className="text-[8px] font-bold text-rose-500 uppercase tracking-tighter bg-rose-50 px-1 rounded italic">Akses Juz Kosong</span>
+                             )}
+                          </div>
                         </div>
-                      </div>
                     </div>
                   </TableCell>
                   <TableCell>

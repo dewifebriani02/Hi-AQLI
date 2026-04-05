@@ -63,6 +63,7 @@ function MufradatPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("surah");
+  const [rankMode, setRankMode] = useState<'ayat' | 'halaman'>('ayat');
 
   // Fetch all passed attempts for the current user
   const progressOptions = useMemo(() => ({
@@ -130,6 +131,9 @@ function MufradatPageContent() {
       // UNIQUE VERSES (Hafalan)
       const uniqueVerses = new Set(userAttempts.map(a => `${a.surah_id}:${a.verse_id}`)).size;
       
+      // UNIQUE PAGES (Halaman)
+      const uniquePages = new Set(userAttempts.filter(a => a.quiz_id.startsWith('mufradat_page_')).map(a => a.page_id)).size;
+      
       // TOTAL PASSED (Aktivitas/Repetisi)
       const totalPassed = userAttempts.length;
       
@@ -146,12 +150,17 @@ function MufradatPageContent() {
         ...u,
         points: u.points || 0,
         verseCount: uniqueVerses,
+        pageCount: uniquePages,
         activityCount: totalPassed,
         reactionSummary
       };
-    }).sort((a: any, b: any) => b.verseCount - a.verseCount || b.points - a.points)
-      .slice(0, 20); // Top 20
-  }, [allGroupUsers, allGroupAttempts, allReactions, isRankTab]);
+    }).sort((a: any, b: any) => {
+      if (rankMode === 'halaman') {
+        return b.pageCount - a.pageCount || b.points - a.points;
+      }
+      return b.verseCount - a.verseCount || b.points - a.points;
+    }).slice(0, 20); // Top 20
+  }, [allGroupUsers, allGroupAttempts, allReactions, isRankTab, rankMode]);
 
   const sendReaction = async (toUserId: string, type: string) => {
     if (!user) return;
@@ -359,10 +368,29 @@ function MufradatPageContent() {
                     <Trophy className="w-6 h-6 text-amber-400 fill-current" />
                     <CardTitle className="text-2xl font-black font-headline uppercase leading-none">Papan Juara Grup</CardTitle>
                   </div>
-                  <CardDescription className="text-white/70 font-medium">Berdasarkan Total Poin & Kapasitas Hafalan.</CardDescription>
+                  <CardDescription className="text-white/70 font-medium">
+                    {rankMode === 'ayat' ? 'Kategori Pejuang Detail (Per Ayat)' : 'Kategori Pejuang Halaman (Per Mushaf)'}
+                  </CardDescription>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                  <Users className="w-6 h-6 text-white" />
+                <div className="flex items-center bg-white/10 p-1 rounded-2xl backdrop-blur-sm border border-white/20">
+                   <button 
+                      onClick={() => setRankMode('ayat')}
+                      className={cn(
+                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
+                        rankMode === 'ayat' ? "bg-white text-[#800000] shadow-lg" : "text-white/70 hover:text-white"
+                      )}
+                   >
+                      Ayat
+                   </button>
+                   <button 
+                      onClick={() => setRankMode('halaman')}
+                      className={cn(
+                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
+                        rankMode === 'halaman' ? "bg-white text-amber-600 shadow-lg" : "text-white/70 hover:text-white"
+                      )}
+                   >
+                      Halaman
+                   </button>
                 </div>
               </div>
             </CardHeader>
@@ -416,12 +444,14 @@ function MufradatPageContent() {
                                 <span className="text-xs font-black text-amber-600">{u.points} <span className="text-[9px] font-medium text-slate-400">POIN</span></span>
                               </div>
                               <div className="flex items-center gap-1 group/stat" title="Hafalan">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                                <span className="text-xs font-black text-emerald-600">{u.verseCount} <span className="text-[9px] font-medium text-slate-400">HAFALAN</span></span>
+                                <CheckCircle2 className={cn("w-3 h-3", rankMode === 'halaman' ? "text-amber-500" : "text-emerald-500")} />
+                                <span className={cn("text-xs font-black", rankMode === 'halaman' ? "text-amber-600" : "text-emerald-600")}>
+                                  {rankMode === 'halaman' ? u.pageCount : u.verseCount} <span className="text-[9px] font-medium text-slate-400 uppercase">{rankMode === 'halaman' ? 'Halaman' : 'Ayat'}</span>
+                                </span>
                               </div>
                               <div className="flex items-center gap-1 group/stat" title="Repetisi">
                                 <Layers className="w-3 h-3 text-slate-400" />
-                                <span className="text-xs font-black text-slate-500">{u.activityCount} <span className="text-[9px] font-medium text-slate-400">REPETISI</span></span>
+                                <span className="text-xs font-black text-slate-500">{u.activityCount} <span className="text-[9px] font-medium text-slate-400 uppercase">Repetisi</span></span>
                               </div>
                             </div>
                           </div>
