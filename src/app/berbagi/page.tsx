@@ -61,7 +61,7 @@ type Donation = {
 };
 
 const paymentMethods = [
-  { id: 'transfer', label: 'Transfer Bank (BSI)', icon: Landmark, detail: 'Bank Syariah Indonesia - 7123456789 a.n. HI AQLI' },
+  { id: 'transfer', label: 'Transfer Bank (BSI)', icon: Landmark, detail: 'Bank Syariah Indonesia - 7209432468 a.n. Dewi Febriani' },
 ];
 
 const normalizeTitle = (title: string) => (title || "").toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -465,11 +465,11 @@ export default function BerbagiPage() {
                 {method === 'transfer' && (
                   <div className="space-y-3 relative z-10">
                     <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">Rekening Tujuan (BSI)</p>
-                    <div className="flex items-center justify-between bg-white/10 p-4 rounded-xl border border-white/20">
-                      <span className="font-mono font-black text-xl tracking-widest text-white">7123456789</span>
-                      <Button variant="ghost" size="sm" className="text-[#D4AF37] font-black hover:bg-white/10" onClick={() => copyToClipboard("7123456789")}>SALIN</Button>
+                    <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
+                      <span className="font-mono font-black text-xl tracking-widest text-white">7209432468</span>
+                      <Button variant="ghost" size="sm" className="text-[#D4AF37] font-black hover:bg-white/10" onClick={() => copyToClipboard("7209432468")}>SALIN</Button>
                     </div>
-                    <p className="text-[10px] text-center font-bold uppercase tracking-tighter text-white/80">Yayasan HI AQLI</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">a.n. Dewi Febriani</p>
                   </div>
                 )}
 

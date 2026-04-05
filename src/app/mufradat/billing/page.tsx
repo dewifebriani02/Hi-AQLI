@@ -416,10 +416,10 @@ export default function MufradatBillingPage() {
                    <span className="text-muted-foreground">Tujuan Transfer:</span>
                    <Badge className="bg-[#800000]">BSI (BANK SYARIAH INDONESIA)</Badge>
                 </div>
-                <div className="flex items-center justify-between text-lg font-black">
-                   <span>7123456789</span>
-                   <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. HI AQLI DIGITAL</span>
-                </div>
+                 <div className="flex items-center justify-between text-lg font-black">
+                    <span>7209432468</span>
+                    <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. Dewi Febriani</span>
+                 </div>
              </div>
 
              <div className="space-y-4">

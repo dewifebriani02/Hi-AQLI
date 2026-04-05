@@ -298,17 +298,24 @@ function RegistrationForm() {
       // Use the pre-resolved UUID for the database
       const finalHalaqahId = resolvedHalaqahId;
 
-      // SAFETY: If we still don't have a UUID (e.g. allHalaqahs failed to load)
-      // perform a last-ditch lookup to avoid the 22P02 error
+      // SAFETY: Robust UUID validation
+      // Standard UUID regex (v1-v5)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      
       let verifiedUuid = finalHalaqahId;
-      if (finalHalaqahId && !finalHalaqahId.includes('-')) {
+      
+      // If NOT a valid UUID, try lookup
+      if (finalHalaqahId && !uuidRegex.test(finalHalaqahId)) {
+        console.log("Resolving virtual ID:", finalHalaqahId);
         const pType = finalHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
         const { data: hData } = await supabase.from("halaqahs").select("id").eq("program_type", pType).maybeSingle();
-        if (hData?.id) verifiedUuid = hData.id;
+        if (hData?.id) {
+          verifiedUuid = hData.id;
+        }
       }
 
-      if (!verifiedUuid || !verifiedUuid.includes('-')) {
-        throw new Error("Gagal memproses ID Program. Mohon muat ulang halaman.");
+      if (!verifiedUuid || !uuidRegex.test(verifiedUuid)) {
+        throw new Error("Gagal memproses ID Program. Mohon muat ulang halaman atau hubungi Admin.");
       }
 
       const { error } = await supabase.from("halaqah_registrations").insert({
@@ -756,10 +763,10 @@ function RegistrationForm() {
               <div className="bg-[#800000]/5 p-6 rounded-2xl border-2 border-[#800000]/10 space-y-4">
                 <p className="text-xs font-black text-[#800000] uppercase tracking-widest">Rekening Tujuan (BSI)</p>
                 <div className="flex items-center justify-between bg-white p-4 rounded-xl border-2 shadow-sm">
-                  <span className="font-mono font-black text-xl tracking-wider">7123456789</span>
-                  <Button variant="ghost" size="sm" className="font-black text-[#800000] hover:bg-[#800000]/10" onClick={() => { navigator.clipboard.writeText("7123456789"); toast({ description: "Nomor rekening disalin" }) }}>SALIN</Button>
+                  <span className="font-mono font-black text-xl tracking-wider">7209432468</span>
+                  <Button variant="ghost" size="sm" className="font-black text-[#800000] hover:bg-[#800000]/10" onClick={() => { navigator.clipboard.writeText("7209432468"); toast({ description: "Nomor rekening disalin" }) }}>SALIN</Button>
                 </div>
-                <p className="text-[10px] font-bold text-center text-muted-foreground">a.n. Sahabat AQLI Digital</p>
+                <p className="text-[10px] font-bold text-center text-muted-foreground">a.n. Dewi Febriani</p>
               </div>
               <Button onClick={() => setStep(3)} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-xl">Saya Sudah Transfer</Button>
             </div>
