@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";

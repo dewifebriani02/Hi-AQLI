@@ -67,14 +67,35 @@ function RegistrationForm() {
     return allHalaqahs.find(h => h.id === selectedHalaqahId);
   }, [selectedHalaqahId, allHalaqahs]);
 
+  // 2. Resolve Virtual IDs to real UUIDs for database operations
+  const resolvedHalaqahId = useMemo(() => {
+    if (!selectedHalaqahId || !allHalaqahs) return selectedHalaqahId;
+    
+    // Virtual ID mapping to program_type
+    if (selectedHalaqahId === 'mufradat-premium') {
+      return allHalaqahs.find(h => h.program_type === 'hi_mufradat')?.id || selectedHalaqahId;
+    }
+    if (selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1') {
+      return allHalaqahs.find(h => h.program_type === 'tikrar_daily')?.id || selectedHalaqahId;
+    }
+    
+    return selectedHalaqahId;
+  }, [selectedHalaqahId, allHalaqahs]);
+
   // Check for ANY existing registration for this halaqah to prevent duplicates
-  const regOptions = useMemo(() => ({
-    filters: [
-      { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'halaqah_id', operator: '==', value: selectedHalaqahId },
-      { column: 'status', operator: 'in', value: ["active", "pending_verification"] }
-    ]
-  }), [user?.id, selectedHalaqahId]);
+  const regOptions = useMemo(() => {
+    // Only apply halaqah_id filter if it's a valid UUID (not a virtual ID)
+    // Virtual IDs should be resolved first
+    const isVirtual = resolvedHalaqahId?.includes('-'); // Simple UUID check
+    
+    return {
+      filters: [
+        { column: 'user_id', operator: '==', value: user?.id },
+        { column: 'halaqah_id', operator: '==', value: resolvedHalaqahId },
+        { column: 'status', operator: 'in', value: ["active", "pending_verification"] }
+      ].filter(f => f.column !== 'halaqah_id' || (f.value && f.value.length > 20)) // Basic UUID length check to avoid 400
+    };
+  }, [user?.id, resolvedHalaqahId]);
 
   const { data: existingRegs, isLoading: isRegLoading } = useCollection("halaqah_registrations", regOptions);
 
@@ -117,6 +138,7 @@ function RegistrationForm() {
   const [voucherCode, setVoucherCode] = useState("");
   const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
   const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
+  const [showVoucher, setShowVoucher] = useState(false);
 
   // Program Detection
   const isMufradat = (circle?.program_type === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
@@ -273,21 +295,20 @@ function RegistrationForm() {
 
     setLoading(true);
     try {
-      let finalHalaqahId = selectedHalaqahId;
+      // Use the pre-resolved UUID for the database
+      const finalHalaqahId = resolvedHalaqahId;
 
-      // Ensure we have a valid UUID for the database if using virtual IDs
-      if (selectedHalaqahId === 'mufradat-premium' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1') {
-        const programType = selectedHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
-        const { data: hData } = await supabase
-          .from("halaqahs")
-          .select("id")
-          .eq("program_type", programType)
-          .limit(1)
-          .maybeSingle();
-        
-        if (hData?.id) {
-          finalHalaqahId = hData.id;
-        }
+      // SAFETY: If we still don't have a UUID (e.g. allHalaqahs failed to load)
+      // perform a last-ditch lookup to avoid the 22P02 error
+      let verifiedUuid = finalHalaqahId;
+      if (finalHalaqahId && !finalHalaqahId.includes('-')) {
+        const pType = finalHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
+        const { data: hData } = await supabase.from("halaqahs").select("id").eq("program_type", pType).maybeSingle();
+        if (hData?.id) verifiedUuid = hData.id;
+      }
+
+      if (!verifiedUuid || !verifiedUuid.includes('-')) {
+        throw new Error("Gagal memproses ID Program. Mohon muat ulang halaman.");
       }
 
       const { error } = await supabase.from("halaqah_registrations").insert({
@@ -295,7 +316,7 @@ function RegistrationForm() {
         user_name: name,
         user_email: user?.email,
         whatsapp: whatsapp,
-        halaqah_id: finalHalaqahId,
+        halaqah_id: verifiedUuid,
         halaqah_title: circle?.title || (isMufradat ? 'Hi Mufradat' : 'Halaqah'),
         is_paid: isPremiumProgram || !!appliedVoucher,
         level: isTikrar ? parseInt(level) : null,
@@ -509,6 +530,52 @@ function RegistrationForm() {
                     </div>
                   )}
 
+                  {/* Voucher Section - Tikrar */}
+                  {isPremiumProgram && (
+                    <div className={cn(
+                      "p-6 rounded-2xl border-2 border-dashed space-y-4 animate-in fade-in transition-all",
+                      appliedVoucher ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"
+                    )}>
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className={cn("w-5 h-5", appliedVoucher ? "text-emerald-600" : "text-slate-400")} />
+                        <h4 className={cn("font-black text-[10px] uppercase tracking-widest", appliedVoucher ? "text-emerald-800" : "text-slate-500")}>
+                          Punya Kode Voucher?
+                        </h4>
+                      </div>
+                      
+                      {appliedVoucher ? (
+                        <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Voucher Aktif</span>
+                            <span className="text-sm font-black text-[#800000]">{appliedVoucher.code}</span>
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-8 text-rose-500 font-bold text-[10px]" onClick={() => {setAppliedVoucher(null); setVoucherCode("");}}>HAPUS</Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="KODE VOUCHER" 
+                              value={voucherCode}
+                              onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                              className="h-12 border-2 rounded-xl font-bold uppercase"
+                            />
+                            <Button 
+                              onClick={handleValidateVoucher}
+                              disabled={isValidatingVoucher || !voucherCode.trim()}
+                              className="bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] h-12 px-6 rounded-xl"
+                            >
+                              {isValidatingVoucher ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
+                            </Button>
+                          </div>
+                          <p className="text-[9px] text-slate-500 font-bold italic mt-1">
+                            *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {/* Tikrar Akad Section */}
                   <div className="p-6 bg-blue-50/50 rounded-2xl border-2 border-blue-200/50 space-y-4 animate-in fade-in zoom-in">
                     <div className="flex items-center gap-2 text-[#800000]">
@@ -596,6 +663,52 @@ function RegistrationForm() {
                     </p>
                   </div>
 
+                  {/* Voucher Section - Mufradat */}
+                  {isPremiumProgram && (
+                    <div className={cn(
+                      "p-6 rounded-2xl border-2 border-dashed space-y-4 animate-in fade-in transition-all",
+                      appliedVoucher ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"
+                    )}>
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className={cn("w-5 h-5", appliedVoucher ? "text-emerald-600" : "text-slate-400")} />
+                        <h4 className={cn("font-black text-[10px] uppercase tracking-widest", appliedVoucher ? "text-emerald-800" : "text-slate-500")}>
+                          Punya Kode Voucher?
+                        </h4>
+                      </div>
+                      
+                      {appliedVoucher ? (
+                        <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Voucher Aktif</span>
+                            <span className="text-sm font-black text-[#800000]">{appliedVoucher.code}</span>
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-8 text-rose-500 font-bold text-[10px]" onClick={() => {setAppliedVoucher(null); setVoucherCode("");}}>HAPUS</Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="KODE VOUCHER" 
+                              value={voucherCode}
+                              onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                              className="h-12 border-2 rounded-xl font-bold uppercase"
+                            />
+                            <Button 
+                              onClick={handleValidateVoucher}
+                              disabled={isValidatingVoucher || !voucherCode.trim()}
+                              className="bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] h-12 px-6 rounded-xl"
+                            >
+                              {isValidatingVoucher ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
+                            </Button>
+                          </div>
+                          <p className="text-[9px] text-slate-500 font-bold italic mt-1">
+                            *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {/* Mufradat Akad Section */}
                   <div className="p-6 bg-emerald-50 rounded-2xl border-2 border-emerald-200 space-y-4 animate-in fade-in zoom-in">
                     <div className="flex items-center gap-2 text-[#800000]">
@@ -626,52 +739,6 @@ function RegistrationForm() {
                       </Label>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* Voucher Section */}
-              {isPremiumProgram && (
-                <div className={cn(
-                  "p-6 rounded-2xl border-2 border-dashed space-y-4 animate-in fade-in transition-all",
-                  appliedVoucher ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"
-                )}>
-                   <div className="flex items-center gap-2">
-                       <ShieldCheck className={cn("w-5 h-5", appliedVoucher ? "text-emerald-600" : "text-slate-400")} />
-                       <h4 className={cn("font-black text-[10px] uppercase tracking-widest", appliedVoucher ? "text-emerald-800" : "text-slate-500")}>
-                          Punya Kode Voucher?
-                       </h4>
-                   </div>
-                   
-                   {appliedVoucher ? (
-                     <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100">
-                        <div className="flex flex-col">
-                           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Voucher Aktif</span>
-                           <span className="text-sm font-black text-[#800000]">{appliedVoucher.code}</span>
-                        </div>
-                        <Button variant="ghost" size="sm" className="h-8 text-rose-500 font-bold text-[10px]" onClick={() => {setAppliedVoucher(null); setVoucherCode("");}}>HAPUS</Button>
-                     </div>
-                   ) : (
-                     <>
-                        <div className="flex gap-2">
-                            <Input 
-                            placeholder="KODE VOUCHER" 
-                            value={voucherCode}
-                            onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                            className="h-12 border-2 rounded-xl font-bold uppercase"
-                            />
-                            <Button 
-                            onClick={handleValidateVoucher}
-                            disabled={isValidatingVoucher || !voucherCode.trim()}
-                            className="bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] h-12 px-6 rounded-xl"
-                            >
-                            {isValidatingVoucher ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
-                            </Button>
-                        </div>
-                        <p className="text-[9px] text-slate-500 font-bold italic mt-1">
-                            *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
-                        </p>
-                     </>
-                   )}
                 </div>
               )}
 
