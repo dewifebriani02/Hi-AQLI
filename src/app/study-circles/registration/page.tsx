@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2,
   Loader2,
@@ -152,16 +153,18 @@ function RegistrationForm() {
 
   // Minimum Infaq Calculation
   const minInfaq = useMemo(() => {
+    const adminBase = (circle?.base_price || circle?.basePrice) || 0;
+    
     if (isMufradat) {
-      return 20000; // Standard minimum infaq for Hi Mufradat
+      return Math.max(20000, adminBase); // Default 20k fallback
     }
     if (isTikrar) {
       return levels.find(l => l.id === level)?.price || 50000;
     }
     if (circle?.payment_type === 'selectable') {
-      return 50000; // Base minimum for selectable
+      return adminBase || 50000; // Base minimum for selectable
     }
-    return (circle?.base_price || circle?.basePrice) || 0;
+    return adminBase || 0;
   }, [isMufradat, isTikrar, level, circle?.base_price, circle?.basePrice, circle?.payment_type]);
 
   useEffect(() => {
@@ -649,26 +652,49 @@ function RegistrationForm() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Nominal Infaq</Label>
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <div className="absolute left-3 top-3.5 text-xs font-black text-muted-foreground">Rp</div>
-                        <Input
-                          type="number"
-                          value={infaqAmount}
-                          onChange={(e) => setInfaqAmount(parseInt(e.target.value) || 0)}
-                          className="pl-10 h-14 border-2 text-xl font-black text-[#800000] focus-visible:ring-[#800000]"
-                        />
+                    
+                    {circle?.payment_type === 'selectable' ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {INFAQ_LEVELS.map((lvl) => (
+                          <Button
+                            key={lvl}
+                            type="button"
+                            variant={infaqAmount === lvl ? "default" : "outline"}
+                            className={cn(
+                              "h-12 font-black text-xs transition-all rounded-xl border-2",
+                              infaqAmount === lvl ? "bg-[#800000] text-white border-[#800000] scale-105 shadow-md" : "border-[#800000]/10 text-[#800000] hover:bg-[#800000]/5"
+                            )}
+                            onClick={() => setInfaqAmount(lvl)}
+                          >
+                            Rp {lvl.toLocaleString('id-ID')}
+                          </Button>
+                        ))}
                       </div>
-                      <Button 
-                        type="button"
-                        onClick={() => setInfaqAmount(prev => prev + 10000)}
-                        className="h-14 w-14 rounded-xl border-2 border-[#800000]/20 bg-[#800000]/5 text-[#800000] hover:bg-[#800000] hover:text-white transition-all shadow-sm"
-                      >
-                        <Plus className="w-6 h-6" />
-                      </Button>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <div className="absolute left-3 top-3.5 text-xs font-black text-muted-foreground">Rp</div>
+                          <Input
+                            type="number"
+                            value={infaqAmount}
+                            onChange={(e) => setInfaqAmount(parseInt(e.target.value) || 0)}
+                            className="pl-10 h-14 border-2 text-xl font-black text-[#800000] focus-visible:ring-[#800000]"
+                          />
+                        </div>
+                        <Button 
+                          type="button"
+                          onClick={() => setInfaqAmount(prev => prev + 10000)}
+                          className="h-14 w-14 rounded-xl border-2 border-[#800000]/20 bg-[#800000]/5 text-[#800000] hover:bg-[#800000] hover:text-white transition-all shadow-sm"
+                        >
+                          <Plus className="w-6 h-6" />
+                        </Button>
+                      </div>
+                    )}
+                    
                     <p className="text-[10px] text-muted-foreground font-bold italic flex flex-col gap-1">
-                      <span className="flex items-center gap-1"><Info className="w-3 h-3" /> Minimal infaq: Rp 20.000 {circle?.payment_type === 'selectable' && "(Pilihan Bebas)"}</span>
+                      <span className="flex items-center gap-1">
+                        <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')} {circle?.payment_type === 'selectable' && "(Pilihan Terbuka)"}
+                      </span>
                       <span className="text-[9px] text-[#800000] opacity-70">Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu.</span>
                     </p>
                   </div>
@@ -749,6 +775,41 @@ function RegistrationForm() {
                       </Label>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* General Payment Section (Hi Ngaji / Other Premium) */}
+              {isPremiumProgram && !isTikrar && !isMufradat && (
+                <div className="space-y-6 animate-in slide-in-from-top-4 pb-4">
+                  {circle?.payment_type === 'selectable' ? (
+                    <div className="space-y-3">
+                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Pilih Level Infaq</Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {INFAQ_LEVELS.map((lvl) => (
+                          <Button
+                            key={lvl}
+                            type="button"
+                            variant={infaqAmount === lvl ? "default" : "outline"}
+                            className={cn(
+                              "h-12 font-black text-xs transition-all rounded-xl border-2",
+                              infaqAmount === lvl ? "bg-[#800000] text-white border-[#800000] scale-105 shadow-md" : "border-[#800000]/10 text-[#800000] hover:bg-[#800000]/5"
+                            )}
+                            onClick={() => setInfaqAmount(lvl)}
+                          >
+                            Rp {lvl.toLocaleString('id-ID')}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-5 bg-amber-50/50 rounded-2xl border-2 border-dashed border-amber-200 flex items-center justify-between">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-black uppercase text-muted-foreground">Biaya Investasi</span>
+                        <p className="text-2xl font-black text-[#800000]">Rp {infaqAmount.toLocaleString('id-ID')}</p>
+                      </div>
+                      <Badge variant="outline" className="bg-white border-[#800000]/20 text-[#800000] font-black text-[10px]">PROGRAM PREMIUM</Badge>
+                    </div>
+                  )}
                 </div>
               )}
 

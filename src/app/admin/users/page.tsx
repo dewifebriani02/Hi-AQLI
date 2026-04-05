@@ -117,15 +117,26 @@ export default function AdminUsersPage() {
     if (!userToDelete?.id) return;
 
     try {
-      const { error } = await supabase.from('users').delete().eq('id', userToDelete.id);
+      // Use .select() to confirm if a row was actually deleted
+      const { data, error } = await supabase.from('users').delete().eq('id', userToDelete.id).select();
       if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Gagal menghapus",
+          description: "Data thalibah tidak ditemukan atau akses ditolak. Pastikan Ukhti memiliki izin admin.",
+        });
+        setIsDeleteDialogOpen(false);
+        return;
+      }
       
       // Also try to remove from roles_admin if they were an admin
       await supabase.from('roles_admin').delete().eq('id', userToDelete.id);
 
       toast({
         title: "User Dihapus",
-        description: `Profil ${userToDelete.username} telah dihapus dari database.`,
+        description: `Profil ${userToDelete.username} telah berhasil dihapus dari database.`,
       });
       setIsDeleteDialogOpen(false);
       setUserToDelete(null);

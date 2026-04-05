@@ -183,7 +183,23 @@ export default function MutabaahPage() {
   if (isSetupMode && user) {
     return (
       <div className="flex flex-col min-h-screen bg-white">
-        <div className="p-6 space-y-6 max-w-2xl mx-auto w-full">
+        {/* Sticky Header for Setup Mode */}
+        <div className="sticky top-0 z-[60] bg-white/95 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
+          <Button variant="ghost" onClick={() => setIsSetupMode(false)} className="text-muted-foreground font-bold h-9">Batal</Button>
+          <div className="text-center">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Pengaturan Target</h2>
+            <p className="text-[9px] font-bold text-muted-foreground">{selectedGoals.length} Amalan Terpilih</p>
+          </div>
+          <Button 
+            onClick={saveGoals} 
+            disabled={selectedGoals.length === 0}
+            className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-[10px] h-9 px-4 rounded-xl shadow-md"
+          >
+            SIMPAN
+          </Button>
+        </div>
+
+        <div className="p-6 space-y-6 max-w-2xl mx-auto w-full pt-10">
           <div className="space-y-2">
             <h1 className="text-3xl font-black text-[#800000] uppercase italic">Pilih Targetmu</h1>
             <p className="text-sm font-bold text-muted-foreground">"Sedikit tapi konsisten lebih dicintai Allah daripada banyak tapi terputus."</p>
@@ -232,13 +248,13 @@ export default function MutabaahPage() {
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-slate-100 flex justify-center">
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-slate-100 flex justify-center z-[60]">
           <Button 
-            className="w-full max-w-md bg-[#800000] hover:bg-[#800000]/90 h-14 text-lg font-black uppercase rounded-2xl shadow-xl shadow-[#800000]/20"
+            className="w-full max-w-md bg-[#800000] hover:bg-[#800000]/90 h-14 text-sm font-black uppercase rounded-2xl shadow-xl shadow-[#800000]/20"
             disabled={selectedGoals.length === 0}
             onClick={saveGoals}
           >
-            Mulai Konsisten Sekarang <ArrowRight className="ml-2 w-5 h-5" />
+            SIMPAN TARGET & MULAI ({selectedGoals.length} AMALAN) <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
         </div>
       </div>
