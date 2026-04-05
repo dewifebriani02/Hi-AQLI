@@ -13,7 +13,7 @@ export interface Chapter {
 }
 
 export const QURAN_CHAPTERS: Chapter[] = [
-  { id: 1, name_simple: "Al-Fatihah", name_arabic: "الفatحة", verses_count: 7, translated_name: "Pembukaan", revelation_place: "makkah" },
+  { id: 1, name_simple: "Al-Fatihah", name_arabic: "الفاتحة", verses_count: 7, translated_name: "Pembukaan", revelation_place: "makkah" },
   { id: 2, name_simple: "Al-Baqarah", name_arabic: "البقرة", verses_count: 286, translated_name: "Sapi Betina", revelation_place: "madinah" },
   { id: 3, name_simple: "Ali 'Imran", name_arabic: "آل عمران", verses_count: 200, translated_name: "Keluarga Imran", revelation_place: "madinah" },
   { id: 4, name_simple: "An-Nisa", name_arabic: "النساء", verses_count: 176, translated_name: "Wanita", revelation_place: "madinah" },

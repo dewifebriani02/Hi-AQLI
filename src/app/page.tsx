@@ -100,7 +100,7 @@ export default function DashboardPage() {
         { column: 'user_id', operator: '==', value: user.id },
         { column: 'completed', operator: '==', value: true }
       ],
-      orderBy: { column: 'created_at', ascending: false },
+      orderBy: { column: 'updated_at', ascending: false },
       limit: 20
     } : undefined
   );
@@ -110,9 +110,9 @@ export default function DashboardPage() {
     "halaqah_registrations",
     user?.id ? {
       filters: [
-        { column: 'userId', operator: '==', value: user.id }
+        { column: 'user_id', operator: '==', value: user.id }
       ],
-      orderBy: { column: 'createdAt', ascending: false },
+      orderBy: { column: 'created_at', ascending: false },
       limit: 10
     } : undefined
   );

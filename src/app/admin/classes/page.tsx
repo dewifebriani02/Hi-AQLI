@@ -42,11 +42,10 @@ const INITIAL_FORM = {
   time: "19:00",
   startDate: "",
   durationWeeks: 4,
-  durationMonths: 1,
   juz: "1",
   level: "Semua Level",
   isPremium: false,
-  paymentType: "fixed", // 'fixed' or 'selectable'
+  paymentType: "fixed", // 'fixed' or 'selectable' 
   hasExam: true,
   hasCertificate: true,
   tag: "",
@@ -128,7 +127,6 @@ export default function AdminClassesPage() {
       time: time || "19:00",
       startDate: h.startDate || "",
       durationWeeks: h.durationWeeks || 4,
-      durationMonths: h.durationMonths || 1,
       juz: h.juz || "1",
       level: h.level || "Semua Level",
       isPremium: h.isPremium || false,
@@ -163,17 +161,14 @@ export default function AdminClassesPage() {
       startDate: form.startDate,
       endDate: calculatedEndDate,
       durationWeeks: form.durationWeeks,
-      durationMonths: form.durationMonths,
       juz: form.programType === 'hi_ngaji' ? null : form.juz,
       level: form.level,
       isPremium: form.isPremium,
-      payment_type: form.paymentType,
       hasExam: form.hasExam,
       hasCertificate: form.hasCertificate,
       tag: form.tag,
       basePrice: form.basePrice,
-      quota: form.quota,
-      updated_at: new Date().toISOString()
+      quota: form.quota
     };
 
     try {
@@ -542,11 +537,11 @@ export default function AdminClassesPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">{form.programType === 'hi_ngaji' ? 'Durasi (Bulan)' : 'Target Hafalan satu Halaman'}</Label>
+                <Label className="text-xs font-black uppercase">{form.programType === 'hi_ngaji' ? 'Durasi (Pekan)' : 'Target Hafalan satu Halaman'}</Label>
                 {form.programType === 'hi_ngaji' ? (
                   <div className="relative">
                     <Timer className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input type="number" min="1" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: parseInt(e.target.value) || 1 })} className="pl-10 h-10" />
+                    <Input type="number" min="1" value={form.durationWeeks} onChange={(e) => setForm({ ...form, durationWeeks: parseInt(e.target.value) || 4 })} className="pl-10 h-10" />
                   </div>
                 ) : form.programType === 'hi_mufradat' ? (
                   <Select value={form.durationWeeks.toString()} onValueChange={(v) => setForm({ ...form, durationWeeks: parseInt(v) })}>

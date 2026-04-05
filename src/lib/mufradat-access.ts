@@ -85,15 +85,15 @@ export function getMufradatStatus(
 
   // 1. GUEST ACCESS: Not logged in or no baseline profile
   if (!user || user.mufradat_status === 'inactive' || !user.mufradat_group_id) {
-    // If not logged in at all, redirect to registration
+    // If not logged in at all, redirect to registration with automated funnel back to program registration
     if (!user) {
       return {
         status: 'inactive',
         isBlocked: true,
         showSoftReminder: false,
         message: "Program ini membutuhkan pendaftaran untuk mengakses seluruh ayat. Mari bergabung menjadi peserta Hi Mufradat!",
-        redirectTo: '/study-circles/registration?id=mufradat-premium',
-        buttonText: 'DAFTAR SEKARANG'
+        redirectTo: '/register?redirectTo=/study-circles/registration?id=mufradat-premium',
+        buttonText: 'DAFTAR PROGRAM SEKARANG'
       };
     }
 
@@ -103,7 +103,7 @@ export function getMufradatStatus(
       showSoftReminder: false,
       message: "Ukhti belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu.",
       redirectTo: '/study-circles/registration?id=mufradat-premium',
-      buttonText: 'DAFTAR SEKARANG'
+      buttonText: 'DAFTAR PROGRAM SEKARANG'
     };
   }
 
@@ -225,7 +225,8 @@ export function getMufradatStatus(
       status: 'blocked',
       isBlocked: !hasPendingCurrent, // Only block if NO pending verification
       showSoftReminder: hasPendingCurrent,
-      message: msg
+      message: msg,
+      redirectTo: '/mufradat/billing'
     };
   }
 

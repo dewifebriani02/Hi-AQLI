@@ -26,7 +26,7 @@ export default function NgajiPage() {
   const { data: dbHalaqahs, isLoading: isHalaqahsLoading } = useCollection("halaqahs");
 
   const userRegOptions = useMemo(() => ({
-    filters: [{ column: 'userId', operator: '==', value: user?.id }]
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   }), [user?.id]);
 
   const { data: userRegs } = useCollection("halaqah_registrations", userRegOptions);
@@ -42,7 +42,7 @@ export default function NgajiPage() {
   });
 
   const getHalaqahStatus = (id: string) => {
-    const reg = userRegs?.find(r => r.halaqahId === id);
+    const reg = userRegs?.find(r => r.halaqah_id === id);
     if (!reg) {
       if (id === TIKRAR_ID && userData?.isTikrarPaid) return 'active';
       if (userData?.followedHalaqahs?.includes(id)) return 'active';
@@ -143,7 +143,7 @@ export default function NgajiPage() {
               </div>
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Durasi</span>
-                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {circle.durationMonths || '-'} Bulan</span>
+                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {Math.ceil((circle.durationWeeks || 4) / 4)} Bulan</span>
               </div>
               <div className="flex flex-col items-end">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Sisa Kuota</span>

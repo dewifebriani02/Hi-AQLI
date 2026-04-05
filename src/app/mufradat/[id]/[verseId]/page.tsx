@@ -261,7 +261,7 @@ function VerseDetailContent() {
           <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Hi Mufradat • Tadabbur Ayat</p>
         </div>
         <div className="flex items-center gap-1">
-          <Button asChild={(user || access.isFree)} variant="ghost" size="icon" className="text-[#D4AF37]">
+          <Button asChild={Boolean(user || access.isFree)} variant="ghost" size="icon" className="text-[#D4AF37]">
             <Link href={(user || access.isFree) ? `/mufradat/${id}/${verseId}/quiz${from ? `?from=${from}` : ''}` : `/login?redirectTo=/mufradat/${id}/${verseId}${from ? `?from=${from}` : ''}`}>
               <GraduationCap className="h-5 w-5" />
             </Link>
@@ -474,7 +474,6 @@ function VerseDetailContent() {
                       {access.message}
                    </p>
                    <p className="text-[11px] text-muted-foreground italic px-6">
-                      Hi AQLI membutuhkan dana untuk biaya operasional agar terus dapat menemani perjuangan Ukhti dalam mendalami kalam-Nya.
                    </p>
                 </div>
                 <div className="flex flex-col gap-3 px-4">
