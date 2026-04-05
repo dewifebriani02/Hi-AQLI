@@ -155,6 +155,26 @@ function RegistrationForm() {
   const [isValidatingReferral, setIsValidatingReferral] = useState(false);
   const [appliedReferral, setAppliedReferral] = useState<any>(null);
 
+  // 1. Auto-apply referral if user has referred_by_id in their profile
+  useEffect(() => {
+    if (userData?.referred_by_id && !appliedReferral) {
+      const fetchReferrer = async () => {
+        const { data: referrer } = await supabase
+          .from("users")
+          .select("id, referral_code, username")
+          .eq("id", userData.referred_by_id)
+          .maybeSingle();
+        
+        if (referrer) {
+           setAppliedReferral(referrer);
+           setReferralCodeInput(referrer.referral_code || "");
+           console.log("Auto-applied persistent referral:", referrer.referral_code);
+        }
+      };
+      fetchReferrer();
+    }
+  }, [userData?.referred_by_id, appliedReferral]);
+
   // Program Detection
   const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
   const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';

@@ -54,7 +54,30 @@ function RegisterContent() {
           .single();
 
         if (!profile) {
-          // Create missing profile using upsert for better resilience
+          let referrerId = null;
+
+          // 1. Resolve Referrer ID if ref code exists
+          if (referralCode) {
+            const { data: referrer } = await supabase
+              .from('users')
+              .select('id, referral_balance')
+              .eq('referral_code', referralCode.toUpperCase())
+              .maybeSingle();
+            
+            if (referrer) {
+              referrerId = referrer.id;
+
+              // 2. Award Sign-up Bonus to Referrer (+5000)
+              await supabase
+                .from('users')
+                .update({ referral_balance: (referrer.referral_balance || 0) + 5000 })
+                .eq('id', referrerId);
+              
+              console.log('Referral bonus awarded to:', referrerId);
+            }
+          }
+
+          // 3. Create missing profile with referred_by_id
           await supabase.from('users').upsert({
             id: user.id,
             username: username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
@@ -62,6 +85,7 @@ function RegisterContent() {
             role_id: 'learner',
             points: 0,
             followed_halaqahs: [],
+            referred_by_id: referrerId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }, { onConflict: 'id' });
@@ -71,7 +95,7 @@ function RegisterContent() {
 
       syncProfile();
     }
-  }, [user, router, username, isUserLoading]);
+  }, [user, router, username, isUserLoading, referralCode, redirectTo]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
