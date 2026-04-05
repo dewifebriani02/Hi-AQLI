@@ -52,14 +52,19 @@ export default function AdminDonationsPage() {
   }), []);
 
   const { data: donations, isLoading } = useCollection("donations", donationOptions);
-  const { data: campaigns } = useCollection("campaigns", {
+
+  const campaignOptions = useMemo(() => ({
     filters: [{ column: 'is_active', operator: '==', value: true }],
     orderBy: { column: 'title', ascending: true }
-  });
+  }), []);
 
-  const { count: learnersCount } = useCount("users", useMemo(() => ({
+  const { data: campaigns } = useCollection("campaigns", campaignOptions);
+
+  const filterLearners = useMemo(() => ({
     filters: [{ column: 'role_id', operator: '==', value: 'learner' }]
-  }), []));
+  }), []);
+
+  const { count: learnersCount } = useCount("users", filterLearners);
 
   const filteredDonations = donations?.filter(d => {
     const sender = (d?.sender_name || "").toLowerCase();

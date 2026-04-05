@@ -118,23 +118,23 @@ export default function AdminClassesPage() {
     setEditingHalaqah(h);
     const [day, time] = (h.schedule || "Senin, 19:00").split(", ");
     setForm({
-      programType: h.programType || "hi_ngaji",
+      programType: h.program_type || h.programType || "hi_ngaji",
       title: h.title,
       description: h.description || "",
       muallimah: h.muallimah || "Admin / Menunggu Assignment",
       musyrifah: h.musyrifah || "",
       day: day || "Senin",
       time: time || "19:00",
-      startDate: h.startDate || "",
-      durationWeeks: h.durationWeeks || 4,
+      startDate: h.start_date || h.startDate || "",
+      durationWeeks: h.duration_weeks || h.durationWeeks || 4,
       juz: h.juz || "1",
       level: h.level || "Semua Level",
-      isPremium: h.isPremium || false,
+      isPremium: h.is_premium || h.isPremium || false,
       paymentType: h.payment_type || "fixed",
-      hasExam: h.hasExam ?? true,
-      hasCertificate: h.hasCertificate ?? true,
+      hasExam: h.has_exam ?? h.hasExam ?? true,
+      hasCertificate: h.has_certificate ?? h.hasCertificate ?? true,
       tag: h.tag || "",
-      basePrice: h.basePrice || 0,
+      basePrice: h.base_price || h.basePrice || 0,
       quota: h.quota || 20,
     });
     setIsDialogOpen(true);
@@ -152,22 +152,22 @@ export default function AdminClassesPage() {
     }
 
     const finalData = {
-      programType: form.programType,
+      program_type: form.programType,
       title: form.title,
       muallimah: form.muallimah,
       musyrifah: form.musyrifah,
       description: form.description,
       schedule: finalSchedule,
-      startDate: form.startDate,
-      endDate: calculatedEndDate,
-      durationWeeks: form.durationWeeks,
+      start_date: form.startDate,
+      end_date: calculatedEndDate,
+      duration_weeks: form.durationWeeks,
       juz: form.programType === 'hi_ngaji' ? null : form.juz,
       level: form.level,
-      isPremium: form.isPremium,
-      hasExam: form.hasExam,
-      hasCertificate: form.hasCertificate,
+      is_premium: form.isPremium,
+      has_exam: form.hasExam,
+      has_certificate: form.hasCertificate,
       tag: form.tag,
-      basePrice: form.basePrice,
+      base_price: form.basePrice,
       quota: form.quota
     };
 
@@ -296,8 +296,8 @@ export default function AdminClassesPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-black text-sm uppercase text-[#800000]">{h.title}</h3>
-                        <Badge className="bg-slate-800 text-white text-[7px] font-black h-4 uppercase">{h.programType === 'hi_mufradat' ? 'HI MUFRADAT' : h.programType === 'tikrar_daily' ? 'TIKRAR DAILY' : 'HI NGAJI'}</Badge>
-                        {h.isPremium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
+                        <Badge className="bg-slate-800 text-white text-[7px] font-black h-4 uppercase">{ (h.program_type || h.programType) === 'hi_mufradat' ? 'HI MUFRADAT' : (h.program_type || h.programType) === 'tikrar_daily' ? 'TIKRAR DAILY' : 'HI NGAJI'}</Badge>
+                        {(h.is_premium || h.isPremium) && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -333,7 +333,7 @@ export default function AdminClassesPage() {
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
                         <Calendar className="w-3 h-3 text-[#800000]" />
-                        {h.startDate ? new Date(h.startDate).toLocaleDateString('id-ID') : '-'} s/d {h.endDate ? new Date(h.endDate).toLocaleDateString('id-ID') : '-'}
+                        { (h.start_date || h.startDate) ? new Date(h.start_date || h.startDate).toLocaleDateString('id-ID') : '-'} s/d { (h.end_date || h.endDate) ? new Date(h.end_date || h.endDate).toLocaleDateString('id-ID') : '-'}
                       </div>
                       <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground uppercase">
                         <Clock className="w-3 h-3 text-[#800000]" />

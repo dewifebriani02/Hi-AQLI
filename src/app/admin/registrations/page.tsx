@@ -53,7 +53,8 @@ export default function AdminRegistrationsPage() {
       };
 
       // Special logic for Hi Mufradat Auto-Grouping (Only if NO GROUP assigned yet)
-      if (!currentGroupId && (reg.halaqah_id === 'mufradat-premium' || reg.halaqah_title?.toLowerCase().includes('mufradat'))) {
+      const isMufradatReg = reg.halaqah_id === 'mufradat-premium' || reg.halaqah_title?.toLowerCase().includes('mufradat');
+      if (!currentGroupId && isMufradatReg) {
         try {
           // 1. Find latest group with space (< 50)
           const { data: availableGroups } = await supabase
@@ -94,7 +95,8 @@ export default function AdminRegistrationsPage() {
       }
 
       // Special logic for Tikrar Premium Start Date
-      if (reg.halaqah_id === 'tikrar-j30-b1' || reg.halaqah_id === 'tikrar-premium') {
+      const isTikrarReg = reg.halaqah_id === 'tikrar-j30-b1' || reg.halaqah_id === 'tikrar-premium' || reg.halaqah_title?.toLowerCase().includes('tikrar');
+      if (isTikrarReg) {
         updateData.is_tikrar_paid = true;
         updateData.paid_juz = reg.target_juz || 30;
         updateData.tikrar_level = reg.level || 3;
@@ -105,7 +107,7 @@ export default function AdminRegistrationsPage() {
       if (userError) throw userError;
 
       // --- HI MUFRADAT SUBSCRIPTION LOGIC ---
-      if (reg.halaqah_id === 'mufradat-premium' || reg.halaqah_title?.toLowerCase().includes('mufradat')) {
+      if (isMufradatReg) {
         const type = reg.payment_type || 'initial';
         const billingMonth = reg.billing_month || format(new Date(), 'yyyy-MM');
         

@@ -58,64 +58,55 @@ export default function DashboardPage() {
   const todayStr = new Date().toISOString().split('T')[0];
   const thirtyDaysAgoStr = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
-  const { data: mutabaahLogs } = useCollection(
-    "mutabaah_logs",
-    user?.id ? {
-      filters: [
-        { column: 'user_id', operator: '==', value: user.id },
-        { column: 'date', operator: '==', value: todayStr }
-      ]
-    } : undefined
-  );
+  const mutabaahOptions = useMemo(() => (user?.id ? {
+    filters: [
+      { column: 'user_id', operator: '==', value: user.id },
+      { column: 'date', operator: '==', value: todayStr }
+    ]
+  } : undefined), [user?.id, todayStr]);
 
-  // Get quiz attempts for streak and repetisi calculation - only fetch if user is logged in
-  const { data: quizAttempts } = useCollection(
-    "quiz_attempts",
-    user?.id ? {
-      filters: [
-        { column: 'user_id', operator: '==', value: user.id },
-        { column: 'created_at', operator: '>=', value: thirtyDaysAgoStr }
-      ],
-      orderBy: { column: 'created_at', ascending: false }
-    } : undefined
-  );
+  const { data: mutabaahLogs } = useCollection("mutabaah_logs", mutabaahOptions);
 
-  // Get user's recent donations
-  const { data: userDonations } = useCollection(
-    "donations",
-    user?.id ? {
-      filters: [
-        { column: 'user_id', operator: '==', value: user.id }
-      ],
-      orderBy: { column: 'created_at', ascending: false },
-      limit: 10
-    } : undefined
-  );
+  const quizOptions = useMemo(() => (user?.id ? {
+    filters: [
+      { column: 'user_id', operator: '==', value: user.id },
+      { column: 'created_at', operator: '>=', value: thirtyDaysAgoStr }
+    ],
+    orderBy: { column: 'created_at', ascending: false }
+  } : undefined), [user?.id, thirtyDaysAgoStr]);
 
-  // Get user's recent mutabaah history (last 20 logs)
-  const { data: mutabaahHistory } = useCollection(
-    "mutabaah_logs",
-    user?.id ? {
-      filters: [
-        { column: 'user_id', operator: '==', value: user.id },
-        { column: 'completed', operator: '==', value: true }
-      ],
-      orderBy: { column: 'updated_at', ascending: false },
-      limit: 20
-    } : undefined
-  );
+  const { data: quizAttempts } = useCollection("quiz_attempts", quizOptions);
 
-  // Get user's class registration history
-  const { data: ngajiRegs } = useCollection(
-    "halaqah_registrations",
-    user?.id ? {
-      filters: [
-        { column: 'user_id', operator: '==', value: user.id }
-      ],
-      orderBy: { column: 'created_at', ascending: false },
-      limit: 10
-    } : undefined
-  );
+  const donationOptions = useMemo(() => (user?.id ? {
+    filters: [
+      { column: 'user_id', operator: '==', value: user.id }
+    ],
+    orderBy: { column: 'created_at', ascending: false },
+    limit: 10
+  } : undefined), [user?.id]);
+
+  const { data: userDonations } = useCollection("donations", donationOptions);
+
+  const mutabaahHistoryOptions = useMemo(() => (user?.id ? {
+    filters: [
+      { column: 'user_id', operator: '==', value: user.id },
+      { column: 'completed', operator: '==', value: true }
+    ],
+    orderBy: { column: 'updated_at', ascending: false },
+    limit: 20
+  } : undefined), [user?.id]);
+
+  const { data: mutabaahHistory } = useCollection("mutabaah_logs", mutabaahHistoryOptions);
+
+  const ngajiRegOptions = useMemo(() => (user?.id ? {
+    filters: [
+      { column: 'user_id', operator: '==', value: user.id }
+    ],
+    orderBy: { column: 'created_at', ascending: false },
+    limit: 10
+  } : undefined), [user?.id]);
+
+  const { data: ngajiRegs } = useCollection("halaqah_registrations", ngajiRegOptions);
 
   // Independent counts
   const mutabaahActivitiesCount = 28;

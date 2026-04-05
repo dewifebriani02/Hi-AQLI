@@ -53,13 +53,17 @@ import { id as idLocale } from "date-fns/locale";
 export default function AdminVouchersPage() {
   const { toast } = useToast();
   
-  const { data: vouchers, isLoading: isVouchersLoading, refresh: refreshVouchers } = useCollection("vouchers", {
+  const voucherOptions = useMemo(() => ({
     orderBy: { column: 'created_at', ascending: false }
-  });
+  }), []);
+
+  const { data: vouchers, isLoading: isVouchersLoading, refresh: refreshVouchers } = useCollection("vouchers", voucherOptions);
   
-  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection("voucher_redemptions", {
+  const redemptionOptions = useMemo(() => ({
     select: "*, vouchers(*), users(username, email)"
-  });
+  }), []);
+
+  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection("voucher_redemptions", redemptionOptions);
 
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);

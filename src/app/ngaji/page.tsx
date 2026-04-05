@@ -38,14 +38,14 @@ export default function NgajiPage() {
   const filteredCircles = dbHalaqahs?.filter((c) => {
     const matchesSearch = (c.title || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.muallimah || "").toLowerCase().includes(search.toLowerCase());
-    return matchesSearch && c.programType === 'hi_ngaji';
+    return matchesSearch && (c.program_type || c.programType) === 'hi_ngaji';
   });
 
   const getHalaqahStatus = (id: string) => {
     const reg = userRegs?.find(r => r.halaqah_id === id);
     if (!reg) {
       if (id === TIKRAR_ID && userData?.isTikrarPaid) return 'active';
-      if (userData?.followedHalaqahs?.includes(id)) return 'active';
+      if (userData?.followed_halaqahs?.includes(id)) return 'active';
       return 'none';
     }
     return reg.status;
@@ -82,7 +82,7 @@ export default function NgajiPage() {
             "p-4 hover:bg-accent/5 transition-all cursor-pointer group border-none shadow-sm",
             isActive ? "bg-white border-l-4 border-[#D4AF37]" :
               isPending ? "bg-white border-l-4 border-amber-500" :
-                circle.isPremium ? "bg-white border-l-4 border-[#800000]" : "bg-card/50",
+                (circle.is_premium || circle.isPremium) ? "bg-white border-l-4 border-[#800000]" : "bg-card/50",
             isFull && "opacity-60"
           )}
         >
@@ -97,7 +97,7 @@ export default function NgajiPage() {
                 )}>
                   {isActive ? <PlayCircle className="w-6 h-6" /> :
                     isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
-                      circle.is_premium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                      (circle.is_premium || circle.is_premium) ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                 </div>
                 <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -109,7 +109,7 @@ export default function NgajiPage() {
                     ) : isFull ? (
                       <Badge variant="outline" className="text-destructive border-destructive text-[7px] h-4 px-1.5 font-black uppercase">PENUH</Badge>
                     ) : (
-                      circle.isPremium && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">PREMIUM</Badge>
+                      (circle.is_premium || circle.isPremium) && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">PREMIUM</Badge>
                     )}
                   </div>
                   <div className="flex flex-col gap-0.5 mt-1">
@@ -137,13 +137,13 @@ export default function NgajiPage() {
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Rentang</span>
                 <span className="text-[9px] font-bold flex flex-col leading-tight">
-                  <span className="flex items-center gap-1"><Calendar className="w-2.5 h-2.5 text-[#800000]" /> {circle.startDate ? new Date(circle.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
-                  <span className="flex items-center gap-1 ml-3.5 text-muted-foreground">s/d {circle.endDate ? new Date(circle.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+                  <span className="flex items-center gap-1"><Calendar className="w-2.5 h-2.5 text-[#800000]" /> { (circle.start_date || circle.startDate) ? new Date(circle.start_date || circle.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+                  <span className="flex items-center gap-1 ml-3.5 text-muted-foreground">s/d { (circle.end_date || circle.endDate) ? new Date(circle.end_date || circle.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
                 </span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Durasi</span>
-                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {Math.ceil((circle.durationWeeks || 4) / 4)} Bulan</span>
+                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {Math.ceil(( (circle.duration_weeks || circle.durationWeeks) || 4) / 4)} Bulan</span>
               </div>
               <div className="flex flex-col items-end">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Sisa Kuota</span>
@@ -153,11 +153,11 @@ export default function NgajiPage() {
 
             <div className="flex items-center justify-between mt-1">
               <div className="flex gap-2">
-                {circle.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4 flex items-center gap-1"><GraduationCap className="w-2 h-2" /> UJIAN</Badge>}
-                {circle.hasCertificate && <Badge variant="outline" className="text-[8px] border-blue-200 text-blue-700 bg-blue-50 h-4 flex items-center gap-1"><Award className="w-2 h-2" /> SERTIFIKAT</Badge>}
+                {circle.has_exam || circle.hasExam ? <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4 flex items-center gap-1"><GraduationCap className="w-2 h-2" /> UJIAN</Badge> : null}
+                {circle.has_certificate || circle.hasCertificate ? <Badge variant="outline" className="text-[8px] border-blue-200 text-blue-700 bg-blue-50 h-4 flex items-center gap-1"><Award className="w-2 h-2" /> SERTIFIKAT</Badge> : null}
               </div>
-              {user && circle.isPremium && !isActive && !isPending && (
-                <span className="text-xs font-black text-[#800000]">Rp {circle.basePrice?.toLocaleString('id-ID')}</span>
+              {user && (circle.is_premium || circle.isPremium) && !isActive && !isPending && (
+                <span className="text-xs font-black text-[#800000]">Rp {(circle.base_price || circle.basePrice)?.toLocaleString('id-ID')}</span>
               )}
             </div>
           </div>
