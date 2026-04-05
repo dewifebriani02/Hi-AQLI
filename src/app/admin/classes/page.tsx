@@ -119,24 +119,24 @@ export default function AdminClassesPage() {
     setEditingHalaqah(h);
     const [day, time] = (h.schedule || "Senin, 19:00").split(", ");
     setForm({
-      programType: h.program_type || "hi_ngaji",
+      programType: h.programType || "hi_ngaji",
       title: h.title,
       description: h.description || "",
       muallimah: h.muallimah || "Admin / Menunggu Assignment",
       musyrifah: h.musyrifah || "",
       day: day || "Senin",
       time: time || "19:00",
-      startDate: h.start_date || "",
-      durationWeeks: h.duration_weeks || 4,
-      durationMonths: h.duration_months || 1,
+      startDate: h.startDate || "",
+      durationWeeks: h.durationWeeks || 4,
+      durationMonths: h.durationMonths || 1,
       juz: h.juz || "1",
       level: h.level || "Semua Level",
-      isPremium: h.is_premium || false,
+      isPremium: h.isPremium || false,
       paymentType: h.payment_type || "fixed",
-      hasExam: h.has_exam ?? true,
-      hasCertificate: h.has_certificate ?? true,
+      hasExam: h.hasExam ?? true,
+      hasCertificate: h.hasCertificate ?? true,
       tag: h.tag || "",
-      basePrice: h.base_price || 0,
+      basePrice: h.basePrice || 0,
       quota: h.quota || 20,
     });
     setIsDialogOpen(true);
@@ -154,24 +154,24 @@ export default function AdminClassesPage() {
     }
 
     const finalData = {
-      program_type: form.programType,
+      programType: form.programType,
       title: form.title,
       muallimah: form.muallimah,
       musyrifah: form.musyrifah,
       description: form.description,
       schedule: finalSchedule,
-      start_date: form.startDate,
-      end_date: calculatedEndDate,
-      duration_weeks: form.durationWeeks,
-      duration_months: form.durationMonths,
+      startDate: form.startDate,
+      endDate: calculatedEndDate,
+      durationWeeks: form.durationWeeks,
+      durationMonths: form.durationMonths,
       juz: form.programType === 'hi_ngaji' ? null : form.juz,
       level: form.level,
-      is_premium: form.isPremium,
+      isPremium: form.isPremium,
       payment_type: form.paymentType,
-      has_exam: form.hasExam,
-      has_certificate: form.hasCertificate,
+      hasExam: form.hasExam,
+      hasCertificate: form.hasCertificate,
       tag: form.tag,
-      base_price: form.basePrice,
+      basePrice: form.basePrice,
       quota: form.quota,
       updated_at: new Date().toISOString()
     };
@@ -295,14 +295,14 @@ export default function AdminClassesPage() {
             const sisa = getSisaKuota(h);
             const total = h.quota || 0;
             return (
-              <Card key={h.id} className={cn("border-none shadow-sm group overflow-hidden border-l-4", h.is_premium ? "border-l-[#800000]" : "border-l-blue-500")}>
+              <Card key={h.id} className={cn("border-none shadow-sm group overflow-hidden border-l-4", h.isPremium ? "border-l-[#800000]" : "border-l-blue-500")}>
                 <CardContent className="p-5">
                   <div className="flex justify-between items-start mb-2">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-black text-sm uppercase text-[#800000]">{h.title}</h3>
-                        <Badge className="bg-slate-800 text-white text-[7px] font-black h-4 uppercase">{h.program_type === 'hi_mufradat' ? 'HI MUFRADAT' : h.program_type === 'tikrar_daily' ? 'TIKRAR DAILY' : 'HI NGAJI'}</Badge>
-                        {h.is_premium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
+                        <Badge className="bg-slate-800 text-white text-[7px] font-black h-4 uppercase">{h.programType === 'hi_mufradat' ? 'HI MUFRADAT' : h.programType === 'tikrar_daily' ? 'TIKRAR DAILY' : 'HI NGAJI'}</Badge>
+                        {h.isPremium && <Badge className="bg-[#800000] text-white text-[7px] font-black h-4">PREMIUM</Badge>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -327,7 +327,7 @@ export default function AdminClassesPage() {
                     <Badge variant="secondary" className={cn("text-[8px] font-black h-4 border uppercase gap-1", sisa === 0 ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
                       <Info className="w-2.5 h-2.5" /> Sisa Kuota: {sisa} / {total}
                     </Badge>
-                    {h.has_exam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4">UJIAN</Badge>}
+                    {h.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4">UJIAN</Badge>}
                   </div>
 
                   <div className="flex items-center justify-between border-t pt-3 mt-auto">
@@ -338,7 +338,7 @@ export default function AdminClassesPage() {
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
                         <Calendar className="w-3 h-3 text-[#800000]" />
-                        {h.start_date ? new Date(h.start_date).toLocaleDateString('id-ID') : '-'} s/d {h.end_date ? new Date(h.end_date).toLocaleDateString('id-ID') : '-'}
+                        {h.startDate ? new Date(h.startDate).toLocaleDateString('id-ID') : '-'} s/d {h.endDate ? new Date(h.endDate).toLocaleDateString('id-ID') : '-'}
                       </div>
                       <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground uppercase">
                         <Clock className="w-3 h-3 text-[#800000]" />

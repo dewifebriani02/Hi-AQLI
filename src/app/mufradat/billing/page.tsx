@@ -87,7 +87,7 @@ export default function MufradatBillingPage() {
       const { data: halaqahData } = await supabase
         .from("halaqahs")
         .select("id")
-        .ilike("title", "%Hi Mufradat%")
+        .eq("programType", "hi_mufradat")
         .limit(1)
         .maybeSingle();
 
@@ -150,7 +150,7 @@ export default function MufradatBillingPage() {
       const { data: halaqahData } = await supabase
         .from("halaqahs")
         .select("id")
-        .ilike("title", "%Hi Mufradat%")
+        .eq("programType", "hi_mufradat")
         .limit(1)
         .maybeSingle();
 

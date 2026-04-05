@@ -73,12 +73,12 @@ function RegistrationForm() {
   const resolvedHalaqahId = useMemo(() => {
     if (!selectedHalaqahId || !allHalaqahs) return selectedHalaqahId;
     
-    // Virtual ID mapping to program_type
+    // Virtual ID mapping to programType
     if (selectedHalaqahId === 'mufradat-premium') {
-      return allHalaqahs.find(h => h.program_type === 'hi_mufradat')?.id || selectedHalaqahId;
+      return allHalaqahs.find(h => h.programType === 'hi_mufradat')?.id || selectedHalaqahId;
     }
     if (selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1') {
-      return allHalaqahs.find(h => h.program_type === 'tikrar_daily')?.id || selectedHalaqahId;
+      return allHalaqahs.find(h => h.programType === 'tikrar_daily')?.id || selectedHalaqahId;
     }
     
     return selectedHalaqahId;
@@ -143,8 +143,8 @@ function RegistrationForm() {
   const [showVoucher, setShowVoucher] = useState(false);
 
   // Program Detection
-  const isMufradat = (circle?.program_type === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
-  const isTikrar = circle?.program_type === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
+  const isMufradat = (circle?.programType === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
+  const isTikrar = circle?.programType === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
 
   const isPremiumProgram = useMemo(() => {
     return circle?.is_premium === true || isMufradat || isTikrar;
@@ -208,7 +208,7 @@ function RegistrationForm() {
       }
 
       // 3. Check Program ID
-      const programType = circle?.program_type || (isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : ''));
+      const programType = circle?.programType || (isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : ''));
       if (voucher.program_id !== 'all' && !programType.includes(voucher.program_id) && voucher.program_id !== 'mufradat') {
          // Fallback check for mufradat-premium id
          if (!(selectedHalaqahId === 'mufradat-premium' && voucher.program_id === 'mufradat')) {
@@ -310,7 +310,7 @@ function RegistrationForm() {
       if (finalHalaqahId && !uuidRegex.test(finalHalaqahId)) {
         console.log("Resolving virtual ID:", finalHalaqahId);
         const pType = finalHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
-        const { data: hData } = await supabase.from("halaqahs").select("id").eq("program_type", pType).maybeSingle();
+        const { data: hData } = await supabase.from("halaqahs").select("id").eq("programType", pType).maybeSingle();
         if (hData?.id) {
           verifiedUuid = hData.id;
         }
