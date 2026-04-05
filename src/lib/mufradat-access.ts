@@ -1,4 +1,5 @@
 import { subMonths, format, getDate, isAfter, parseISO, startOfMonth, addDays } from "date-fns";
+import { SURAH_START_PAGES, getJuzForPage } from "./quran-mapping";
 
 export type MufradatAccessStatus = 
   | 'active'           // Fully paid and in good standing
@@ -109,10 +110,15 @@ export function getMufradatStatus(
 
   // Handle Leave status
   if (user.mufradat_status === 'on_leave') {
+    const today = new Date();
+    const leaveFrom = user.mufradat_leave_from ? parseISO(user.mufradat_leave_from) : null;
     const leaveUntil = user.mufradat_leave_until ? parseISO(user.mufradat_leave_until) : null;
-    const isLeaveActive = leaveUntil ? isAfter(leaveUntil, new Date()) : false;
     
-    if (isLeaveActive) {
+    // Check if Today is between From and Until
+    const isAfterFrom = !leaveFrom || today >= leaveFrom;
+    const isBeforeUntil = !leaveUntil || today <= leaveUntil;
+    
+    if (isAfterFrom && isBeforeUntil) {
       return {
         status: 'on_leave',
         isBlocked: true,
@@ -145,6 +151,28 @@ export function getMufradatStatus(
     r.payment_type === 'monthly' && 
     r.billing_month === nextMonthStr
   );
+
+  // --- HAK AKSES JUZ CHECK ---
+  // Default to restricted if no surah is specified, otherwise check list
+  if (sNum !== null) {
+     // Basic mapping for Surah to Juz (Approximation by start page)
+     // Surahs spanning multiple juz are simplified to their STARTING juz
+     const surahStartPage = (SURAH_START_PAGES as any)[sNum];
+     const juzId = surahStartPage ? getJuzForPage(surahStartPage) : null;
+     
+     const accessibleJuz = user.mufradat_accessible_juz || [];
+     const isJuzAccessible = juzId !== null && accessibleJuz.includes(juzId);
+     
+     if (!isJuzAccessible && !isFreeApril) {
+        return {
+          status: 'active',
+          isBlocked: true,
+          showSoftReminder: false,
+          message: `Ukhti belum memiliki akses untuk Juz ${juzId || 'ini'}. Silakan hubungi admin untuk pembukaan akses Juz.`,
+          buttonText: 'HUBUNGI ADMIN'
+        };
+     }
+  }
 
   // Check for PENDING verification (to show specialized message)
   const hasPendingNext = registrations.some(r => 

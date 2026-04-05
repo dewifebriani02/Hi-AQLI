@@ -375,6 +375,13 @@ export default function DashboardPage() {
       .slice(0, 10);
   }, [quizAttempts, userDonations, mutabaahHistory, ngajiRegs]);
 
+  const isMufradatRegistered = useMemo(() => {
+    return userData?.mufradat_group_id || ngajiRegs?.some(r => 
+      (r.halaqah_id === 'mufradat-premium' || r.halaqah_title?.toLowerCase().includes('mufradat')) && 
+      ['active', 'verified', 'pending_verification'].includes(r.status)
+    );
+  }, [userData, ngajiRegs]);
+
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
       {/* Header: Greeting & Points */}
@@ -466,8 +473,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Hi Mufradat Registration Banner - Only show for logged in users */}
-      {user && (
+      {/* Hi Mufradat Registration Banner - Only show for logged in users WHO ARE NOT YET REGISTERED */}
+      {user && !isMufradatRegistered && (
         <section className="px-1 mb-6">
           <Link href="/study-circles/registration?id=mufradat-premium" className="block group">
             <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#800000] to-[#5a0000] p-6 shadow-xl border-2 border-[#D4AF37]/30 group-hover:shadow-2xl transition-all duration-300">

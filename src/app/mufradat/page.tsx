@@ -80,6 +80,11 @@ function MufradatPageContent() {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 
+  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection(user ? "voucher_redemptions" : null, {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }],
+    select: "*, vouchers(*)"
+  });
+
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
   const isRankTab = activeTab === 'rank';
@@ -164,8 +169,8 @@ function MufradatPageContent() {
   };
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || []);
-  }, [userData, registrations]);
+    return getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
+  }, [userData, registrations, redemptions]);
 
   const [selectedReciterId, setSelectedReciterId] = useState<number>(7);
   const [isReciterDialogOpen, setIsReciterDialogOpen] = useState(false);
@@ -197,7 +202,7 @@ function MufradatPageContent() {
 
   const selectedReciterName = RECITERS.find(r => r.id === selectedReciterId)?.name || "Pilih Qari";
 
-  if (isUserLoading || isRegLoading || isUserDataLoading || isProgressLoading) {
+  if (isUserLoading || isRegLoading || isUserDataLoading || isProgressLoading || isRedemptionsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />

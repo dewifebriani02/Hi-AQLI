@@ -55,6 +55,10 @@ export default function MufradatBillingPage() {
   const [senderName, setSenderName] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [amount, setAmount] = useState<string>("50000");
+  
+  // Leave Form States
+  const [leaveStart, setLeaveStart] = useState("");
+  const [leaveEnd, setLeaveEnd] = useState("");
 
   const access = useMemo(() => {
     return getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
@@ -62,6 +66,75 @@ export default function MufradatBillingPage() {
 
   const [voucherCode, setVoucherCode] = useState("");
   const [isRedeeming, setIsRedeeming] = useState(false);
+
+  const hasActiveVoucher = useMemo(() => {
+    return redemptions?.some(r => r.vouchers?.program_id === 'mufradat' || r.vouchers?.program_id === 'all');
+  }, [redemptions]);
+
+  // Combined History: Payments + Cuti + Vouchers
+  const combinedHistory = useMemo(() => {
+    const history: any[] = [];
+    
+    // 1. Add Registrations (Payments, Cuti, Initial)
+    registrations?.forEach(reg => {
+      history.push({
+        id: reg.id,
+        type: 'registration',
+        date: reg.created_at,
+        title: reg.payment_type === 'leave_request' ? "Permohonan Cuti" : 
+               reg.payment_type === 'monthly' ? `Infaq ${reg.billing_month}` : 
+               "Pendaftaran Program",
+        amount: reg.amount || 0,
+        status: reg.status,
+        paymentType: reg.payment_type
+      });
+    });
+
+    // 2. Add Voucher Redemptions
+    redemptions?.forEach(red => {
+      history.push({
+        id: red.id,
+        type: 'voucher',
+        date: red.redeemed_at || red.created_at,
+        title: `Aktivasi Voucher: ${red.vouchers?.code || 'Mufradat'}`,
+        amount: 0,
+        status: 'verified', // Vouchers are instant
+        paymentType: 'voucher',
+        voucherCode: red.vouchers?.code,
+        programId: red.vouchers?.program_id
+      });
+    });
+
+    return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [registrations, redemptions]);
+
+  const billingDeadlines = useMemo(() => {
+    // Determine which month we are looking at for the next deadline
+    const today = new Date();
+    const day = today.getDate();
+    
+    // If access has a specific nextBillingMonth, use it. 
+    // Otherwise, calculate based on current date (if after 10th, look at next month)
+    let targetMonthStr = access.nextBillingMonth;
+    if (!targetMonthStr) {
+      if (day > 10) {
+        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        targetMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`;
+      } else {
+        targetMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      }
+    }
+
+    const [year, month] = targetMonthStr.split('-').map(Number);
+    const toleranceDate = new Date(year, month - 1, 10);
+    const idealDate = new Date(year, month - 1, 0); // Last day of previous month
+    
+    return { idealDate, toleranceDate, monthName: new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(toleranceDate) };
+  }, [access.nextBillingMonth]);
+
+  const activeVoucher = useMemo(() => {
+    return redemptions?.find(r => r.vouchers?.program_id === 'mufradat' || r.vouchers?.program_id === 'all');
+  }, [redemptions]);
 
   // Auto-set sender name from profile
   useEffect(() => {
@@ -157,19 +230,30 @@ export default function MufradatBillingPage() {
       const hId = halaqahData?.id || null;
 
       // 2. Insert into halaqah_registrations
+      // If access.nextBillingMonth is not set (e.g. status is already active),
+      // we assume the leave is for the NEXT period.
+      const targetMonth = access.nextBillingMonth || new Date(today.getFullYear(), today.getMonth() + 1, 15).toISOString().slice(0, 7);
+
+      const metadata: any = { 
+        request_date: new Date().toISOString(), 
+        type: 'cuti',
+        leave_from: leaveStart ? new Date(leaveStart).toISOString() : null,
+        leave_until: leaveEnd ? new Date(leaveEnd).toISOString() : null
+      };
+
       const { error } = await supabase.from("halaqah_registrations").insert({
         user_id: user?.id,
         user_name: userData?.username || user?.user_metadata?.full_name,
         user_email: user?.email,
         whatsapp: userData?.phone,
-        halaqah_id: hId, // Fixed: Using UUID instead of 'mufradat-premium'
-        halaqah_title: 'Hi Mufradat (Permohonan Cuti)',
+        halaqah_id: hId, 
+        halaqah_title: `Hi Mufradat (Cuti: ${leaveStart || '1 Bln'})`,
         is_paid: false,
         status: "pending_verification",
         payment_type: "leave_request",
-        billing_month: access.nextBillingMonth,
+        billing_month: targetMonth,
         created_at: new Date().toISOString(),
-        metadata: { request_date: new Date().toISOString(), type: 'cuti' }
+        metadata: metadata
       });
 
       if (error) throw error;
@@ -305,26 +389,54 @@ export default function MufradatBillingPage() {
               {access.status.toUpperCase()}
             </Badge>
           </div>
-          <CardDescription className="text-xs font-medium leading-relaxed mt-2">
-            {access.message}
+          <CardDescription className="text-xs font-medium leading-relaxed mt-2 flex flex-col gap-1">
+            <span>{access.message}</span>
+            {hasActiveVoucher && (
+              <span className="text-emerald-700 font-black flex items-center gap-1 mt-1 animate-pulse">
+                <ShieldCheck className="w-3.5 h-3.5" /> AKSES VOUCHER AKTIF
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         
         <CardContent className="space-y-6 pt-0">
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-muted/30 rounded-2xl border border-dashed flex flex-col gap-1">
-               <span className="text-[9px] font-black text-muted-foreground uppercase">Jatuh Tempo</span>
-               <span className="text-sm font-bold flex items-center gap-2">
+               <span className="text-[9px] font-black text-muted-foreground uppercase">
+                 {hasActiveVoucher ? "Masa Berlaku Voucher" : "Batas Infaq (Toleransi)"}
+               </span>
+               <span className="text-xs font-bold flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#800000]" />
-                  Tanggal 10
+                  {hasActiveVoucher ? (
+                    activeVoucher?.vouchers?.expiry_date ? 
+                      new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(activeVoucher.vouchers.expiry_date)) :
+                      "Selamanya"
+                  ) : (
+                    new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(billingDeadlines.toleranceDate)
+                  )}
                </span>
+               {!hasActiveVoucher && (
+                 <span className="text-[8px] text-muted-foreground font-medium italic">
+                   *Ideal: {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(billingDeadlines.idealDate)}
+                 </span>
+               )}
             </div>
-            <div className="p-4 bg-muted/30 rounded-2xl border border-dashed flex flex-col gap-1">
+            <div className="p-4 bg-muted/30 rounded-2xl border border-dashed flex flex-col gap-1 group relative overflow-hidden">
                <span className="text-[9px] font-black text-muted-foreground uppercase">Sisa Kuota Cuti</span>
-               <span className="text-sm font-bold flex items-center gap-2">
-                  <Coffee className="w-4 h-4 text-emerald-600" />
-                  {userData.mufradat_leave_balance || 3} Bulan
-               </span>
+               <div className="flex items-center justify-between">
+                 <span className="text-sm font-bold flex items-center gap-2">
+                    <Coffee className="w-4 h-4 text-emerald-600" />
+                    {userData.mufradat_leave_balance ?? 3} Bulan
+                 </span>
+                 <Button 
+                    variant="link" 
+                    className="h-6 text-[10px] font-black p-0 text-[#800000] hover:no-underline hover:scale-105 transition-all"
+                    onClick={() => setMode('leave')}
+                    disabled={(userData.mufradat_leave_balance ?? 3) <= 0}
+                  >
+                    AJUKAN
+                 </Button>
+               </div>
             </div>
           </div>
 
@@ -527,19 +639,46 @@ export default function MufradatBillingPage() {
                   Pengajuan cuti akan menonaktifkan tagihan dan memblokir akses ayat untuk sementara. Masa cuti dihitung 1 bulan penuh mulai periode berikutnya.
                 </p>
              </div>
-             <p className="text-[10px] text-muted-foreground italic font-medium leading-relaxed">
-               *Cuti maksimal diperbolehkan selama 3 bulan kumulatif. Setelah 3 bulan, Ukhti wajib membayar pendaftaran ulang jika ingin kembali aktif.
-             </p>
+             
+             <div className="space-y-6">
+                <div className="p-4 bg-[#800000]/5 rounded-2xl border border-[#800000]/10">
+                   <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                      Sesuai ketentuan, permohonan cuti akan memotong 1 bulan jatah cuti Ukhti (Jatah: 3 bulan per program).
+                      Akses ayat akan ditutup otomatis selama rentang tanggal yang Ukhti pilih di bawah ini.
+                   </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Mulai Cuti</Label>
+                      <Input 
+                         type="date" 
+                         value={leaveStart}
+                         onChange={(e) => setLeaveStart(e.target.value)}
+                         className="h-12 rounded-xl"
+                      />
+                   </div>
+                   <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Hingga Tanggal</Label>
+                      <Input 
+                         type="date" 
+                         value={leaveEnd}
+                         onChange={(e) => setLeaveEnd(e.target.value)}
+                         className="h-12 rounded-xl"
+                      />
+                   </div>
+                </div>
+             </div>
           </CardContent>
           <CardFooter className="flex gap-3 pt-0">
              <Button variant="ghost" className="flex-1 font-bold h-12" onClick={() => setMode('view')}>Batal</Button>
              <Button 
                 onClick={handleRequestLeave}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 rounded-xl shadow-lg"
-                disabled={isSubmitting || (userData.mufradat_leave_balance <= 0)}
+                disabled={isSubmitting || (userData.mufradat_leave_balance <= 0) || !leaveStart || !leaveEnd}
              >
                 {isSubmitting ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle2 className="w-5 h-5 mr-2" />}
-                AJUKAN CUTI SEBULAN
+                KONFIRMASI PENGAJUAN CUTI
              </Button>
           </CardFooter>
         </Card>
@@ -549,35 +688,41 @@ export default function MufradatBillingPage() {
       <div className="space-y-4">
         <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground px-1">Riwayat Status & Billing</h3>
         <div className="space-y-2">
-          {registrations?.filter(r => r.payment_type === 'monthly' || r.payment_type === 'leave_request').slice(0, 3).map((reg: any) => (
-            <div key={reg.id} className="bg-white p-4 rounded-2xl shadow-sm border flex items-center justify-between group hover:shadow-md transition-shadow">
+          {combinedHistory.slice(0, 5).map((item: any) => (
+            <div key={`${item.type}-${item.id}`} className="bg-white p-4 rounded-2xl shadow-sm border flex items-center justify-between group hover:shadow-md transition-shadow animate-in slide-in-from-left-4 duration-300">
                <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center",
-                    reg.payment_type === 'leave_request' ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-600"
+                    item.paymentType === 'leave_request' ? "bg-emerald-100 text-emerald-600" : 
+                    item.type === 'voucher' ? "bg-amber-100 text-amber-600" :
+                    "bg-slate-100 text-slate-600"
                   )}>
-                    {reg.payment_type === 'leave_request' ? <Coffee className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                    {item.paymentType === 'leave_request' ? <Coffee className="w-4 h-4" /> : 
+                     item.type === 'voucher' ? <ShieldCheck className="w-4 h-4" /> :
+                     <CreditCard className="w-4 h-4" />}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-xs font-black text-slate-800">{reg.payment_type === 'leave_request' ? "Permohonan Cuti" : `Infaq ${reg.billing_month}`}</span>
+                    <span className="text-xs font-black text-slate-800">{item.title}</span>
                     <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-tighter">
-                      {new Date(reg.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • Rp {reg.amount?.toLocaleString('id-ID') || 0}
+                      {new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} 
+                      {item.amount > 0 && ` • Rp ${item.amount.toLocaleString('id-ID')}`}
                     </span>
                   </div>
                </div>
                 <Badge className={cn(
                   "text-[8px] font-black border-none px-2 py-0.5",
-                  reg.status === 'verified' ? "bg-emerald-500" : 
-                  reg.status === 'pending_verification' ? "bg-amber-500" : 
+                  item.status === 'verified' || item.type === 'voucher' ? "bg-emerald-500" : 
+                  item.status === 'pending_verification' ? "bg-amber-500" : 
                   "bg-rose-500"
                 )}>
-                  {reg.status === 'verified' ? 'VERIFIED' : reg.status === 'pending_verification' ? 'PENDING' : 'REJECTED'}
+                  {item.status === 'verified' || item.type === 'voucher' ? 'VERIFIED' : 
+                   item.status === 'pending_verification' ? 'PENDING' : 'REJECTED'}
                 </Badge>
             </div>
           ))}
-          {(!registrations || registrations.length === 0) && (
+          {combinedHistory.length === 0 && (
             <div className="text-center py-10 opacity-30 italic text-xs font-bold text-muted-foreground border-2 border-dashed rounded-3xl">
-              Belum ada riwayat pembayaran bulanan.
+              Belum ada riwayat aktivitas penagihan.
             </div>
           )}
         </div>

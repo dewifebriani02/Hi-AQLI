@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users, Timer, GraduationCap, Award, UserPlus, X, Info } from "lucide-react";
+import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users, Timer, GraduationCap, Award, UserPlus, X, Info, ArrowRightLeft } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -67,6 +67,13 @@ export default function AdminClassesPage() {
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [selectedHalaqah, setSelectedHalaqah] = useState<any>(null);
   const [newParticipantId, setNewParticipantId] = useState("");
+
+  // Participant Transfer State
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [transferTargetParticipant, setTransferTargetParticipant] = useState<any>(null);
+  const [transferDestinationHalaqahId, setTransferDestinationHalaqahId] = useState("");
+  const [isTransferring, setIsTransferring] = useState(false);
+
 
   // Fetch Classes
   const { data: halaqahs, isLoading } = useCollection("halaqahs");
@@ -249,6 +256,79 @@ export default function AdminClassesPage() {
     }
   };
 
+  const handleTransferParticipant = async () => {
+    if (!transferTargetParticipant || !transferDestinationHalaqahId || !selectedHalaqah) return;
+
+    const destHalaqah = halaqahs?.find(h => h.id === transferDestinationHalaqahId);
+    if (!destHalaqah) return;
+
+    // Quota Check
+    const totalRegDest = allRegistrations?.filter(r => r.halaqah_id === destHalaqah.id).length || 0;
+    const sisa = Math.max(0, (destHalaqah.quota || 0) - totalRegDest);
+    
+    if (sisa <= 0) {
+      toast({ variant: "destructive", title: "Gagal Pindah", description: "Kuota kelas tujuan sudah penuh." });
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      // 1. Update Registration Record
+      const { error: regError } = await supabase
+        .from("halaqah_registrations")
+        .update({
+          halaqah_id: destHalaqah.id,
+          halaqah_title: destHalaqah.title,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', transferTargetParticipant.id);
+
+      if (regError) throw regError;
+
+      // 2. Update User Profile followed_halaqahs
+      const { data: userToUpdate, error: fetchErr } = await supabase
+        .from("users")
+        .select("followed_halaqahs")
+        .eq('id', transferTargetParticipant.user_id)
+        .single();
+
+      if (fetchErr) throw fetchErr;
+
+      if (userToUpdate) {
+        const currentFollowed = userToUpdate.followed_halaqahs || [];
+        // Remove old ID, add new ID
+        const updatedFollowed = currentFollowed.filter((id: string) => id !== selectedHalaqah.id);
+        if (!updatedFollowed.includes(destHalaqah.id)) {
+          updatedFollowed.push(destHalaqah.id);
+        }
+
+        const { error: userError } = await supabase
+          .from("users")
+          .update({
+            followed_halaqahs: updatedFollowed,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', transferTargetParticipant.user_id);
+
+        if (userError) throw userError;
+      }
+
+      toast({ 
+        title: "Peserta Berhasil Dipindahkan", 
+        description: `${transferTargetParticipant.user_name} pindah ke ${destHalaqah.title}` 
+      });
+      setIsTransferOpen(false);
+      setTransferTargetParticipant(null);
+      setTransferDestinationHalaqahId("");
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Gagal memindahkan peserta", description: e.message });
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
+
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus kelas ini? Tindakan ini tidak dapat dibatalkan.")) return;
     try {
@@ -400,14 +480,28 @@ export default function AdminClassesPage() {
                           <span className="text-[9px] text-muted-foreground">{p.user_email}</span>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleRemoveParticipant(p.id, p.user_id)}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-amber-600 hover:bg-amber-50"
+                            onClick={() => {
+                              setTransferTargetParticipant(p);
+                              setIsTransferOpen(true);
+                            }}
+                            title="Pindah Kelas"
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            onClick={() => handleRemoveParticipant(p.id, p.user_id)}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                     </div>
                   ))
                 )}
@@ -626,6 +720,64 @@ export default function AdminClassesPage() {
           <DialogFooter className="shrink-0 pt-4">
             <Button onClick={handleSave} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black gap-2 h-12 shadow-xl">
               <CheckCircle2 className="w-5 h-5" /> SIMPAN PROGRAM
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer Participant Dialog */}
+      <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="w-5 h-5 text-amber-600" />
+              Transfer Peserta
+            </DialogTitle>
+            <DialogDescription>
+              Pindahkan <strong>{transferTargetParticipant?.user_name}</strong> dari <strong>{selectedHalaqah?.title}</strong> ke kelas lain.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase">Pilih Kelas Tujuan</Label>
+              <Select value={transferDestinationHalaqahId} onValueChange={setTransferDestinationHalaqahId}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Pilih kelas tujuan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {halaqahs?.filter(h => h.id !== selectedHalaqah?.id).map(h => (
+                    <SelectItem key={h.id} value={h.id}>
+                      {h.title} ({getSisaKuota(h)} sisa)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex gap-3 text-amber-800">
+              <Info className="w-5 h-5 shrink-0" />
+              <p className="text-[10px] font-medium leading-relaxed">
+                Tindakan ini akan memindahkan data registrasi peserta ke kelas baru dan memperbarui akses kelas di profil mereka secara otomatis.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsTransferOpen(false)}
+              disabled={isTransferring}
+            >
+              Batal
+            </Button>
+            <Button 
+              onClick={handleTransferParticipant} 
+              className="bg-amber-600 hover:bg-amber-700 font-bold gap-2"
+              disabled={!transferDestinationHalaqahId || isTransferring}
+            >
+              {isTransferring ? <Loader2 className="animate-spin w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+              KONFIRMASI PINDAH
             </Button>
           </DialogFooter>
         </DialogContent>

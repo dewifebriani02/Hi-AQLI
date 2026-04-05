@@ -96,11 +96,16 @@ export default function MufradatSurahDetailPage() {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   });
 
+  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection(user ? "voucher_redemptions" : null, {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }],
+    select: "*, vouchers(*)"
+  });
+
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || [], id);
-  }, [userData, registrations, id]);
+    return getMufradatStatus(userData, registrations || [], id, undefined, redemptions || []);
+  }, [userData, registrations, id, redemptions]);
 
   const isProgressLoading = isUserProgressLoading;
 
@@ -324,7 +329,7 @@ export default function MufradatSurahDetailPage() {
     }
   };
 
-  if (loading || isUserLoading || isRegLoading || isUserDataLoading || isUserProgressLoading) {
+  if (loading || isUserLoading || isRegLoading || isUserDataLoading || isUserProgressLoading || isRedemptionsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
