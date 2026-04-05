@@ -145,12 +145,23 @@ export default function MufradatBillingPage() {
 
     setIsSubmitting(true);
     try {
+      // 1. Get a valid halaqah_id for Hi Mufradat (Must be a UUID)
+      const { data: halaqahData } = await supabase
+        .from("halaqahs")
+        .select("id")
+        .ilike("title", "%Hi Mufradat%")
+        .limit(1)
+        .maybeSingle();
+
+      const hId = halaqahData?.id || null;
+
+      // 2. Insert into halaqah_registrations
       const { error } = await supabase.from("halaqah_registrations").insert({
         user_id: user?.id,
         user_name: userData?.username || user?.user_metadata?.full_name,
         user_email: user?.email,
         whatsapp: userData?.phone,
-        halaqah_id: 'mufradat-premium',
+        halaqah_id: hId, // Fixed: Using UUID instead of 'mufradat-premium'
         halaqah_title: 'Hi Mufradat (Permohonan Cuti)',
         is_paid: false,
         status: "pending_verification",

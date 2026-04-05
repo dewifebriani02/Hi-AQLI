@@ -89,7 +89,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r-[#D4AF37]/30">
-      <SidebarHeader className="border-b border-[#D4AF37]/30 py-4 bg-[#800000]">
+      <SidebarHeader className="py-4 bg-[#800000]">
         <div className="flex items-center justify-between px-2">
           <Link href="/" className="flex items-center gap-2" onClick={handleLinkClick}>
             <Logo

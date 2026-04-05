@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Berhijrah dengan Ilmu, Beramal dengan Itqan.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#800000',
-    theme_color: '#800000',
+    background_color: '#ffffff',
+    theme_color: '#ffffff',
     icons: [
       {
         src: '/icon.png',

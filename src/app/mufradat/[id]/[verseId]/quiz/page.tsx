@@ -367,7 +367,7 @@ function MufradatQuizContent() {
                 
                 {!user && (
                     <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-widest text-xs gap-2">
-                        <Link href={`/login?mode=register&redirectTo=/mufradat/${id}/${verseId}`}>
+                        <Link href={`/register?redirectTo=/mufradat/${id}/${verseId}`}>
                             <Trophy className="w-4 h-4" /> DAFTAR UNTUK SIMPAN SKOR
                         </Link>
                     </Button>
@@ -385,7 +385,7 @@ function MufradatQuizContent() {
                 
                 {!user && (
                     <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 text-[#800000] font-black py-7 rounded-2xl uppercase tracking-widest text-[10px] gap-2">
-                        <Link href="/login?mode=register">
+                        <Link href="/register">
                             DAFTAR AKUN HI AQLI
                         </Link>
                     </Button>
