@@ -41,11 +41,6 @@ const nextConfig: NextConfig = {
         destination: 'https://whatsapp.com/channel/0029Vb5sNGZ9mrGkJGzEh421',
         permanent: true,
       },
-      {
-        source: '/study',
-        destination: '/study-circles',
-        permanent: true,
-      },
     ]
   },
 };
