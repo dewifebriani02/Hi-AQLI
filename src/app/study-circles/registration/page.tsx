@@ -30,7 +30,8 @@ import {
   Plus,
   Info,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  HeartHandshake
 } from "lucide-react";
 import { useUser, supabase } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
@@ -143,6 +144,11 @@ function RegistrationForm() {
   const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
   const [showVoucher, setShowVoucher] = useState(false);
 
+  // Referral States
+  const [referralCodeInput, setReferralCodeInput] = useState("");
+  const [isValidatingReferral, setIsValidatingReferral] = useState(false);
+  const [appliedReferral, setAppliedReferral] = useState<any>(null);
+
   // Program Detection
   const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
   const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
@@ -156,16 +162,33 @@ function RegistrationForm() {
     const adminBase = (circle?.base_price || circle?.basePrice) || 0;
     
     if (isMufradat) {
-      return Math.max(20000, adminBase); // Default 20k fallback
+      return Math.max(20000, adminBase);
     }
     if (isTikrar) {
       return levels.find(l => l.id === level)?.price || 50000;
     }
     if (circle?.payment_type === 'selectable') {
-      return adminBase || 50000; // Base minimum for selectable
+      return adminBase || 50000;
     }
     return adminBase || 0;
-  }, [isMufradat, isTikrar, level, circle?.base_price, circle?.basePrice, circle?.payment_type]);
+  }, [isMufradat, isTikrar, level, circle, isMufradat, isTikrar]);
+
+  const isFirstRegistration = useMemo(() => {
+    if (!user || !allRegistrations || !circle) return true;
+    const sameProgramRegs = allRegistrations.filter(r => 
+      r.user_id === user.id && 
+      (r.halaqah_id === circle.id || r.halaqah_title?.toLowerCase().includes(isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : '---')))
+    );
+    return sameProgramRegs.length === 0;
+  }, [user, allRegistrations, circle, isMufradat, isTikrar]);
+
+  const registrationFee = isFirstRegistration ? 10000 : 0;
+  const referralDiscount = appliedReferral ? 5000 : 0;
+
+  const totalCalculated = useMemo(() => {
+    if (!isPremiumProgram || appliedVoucher) return 0;
+    return Math.max(0, infaqAmount + registrationFee - referralDiscount + uniqueCode);
+  }, [isPremiumProgram, infaqAmount, registrationFee, referralDiscount, uniqueCode, appliedVoucher]);
 
   useEffect(() => {
     // Ensure infaqAmount is at least the minimum
@@ -253,6 +276,35 @@ function RegistrationForm() {
     }
   };
 
+  const handleValidateReferral = async () => {
+    if (!referralCodeInput.trim()) return;
+    
+    setIsValidatingReferral(true);
+    try {
+      const { data: referrer, error } = await supabase
+        .from("users")
+        .select("id, referral_code, username")
+        .eq("referral_code", referralCodeInput.trim().toUpperCase())
+        .maybeSingle();
+
+      if (error || !referrer) {
+        throw new Error("Kode Referral tidak valid atau tidak ditemukan.");
+      }
+
+      if (referrer.id === user?.id) {
+        throw new Error("Tidak bisa menggunakan kode referral milik sendiri.");
+      }
+
+      setAppliedReferral(referrer);
+      toast({ title: "Referral Berhasil!", description: `Ukhti mendapatkan potongan Rp 5.000 dari ${referrer.referral_code}.` });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Referral Gagal", description: err.message });
+      setAppliedReferral(null);
+    } finally {
+      setIsValidatingReferral(false);
+    }
+  };
+
   const handleNext = () => {
     if (!selectedHalaqahId) {
       toast({ variant: "destructive", title: "Mohon pilih program terlebih dahulu" });
@@ -333,12 +385,16 @@ function RegistrationForm() {
         is_paid: isPremiumProgram || !!appliedVoucher,
         level: isTikrar ? parseInt(level) : null,
         target_juz: isTikrar ? parseInt(targetJuz) : null,
-        amount: appliedVoucher ? 0 : (isPremiumProgram ? infaqAmount + uniqueCode : 0),
+        amount: appliedVoucher ? 0 : totalCalculated,
         payment_method: appliedVoucher ? "voucher" : (isPremiumProgram ? "transfer" : "free"),
         sender_name: appliedVoucher ? `VOUCHER: ${appliedVoucher.code}` : (isPremiumProgram ? senderName : null),
         proof_file_name: appliedVoucher ? "VOUCHER_ACTIVATED" : (proofFile?.name || null),
         status: "pending_verification",
         created_at: new Date().toISOString(),
+        registration_fee: registrationFee,
+        referral_code_used: appliedReferral?.referral_code || null,
+        referral_discount_amount: referralDiscount,
+        is_first_registration: isFirstRegistration,
         // Extra metadata for Hi Mufradat
         metadata: isMufradat ? {
           schedule: durationMonths,
@@ -346,11 +402,28 @@ function RegistrationForm() {
           akadAccepted: true,
           unitPrice: 0,
           infaqBase: infaqAmount,
-          voucher_code: appliedVoucher?.code || null
+          voucher_code: appliedVoucher?.code || null,
+          referral_code: appliedReferral?.referral_code || null
         } : (appliedVoucher ? { voucher_code: appliedVoucher.code } : null)
       });
 
       if (error) throw error;
+
+      // UPDATE REFERRER BALANCE (+5000)
+      if (appliedReferral) {
+        const { data: currentReferrer } = await supabase
+          .from("users")
+          .select("referral_balance")
+          .eq("id", appliedReferral.id)
+          .single();
+        
+        const newBalance = (currentReferrer?.referral_balance || 0) + 5000;
+        
+        await supabase
+          .from("users")
+          .update({ referral_balance: newBalance })
+          .eq("id", appliedReferral.id);
+      }
 
       // RECORD VOUCHER REDEMPTION
       if (appliedVoucher) {
@@ -482,6 +555,46 @@ function RegistrationForm() {
                     <Input placeholder="0812345..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
                   </div>
                 </div>
+              </div>
+
+              {/* Referral Code Field */}
+              <div className={cn(
+                "p-5 rounded-2xl border-2 border-dashed space-y-4 animate-in fade-in transition-all",
+                appliedReferral ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"
+              )}>
+                <div className="flex items-center gap-2">
+                  <HeartHandshake className={cn("w-5 h-5", appliedReferral ? "text-amber-600" : "text-slate-400")} />
+                  <h4 className={cn("font-black text-[10px] uppercase tracking-widest", appliedReferral ? "text-amber-800" : "text-slate-500")}>
+                    Punya Kode Referral Teman?
+                  </h4>
+                </div>
+                
+                {appliedReferral ? (
+                  <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-amber-100 shadow-sm">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-amber-600 uppercase tracking-tighter">Referral Aktif (-Rp 5.000)</span>
+                      <span className="text-sm font-black text-[#800000]">{appliedReferral.referral_code}</span>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-8 text-rose-500 font-bold text-[10px]" onClick={() => {setAppliedReferral(null); setReferralCodeInput("");}}>HAPUS</Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="CONTOH: AQLI-DEWI01" 
+                      value={referralCodeInput}
+                      onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                      className="h-12 border-2 rounded-xl font-bold uppercase placeholder:text-slate-300"
+                    />
+                    <Button 
+                      onClick={handleValidateReferral}
+                      disabled={isValidatingReferral || !referralCodeInput.trim()}
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] h-12 px-6 rounded-xl shadow-lg shadow-amber-500/20"
+                    >
+                      {isValidatingReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : "Gunakan"}
+                    </Button>
+                  </div>
+                )}
+                {!appliedReferral && <p className="text-[9px] text-slate-500 font-bold italic mt-1 font-sans">*Gunakan kode teman untuk mendapatkan diskon Rp 5.000.</p>}
               </div>
 
               {isTikrar && (
@@ -818,15 +931,48 @@ function RegistrationForm() {
               </Button>
             </div>
           ) : step === 2 ? (
-            <div className="space-y-8">
-              <div className="text-center space-y-2 bg-muted/30 p-8 rounded-3xl border-2 border-dashed border-[#800000]/20 animate-in fade-in slide-in-from-bottom-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Infaq Pendaftaran</p>
-                <div className="text-4xl font-black text-[#800000]">Rp {(infaqAmount + uniqueCode).toLocaleString('id-ID')}</div>
-                <div className="space-y-1">
-                  <p className="text-[10px] text-amber-700 font-bold italic bg-amber-50 py-1 px-3 rounded-full inline-block border border-amber-100">*Termasuk kode unik verifikasi {uniqueCode}</p>
-                  <p className="text-[9px] text-muted-foreground font-medium max-w-[280px] mx-auto italic leading-relaxed">Selisih nominal dari kode unik verifikasi akan disalurkan sebagai infaq melalui program Hi Berbagi di Hi AQLI.</p>
+            <div className="space-y-8 animate-in slide-in-from-right duration-300">
+              {/* Rincian Pembayaran */}
+              <div className="bg-slate-50 rounded-3xl p-6 border-2 border-slate-100 space-y-4">
+                <h3 className="text-sm font-black text-[#800000] uppercase tracking-widest border-b pb-3 mb-4 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" /> Rincian Pembayaran
+                </h3>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Infaq Bulanan</span>
+                    <span className="font-black text-slate-700">Rp {infaqAmount.toLocaleString('id-ID')}</span>
+                  </div>
+                  
+                  {registrationFee > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex flex-col">
+                        <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Biaya Registrasi</span>
+                        <span className="text-[9px] text-amber-600 font-bold italic">*Hanya pendaftaran ke-1</span>
+                      </div>
+                      <span className="font-black text-slate-700">Rp {registrationFee.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+
+                  {referralDiscount > 0 && (
+                    <div className="flex justify-between items-center text-sm pt-1">
+                      <span className="text-emerald-600 font-bold uppercase text-[10px] tracking-wider">Diskon Referral ({appliedReferral?.referral_code})</span>
+                      <span className="font-black text-emerald-600">-Rp {referralDiscount.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center text-sm pt-1">
+                    <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Kode Unik</span>
+                    <span className="font-black text-slate-700">+{uniqueCode}</span>
+                  </div>
+
+                  <div className="pt-4 border-t-2 border-dashed border-slate-200 mt-2 flex justify-between items-center">
+                    <span className="text-sm font-black text-[#800000] uppercase tracking-widest">Total Bayar</span>
+                    <span className="text-2xl font-black text-[#800000]">Rp {totalCalculated.toLocaleString('id-ID')}</span>
+                  </div>
                 </div>
               </div>
+
               <div className="bg-[#800000]/5 p-6 rounded-2xl border-2 border-[#800000]/10 space-y-4">
                 <p className="text-xs font-black text-[#800000] uppercase tracking-widest">Rekening Tujuan (BSI)</p>
                 <div className="flex items-center justify-between bg-white p-4 rounded-xl border-2 shadow-sm">

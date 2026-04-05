@@ -38,10 +38,15 @@ import {
   HeartPulse,
   Search,
   Users,
+  Share2,
+  MessageSquare,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import Link from "next/link";
-import { useUser } from "@/supabase";
+import { useUser, supabase } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
+import { useToast } from "@/hooks/use-toast";
 import { QURAN_CHAPTERS, SURAH_MAP_STR } from "@/lib/quran-data";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +54,8 @@ export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const [streakDays, setStreakDays] = useState(0);
   const [nextPrayer, setNextPrayer] = useState<{ name: string, time: string, location?: string } | null>(null);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const { toast } = useToast();
 
   // Only fetch data if user is logged in
   const { data: userData } = useDoc("users", user?.id);
@@ -275,6 +282,54 @@ export default function DashboardPage() {
     fetchHijri();
   }, [todayStr]);
 
+  // Generate Referral Code logic
+  useEffect(() => {
+    const generateReferralCode = async () => {
+      if (!user || userData?.referral_code || isGeneratingCode) return;
+      
+      setIsGeneratingCode(true);
+      try {
+        const firstName = (user.user_metadata?.full_name?.split(' ')[0] || 'AQLI').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        let sequence = 1;
+        let code = "";
+        let isUnique = false;
+
+        while (!isUnique) {
+          const seqStr = sequence.toString().padStart(2, '0');
+          code = `AQLI-${firstName}${seqStr}`;
+
+          // Check if code exists
+          const { data: existing } = await supabase
+            .from("users")
+            .select("id")
+            .eq("referral_code", code)
+            .maybeSingle();
+
+          if (!existing) {
+            isUnique = true;
+          } else {
+            sequence++;
+          }
+        }
+
+        // Save code
+        await supabase
+          .from("users")
+          .update({ referral_code: code })
+          .eq("id", user.id);
+
+      } catch (e) {
+        console.error("Failed to generate referral code", e);
+      } finally {
+        setIsGeneratingCode(false);
+      }
+    };
+
+    if (userData && !userData.referral_code) {
+      generateReferralCode();
+    }
+  }, [user, userData, isGeneratingCode]);
+
   // Combine activities for "Riwayat Terkini"
   const recentActivities = useMemo(() => {
     const activities: any[] = [];
@@ -364,7 +419,7 @@ export default function DashboardPage() {
         status: n.status === 'active' ? 'Aktif' : 'Terdaftar',
         title: 'Pendaftaran Kelas',
         subtitle: n.status === 'pending_verification' ? 'Menunggu Verifikasi' : 'Siap Mulai Belajar',
-        timestamp: n.createdAt,
+        timestamp: n.created_at || n.createdAt || new Date(),
         icon: Users,
         color: n.status === 'active' ? 'text-emerald-600' : 'text-amber-500'
       });
@@ -473,47 +528,44 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Hi Mufradat Registration Banner - Only show for logged in users WHO ARE NOT YET REGISTERED */}
-      {user && !isMufradatRegistered && (
-        <section className="px-1 mb-6">
-          <Link href="/study-circles/registration?id=mufradat-premium" className="block group">
-            <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#800000] to-[#5a0000] p-6 shadow-xl border-2 border-[#D4AF37]/30 group-hover:shadow-2xl transition-all duration-300">
-              {/* Decorative Gold Elements */}
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-              <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-              
-              <div className="relative flex flex-col sm:flex-row items-center gap-5">
-                <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 group-hover:rotate-6 transition-transform">
-                  <BookOpen className="w-8 h-8 text-[#D4AF37]" />
-                </div>
-                
-                <div className="flex-1 text-center sm:text-left space-y-1">
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                    <h3 className="text-lg font-black text-white font-headline tracking-tight">Hi Mufradat</h3>
-                    <Badge className="bg-[#D4AF37] text-[#800000] border-none text-[7px] h-3.5 font-black px-1.5 uppercase tracking-widest">OPEN</Badge>
-                  </div>
-                  <p className="text-white/80 text-[10px] sm:text-xs font-bold leading-relaxed max-w-md">
-                    Pahami 1 hal Al-Qur'an per pekan dengan bimbingan & monitoring intensif. Mulai Rp 20rb/bln!
+      {/* 1. GUEST PROMO (Moved right above Layanan Utama) */}
+      {!isMufradatRegistered && (
+        <div className="mx-1 mt-2 mb-2">
+          <Link href={user ? "/study-circles/registration?id=mufradat-premium" : "/register"}>
+            <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] to-[#500000] shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:shadow-[#800000]/20">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 blur-3xl -mr-20 -mt-20 rounded-full animate-pulse" />
+              <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+                <div className="flex-1 text-center sm:text-left">
+                  <Badge className="bg-amber-400 text-[#800000] mb-4 font-black tracking-widest uppercase py-1 px-3 animate-bounce">
+                    PROMO TERBATAS!
+                  </Badge>
+                  <h2 className="text-3xl sm:text-4xl font-black text-white font-headline leading-tight mb-3">
+                    Level Up Hafalan<br />
+                    <span className="text-amber-400">Hi Mufradat</span>
+                  </h2>
+                  <p className="text-slate-100 text-sm font-medium leading-relaxed mb-6 opacity-90 max-w-md">
+                    Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik.
                   </p>
-                  <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-black text-white uppercase tracking-wider">
-                      <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> TERSTRUKTUR
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+                    <div className="flex items-center gap-2">
+                       <Sparkles className="w-4 h-4 text-amber-400" />
+                       <span className="text-[10px] font-black text-white uppercase tracking-wider">Diskon Referral 5rb</span>
                     </div>
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[8px] font-black text-white uppercase tracking-wider">
-                      <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" /> MONITORING
+                    <div className="flex items-center gap-2">
+                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                       <span className="text-[10px] font-black text-white uppercase tracking-wider">Mulai dari 20rb</span>
                     </div>
                   </div>
                 </div>
-                
                 <div className="flex-shrink-0 w-full sm:w-auto">
-                  <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-5 py-2.5 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-transform">
-                    DAFTAR <ArrowRight className="w-3.5 h-3.5" />
+                  <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-6 py-3 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-all">
+                    DAFTAR KINI <ArrowRight className="w-4 h-4" />
                   </div>
                 </div>
               </div>
             </div>
           </Link>
-        </section>
+        </div>
       )}
 
       {/* Layanan Utama - 4-Column Icon Grid */}
@@ -589,6 +641,73 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {user && userData?.referral_code && (
+        <div className="mx-1 mb-8">
+          <Card className="border-none shadow-2xl overflow-hidden rounded-[2.5rem] bg-white border border-amber-100 flex flex-col sm:flex-row min-h-[180px] group transition-all">
+            {/* Promo Image (Premium Preview) */}
+            <div className="relative w-full sm:w-1/3 bg-[#800000] overflow-hidden">
+               <img 
+                src="/images/promo-hiaqli.png" 
+                alt="Promo Hi AQLI" 
+                className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#800000] via-transparent to-transparent sm:bg-gradient-to-r" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="p-3 bg-white/10 backdrop-blur rounded-2xl border border-white/20">
+                   <Sparkles className="w-6 h-6 text-amber-400 animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            <CardContent className="p-6 flex-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-col">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Ajak Teman & Hemat Bersama</h3>
+                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Pahala Jariyah + Bonus Saldo</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Saldo Hadiah</p>
+                    <p className="text-sm font-black text-emerald-600">Rp {(userData.referral_balance || 0).toLocaleString('id-ID')}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1 mb-6">
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kode Referral Ukhti</p>
+                    <div className="text-2xl font-black text-[#800000] tracking-[0.3em] font-mono">
+                      {userData.referral_code}
+                    </div>
+                </div>
+              </div>
+
+              {/* Common Promo Text Generator */}
+              {(() => {
+                const origin = "https://hiaqli.pro";
+                const referralLink = `${origin}/register?ref=${userData.referral_code}&redirectTo=${encodeURIComponent(`/study-circles/registration?ref=${userData.referral_code}`)}`;
+                const commonPromoText = `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ✨\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group (Cuma 20rb!).\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n💬 WhatsApp: https://hiaqli.pro/whatsapp\n📢 Telegram: https://hiaqli.pro/telegram\n\nKunjungi Website Kami:\n🌐 www.hiaqli.pro\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏✨`;
+                
+                return (
+                  <Button 
+                    variant="outline"
+                    className="w-full rounded-2xl h-16 font-black uppercase text-[12px] tracking-[0.2em] gap-3 bg-[#800000] text-white border-2 border-[#800000] hover:bg-white hover:text-[#800000] transition-all shadow-xl shadow-[#800000]/20 group/btn"
+                    onClick={() => {
+                      navigator.clipboard.writeText(commonPromoText);
+                      toast({
+                        title: "Pesan Disalin!",
+                        description: "Silakan tempel (paste) ke WhatsApp atau media sosial lainnya.",
+                      });
+                    }}
+                  >
+                    <Download className="w-5 h-5 group-hover/btn:-translate-y-1 transition-transform" /> 
+                    SALIN PESAN PROMOSI
+                  </Button>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Riwayat Terkini Section - Moved below Layanan Utama */}
       {user && recentActivities.length > 0 && (
         <section className="px-1 mb-2">
@@ -640,6 +759,45 @@ export default function DashboardPage() {
           </div>
         </section>
       )}
+
+      {/* Footer: Community Links */}
+      <div className="mt-8 mb-4 px-4 py-8 bg-[#800000]/5 rounded-[2.5rem] border border-[#800000]/10 flex flex-col items-center gap-6">
+        <div className="text-center space-y-1">
+          <p className="text-[10px] font-black text-[#800000] uppercase tracking-[0.2em]">Gabung Komunitas Kami</p>
+          <h3 className="text-lg font-black text-slate-800 font-headline">Lebih Dekat Dengan Al-Qur'an</h3>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-2 w-full max-w-md px-1">
+          <Link 
+            href="/whatsapp" 
+            target="_blank" 
+            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-500/10"
+          >
+            <MessageSquare className="w-4 h-4 fill-white" />
+            <span className="text-[8px] font-black uppercase tracking-wider">Grup WA</span>
+          </Link>
+          
+          <Link 
+            href="/channel" 
+            target="_blank" 
+            className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-700/10"
+          >
+            <Zap className="w-4 h-4 fill-white" />
+            <span className="text-[8px] font-black uppercase tracking-wider">Channel WA</span>
+          </Link>
+          
+          <Link 
+            href="/telegram" 
+            target="_blank" 
+            className="bg-sky-500 hover:bg-sky-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-sky-500/10"
+          >
+            <ExternalLink className="w-4 h-4" />
+            <span className="text-[8px] font-black uppercase tracking-wider">Telegram</span>
+          </Link>
+        </div>
+        
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">www.hiaqli.pro • Teruslah Istiqomah ✨</p>
+      </div>
     </div>
   );
 }

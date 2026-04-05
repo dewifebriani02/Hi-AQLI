@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Loader2, LogIn, Mail, Lock, Eye, EyeOff, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/common/logo';
 import { Suspense } from 'react';
@@ -20,6 +20,7 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/';
+  const referralCode = searchParams.get('ref');
   
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -95,6 +96,20 @@ function LoginContent() {
           {error && (
             <Alert variant="destructive" className="animate-in fade-in zoom-in duration-300">
               <AlertDescription className="text-xs font-bold">{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {referralCode && (
+            <Alert className="bg-emerald-50 border-emerald-200 text-emerald-800 animate-in slide-in-from-top-2 duration-500">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500 rounded-lg text-white">
+                  <Zap className="w-4 h-4 fill-current" />
+                </div>
+                <AlertDescription className="text-[10px] font-black uppercase tracking-wider leading-tight">
+                  Kode Referal <span className="text-emerald-600 underline">{referralCode}</span> Aktif. <br/>
+                  <span className="opacity-70">Masuk untuk melanjutkan pendaftaran program Ukhti.</span>
+                </AlertDescription>
+              </div>
             </Alert>
           )}
 
@@ -201,7 +216,7 @@ function LoginContent() {
           <p className="text-center text-sm text-muted-foreground w-full">
             Belum punya akun?{' '}
             <Link 
-              href={`/register${redirectTo !== '/' ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`} 
+              href={`/register?redirectTo=${encodeURIComponent(redirectTo)}${referralCode ? `&ref=${referralCode}` : ''}`} 
               className="text-[#800000] font-black hover:underline uppercase text-xs tracking-wider"
             >
               Daftar Sekarang

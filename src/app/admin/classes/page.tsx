@@ -707,6 +707,7 @@ export default function AdminClassesPage() {
                     <Label className="text-xs font-black uppercase">{form.paymentType === 'fixed' ? 'Nominal Infaq (Rp)' : 'Min. Infaq (Level 1)'}</Label>
                     <Input type="number" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: parseInt(e.target.value) || 0 })} />
                     {form.paymentType === 'selectable' && <span className="text-[9px] font-bold text-amber-600 italic leading-none block">User memilih: 50k, 75k, 100k, 125k, 150k</span>}
+                    {form.programType === 'hi_mufradat' && <span className="text-[9px] font-bold text-[#800000] italic leading-none block mt-1">*Minimal Rp 20.000 untuk Hi Mufradat</span>}
                   </div>
                 </div>
                 <div className="space-y-2">
