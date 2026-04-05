@@ -61,6 +61,9 @@ const INITIAL_ADD_FORM = {
   email: "",
   phone: "",
   role_id: "learner",
+  bank_name: "",
+  bank_account_number: "",
+  bank_account_holder: "",
 };
 
 export default function AdminUsersPage() {
@@ -90,6 +93,9 @@ export default function AdminUsersPage() {
       username: editingUser.username,
       role_id: editingUser.role_id,
       phone: editingUser.phone || "",
+      bank_name: editingUser.bank_name || "",
+      bank_account_number: editingUser.bank_account_number || "",
+      bank_account_holder: editingUser.bank_account_holder || "",
       is_blacklisted: editingUser.is_blacklisted || false,
       updated_at: new Date().toISOString(),
     };
@@ -161,6 +167,9 @@ export default function AdminUsersPage() {
         email: addForm.email,
         phone: addForm.phone,
         role_id: addForm.role_id,
+        bank_name: addForm.bank_name,
+        bank_account_number: addForm.bank_account_number,
+        bank_account_holder: addForm.bank_account_holder,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -250,6 +259,37 @@ export default function AdminUsersPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* BANK DETAILS IN ADD FORM */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid gap-4">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Informasi Rekening (Oksional)</p>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase">Nama Bank</Label>
+                  <Input
+                    placeholder="Contoh: BSI / Mandiri"
+                    value={addForm.bank_name}
+                    onChange={(e) => setAddForm({ ...addForm, bank_name: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase">No. Rekening</Label>
+                    <Input
+                      placeholder="000XXX000"
+                      value={addForm.bank_account_number}
+                      onChange={(e) => setAddForm({ ...addForm, bank_account_number: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase">Nama Pemilik</Label>
+                    <Input
+                      placeholder="Nama di Buku Tabungan"
+                      value={addForm.bank_account_holder}
+                      onChange={(e) => setAddForm({ ...addForm, bank_account_holder: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -386,6 +426,41 @@ export default function AdminUsersPage() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 grid gap-4">
+                                <div className="flex items-center gap-2">
+                                  <CreditCard className="w-4 h-4 text-[#800000]" />
+                                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Informasi Payout / Rekening</span>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs font-bold uppercase text-muted-foreground">Nama Bank</Label>
+                                  <Input
+                                    placeholder="Contoh: BSI / Bank Syariah Indonesia"
+                                    value={editingUser?.bank_name || ""}
+                                    onChange={(e) => setEditingUser({ ...editingUser, bank_name: e.target.value })}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase text-muted-foreground">Nomor Rekening</Label>
+                                    <Input
+                                      placeholder="7209XXX"
+                                      value={editingUser?.bank_account_number || ""}
+                                      onChange={(e) => setEditingUser({ ...editingUser, bank_account_number: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase text-muted-foreground">Nama Pemilik</Label>
+                                    <Input
+                                      placeholder="Sesuai Buku Tabungan"
+                                      value={editingUser?.bank_account_holder || ""}
+                                      onChange={(e) => setEditingUser({ ...editingUser, bank_account_holder: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
                             </div>
 
                             <div className="flex items-center justify-between p-4 rounded-xl bg-rose-50 border-2 border-dashed border-rose-200">

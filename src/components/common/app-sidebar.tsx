@@ -52,6 +52,7 @@ const adminItems = [
       { href: "/admin/mufradat/juz-access", label: "Hak Akses Juz" },
       { href: "/admin/registrations", label: "Verifikasi Pembayaran" },
       { href: "/admin/mufradat/reports", label: "Laporan Kinerja" },
+      { href: "/admin/mufradat/finance", label: "Monitor Keuangan" },
     ]
   },
   { 

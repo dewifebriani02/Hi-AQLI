@@ -58,13 +58,17 @@ export default function MufradatGroupsPage() {
     whatsapp_link: string, 
     start_date: string,
     musyrifah_name: string,
-    musyrifah_phone: string
+    musyrifah_phone: string,
+    muallimah_name: string,
+    muallimah_phone: string
   }>({ 
     name: "", 
     whatsapp_link: "", 
     start_date: "",
     musyrifah_name: "",
-    musyrifah_phone: ""
+    musyrifah_phone: "",
+    muallimah_name: "",
+    muallimah_phone: ""
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewingGroupId, setViewingGroupId] = useState<string | null>(null);
@@ -105,7 +109,9 @@ export default function MufradatGroupsPage() {
       whatsapp_link: group.whatsapp_link || "",
       start_date: group.start_date || "",
       musyrifah_name: group.musyrifah_name || "",
-      musyrifah_phone: group.musyrifah_phone || ""
+      musyrifah_phone: group.musyrifah_phone || "",
+      muallimah_name: group.muallimah_name || "",
+      muallimah_phone: group.muallimah_phone || ""
     });
   };
 
@@ -119,7 +125,9 @@ export default function MufradatGroupsPage() {
           whatsapp_link: editValues.whatsapp_link,
           start_date: editValues.start_date || null,
           musyrifah_name: editValues.musyrifah_name,
-          musyrifah_phone: editValues.musyrifah_phone
+          musyrifah_phone: editValues.musyrifah_phone,
+          muallimah_name: editValues.muallimah_name,
+          muallimah_phone: editValues.muallimah_phone
         })
         .eq('id', id);
 
@@ -362,7 +370,8 @@ export default function MufradatGroupsPage() {
                   <TableHead className="w-[180px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Nama Grup</TableHead>
                   <TableHead className="w-[120px] text-[10px] font-black uppercase tracking-widest">Mulai</TableHead>
                   <TableHead className="w-[120px] text-[10px] font-black uppercase tracking-widest">Peserta</TableHead>
-                  <TableHead className="w-[180px] text-[10px] font-black uppercase tracking-widest">Musyrifah</TableHead>
+                  <TableHead className="w-[150px] text-[10px] font-black uppercase tracking-widest">Musyrifah</TableHead>
+                  <TableHead className="w-[150px] text-[10px] font-black uppercase tracking-widest">Muallimah</TableHead>
                   <TableHead className="min-w-[200px] text-[10px] font-black uppercase tracking-widest">Link WhatsApp Monitoring</TableHead>
                   <TableHead className="text-right pr-6 w-[200px] text-[10px] font-black uppercase tracking-widest">Aksi</TableHead>
                 </TableRow>
@@ -435,6 +444,29 @@ export default function MufradatGroupsPage() {
                           <div className="flex flex-col">
                             <span className="text-xs font-bold text-slate-700">{group.musyrifah_name || '-'}</span>
                             <span className="text-[10px] text-muted-foreground">{group.musyrifah_phone || '-'}</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <Input 
+                              placeholder="Nama Muallimah"
+                              value={editValues.muallimah_name} 
+                              onChange={e => setEditValues(v => ({ ...v, muallimah_name: e.target.value }))}
+                              className="h-8 text-[10px]"
+                            />
+                            <Input 
+                              placeholder="No. WA (62812...)"
+                              value={editValues.muallimah_phone} 
+                              onChange={e => setEditValues(v => ({ ...v, muallimah_phone: e.target.value }))}
+                              className="h-8 text-[10px]"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-[#800000]">{group.muallimah_name || '-'}</span>
+                            <span className="text-[10px] text-muted-foreground">{group.muallimah_phone || '-'}</span>
                           </div>
                         )}
                       </TableCell>

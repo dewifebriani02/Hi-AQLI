@@ -293,6 +293,19 @@ function MufradatMonitoringContent() {
             <h1 className="text-4xl font-black font-headline tracking-tighter text-[#800000]">PROGRESS & REMINDER</h1>
             <p className="text-muted-foreground font-medium text-sm">Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="h-10 text-[10px] font-black uppercase tracking-widest border-2 border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5 rounded-xl">
+            <Link href="/admin/mufradat/groups">Kelola Grup</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="h-10 text-[10px] font-black uppercase tracking-widest border-2 border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5 rounded-xl">
+            <Link href="/admin/mufradat/reports">Laporan Kinerja</Link>
+          </Button>
+          <Button asChild variant="default" size="sm" className="h-10 text-[10px] font-black uppercase tracking-widest bg-[#800000] hover:bg-[#800000]/90 text-white rounded-xl shadow-lg shadow-[#800000]/20">
+            <Link href="/admin/mufradat/finance" className="flex items-center gap-2">
+              <TrendingUp className="w-3.5 h-3.5" /> Keuangan
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}

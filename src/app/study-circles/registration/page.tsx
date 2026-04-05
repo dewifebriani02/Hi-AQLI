@@ -453,6 +453,7 @@ function RegistrationForm() {
         referral_code_used: appliedReferral?.referral_code || null,
         referral_discount_amount: referralDiscount,
         is_first_registration: isFirstRegistration,
+        unique_code: uniqueCode,
         // Extra metadata for Hi Mufradat
         metadata: isMufradat ? {
           schedule: durationMonths,
