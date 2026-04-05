@@ -160,9 +160,12 @@ function RegistrationForm() {
   const [isValidatingReferral, setIsValidatingReferral] = useState(false);
   const [appliedReferral, setAppliedReferral] = useState<any>(null);
 
-  // 1. Auto-apply referral if user has referred_by_id in their profile
+  // 1. Auto-apply referral (From Profile OR URL)
   useEffect(() => {
-    if (userData?.referred_by_id && !appliedReferral) {
+    const urlReferral = searchParams.get('ref');
+    const effectiveReferralId = userData?.referred_by_id;
+
+    if ((effectiveReferralId || urlReferral) && !appliedReferral) {
       const fetchReferrer = async () => {
         // Only apply persistent referral if this is truly the user's first registration ever
         const isActuallyFirstTime = !registrationsHistory || registrationsHistory.length === 0;
@@ -172,21 +175,37 @@ function RegistrationForm() {
            return;
         }
 
-        const { data: referrer } = await supabase
-          .from("users")
-          .select("id, referral_code, username")
-          .eq("id", userData.referred_by_id)
-          .maybeSingle();
+        let referrer = null;
+
+        // Priority 1: From Profile (Persistent)
+        if (effectiveReferralId) {
+          const { data } = await supabase
+            .from("users")
+            .select("id, referral_code, username")
+            .eq("id", effectiveReferralId)
+            .maybeSingle();
+          referrer = data;
+        } 
+        
+        // Priority 2: From URL (Parameters) - fallback or override
+        if (!referrer && urlReferral) {
+          const { data } = await supabase
+            .from("users")
+            .select("id, referral_code, username")
+            .eq("referral_code", urlReferral.toUpperCase())
+            .maybeSingle();
+          referrer = data;
+        }
         
         if (referrer) {
            setAppliedReferral(referrer);
            setReferralCodeInput(referrer.referral_code || "");
-           console.log("Auto-applied persistent referral:", referrer.referral_code);
+           console.log("Auto-applied referral:", referrer.referral_code);
         }
       };
       fetchReferrer();
     }
-  }, [userData?.referred_by_id, appliedReferral]);
+  }, [userData?.referred_by_id, searchParams, appliedReferral, registrationsHistory]);
 
   // Program Detection
   const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
