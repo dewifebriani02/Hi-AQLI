@@ -52,14 +52,7 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 
-const RECITERS = [
-  { id: 7, name: "Mishary Rashid Alafasy", style: "Murattal" },
-  { id: 2, name: "AbdulBaset AbdulSamad", style: "Murattal" },
-  { id: 3, name: "Abdur-Rahman as-Sudais", style: "Sura/Juz" },
-  { id: 6, name: "Mahmoud Khalil Al-Husary", style: "Murattal" },
-  { id: 12, name: "Saud al-Shuraim", style: "Murattal" },
-  { id: 1, name: "AbdulBaset AbdulSamad", style: "Mujawwad" },
-];
+
 
 function MufradatPageContent() {
   const { user, isUserLoading } = useUser();
@@ -189,8 +182,7 @@ function MufradatPageContent() {
     return getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
   }, [userData, registrations, redemptions]);
 
-  const [selectedReciterId, setSelectedReciterId] = useState<number>(7);
-  const [isReciterDialogOpen, setIsReciterDialogOpen] = useState(false);
+
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -206,18 +198,7 @@ function MufradatPageContent() {
     router.replace(`/mufradat?${params.toString()}`);
   };
 
-  useEffect(() => {
-    const saved = localStorage.getItem('aqli_reciter_id');
-    if (saved) setSelectedReciterId(parseInt(saved));
-  }, []);
 
-  const selectReciter = (id: number) => {
-    setSelectedReciterId(id);
-    localStorage.setItem('aqli_reciter_id', id.toString());
-    setIsReciterDialogOpen(false);
-  };
-
-  const selectedReciterName = RECITERS.find(r => r.id === selectedReciterId)?.name || "Pilih Qari";
 
   // WEEKLY LEAGUE RESET LOGIC (Every Monday 00:00)
   useEffect(() => {
@@ -271,116 +252,59 @@ function MufradatPageContent() {
         </div>
 
         <div className={cn(
-          "grid gap-2 shrink-0 w-full sm:w-auto",
-          activeTab === 'rank' ? "grid-cols-1" : "grid-cols-2 sm:flex sm:flex-row"
+          "shrink-0 w-full sm:w-auto",
+          activeTab === 'rank' ? "hidden" : "block"
         )}>
           {user && (
-            <div className="flex flex-row gap-2 w-full sm:w-auto">
-              <Button asChild variant="outline" className="h-12 px-5 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all bg-white shadow-sm flex-1 sm:flex-initial">
-                <Link href="/mufradat/billing" className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                    <CreditCard className="w-4 h-4" />
+            <div className="grid grid-cols-3 gap-1.5 w-full sm:flex sm:flex-row sm:gap-2 sm:w-auto sm:items-end">
+              <Button asChild variant="outline" className="h-12 px-2 sm:px-5 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 group transition-all bg-white shadow-sm flex-1">
+                <Link href="/mufradat/billing" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <div className="flex flex-col items-start leading-none gap-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Langganan</span>
-                    <span className="text-xs font-bold text-slate-800">STATUS</span>
+                  <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
+                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground line-clamp-1">Langganan</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-800 uppercase line-clamp-1">Status</span>
                   </div>
                 </Link>
               </Button>
 
               {/* LEAGUE BADGE */}
               <div className={cn(
-                "h-12 px-5 rounded-2xl border-2 flex items-center gap-3 shadow-sm flex-1 sm:flex-initial transition-all",
+                "h-12 px-2 sm:px-5 rounded-2xl border-2 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 transition-all",
                 userData?.mufradat_league === 'Intan' ? "bg-cyan-50 border-cyan-500/20 text-cyan-700" :
                 userData?.mufradat_league === 'Emas' ? "bg-amber-50 border-amber-500/20 text-amber-700" :
                 userData?.mufradat_league === 'Perak' ? "bg-slate-50 border-slate-500/20 text-slate-700" :
                 "bg-slate-50 border-slate-200 text-slate-500"
               )}>
                 <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center",
+                  "w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
                   userData?.mufradat_league === 'Intan' ? "bg-cyan-100" :
                   userData?.mufradat_league === 'Emas' ? "bg-amber-100 text-amber-600" :
                   userData?.mufradat_league === 'Perak' ? "bg-slate-200 text-slate-700" :
                   "bg-slate-100 text-slate-400"
                 )}>
-                  {userData?.mufradat_league === 'Intan' ? <Trophy className="w-4 h-4" /> :
-                   userData?.mufradat_league === 'Emas' ? <Trophy className="w-4 h-4" /> :
-                   userData?.mufradat_league === 'Perak' ? <Award className="w-4 h-4" /> :
-                   <Zap className="w-4 h-4" />}
+                  {userData?.mufradat_league === 'Intan' ? <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
+                   userData?.mufradat_league === 'Emas' ? <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
+                   userData?.mufradat_league === 'Perak' ? <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
+                   <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 </div>
-                <div className="flex flex-col items-start leading-none gap-1">
-                  <span className="text-[9px] font-black uppercase tracking-tight opacity-70">Liga Minggu Ini</span>
-                  <span className="text-xs font-black uppercase">{userData?.mufradat_league || 'Perunggu'}</span>
+                <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
+                  <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-tight opacity-70 line-clamp-1">Liga</span>
+                  <span className="text-[9px] sm:text-xs font-black uppercase line-clamp-1">{userData?.mufradat_league || 'Perunggu'}</span>
                 </div>
               </div>
 
-              <div className="h-12 px-5 rounded-2xl border-2 border-orange-500/10 bg-orange-50/30 flex items-center gap-3 shadow-sm flex-1 sm:flex-initial animate-in zoom-in duration-500">
-                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-                  <Flame className={cn("w-4 h-4 fill-current", (userData?.mufradat_streak_count || 0) > 0 ? "animate-pulse" : "opacity-30")} />
+              <div className="h-12 px-2 sm:px-5 rounded-2xl border-2 border-orange-500/10 bg-orange-50/30 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 animate-in zoom-in duration-500">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                  <Flame className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current", (userData?.mufradat_streak_count || 0) > 0 ? "animate-pulse" : "opacity-30")} />
                 </div>
-                <div className="flex flex-col items-start leading-none gap-1">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-600/70">Konsistensi</span>
-                  <span className="text-xs font-black text-orange-700">{userData?.mufradat_streak_count || 0} HARI</span>
+                <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
+                  <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-orange-600/70 line-clamp-1">Streak</span>
+                  <span className="text-[9px] sm:text-xs font-black text-orange-700 line-clamp-1 text-center sm:text-left">{userData?.mufradat_streak_count || 0} HARI</span>
                 </div>
               </div>
             </div>
-          )}
-
-          {activeTab !== 'rank' && (
-            <Dialog open={isReciterDialogOpen} onOpenChange={setIsReciterDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="h-12 px-6 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all shrink-0 bg-white shadow-sm w-full sm:w-auto">
-                  <div className="w-8 h-8 rounded-full bg-[#800000]/10 flex items-center justify-center text-[#800000] group-hover:bg-[#800000] group-hover:text-white transition-colors">
-                    <Headphones className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col items-start leading-none gap-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pilihan Qari</span>
-                    <span className="text-xs font-bold text-slate-800 truncate max-w-[80px] sm:max-w-none">{selectedReciterName}</span>
-                  </div>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
-                <DialogHeader className="p-6 bg-gradient-to-br from-[#800000] to-[#b91c1c] text-white">
-                  <DialogTitle className="text-xl font-black font-headline flex items-center gap-3">
-                    <Music className="w-6 h-6 text-[#D4AF37]" />
-                    PILIH QARI FAVORIT
-                  </DialogTitle>
-                  <p className="text-white/70 text-xs font-medium">Suara Tilawah akan menyesuaikan Qari yang Anda pilih.</p>
-                </DialogHeader>
-                <div className="p-4 grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto bg-slate-50">
-                  {RECITERS.map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => selectReciter(r.id)}
-                      className={cn(
-                        "flex items-center justify-between p-4 rounded-2xl transition-all border-2",
-                        selectedReciterId === r.id 
-                          ? "bg-white border-[#800000] shadow-md scale-[1.02]" 
-                          : "bg-white/50 border-transparent hover:border-slate-200 hover:bg-white"
-                      )}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center font-black text-sm",
-                          selectedReciterId === r.id ? "bg-[#800000] text-white" : "bg-slate-100 text-slate-400"
-                        )}>
-                          {r.name[0]}
-                        </div>
-                        <div className="flex flex-col items-start">
-                          <span className={cn("text-sm font-bold", selectedReciterId === r.id ? "text-[#800000]" : "text-slate-700")}>{r.name}</span>
-                          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">{r.style}</span>
-                        </div>
-                      </div>
-                      {selectedReciterId === r.id && (
-                        <div className="w-6 h-6 rounded-full bg-[#800000] flex items-center justify-center text-white">
-                          <Check className="w-3.5 h-3.5" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </DialogContent>
-            </Dialog>
           )}
         </div>
       </div>
@@ -449,6 +373,28 @@ function MufradatPageContent() {
         </div>
       )}
 
+      {/* MABAR PROMO CARD */}
+      <Link href="/mufradat/mabar">
+        <div className="group relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#800000] via-[#A52A2A] to-[#8B4513] p-8 text-white shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] mb-8 border-b-4 border-black/20">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform">
+                <Trophy className="w-8 h-8" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xl font-black uppercase tracking-tighter leading-none">Mabar Al-Qur'an</h3>
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest leading-relaxed">Kompetisi Hafalan Serentak Per Juz • Live Leaderboard</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 bg-white/20 px-5 py-2.5 rounded-2xl backdrop-blur-md border border-white/10 self-start sm:self-auto">
+              <span className="text-xs font-black uppercase tracking-widest">KUBER GABUNG!</span>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+          <Trophy className="absolute -bottom-6 -right-6 w-48 h-48 text-white/5 rotate-12 group-hover:scale-110 transition-transform duration-700" />
+        </div>
+      </Link>
+
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="surah" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
@@ -469,25 +415,27 @@ function MufradatPageContent() {
           <div className="space-y-4">
             <SurahList 
               baseUrl="/mufradat" 
-              userProgress={progress} 
-              selectedReciterId={selectedReciterId} 
+              userProgress={progress || []} 
+              showAudio={false}
             />
           </div>
         </TabsContent>
         
         <TabsContent value="juz" className="focus-visible:outline-none">
           <JuzList 
-            userProgress={progress} 
-            selectedReciterId={selectedReciterId} 
+            userProgress={progress || []} 
             mode="ayat"
+            variant="mufradat"
+            unlockedJuz={userData?.mufradat_accessible_juz || []}
           />
         </TabsContent>
 
         <TabsContent value="murajaah" className="focus-visible:outline-none">
           <JuzList 
-            userProgress={progress} 
-            selectedReciterId={selectedReciterId} 
+            userProgress={progress || []} 
             mode="halaman"
+            variant="mufradat"
+            unlockedJuz={userData?.mufradat_accessible_juz || []}
           />
         </TabsContent>
 

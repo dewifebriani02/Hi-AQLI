@@ -24,12 +24,14 @@ interface SurahListProps {
   baseUrl?: string;
   userProgress?: any[];
   selectedReciterId?: number;
+  showAudio?: boolean;
 }
 
 export function SurahList({ 
   baseUrl = "/tilawah", 
   userProgress = [], 
-  selectedReciterId = 7 
+  selectedReciterId = 7,
+  showAudio = true
 }: SurahListProps) {
   const [surahs, setSurahs] = useState<Surah[]>(QURAN_CHAPTERS as Surah[]);
   const [search, setSearch] = useState("");
@@ -40,11 +42,9 @@ export function SurahList({
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Surahs are now loaded from local QURAN_CHAPTERS for instant performance
     setLoading(false);
   }, []);
 
-  // Audio Cleanup on unmount
   useEffect(() => {
     return () => {
       if (audio) {
@@ -64,10 +64,7 @@ export function SurahList({
       return;
     }
 
-    if (audio) {
-      audio.pause();
-    }
-
+    if (audio) audio.pause();
     setLoadingAudioId(surahId);
 
     try {
@@ -88,16 +85,11 @@ export function SurahList({
         setPlayingId(surahId);
         setLoadingAudioId(null);
       };
-
-      newAudio.onended = () => {
-        setPlayingId(null);
-      };
-
+      newAudio.onended = () => setPlayingId(null);
       newAudio.onerror = () => {
         setLoadingAudioId(null);
         setPlayingId(null);
       };
-
       await newAudio.play();
     } catch (err) {
       console.error("Audio Playback Error:", err);
@@ -105,26 +97,20 @@ export function SurahList({
     }
   };
 
-  // Calculate completion status for each surah
   const completionMap = useMemo(() => {
     const map = new Map<number, number>();
     if (!userProgress) return map;
-
     userProgress.forEach(attempt => {
       const isPassed = attempt.is_passed || Number(attempt.score) === Number(attempt.total_questions);
       if (isPassed && !attempt.quiz_id.startsWith('mufradat_page_') && !attempt.quiz_id.startsWith('mufradat_juz_exam_')) {
         const sId = Number(attempt.surah_id);
         const vId = Number(attempt.verse_id);
-        
         if (sId > 0) {
-          if (!map.has(sId)) {
-            (map as any).set(sId, new Set());
-          }
+          if (!map.has(sId)) (map as any).set(sId, new Set());
           (map.get(sId) as any).add(vId);
         }
       }
     });
-
     const finalMap = new Map<number, number>();
     map.forEach((verseSet, sId) => {
       finalMap.set(sId, (verseSet as any).size);
@@ -132,7 +118,6 @@ export function SurahList({
     return finalMap;
   }, [userProgress]);
 
-  // Page Quiz progress for locking
   const completedPageQuizzes = useMemo(() => {
     const pageSet = new Set<number>();
     if (!userProgress) return pageSet;
@@ -177,24 +162,17 @@ export function SurahList({
         {filteredSurahs.map((surah) => {
           const passedCount = completionMap.get(surah.id) || 0;
           const isCompleted = passedCount >= surah.verses_count;
-
           const startPage = SURAH_START_PAGES[surah.id] || 1;
           const isFreeSurah = [1, 112, 113, 114].includes(surah.id);
           const isUnlocked = baseUrl !== "/mufradat" || isFreeSurah || startPage === 1 || completedPageQuizzes.has(startPage - 1) || passedCount > 0;
-          
-          const href = baseUrl === "/mufradat" 
-            ? `${baseUrl}/${surah.id}` 
-            : `${baseUrl}/${surah.id}`;
+          const href = `${baseUrl}/${surah.id}`;
 
           const CardContent = (
             <Card 
               className={cn(
                 "p-4 transition-all group border-none shadow-sm relative overflow-hidden h-full",
-                isUnlocked && "cursor-pointer",
-                !isUnlocked && "opacity-40 grayscale pointer-events-none select-none border border-slate-200",
-                isCompleted 
-                  ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80" 
-                  : "bg-card/50 hover:bg-accent hover:text-accent-foreground"
+                isUnlocked ? "cursor-pointer" : "opacity-40 grayscale pointer-events-none select-none border border-slate-200",
+                isCompleted ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80" : "bg-card/50 hover:bg-accent hover:text-accent-foreground"
               )}
             >
               {!isUnlocked && (
@@ -210,52 +188,35 @@ export function SurahList({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-lg font-bold text-sm transition-colors rotate-45",
-                    isCompleted 
-                      ? "bg-emerald-500 text-white" 
-                      : !isUnlocked ? "bg-slate-200 text-slate-400" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                    "flex items-center justify-center w-10 h-10 rounded-lg font-bold text-sm transition-all rotate-45",
+                    isCompleted ? "bg-emerald-500 text-white" : !isUnlocked ? "bg-slate-200 text-slate-400" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
                   )}>
                     <span className="-rotate-45">{surah.id}</span>
                   </div>
                   <div className="flex flex-col">
-                    <h4 className={cn(
-                      "font-bold text-base",
-                      isCompleted && "text-emerald-900"
-                    )}>{surah.name_simple}</h4>
-                    <p className={cn(
-                      "text-xs text-muted-foreground",
-                      isCompleted ? "text-emerald-700/70" : "group-hover:text-accent-foreground/80"
-                    )}>
+                    <h4 className={cn("font-bold text-base", isCompleted && "text-emerald-900")}>{surah.name_simple}</h4>
+                    <p className={cn("text-xs text-muted-foreground", isCompleted ? "text-emerald-700/70" : "group-hover:text-accent-foreground/80")}>
                       {surah.translated_name} • {surah.verses_count} Ayat
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={!isUnlocked}
-                    className={cn(
-                      "w-10 h-10 rounded-full transition-all shrink-0",
-                      playingId === surah.id 
-                        ? "bg-[#800000] text-white hover:bg-[#800000]/90" 
-                        : "bg-muted/50 text-muted-foreground hover:bg-[#800000]/10 hover:text-[#800000]"
-                    )}
-                    onClick={(e) => isUnlocked && togglePlay(e, surah.id)}
-                  >
-                    {loadingAudioId === surah.id ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : playingId === surah.id ? (
-                      <Pause className="w-5 h-5 fill-current" />
-                    ) : (
-                      <Play className="w-5 h-5 fill-current ml-0.5" />
-                    )}
-                  </Button>
+                  {showAudio && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={!isUnlocked}
+                      className={cn(
+                        "w-10 h-10 rounded-full transition-all shrink-0",
+                        playingId === surah.id ? "bg-[#800000] text-white hover:bg-[#800000]/90" : "bg-muted/50 text-muted-foreground hover:bg-[#800000]/10 hover:text-[#800000]"
+                      )}
+                      onClick={(e) => isUnlocked && togglePlay(e, surah.id)}
+                    >
+                      {loadingAudioId === surah.id ? <Loader2 className="w-5 h-5 animate-spin" /> : playingId === surah.id ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                    </Button>
+                  )}
                   <div className="text-right flex flex-col items-end gap-1">
-                    <div className={cn(
-                      "text-xl font-arabic leading-none",
-                      isCompleted ? "text-emerald-800" : "mb-1"
-                    )}>{surah.name_arabic}</div>
+                    <div className={cn("text-xl font-arabic leading-none", isCompleted ? "text-emerald-800" : "mb-1")}>{surah.name_arabic}</div>
                     {isCompleted ? (
                       <div className="flex items-center gap-1 bg-emerald-200/50 px-1.5 py-0.5 rounded text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
                         <Star className="w-2 h-2 fill-current" /> Khatam
@@ -283,12 +244,7 @@ export function SurahList({
           );
 
           if (!isUnlocked) return <div key={surah.id}>{CardContent}</div>;
-
-          return (
-            <Link key={surah.id} href={href}>
-              {CardContent}
-            </Link>
-          );
+          return <Link key={surah.id} href={href}>{CardContent}</Link>;
         })}
       </div>
     </div>

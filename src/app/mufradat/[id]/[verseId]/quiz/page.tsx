@@ -25,6 +25,8 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
 import { useCollection, useDoc } from "@/supabase/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { format } from "date-fns";
+import { getJuzForPage } from "@/lib/quran-mapping";
 
 interface Question {
   id: number;
@@ -264,6 +266,68 @@ function MufradatQuizContent() {
         });
 
       if (insertError) throw insertError;
+
+      // --- MABAR SCORING LOGIC ---
+      if (isPassed && pageId) {
+        const currentJuz = getJuzForPage(pageId);
+        const { data: activeMabar } = await supabase
+          .from('mufradat_mabar_sessions')
+          .select('id')
+          .eq('status', 'active')
+          .eq('juz_id', currentJuz)
+          .maybeSingle();
+
+        if (activeMabar) {
+          const { data: participant } = await supabase
+            .from('mufradat_mabar_participants')
+            .select('points_earned')
+            .eq('session_id', activeMabar.id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (participant) {
+            await supabase
+              .from('mufradat_mabar_participants')
+              .update({ 
+                points_earned: (participant.points_earned || 0) + 10,
+                last_activity_at: new Date().toISOString()
+              })
+              .eq('session_id', activeMabar.id)
+              .eq('user_id', user.id);
+          }
+        }
+      }
+
+      // --- MABAR SCORING LOGIC ---
+      if (isPassed && pageId) {
+        const currentJuz = getJuzForPage(pageId);
+        const { data: activeMabar } = await supabase
+          .from('mufradat_mabar_sessions')
+          .select('id')
+          .eq('status', 'active')
+          .eq('juz_id', currentJuz)
+          .maybeSingle();
+
+        if (activeMabar) {
+          const { data: participant } = await supabase
+            .from('mufradat_mabar_participants')
+            .select('points_earned')
+            .eq('session_id', activeMabar.id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (participant) {
+            await supabase
+              .from('mufradat_mabar_participants')
+              .update({ 
+                points_earned: (participant.points_earned || 0) + 10,
+                last_activity_at: new Date().toISOString()
+              })
+              .eq('session_id', activeMabar.id)
+              .eq('user_id', user.id);
+          }
+        }
+      }
 
       // --- STREAK & POINTS LOGIC ---
       if (isPassed) {
