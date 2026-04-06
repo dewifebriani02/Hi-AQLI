@@ -21,10 +21,10 @@ USING (auth.uid() = user_id);
 
 CREATE POLICY "Admin can view all badges" 
 ON public.user_badges FOR SELECT 
-USING (EXISTS (
-    SELECT 1 FROM public.users 
-    WHERE id = auth.uid() AND (role = 'admin' OR role = 'superadmin')
-));
+USING (
+    EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid()) OR
+    EXISTS (SELECT 1 FROM public.roles_superadmin WHERE id = auth.uid())
+);
 
 -- Indexing
 CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON public.user_badges(user_id);

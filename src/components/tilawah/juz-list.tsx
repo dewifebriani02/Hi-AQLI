@@ -83,13 +83,15 @@ interface JuzListProps {
   userProgress?: any[];
   variant?: "mufradat" | "tilawah";
   selectedReciterId?: number;
+  mode?: "ayat" | "halaman";
 }
 
 export function JuzList({ 
   baseUrl = "/mufradat", 
   userProgress = [], 
   variant = "mufradat",
-  selectedReciterId = 7
+  selectedReciterId = 7,
+  mode = "halaman"
 }: JuzListProps) {
   const [search, setSearch] = useState("");
   const [playingJuz, setPlayingJuz] = useState<number | null>(null);
@@ -295,7 +297,15 @@ export function JuzList({
                       "flex-1 flex flex-col p-4 transition-all",
                       isJuzUnlocked ? "cursor-pointer" : "pointer-events-none"
                     )}
-                    onClick={() => isJuzUnlocked && setExpandedJuz(isExpanded ? null : j)}
+                    onClick={() => {
+                      if (!isJuzUnlocked) return;
+                      if (mode === 'ayat') {
+                        // Directly navigate to first verse
+                        window.location.href = `/mufradat/${mapping.surah}/${mapping.verse}`;
+                      } else {
+                        setExpandedJuz(isExpanded ? null : j);
+                      }
+                    }}
                   >
                     {!isJuzUnlocked && (
                       <div className="absolute top-2 right-2 p-1.5 bg-slate-400/20 rounded-full">

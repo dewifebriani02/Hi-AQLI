@@ -45,7 +45,8 @@ import {
   ThumbsUp,
   Flame,
   Award,
-  GraduationCap
+  GraduationCap,
+  RotateCcw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -449,15 +450,18 @@ function MufradatPageContent() {
       )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="surah" className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
-            <Layers className="w-4 h-4" /> Ayat
+        <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
+          <TabsTrigger value="surah" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
+            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Surat
           </TabsTrigger>
-          <TabsTrigger value="juz" className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
-            <BookOpen className="w-4 h-4" /> Halaman
+          <TabsTrigger value="juz" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
+            <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Juz
           </TabsTrigger>
-          <TabsTrigger value="rank" className="font-bold gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white rounded-lg transition-all">
-            <Trophy className="w-4 h-4" /> Juara
+          <TabsTrigger value="murajaah" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
+            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Halaman
+          </TabsTrigger>
+          <TabsTrigger value="rank" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-amber-600 data-[state=active]:text-white rounded-lg transition-all">
+            <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Juara
           </TabsTrigger>
         </TabsList>
         
@@ -475,6 +479,15 @@ function MufradatPageContent() {
           <JuzList 
             userProgress={progress} 
             selectedReciterId={selectedReciterId} 
+            mode="ayat"
+          />
+        </TabsContent>
+
+        <TabsContent value="murajaah" className="focus-visible:outline-none">
+          <JuzList 
+            userProgress={progress} 
+            selectedReciterId={selectedReciterId} 
+            mode="halaman"
           />
         </TabsContent>
 

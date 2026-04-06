@@ -37,7 +37,8 @@ import {
   UserPlus,
   ChevronRight,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Calendar
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
