@@ -23,7 +23,8 @@ import {
   ArrowRight,
   Flame,
   Award,
-  BookOpen
+  BookOpen,
+  Play
 } from "lucide-react";
 import Link from "next/link";
 import { format, differenceInSeconds } from "date-fns";
@@ -166,7 +167,7 @@ export default function MufradatMabarRoomPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-4">
          {/* LEFT CONTENT: Lobby or Summary */}
          <div className="lg:col-span-8 space-y-6">
-            {session.status === 'pending' && (
+            {session.status === 'pending' ? (
                <div className="relative overflow-hidden rounded-[2.5rem] bg-white border shadow-xl p-8 sm:p-12 text-center space-y-8">
                   <div className="relative z-10 space-y-4">
                      <div className="w-24 h-24 bg-[#800000]/10 text-[#800000] rounded-full flex items-center justify-center mx-auto shadow-inner">
