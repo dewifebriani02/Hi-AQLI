@@ -36,7 +36,6 @@ import {
   Heart, 
   Trophy, 
   Zap, 
-  Award, 
   Star,
   Users,
   Search,

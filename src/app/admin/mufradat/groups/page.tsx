@@ -35,8 +35,9 @@ import {
   UserMinus,
   X,
   UserPlus,
-  Calendar,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -75,6 +76,19 @@ export default function MufradatGroupsPage() {
   const [isViewMembersOpen, setIsViewMembersOpen] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  
+  // NEW CRUD STATES
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newGroup, setNewGroup] = useState({
+    name: "",
+    start_date: new Date().toISOString().split('T')[0],
+    musyrifah_name: "",
+    musyrifah_phone: "",
+    muallimah_name: "",
+    muallimah_phone: "",
+    whatsapp_link: ""
+  });
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const { data: groups, isLoading, refresh } = useCollection("mufradat_groups", {
     orderBy: { column: 'created_at', ascending: true }
@@ -266,25 +280,63 @@ export default function MufradatGroupsPage() {
     }
   };
 
-  const handleAddGroup = async () => {
+  const handleCreateGroup = async () => {
+    if (!newGroup.name) {
+      toast({ variant: "destructive", title: "Nama grup wajib diisi" });
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      const nextNum = (groups?.length || 0) + 1;
       const { error } = await supabase
         .from('mufradat_groups')
         .insert({
-          name: `Grup ${nextNum}`,
-          whatsapp_link: "",
+          name: newGroup.name,
+          whatsapp_link: newGroup.whatsapp_link,
           member_count: 0,
-          start_date: new Date().toISOString().split('T')[0]
+          start_date: newGroup.start_date || null,
+          musyrifah_name: newGroup.musyrifah_name,
+          musyrifah_phone: newGroup.musyrifah_phone,
+          muallimah_name: newGroup.muallimah_name,
+          muallimah_phone: newGroup.muallimah_phone
         });
 
       if (error) throw error;
 
-      toast({ title: "Grup Baru Dibuat", description: `Grup ${nextNum} berhasil ditambahkan.` });
+      toast({ title: "Grup Berhasil Dibuat", description: `Masyallah, ${newGroup.name} telah siap!` });
+      setIsCreateDialogOpen(false);
       refresh();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal membuat grup", description: e.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteGroup = async (id: string) => {
+    setIsProcessing(true);
+    try {
+      // 1. Set mufradat_group_id to null for all members
+      const { error: memberErr } = await supabase
+        .from('users')
+        .update({ mufradat_group_id: null })
+        .eq('mufradat_group_id', id);
+      
+      if (memberErr) throw memberErr;
+
+      // 2. Delete the group
+      const { error: groupErr } = await supabase
+        .from('mufradat_groups')
+        .delete()
+        .eq('id', id);
+
+      if (groupErr) throw groupErr;
+
+      toast({ title: "Grup Dihapus", description: "Grup dan relasi peserta telah dihapus." });
+      setConfirmDeleteId(null);
+      refresh();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal menghapus", description: e.message });
     } finally {
       setIsProcessing(false);
     }
@@ -316,8 +368,8 @@ export default function MufradatGroupsPage() {
             <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-widest font-bold">Hi Mufradat • Batch 50 Thalibah</p>
           </div>
         </div>
-        <Button onClick={handleAddGroup} disabled={isProcessing} className="bg-[#800000] hover:bg-[#800000]/90 font-black h-12 px-6 rounded-xl shadow-lg gap-2 w-full sm:w-auto">
-          {isProcessing ? <Loader2 className="animate-spin w-5 h-5" /> : <Plus className="w-5 h-5" />}
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#800000] hover:bg-[#800000]/90 font-black h-12 px-6 rounded-xl shadow-lg gap-2 w-full sm:w-auto">
+          <Plus className="w-5 h-5" />
           TAMBAH GRUP BARU
         </Button>
       </div>
@@ -533,8 +585,16 @@ export default function MufradatGroupsPage() {
                                 <Link href={`/admin/mufradat?groupId=${group.id}`}>Monitor</Link>
                              </Button>
                              <Button variant="outline" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3 border-2" onClick={() => handleStartEdit(group)}>
-                                Edit
-                             </Button>
+                                 Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 text-[9px] sm:text-[10px] font-black uppercase text-rose-600 hover:bg-rose-50 px-2 sm:px-3" 
+                                onClick={() => setConfirmDeleteId(group.id)}
+                              >
+                                 <Trash2 className="w-3.5 h-3.5 mr-1" /> Hapus
+                              </Button>
                           </div>
                         )}
                       </TableCell>
@@ -546,6 +606,94 @@ export default function MufradatGroupsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* CREATE GROUP DIALOG */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-md p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+           <DialogHeader className="p-8 bg-[#800000] text-white">
+              <DialogTitle className="text-2xl font-black font-headline uppercase">Tambah Grup Baru</DialogTitle>
+              <p className="text-white/60 text-xs font-medium">Lengkapi detail grup thalibah Hi Mufradat Anda.</p>
+           </DialogHeader>
+           <CardContent className="p-8 space-y-4">
+              <div className="space-y-1.5">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Grup</label>
+                 <Input 
+                   placeholder="Contoh: Batch 5 - Ummahat" 
+                   value={newGroup.name}
+                   onChange={e => setNewGroup(v => ({ ...v, name: e.target.value }))}
+                   className="h-12 rounded-xl focus:border-[#800000]/30"
+                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Musyrifah</label>
+                    <Input 
+                      placeholder="Nama"
+                      value={newGroup.musyrifah_name}
+                      onChange={e => setNewGroup(v => ({ ...v, musyrifah_name: e.target.value }))}
+                      className="h-11 text-xs"
+                    />
+                 </div>
+                 <div className="space-y-1.5 pt-5.5">
+                    <Input 
+                      placeholder="No. WA"
+                      value={newGroup.musyrifah_phone}
+                      onChange={e => setNewGroup(v => ({ ...v, musyrifah_phone: e.target.value }))}
+                      className="h-11 text-xs"
+                    />
+                 </div>
+              </div>
+              <div className="space-y-1.5">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tanggal Mulai</label>
+                 <Input 
+                   type="date"
+                   value={newGroup.start_date}
+                   onChange={e => setNewGroup(v => ({ ...v, start_date: e.target.value }))}
+                   className="h-11"
+                 />
+              </div>
+              <Button 
+                onClick={handleCreateGroup} 
+                className="w-full h-14 bg-[#800000] hover:bg-[#800000]/90 font-black text-lg rounded-2xl shadow-xl mt-4"
+                disabled={isProcessing}
+              >
+                {isProcessing ? <Loader2 className="animate-spin w-5 h-5" /> : 'SIMPAN GRUP BARU'}
+              </Button>
+           </CardContent>
+        </DialogContent>
+      </Dialog>
+
+      {/* DELETE CONFIRMATION DIALOG */}
+      <Dialog open={!!confirmDeleteId} onOpenChange={() => setConfirmDeleteId(null)}>
+        <DialogContent className="max-w-sm p-8 text-center rounded-3xl border-none shadow-2xl">
+           <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8" />
+           </div>
+           <DialogHeader>
+              <DialogTitle className="text-xl font-black text-slate-900 leading-tight">HAPUS GRUP INI?</DialogTitle>
+              <p className="text-xs font-medium text-slate-500 mt-2 px-4">
+                Masyallah, apakah Ukhti yakin? Peserta di dalam grup ini akan menjadi 'Tanpa Grup' (Ungrouped).
+              </p>
+           </DialogHeader>
+           <div className="flex flex-col gap-3 mt-8">
+              <Button 
+                variant="destructive" 
+                className="h-12 rounded-2xl font-black text-sm shadow-lg bg-rose-600 hover:bg-rose-700" 
+                onClick={() => confirmDeleteId && handleDeleteGroup(confirmDeleteId)}
+                disabled={isProcessing}
+              >
+                YA, HAPUS GRUP
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="h-10 text-slate-400 font-bold" 
+                onClick={() => setConfirmDeleteId(null)}
+              >
+                TIDAK, BATALKAN
+              </Button>
+           </div>
+        </DialogContent>
+      </Dialog>
 
       {/* VIEW MEMBERS MODAL */}
       <Dialog open={isViewMembersOpen} onOpenChange={setIsViewMembersOpen}>

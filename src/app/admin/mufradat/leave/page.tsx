@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export default function AdminLeaveManagementPage() {
   const { toast } = useToast();
@@ -435,16 +436,6 @@ export default function AdminLeaveManagementPage() {
           Menyetujui permohonan cuti akan otomatis memotong sisa kuota cuti thalibah sebanyak 1 bulan dan menonaktifkan tagihan untuk periode yang dipilih. Thalibah akan tetap terdaftar dalam grup namun tidak dapat mengakses ayat hingga periode cuti berakhir.
         </p>
       </div>
-    </div>
-
-      <div className="bg-emerald-50 p-6 rounded-2xl border-2 border-dashed border-emerald-200">
-        <h4 className="flex items-center gap-2 font-black text-emerald-800 mb-2 uppercase tracking-tight">
-          <Coffee className="w-5 h-5" /> Catatan Admin:
-        </h4>
-        <p className="text-xs text-emerald-900/70 leading-relaxed font-bold">
-          Menyetujui permohonan cuti akan otomatis memotong sisa kuota cuti thalibah sebanyak 1 bulan dan menonaktifkan tagihan untuk periode yang dipilih. Thalibah akan tetap terdaftar dalam grup namun tidak dapat mengakses ayat hingga periode cuti berakhir.
-        </p>
-      </div>
-    </div>
+     </div>
   );
 }
