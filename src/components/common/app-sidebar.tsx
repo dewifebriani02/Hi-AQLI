@@ -41,6 +41,7 @@ const adminItems = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
   { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
   { href: "/admin/users", label: "Manajemen Users", icon: UserCog },
+  { href: "/admin/finance", label: "Monitor Keuangan", icon: BarChart3 },
   { href: "/admin/vouchers", label: "Manajemen Voucher", icon: ShieldCheck },
   { 
     label: "Kelola Hi Mufradat", 
@@ -52,7 +53,6 @@ const adminItems = [
       { href: "/admin/mufradat/juz-access", label: "Hak Akses Juz" },
       { href: "/admin/registrations", label: "Verifikasi Pembayaran" },
       { href: "/admin/mufradat/reports", label: "Laporan Kinerja" },
-      { href: "/admin/mufradat/finance", label: "Monitor Keuangan" },
     ]
   },
   { 

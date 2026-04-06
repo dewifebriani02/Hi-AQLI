@@ -57,6 +57,11 @@ function MufradatQuizContent() {
   const [surahInfo, setSurahInfo] = useState<{ verses_count: number } | null>(null);
   const [pageId, setPageId] = useState<number | null>(null);
   const [nextVersePage, setNextVersePage] = useState<number | null>(null);
+  
+  // Sprint Mode states
+  const [isSprintMode, setIsSprintMode] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(10);
+  const [timerActive, setTimerActive] = useState(false);
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
@@ -169,7 +174,7 @@ function MufradatQuizContent() {
     fetchQuestions();
   }, [id, verseId]);
 
-  // Timer logic
+  // Main Timer logic
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (!isFinished && !loading && (user || id === '1' || id === '112' || id === '113' || id === '114')) {
@@ -177,6 +182,23 @@ function MufradatQuizContent() {
     }
     return () => clearInterval(interval);
   }, [isFinished, loading, user, id]);
+
+  // Sprint Mode Countdown logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (timerActive && isSprintMode && !isFinished && !loading && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft(t => t - 1), 1000);
+    } else if (timeLeft === 0 && timerActive && isSprintMode) {
+      // Time's up! Handle as wrong answer
+      handleAnswer("__timeout__");
+    }
+    return () => clearInterval(interval);
+  }, [timerActive, isSprintMode, timeLeft, isFinished, loading]);
+
+  const startQuiz = () => {
+    setTimerActive(true);
+    setTimeLeft(10);
+  };
 
   const handleAnswer = (answer: string) => {
     if (selectedAnswer || isFinished) return;
@@ -186,11 +208,15 @@ function MufradatQuizContent() {
     
     setSelectedAnswer(answer);
     setIsCorrect(correct);
+    setTimerActive(false); // Pause countdown
     
     if (correct) {
       playSfx('correct');
       setScore(s => s + 1);
     } else {
+      if (answer === "__timeout__") {
+        toast({ title: "WAKTU HABIS!", variant: "destructive", duration: 1000 });
+      }
       playSfx('incorrect');
       setWrongWords(prev => [...prev, currentQ]);
     }
@@ -200,10 +226,11 @@ function MufradatQuizContent() {
         setCurrentIdx(prev => prev + 1);
         setSelectedAnswer(null);
         setIsCorrect(null);
+        setTimeLeft(10); // Reset countdown for next question
+        if (isSprintMode) setTimerActive(true);
       } else {
         setIsFinished(true);
         const finalScore = score + (correct ? 1 : 0);
-        // Important: use the state + current if it WAS wrong to capture the last wrong item
         const finalWrongWords = correct ? [...wrongWords] : [...wrongWords, currentQ];
         
         if (finalScore === questions.length) playSfx('perfect');
@@ -238,22 +265,84 @@ function MufradatQuizContent() {
 
       if (insertError) throw insertError;
 
-      // Update points for perfect score
+      // --- STREAK & POINTS LOGIC ---
       if (isPassed) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('points')
-          .eq('id', user.id)
-          .maybeSingle();
+        // 1. Calculate Streak
+        const now = new Date();
+        const lastQuizAt = userData?.last_mufradat_quiz_at ? new Date(userData.last_mufradat_quiz_at) : null;
+        let newStreak = userData?.mufradat_streak_count || 0;
+
+        if (!lastQuizAt) {
+          newStreak = 1;
+        } else {
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+          const lastDate = new Date(lastQuizAt.getFullYear(), lastQuizAt.getMonth(), lastQuizAt.getDate()).getTime();
+          const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+
+          if (diffDays === 1) newStreak += 1;
+          else if (diffDays > 1) newStreak = 1;
+        }
+
+        // 2. Update Profile (Points + Streak + Weekly League)
+        const newWeeklyPoints = (userData?.mufradat_weekly_points || 0) + 10;
+        let newLeague = userData?.mufradat_league || 'Perunggu';
         
-        const currentPoints = profile?.points || 0;
+        if (newWeeklyPoints > 1000) newLeague = 'Intan';
+        else if (newWeeklyPoints > 300) newLeague = 'Emas';
+        else if (newWeeklyPoints > 100) newLeague = 'Perak';
+
+        if (newLeague !== userData?.mufradat_league) {
+          toast({ 
+            title: `NAIK KASTA: ${newLeague.toUpperCase()}!`, 
+            description: "Masyallah! Ukhti naik ke liga yang lebih tinggi.", 
+            duration: 5000 
+          });
+        }
+
         await supabase
           .from('users')
-          .update({ points: currentPoints + 10 })
+          .update({ 
+            points: (userData?.points || 0) + 10,
+            mufradat_streak_count: newStreak,
+            last_mufradat_quiz_at: now.toISOString(),
+            mufradat_weekly_points: newWeeklyPoints,
+            mufradat_league: newLeague,
+            last_league_reset_at: userData?.last_league_reset_at || now.toISOString()
+          })
           .eq('id', user.id);
-          
-        toast({ title: "Masyallah! +10 Poin", description: "Progres hafalan berhasil disimpan." });
+
+        // 3. --- BADGE AWARD LOGIC ---
+        const awardBadge = async (type: string, title: string, icon: string) => {
+           const { data: existing } = await supabase.from('user_badges').select('id').eq('user_id', user.id).eq('badge_type', type).maybeSingle();
+           if (!existing) {
+             await supabase.from('user_badges').insert({ user_id: user.id, badge_type: type });
+             toast({ 
+               title: `LENCANA BARU: ${title}`, 
+               description: "Masyallah! Ukhti mendapatkan penghargaan baru.", 
+               duration: 5000 
+             });
+           }
+        };
+
+        // Check Streak Badge
+        if (newStreak >= 7) await awardBadge('streak_7', 'Pejuang Konsisten (7 Hari)', '🔥');
+        
+        // Check Subuh Warrior (04:00 - 06:00)
+        const hour = now.getHours();
+        if (hour >= 4 && hour < 6) await awardBadge('subuh_warrior', 'Bintang Subuh', '🌅');
+
+        // Check Total Passed (Hafidzah Muda)
+        const { count } = await supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_passed', true);
+        if ((count || 0) >= 100) await awardBadge('hafidzah_100', 'Hafidzah Muda (100 Kuis)', '🎓');
+        
+        toast({ 
+          title: "Masyallah! +10 Poin", 
+          description: newStreak > 1 
+            ? `Konsistensi Ukhti hari ini: ${newStreak} HARI 🔥` 
+            : "Progres hafalan berhasil disimpan." 
+        });
       }
+      // --- END STREAK & BADGE LOGIC ---
 
       // Refresh leaderboard after save
       refreshLeaderboard();
@@ -282,6 +371,8 @@ function MufradatQuizContent() {
     setTotalTime(0);
     setWrongWords([]);
     setAttempts(prev => prev + 1);
+    setTimeLeft(10);
+    setTimerActive(isSprintMode);
   };
 
   if (loading || isUserLoading || isUserDataLoading || isLeaderboardLoading) {
@@ -479,34 +570,110 @@ function MufradatQuizContent() {
 
       <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1.5 bg-slate-100 [&>div]:bg-[#D4AF37]" />
 
-      <Card className="border-none shadow-xl overflow-hidden rounded-3xl bg-white">
-        <CardContent className="p-10 text-center bg-slate-50 flex flex-col items-center gap-6">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apa arti dari kata berikut?</p>
-          <div className="text-5xl sm:text-6xl font-arabic text-[#800000]">{questions[currentIdx]?.arabic}</div>
-        </CardContent>
-        <CardContent className="p-6 sm:p-8 grid grid-cols-1 gap-3">
-          {questions[currentIdx]?.options.map((opt, i) => (
-            <Button
-              key={i}
-              variant="outline"
-              disabled={!!selectedAnswer}
-              onClick={() => handleAnswer(opt)}
-              className={cn(
-                "h-auto py-5 text-lg font-bold transition-all border-2 rounded-2xl justify-between px-6",
-                selectedAnswer === opt && isCorrect === true && "bg-emerald-50 border-emerald-500 text-emerald-700",
-                selectedAnswer === opt && isCorrect === false && "bg-rose-50 border-rose-500 text-rose-700",
-                selectedAnswer && opt === questions[currentIdx].correct && isCorrect === false && "bg-emerald-50 border-emerald-500 text-emerald-700",
-                !selectedAnswer && "hover:border-[#D4AF37] hover:bg-slate-50"
-              )}
-            >
-              <span>{opt}</span>
-              {selectedAnswer === opt && isCorrect === true && <CheckCircle2 className="w-5 h-5" />}
-              {selectedAnswer === opt && isCorrect === false && <XCircle className="w-5 h-5" />}
-              {selectedAnswer && opt === questions[currentIdx].correct && isCorrect === false && <CheckCircle2 className="w-5 h-5 opacity-50" />}
-            </Button>
-          ))}
-        </CardContent>
-      </Card>
+      {!timerActive && currentIdx === 0 && !isFinished ? (
+        <Card className="border-4 border-[#D4AF37]/20 shadow-2xl overflow-hidden rounded-3xl bg-white p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto text-[#D4AF37]">
+             <Zap className="w-10 h-10 fill-current" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black font-headline text-[#800000]">SIAP MULAI?</h2>
+            <p className="text-sm font-medium text-muted-foreground">Pilih mode kuis Anda sebelum memulai.</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+             <button 
+                onClick={() => setIsSprintMode(false)}
+                className={cn(
+                  "p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3",
+                  !isSprintMode ? "border-[#800000] bg-[#800000]/5 shadow-lg" : "border-slate-100 hover:border-[#800000]/20"
+                )}
+             >
+                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", !isSprintMode ? "bg-[#800000] text-white" : "bg-slate-100 text-slate-400")}>
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-xs font-black uppercase">Mode Santai</span>
+                  <span className="text-[10px] font-medium text-slate-400">Tanpa Batas Waktu</span>
+                </div>
+             </button>
+
+             <button 
+                onClick={() => setIsSprintMode(true)}
+                className={cn(
+                  "p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3",
+                  isSprintMode ? "border-orange-500 bg-orange-50 shadow-lg" : "border-slate-100 hover:border-orange-200"
+                )}
+             >
+                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", isSprintMode ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-400")}>
+                  <Timer className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-xs font-black uppercase text-orange-600">Flashcard Sprint</span>
+                  <span className="text-[10px] font-black text-orange-400">10 DETIK / SOAL</span>
+                </div>
+             </button>
+          </div>
+
+          <Button 
+            onClick={startQuiz}
+            className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-16 rounded-2xl text-lg shadow-xl"
+          >
+            MULAI KUIS SEKARANG
+          </Button>
+        </Card>
+      ) : (
+        <Card className="border-none shadow-xl overflow-hidden rounded-3xl bg-white relative">
+          {/* SPRINT TIMER OVERLAY */}
+          {isSprintMode && timerActive && (
+            <div className="absolute top-0 left-0 w-full h-1 bg-slate-100 z-10">
+               <div 
+                  className={cn(
+                    "h-full transition-all duration-1000",
+                    timeLeft > 5 ? "bg-orange-500" : "bg-rose-600"
+                  )}
+                  style={{ width: `${(timeLeft / 10) * 100}%` }}
+               />
+            </div>
+          )}
+
+          <CardContent className="p-10 text-center bg-slate-50 flex flex-col items-center gap-6 relative">
+            <div className="flex items-center justify-between w-full absolute top-4 px-6 left-0">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apa arti dari kata berikut?</p>
+               {isSprintMode && (
+                 <Badge variant="outline" className={cn(
+                   "font-black text-sm px-3 py-1 border-2 transition-all animate-in zoom-in",
+                   timeLeft > 5 ? "border-orange-500 text-orange-600 bg-orange-50" : "border-rose-600 text-rose-600 bg-rose-50 scale-110"
+                 )}>
+                   <Timer className="w-4 h-4 mr-1.5" /> 00:{timeLeft.toString().padStart(2, '0')}
+                 </Badge>
+               )}
+            </div>
+            <div className="text-5xl sm:text-6xl font-arabic text-[#800000] mt-8">{questions[currentIdx]?.arabic}</div>
+          </CardContent>
+          <CardContent className="p-6 sm:p-8 grid grid-cols-1 gap-3">
+            {questions[currentIdx]?.options.map((opt, i) => (
+              <Button
+                key={i}
+                variant="outline"
+                disabled={!!selectedAnswer}
+                onClick={() => handleAnswer(opt)}
+                className={cn(
+                  "h-auto py-5 text-lg font-bold transition-all border-2 rounded-2xl justify-between px-6",
+                  selectedAnswer === opt && isCorrect === true && "bg-emerald-50 border-emerald-500 text-emerald-700",
+                  selectedAnswer === opt && isCorrect === false && "bg-rose-50 border-rose-500 text-rose-700",
+                  selectedAnswer && opt === questions[currentIdx].correct && isCorrect === false && "bg-emerald-50 border-emerald-500 text-emerald-700",
+                  !selectedAnswer && "hover:border-[#D4AF37] hover:bg-slate-50"
+                )}
+              >
+                <span>{opt}</span>
+                {selectedAnswer === opt && isCorrect === true && <CheckCircle2 className="w-5 h-5" />}
+                {selectedAnswer === opt && isCorrect === false && <XCircle className="w-5 h-5" />}
+                {selectedAnswer && opt === questions[currentIdx].correct && isCorrect === false && <CheckCircle2 className="w-5 h-5 opacity-50" />}
+              </Button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <p className="text-center text-[10px] text-muted-foreground italic">
         Pilih jawaban yang paling tepat sesuai makna dalam ayat ini.

@@ -51,6 +51,9 @@ import {
   Code2,
   Trash2,
   Search,
+  Gift,
+  BookOpen,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -96,6 +99,8 @@ export default function MufradatFinancePage() {
     if (!allRegistrations) return [];
     return allRegistrations.filter(
       (reg) =>
+        reg.is_premium || 
+        reg.registration_fee > 0 ||
         reg.halaqah_id?.startsWith("mufradat-") ||
         reg.metadata?.program === "mufradat" ||
         reg.halaqah_title?.toLowerCase().includes("mufradat"),
@@ -124,17 +129,53 @@ export default function MufradatFinancePage() {
           month: monthKey,
           totalRevenue: 0,
           totalUniqueCode: 0,
+          totalRegGross: 0,
+          totalRegDiscounts: 0,
+          referralCommissions: {}, // referrer_id -> { name, amount }
+          registrationPayers: [], // { name, amount, totalPaid }
           groups: {},
           isDisbursed: payouts?.some((p: any) => p.billing_month === monthKey),
         };
       }
 
       const amount = Number(reg.amount) || 0;
-      // Fallback: If unique_code is missing/0, use the tail of amount (last 3 digits)
       const uniqueCode = Number(reg.unique_code) || (amount % 1000);
+      const regFeeGross = Number(reg.registration_fee) || 0;
+      const refDiscount = Number(reg.referral_discount_amount) || 0;
 
+      // Tracking Totals
       months[monthKey].totalRevenue += amount;
       months[monthKey].totalUniqueCode += uniqueCode;
+      months[monthKey].totalRegGross += regFeeGross;
+      months[monthKey].totalRegDiscounts += refDiscount;
+
+      if (regFeeGross > 0) {
+        months[monthKey].registrationPayers.push({
+          name: reg.username || reg.metadata?.name || "Thalibah",
+          amount: regFeeGross,
+          totalPaid: amount,
+          isFirst: reg.is_first_registration
+        });
+      }
+
+      // Handle Referral Commissions (Referrer gets 5k)
+      if (reg.referral_code_used) {
+        const referrer = usersData?.find(u => u.referral_code === reg.referral_code_used);
+        if (referrer) {
+          if (!months[monthKey].referralCommissions[referrer.id]) {
+            months[monthKey].referralCommissions[referrer.id] = {
+              name: referrer.username || "Referrer",
+              amount: 0,
+              bank: {
+                name: referrer.bank_name,
+                no: referrer.bank_account_number,
+                holder: referrer.bank_account_holder
+              }
+            };
+          }
+          months[monthKey].referralCommissions[referrer.id].amount += 5000;
+        }
+      }
 
       const groupId = reg.metadata?.mufradat_group_id || "unassigned";
       if (!months[monthKey].groups[groupId]) {
@@ -150,6 +191,10 @@ export default function MufradatFinancePage() {
 
       months[monthKey].groups[groupId].revenue += amount;
       months[monthKey].groups[groupId].uniqueCode += uniqueCode;
+      
+      // Group-specific registration data (to exclude it from group revenue splits)
+      if (!months[monthKey].groups[groupId].regNet) months[monthKey].groups[groupId].regNet = 0;
+      months[monthKey].groups[groupId].regNet += (regFeeGross - refDiscount);
     });
 
     return months;
@@ -165,7 +210,10 @@ export default function MufradatFinancePage() {
   const calculateSplits = (monthData: any) => {
     const totalRevenue = monthData.totalRevenue;
     const totalUniqueCode = monthData.totalUniqueCode;
-    const baseInfaq = totalRevenue - totalUniqueCode;
+    const totalRegNet = monthData.totalRegGross - monthData.totalRegDiscounts;
+    
+    // Infaq Bersih is after Unique Code and the portion of payment that belongs to Registration
+    const baseInfaq = totalRevenue - totalUniqueCode - totalRegNet;
 
     // Splits
     const musyrifahTotal = baseInfaq * 0.4;
@@ -177,7 +225,8 @@ export default function MufradatFinancePage() {
     // Breakdown per group
     const groupsList = Object.entries(monthData.groups).map(
       ([id, g]: [string, any]) => {
-        const gInfaq = g.revenue - g.uniqueCode;
+        const gRegNet = g.regNet || 0;
+        const gInfaq = g.revenue - g.uniqueCode - gRegNet;
         return {
           id,
           ...g,
@@ -188,14 +237,18 @@ export default function MufradatFinancePage() {
     );
 
     return {
-      totalRevenue,
       totalUniqueCode,
+      totalRegGross: monthData.totalRegGross,
+      totalRegDiscounts: monthData.totalRegDiscounts,
+      totalRegNet,
+      referralCommissions: monthData.referralCommissions,
+      registrationPayers: monthData.registrationPayers,
       baseInfaq,
-      musyrifahTotal,
-      muallimahTotal,
-      devTotal,
-      hiBerbagiTotal,
-      operationsTotal,
+      musyrifahTotal: baseInfaq * 0.4,
+      muallimahTotal: baseInfaq * 0.1,
+      devTotal: baseInfaq * 0.2,
+      hiBerbagiTotal: baseInfaq * 0.1 + totalUniqueCode,
+      operationsTotal: baseInfaq * 0.2,
       groups: groupsList,
     };
   };
@@ -500,7 +553,8 @@ export default function MufradatFinancePage() {
                   mufradatRegistrations.reduce((acc, r) => {
                     const amt = Number(r.amount) || 0;
                     const code = Number(r.unique_code) || (amt % 1000);
-                    return acc + (amt - code) * 0.2;
+                    const netReg = (Number(r.registration_fee) || 0) - (Number(r.referral_discount_amount) || 0);
+                    return acc + (amt - code - netReg) * 0.2;
                   }, 0),
                 )}
               </p>
@@ -509,6 +563,29 @@ export default function MufradatFinancePage() {
               <Building2 className="w-4 h-4 text-[#D4AF37]" />
               <span className="text-[10px] font-bold uppercase tracking-widest">
                 Operasional Yayasan
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-xl bg-blue-900 text-white overflow-hidden">
+          <CardContent className="p-6 flex flex-col justify-between h-full">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] mb-1">
+                Saldo Pendaftaran
+              </p>
+              <p className="text-3xl font-black tracking-tighter">
+                {FORMATTER.format(
+                  mufradatRegistrations.reduce((acc, r) => {
+                    return acc + (Number(r.registration_fee) || 0) - (Number(r.referral_discount_amount) || 0);
+                  }, 0),
+                )}
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-[#D4AF37]" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                Kas Pendaftaran
               </span>
             </div>
           </CardContent>
@@ -600,6 +677,15 @@ export default function MufradatFinancePage() {
                       </p>
                     </div>
                     <div className="h-8 w-px bg-slate-200 hidden md:block" />
+                    <div className="text-right hidden md:block">
+                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-0.5">
+                        Net Pendaftaran
+                      </p>
+                      <p className="text-lg font-black text-blue-800 tracking-tighter">
+                        {FORMATTER.format(splits.totalRegNet)}
+                      </p>
+                    </div>
+                    <div className="h-8 w-px bg-slate-200 hidden md:block" />
                     {isExpanded ? (
                       <ChevronUp className="w-6 h-6 text-slate-400" />
                     ) : (
@@ -615,9 +701,9 @@ export default function MufradatFinancePage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                       <div className="p-4 bg-slate-50 rounded-xl border-b-4 border-slate-300">
                         <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">
-                          Infaq Bersih
+                          Infaq Bulanan Bersih
                         </p>
-                        <p className="text-sm font-black text-slate-700">
+                        <p className="text-sm font-black text-[#800000]">
                           {FORMATTER.format(splits.baseInfaq)}
                         </p>
                       </div>
@@ -651,6 +737,14 @@ export default function MufradatFinancePage() {
                         </p>
                         <p className="text-sm font-black text-emerald-900">
                           {FORMATTER.format(splits.hiBerbagiTotal)}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-blue-50 rounded-xl border-b-4 border-blue-300">
+                        <p className="text-[9px] font-bold text-blue-800 uppercase mb-1">
+                          Net Pendaftaran
+                        </p>
+                        <p className="text-sm font-black text-blue-900">
+                          {FORMATTER.format(splits.totalRegNet)}
                         </p>
                       </div>
                     </div>
@@ -717,6 +811,115 @@ export default function MufradatFinancePage() {
                           </TableBody>
                         </Table>
                       </div>
+                    </div>
+
+                    {/* REGISTRATION & REFERRAL REPORT SECTION */}
+                    <div className="p-4 rounded-3xl bg-slate-50/50 border-2 border-dashed border-slate-200">
+                       <div className="flex items-center gap-2 mb-4 px-2">
+                          <Gift className="w-5 h-5 text-blue-600" />
+                          <h4 className="text-xs font-black uppercase tracking-widest text-slate-800">Laporan Pendaftaran & Referral</h4>
+                       </div>
+                       
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="p-4 rounded-2xl bg-white border shadow-sm">
+                             <p className="text-[9px] font-black uppercase text-slate-400 mb-1 leading-none">Pendaftaran (Gross)</p>
+                             <p className="text-lg font-black text-slate-800 leading-none">{FORMATTER.format(splits.totalRegGross)}</p>
+                             <p className="text-[8px] font-bold text-slate-400 mt-2 italic leading-none">Dihitung Rp 10rb per thalibah baru</p>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-white border shadow-sm border-amber-100">
+                             <p className="text-[9px] font-black uppercase text-amber-600 mb-1 leading-none">Potongan & Komisi Ref</p>
+                             <div className="flex items-baseline justify-between mb-1">
+                                <p className="text-lg font-black text-amber-700 leading-none">{FORMATTER.format(splits.totalRegDiscounts + (Object.values(splits.referralCommissions).reduce((a,c:any)=>a+c.amount,0)))}</p>
+                                <Badge className="bg-amber-100 text-amber-700 text-[8px] font-black border-none h-4">5rb/Ref</Badge>
+                             </div>
+                             <p className="text-[8px] font-bold text-slate-400 italic leading-none">Total Diskon User + Komisi Referrer</p>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-200">
+                             <p className="text-[9px] font-black uppercase text-blue-100 mb-1 leading-none">Net Pendaftaran</p>
+                             <p className="text-lg font-black leading-none">{FORMATTER.format(splits.totalRegNet)}</p>
+                             <p className="text-[8px] font-bold text-blue-200 mt-2 italic leading-none">Kas operasional pendaftaran</p>
+                          </div>
+                       </div>
+
+                       {Object.keys(splits.referralCommissions).length > 0 && (
+                          <div className="mt-4">
+                             <div className="flex items-center gap-2 mb-2 px-2">
+                                <Users className="w-3.5 h-3.5 text-emerald-600" />
+                                <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-700">Daftar Komisi Referral</h5>
+                             </div>
+                             <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+                                <Table>
+                                   <TableHeader className="bg-slate-50">
+                                      <TableRow>
+                                         <TableHead className="text-[9px] font-black uppercase py-2">Referrer</TableHead>
+                                         <TableHead className="text-[9px] font-black uppercase">Rekening</TableHead>
+                                         <TableHead className="text-right pr-6 text-[9px] font-black uppercase">Komisi</TableHead>
+                                      </TableRow>
+                                   </TableHeader>
+                                   <TableBody>
+                                      {Object.entries(splits.referralCommissions).map(([id, data]: [string, any]) => (
+                                         <TableRow key={id} className="hover:bg-slate-50/50">
+                                            <TableCell className="py-2.5">
+                                               <span className="text-[11px] font-black text-slate-800">{data.name}</span>
+                                            </TableCell>
+                                            <TableCell className="py-2.5">
+                                               {data.bank?.no ? (
+                                                  <span className="text-[10px] font-black text-slate-500">{data.bank.name} {data.bank.no}</span>
+                                               ) : (
+                                                  <span className="text-[9px] text-rose-500 font-bold">BELUM ISI REKENING</span>
+                                               )}
+                                            </TableCell>
+                                            <TableCell className="text-right pr-6 py-2.5">
+                                               <span className="text-xs font-black text-emerald-700">{FORMATTER.format(data.amount)}</span>
+                                            </TableCell>
+                                         </TableRow>
+                                      ))}
+                                   </TableBody>
+                                </Table>
+                             </div>
+                          </div>
+                       )}
+
+                       {splits.registrationPayers.length > 0 && (
+                          <div className="mt-6 border-t pt-4">
+                             <div className="flex items-center gap-2 mb-2 px-2">
+                                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                                <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-700">Daftar Pembayar Pendaftaran (Audit)</h5>
+                             </div>
+                             <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+                                <Table>
+                                   <TableHeader className="bg-slate-50">
+                                      <TableRow>
+                                         <TableHead className="text-[9px] font-black uppercase py-2">Nama Thalibah</TableHead>
+                                         <TableHead className="text-[9px] font-black uppercase">Total Bayar</TableHead>
+                                         <TableHead className="text-right pr-6 text-[9px] font-black uppercase">Fee Pendaftaran</TableHead>
+                                      </TableRow>
+                                   </TableHeader>
+                                   <TableBody>
+                                      {splits.registrationPayers.map((p: any, idx: number) => (
+                                         <TableRow key={idx} className="hover:bg-slate-50/50">
+                                            <TableCell className="py-2.5">
+                                               <div className="flex items-center gap-2">
+                                                  <span className="text-[11px] font-black text-slate-800">{p.name}</span>
+                                                  {p.isFirst && <Badge className="text-[7px] h-3 bg-blue-100 text-blue-700 border-none font-black uppercase">First Time</Badge>}
+                                               </div>
+                                            </TableCell>
+                                            <TableCell className="py-2.5">
+                                               <span className="text-[10px] font-bold text-slate-400">{FORMATTER.format(p.totalPaid)}</span>
+                                            </TableCell>
+                                            <TableCell className="text-right pr-6 py-2.5">
+                                               <span className="text-xs font-black text-blue-600">{FORMATTER.format(p.amount)}</span>
+                                            </TableCell>
+                                         </TableRow>
+                                      ))}
+                                   </TableBody>
+                                </Table>
+                             </div>
+                             <p className="text-[8px] font-bold text-slate-400 mt-2 italic px-2">
+                                *Jika ada thalibah yang terhitung pendaftaran padahal tidak bayar, silakan edit pendaftaran thalibah tersebut di menu Pendaftaran.
+                             </p>
+                          </div>
+                       )}
                     </div>
 
                     {/* AQLI & DEV SECTION */}
@@ -1127,6 +1330,36 @@ export default function MufradatFinancePage() {
                         );
                       });
                     })}
+
+                    {/* REFERRAL COMMISSIONS IN PREVIEW */}
+                    {previewMonthData && Object.entries(calculateSplits(previewMonthData).referralCommissions).map(([id, data]: [string, any]) => (
+                      <TableRow key={id} className="hover:bg-amber-50/50 bg-amber-50/20">
+                        <TableCell className="py-4">
+                          <span className="text-xs font-black text-slate-800">{data.name}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="text-[9px] font-black border-none px-2 py-0.5 bg-amber-100 text-amber-700">
+                            REFERRER
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {data.bank?.no ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[11px] font-black text-slate-700">{data.bank.name}</span>
+                              <span className="text-[10px] font-bold text-[#800000]">{data.bank.no}</span>
+                              <span className="text-[9px] font-medium text-slate-400 italic">a.n. {data.bank.holder}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-black text-rose-600 flex items-center gap-1 uppercase">
+                              <AlertCircle className="w-3 h-3" /> Rekening Kosong
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                          <span className="text-xs font-black text-emerald-700">{FORMATTER.format(data.amount)}</span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>

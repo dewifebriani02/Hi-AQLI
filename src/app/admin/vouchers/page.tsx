@@ -64,6 +64,10 @@ export default function AdminVouchersPage() {
   }), []);
 
   const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection("voucher_redemptions", redemptionOptions);
+  
+  const { data: registrations } = useCollection("halaqah_registrations", {
+    select: "id, metadata, user_id"
+  });
 
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -128,19 +132,27 @@ export default function AdminVouchersPage() {
     if (!vouchers || !redemptions) return [];
     
     return vouchers.map(v => {
-      const vRedemptions = redemptions.filter(r => r.voucher_id === v.id);
+      // Hybrid count: from redemption table + registration metadata (avoiding duplicates)
+      const redemptionsCount = redemptions.filter(r => r.voucher_id === v.id).length;
+      
+      const regVoucherCount = registrations?.filter(reg => 
+        reg.metadata?.voucher_code === v.code && 
+        !redemptions.some(red => red.user_id === reg.user_id && red.voucher_id === v.id)
+      ).length || 0;
+
+      const totalUsage = redemptionsCount + regVoucherCount;
       const isExpired = v.expiry_date ? new Date(v.expiry_date) < new Date() : false;
-      const isLimitReached = v.usage_limit ? vRedemptions.length >= v.usage_limit : false;
+      const isLimitReached = v.usage_limit ? totalUsage >= v.usage_limit : false;
       
       return {
         ...v,
-        usageCount: vRedemptions.length,
+        usageCount: totalUsage,
         isExpired,
         isLimitReached,
         status: !v.is_active ? 'inactive' : isExpired ? 'expired' : isLimitReached ? 'limit_reached' : 'active'
       };
     });
-  }, [vouchers, redemptions]);
+  }, [vouchers, redemptions, registrations]);
 
   if (isVouchersLoading) {
     return (

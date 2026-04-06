@@ -187,11 +187,11 @@ export default function MufradatSurahDetailPage() {
     const isFreeSurah = [1, 112, 113, 114].includes(sId);
     
     // Lenient Surah Lock: 
-    // 1. Surah 1, 112, 113, 114 are always open (Fatihah & 3 Qul)
-    // 2. OR Surah 2 is open (Baqarah)
+    // 1. FREE SURAHS (Fatihah, 3 Qul, Baqarah)
+    // 2. OR Access is NOT blocked (Handled by mufradat-access.ts which checks subscriptions, vouchers, and explicitly opened Juz)
     // 3. OR User has some progress already
-    // 4. OR Previous page quiz is done
-    const isUnlocked = isFreeSurah || sId === 2 || currentSurahPassedVerses.size > 0 || completedPageQuizzes.has(startPage - 1);
+    // 4. OR Previous page quiz is done (Sequential logic)
+    const isUnlocked = isFreeSurah || !access.isBlocked || sId === 2 || currentSurahPassedVerses.size > 0 || completedPageQuizzes.has(startPage - 1);
     
     if (!isUnlocked) {
       router.push('/mufradat');

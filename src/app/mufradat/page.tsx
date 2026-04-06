@@ -43,7 +43,10 @@ import {
   CheckCircle2,
   ArrowLeft,
   PartyPopper,
-  ThumbsUp
+  ThumbsUp,
+  Flame,
+  Award,
+  GraduationCap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -87,6 +90,11 @@ function MufradatPageContent() {
   });
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+
+  // FETCH BADGES
+  const { data: userBadges, isLoading: isBadgesLoading } = useCollection(user ? "user_badges" : null, {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
+  });
 
   const isRankTab = activeTab === 'rank';
   const group_id = userData?.mufradat_group_id;
@@ -211,7 +219,37 @@ function MufradatPageContent() {
 
   const selectedReciterName = RECITERS.find(r => r.id === selectedReciterId)?.name || "Pilih Qari";
 
-  if (isUserLoading || isRegLoading || isUserDataLoading || isProgressLoading || isRedemptionsLoading) {
+  // WEEKLY LEAGUE RESET LOGIC (Every Monday 00:00)
+  useEffect(() => {
+    async function checkWeeklyReset() {
+      if (!user || !userData) return;
+      
+      const now = new Date();
+      const lastResetAt = userData.last_league_reset_at ? new Date(userData.last_league_reset_at) : null;
+      
+      // Calculate most recent Monday at 00:00
+      const mostRecentMonday = new Date(now);
+      const day = mostRecentMonday.getDay(); // 0 is Sunday, 1 is Monday
+      const diff = mostRecentMonday.getDate() - day + (day === 0 ? -6 : 1); 
+      mostRecentMonday.setDate(diff);
+      mostRecentMonday.setHours(0, 0, 0, 0);
+
+      // If last reset was before this week's Monday, reset!
+      if (!lastResetAt || lastResetAt < mostRecentMonday) {
+        await supabase
+          .from('users')
+          .update({
+            mufradat_weekly_points: 0,
+            mufradat_league: 'Perunggu',
+            last_league_reset_at: now.toISOString()
+          })
+          .eq('id', user.id);
+      }
+    }
+    checkWeeklyReset();
+  }, [user, userData]);
+
+  if (isUserLoading || isRegLoading || isUserDataLoading || isProgressLoading || isRedemptionsLoading || isBadgesLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
@@ -237,17 +275,55 @@ function MufradatPageContent() {
           activeTab === 'rank' ? "grid-cols-1" : "grid-cols-2 sm:flex sm:flex-row"
         )}>
           {user && (
-            <Button asChild variant="outline" className="h-12 px-6 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all bg-white shadow-sm w-full sm:w-auto">
-              <Link href="/mufradat/billing" className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                  <CreditCard className="w-4 h-4" />
+            <div className="flex flex-row gap-2 w-full sm:w-auto">
+              <Button asChild variant="outline" className="h-12 px-5 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex items-center gap-3 group transition-all bg-white shadow-sm flex-1 sm:flex-initial">
+                <Link href="/mufradat/billing" className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col items-start leading-none gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Langganan</span>
+                    <span className="text-xs font-bold text-slate-800">STATUS</span>
+                  </div>
+                </Link>
+              </Button>
+
+              {/* LEAGUE BADGE */}
+              <div className={cn(
+                "h-12 px-5 rounded-2xl border-2 flex items-center gap-3 shadow-sm flex-1 sm:flex-initial transition-all",
+                userData?.mufradat_league === 'Intan' ? "bg-cyan-50 border-cyan-500/20 text-cyan-700" :
+                userData?.mufradat_league === 'Emas' ? "bg-amber-50 border-amber-500/20 text-amber-700" :
+                userData?.mufradat_league === 'Perak' ? "bg-slate-50 border-slate-500/20 text-slate-700" :
+                "bg-slate-50 border-slate-200 text-slate-500"
+              )}>
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center",
+                  userData?.mufradat_league === 'Intan' ? "bg-cyan-100" :
+                  userData?.mufradat_league === 'Emas' ? "bg-amber-100 text-amber-600" :
+                  userData?.mufradat_league === 'Perak' ? "bg-slate-200 text-slate-700" :
+                  "bg-slate-100 text-slate-400"
+                )}>
+                  {userData?.mufradat_league === 'Intan' ? <Trophy className="w-4 h-4" /> :
+                   userData?.mufradat_league === 'Emas' ? <Trophy className="w-4 h-4" /> :
+                   userData?.mufradat_league === 'Perak' ? <Award className="w-4 h-4" /> :
+                   <Zap className="w-4 h-4" />}
                 </div>
                 <div className="flex flex-col items-start leading-none gap-1">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Langganan</span>
-                  <span className="text-xs font-bold text-slate-800">STATUS & INFAQ</span>
+                  <span className="text-[9px] font-black uppercase tracking-tight opacity-70">Liga Minggu Ini</span>
+                  <span className="text-xs font-black uppercase">{userData?.mufradat_league || 'Perunggu'}</span>
                 </div>
-              </Link>
-            </Button>
+              </div>
+
+              <div className="h-12 px-5 rounded-2xl border-2 border-orange-500/10 bg-orange-50/30 flex items-center gap-3 shadow-sm flex-1 sm:flex-initial animate-in zoom-in duration-500">
+                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                  <Flame className={cn("w-4 h-4 fill-current", (userData?.mufradat_streak_count || 0) > 0 ? "animate-pulse" : "opacity-30")} />
+                </div>
+                <div className="flex flex-col items-start leading-none gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-600/70">Konsistensi</span>
+                  <span className="text-xs font-black text-orange-700">{userData?.mufradat_streak_count || 0} HARI</span>
+                </div>
+              </div>
+            </div>
           )}
 
           {activeTab !== 'rank' && (
@@ -326,6 +402,50 @@ function MufradatPageContent() {
           <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-9 px-4 rounded-xl shrink-0">
             <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
           </Button>
+        </div>
+      )}
+
+      {/* ACHIEVEMENT BADGES SECTION */}
+      {user && (userBadges || []).length > 0 && (
+        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
+           <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                 <Award className="w-4 h-4 text-emerald-600" />
+                 <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Lencana Terkumpul</h2>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{(userBadges || []).length} PENGHARGAAN</span>
+           </div>
+           <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
+              {userBadges?.map((b) => {
+                 let icon = <Star className="w-4 h-4" />;
+                 let label = b.badge_type;
+                 let color = "bg-amber-100 text-amber-700 border-amber-200";
+
+                 if (b.badge_type === 'streak_7') {
+                   icon = <Flame className="w-4 h-4 fill-current" />;
+                   label = "Konsisten 7 Hari";
+                   color = "bg-orange-100 text-orange-700 border-orange-200";
+                 } else if (b.badge_type === 'subuh_warrior') {
+                   icon = <Coffee className="w-4 h-4" />;
+                   label = "Bintang Subuh";
+                   color = "bg-blue-100 text-blue-700 border-blue-200";
+                 } else if (b.badge_type === 'hafidzah_100') {
+                   icon = <GraduationCap className="w-4 h-4" />;
+                   label = "Hafidzah Muda";
+                   color = "bg-emerald-100 text-emerald-700 border-emerald-200";
+                 }
+
+                 return (
+                   <div key={b.id} className={cn(
+                     "flex items-center gap-2 px-3 py-2 rounded-xl border-2 shrink-0 transition-all hover:scale-105 shadow-sm",
+                     color
+                   )}>
+                      {icon}
+                      <span className="text-[11px] font-black uppercase tracking-tight">{label}</span>
+                   </div>
+                 );
+              })}
+           </div>
         </div>
       )}
 
