@@ -133,6 +133,7 @@ function RegistrationForm() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [forceShowForm, setForceShowForm] = useState(false);
 
   // Form States
   const [name, setName] = useState("");
@@ -265,9 +266,28 @@ function RegistrationForm() {
 
   useEffect(() => {
     if (step === 2 && isPremiumProgram && !appliedVoucher) {
-      setUniqueCode(Math.floor(100 + Math.random() * 899));
+      // Reuse existing unique code if resuming, otherwise generate new
+      if (forceShowForm && existingReg?.unique_code) {
+        setUniqueCode(existingReg.unique_code);
+      } else {
+        setUniqueCode(Math.floor(100 + Math.random() * 899));
+      }
     }
-  }, [step, isPremiumProgram, appliedVoucher]);
+  }, [step, isPremiumProgram, appliedVoucher, forceShowForm, existingReg]);
+
+  // Handle Resume Pre-fill
+  useEffect(() => {
+    if (forceShowForm && existingReg) {
+      if (existingReg.user_name) setName(existingReg.user_name);
+      if (existingReg.whatsapp) setWhatsapp(existingReg.whatsapp);
+      if (existingReg.amount) {
+        // Base infaq = amount - registration_fee - unique_code + referral_discount
+        const base = (existingReg.amount || 0) - (existingReg.registration_fee || 0) - (existingReg.unique_code || 0) + (existingReg.referral_discount_amount || 0);
+        setInfaqAmount(Math.max(minInfaq, base));
+      }
+      setStep(2);
+    }
+  }, [forceShowForm, existingReg, minInfaq]);
 
   const handleValidateVoucher = async () => {
     if (!voucherCode.trim()) return;
@@ -433,7 +453,7 @@ function RegistrationForm() {
         throw new Error("Gagal memproses ID Program. Mohon muat ulang halaman atau hubungi Admin.");
       }
 
-      const { error } = await supabase.from("halaqah_registrations").insert({
+      const regData = {
         user_id: user?.id,
         user_name: name,
         user_email: user?.email,
@@ -446,9 +466,10 @@ function RegistrationForm() {
         amount: appliedVoucher ? 0 : totalCalculated,
         payment_method: appliedVoucher ? "voucher" : (isPremiumProgram ? "transfer" : "free"),
         sender_name: appliedVoucher ? `VOUCHER: ${appliedVoucher.code}` : (isPremiumProgram ? senderName : null),
-        proof_file_name: appliedVoucher ? "VOUCHER_ACTIVATED" : (proofFile?.name || null),
+        proof_file_name: appliedVoucher ? "VOUCHER_ACTIVATED" : (proofFile?.name || (forceShowForm ? existingReg?.proof_file_name : null)),
         status: "pending_verification",
-        created_at: new Date().toISOString(),
+        created_at: forceShowForm ? existingReg?.created_at : new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         registration_fee: registrationFee,
         referral_code_used: appliedReferral?.referral_code || null,
         referral_discount_amount: referralDiscount,
@@ -462,11 +483,21 @@ function RegistrationForm() {
           unitPrice: 0,
           infaqBase: infaqAmount,
           voucher_code: appliedVoucher?.code || null,
-          referral_code: appliedReferral?.referral_code || null
+          referral_code: appliedReferral?.referral_code || null,
+          is_resume: forceShowForm
         } : (appliedVoucher ? { voucher_code: appliedVoucher.code } : null)
-      });
+      };
 
-      if (error) throw error;
+      if (forceShowForm && existingReg?.id) {
+        const { error } = await supabase
+          .from("halaqah_registrations")
+          .update(regData)
+          .eq('id', existingReg.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("halaqah_registrations").insert(regData);
+        if (error) throw error;
+      }
 
       // RECORD VOUCHER REDEMPTION
       if (appliedVoucher) {
@@ -495,7 +526,7 @@ function RegistrationForm() {
     );
   }
 
-  if (isActuallyActive || isActuallyPending) {
+  if ((isActuallyActive || isActuallyPending) && !forceShowForm) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
         <Card className="w-full max-w-md text-center border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
@@ -513,8 +544,19 @@ function RegistrationForm() {
                   : `Pendaftaran Ukhti untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
               </p>
               {isActuallyPending && (
-                <div className="p-4 bg-muted/50 rounded-xl text-[10px] font-bold text-amber-700 italic border border-amber-200">
-                  Mohon tunggu maksimal 1x24 jam untuk aktivasi akses oleh Admin.
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted/50 rounded-xl text-[10px] font-bold text-amber-700 italic border border-amber-200">
+                    Mohon tunggu maksimal 1x24 jam untuk aktivasi akses oleh Admin.
+                  </div>
+                  {(!existingReg?.proof_file_name || Number(existingReg.amount) === 0) && (
+                    <Button 
+                      onClick={() => setForceShowForm(true)} 
+                      variant="outline" 
+                      className="w-full border-amber-500 text-amber-700 font-black h-12 rounded-xl text-xs gap-2"
+                    >
+                      <Upload className="w-4 h-4" /> LANJUTKAN UNGGAH BUKTI
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

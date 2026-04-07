@@ -43,6 +43,12 @@ const JUZ_MAPPING: Record<number, { surah: number, verse: number, name: string }
   30: { surah: 78, verse: 1, name: "An-Naba'" },
 };
 
+const JUZ_VERSE_COUNTS: Record<number, number> = {
+  1: 148, 2: 111, 3: 126, 4: 131, 5: 124, 6: 110, 7: 149, 8: 142, 9: 159, 10: 127,
+  11: 151, 12: 170, 13: 154, 14: 227, 15: 185, 16: 269, 17: 190, 18: 202, 19: 338, 20: 171,
+  21: 178, 22: 163, 23: 357, 24: 175, 25: 246, 26: 195, 27: 399, 28: 137, 29: 431, 30: 564
+};
+
 interface JuzListProps {
   baseUrl?: string;
   userProgress?: any[];
@@ -113,6 +119,41 @@ export function JuzList({
     });
 
     return { completedPages, completedExams, pagesWithAnyProgress, pageStats };
+  }, [userProgress]);
+
+  const verseCompletionMap = useMemo(() => {
+    const map = new Map<number, number>();
+    if (!userProgress) return map;
+    
+    // Get all chapters and their juz info to map verse completions to juz
+    // For simplicity, we can rely on page-to-juz mapping for verses
+    userProgress.forEach(attempt => {
+      const isPassed = attempt.is_passed || Number(attempt.score) === Number(attempt.total_questions);
+      if (isPassed && !attempt.quiz_id.startsWith('mufradat_page_') && !attempt.quiz_id.startsWith('mufradat_juz_exam_')) {
+        const pNum = attempt.page_id ? Number(attempt.page_id) : null;
+        if (pNum) {
+          const juzId = getJuzForPage(pNum);
+          if (juzId) {
+            const current = map.get(juzId) || 0;
+            // Since kuis_attempts doesn't guarantee uniqueness per verse per juz in this check, 
+            // the detail page will be more accurate, but for the progress bar this is a good heuristic.
+            // Better: use a Set to count unique verses per juz
+            if (! (map as any)._sets) (map as any)._sets = new Map<number, Set<string>>();
+            const juzSets = (map as any)._sets;
+            if (!juzSets.has(juzId)) juzSets.set(juzId, new Set<string>());
+            juzSets.get(juzId).add(`${attempt.surah_id}:${attempt.verse_id}`);
+          }
+        }
+      }
+    });
+
+    const finalMap = new Map<number, number>();
+    if ((map as any)._sets) {
+      (map as any)._sets.forEach((set: Set<string>, jId: number) => {
+        finalMap.set(jId, set.size);
+      });
+    }
+    return finalMap;
   }, [userProgress]);
 
   const { completedPages, completedExams, pagesWithAnyProgress, pageStats } = progressData;
@@ -208,22 +249,26 @@ export function JuzList({
 
           // GRID VIEW (AYAT MODE) OR TILAWAH
           if (mode === 'ayat' || variant === 'tilawah') {
+            const passedVersesCount = verseCompletionMap.get(j) || 0;
+            const totalVerses = JUZ_VERSE_COUNTS[j] || 1;
+            const isJuzCompleted = passedVersesCount >= totalVerses;
+
             const CardContent = (
               <Card className={cn(
                 "p-4 transition-all border-none shadow-sm relative overflow-hidden h-full group",
                 isJuzUnlocked ? "cursor-pointer hover:bg-accent" : "opacity-40 grayscale pointer-events-none select-none",
-                isExamPassed ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80" : "bg-card/50"
+                isExamPassed || isJuzCompleted ? "bg-emerald-50/80 border-l-4 border-emerald-500 hover:bg-emerald-100/80" : "bg-card/50"
               )}>
                  <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "flex items-center justify-center w-10 h-10 rounded-lg font-black text-sm transition-all rotate-45",
-                      isExamPassed ? "bg-emerald-500 text-white" : isJuzUnlocked ? "bg-[#800000]/10 text-[#800000]" : "bg-slate-200 text-slate-400"
+                      isExamPassed || isJuzCompleted ? "bg-emerald-500 text-white" : isJuzUnlocked ? "bg-[#800000]/10 text-[#800000]" : "bg-slate-200 text-slate-400"
                     )}>
                       <span className="-rotate-45">{j}</span>
                     </div>
                     <div className="flex flex-col">
-                      <h4 className={cn("font-bold text-base", isExamPassed && "text-emerald-900 leading-none mb-1")}>Juz {j}</h4>
+                      <h4 className={cn("font-bold text-base", (isExamPassed || isJuzCompleted) && "text-emerald-900 leading-none mb-1")}>Juz {j}</h4>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Dimulai: {mapping.name}</p>
                     </div>
                   </div>
@@ -237,17 +282,35 @@ export function JuzList({
                       {loadingAudioJuz === j ? <Loader2 className="w-4 h-4 animate-spin" /> : playingJuz === j ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
                     </Button>
                   )}
+                  {isJuzCompleted && !isExamPassed && (
+                    <div className="text-right flex flex-col items-end gap-1">
+                       <div className="flex items-center gap-1 bg-emerald-200/50 px-1.5 py-0.5 rounded text-[8px] font-black text-emerald-800 uppercase tracking-tighter">
+                          <Star className="w-2 h-2 fill-current" /> Khatam
+                       </div>
+                    </div>
+                  )}
                 </div>
                 {isExamPassed && (
                   <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-white rounded-bl-lg shadow-sm">
                     <CheckCircle2 className="w-3 h-3" />
                   </div>
                 )}
+                {passedVersesCount > 0 && !isJuzCompleted && isJuzUnlocked && (
+                  <div className="mt-3">
+                    <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                      <span>Progres Hafalan</span>
+                      <span>{Math.round((passedVersesCount/totalVerses)*100)}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-[#800000]" style={{ width: `${(passedVersesCount/totalVerses)*100}%` }} />
+                    </div>
+                  </div>
+                )}
               </Card>
             );
 
             return (
-              <Link key={j} href={isJuzUnlocked ? `${baseUrl}/${mapping.surah}/${mapping.verse}` : "#"}>
+              <Link key={j} href={isJuzUnlocked ? `${baseUrl}/juz/${j}` : "#"}>
                 {CardContent}
               </Link>
             );

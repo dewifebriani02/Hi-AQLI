@@ -1108,9 +1108,15 @@ export default function MufradatFinancePage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-xs font-black text-[#800000]">
+                          <span className={cn(
+                            "text-xs font-black",
+                            (Number(reg.amount) || 0) === 0 ? "text-rose-500 animate-pulse" : "text-[#800000]"
+                          )}>
                             {FORMATTER.format(Number(reg.amount) || 0)}
                           </span>
+                          {(Number(reg.amount) || 0) === 0 && (
+                            <span className="text-[7px] font-black text-rose-600 uppercase">Perlu Koreksi</span>
+                          )}
                           {(Number(reg.unique_code) > 0 || (Number(reg.amount) % 1000) > 0) && (
                             <span className="text-[9px] font-bold text-slate-400">
                               Kode: {Number(reg.unique_code) || (Number(reg.amount) % 1000)}

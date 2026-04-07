@@ -64,6 +64,7 @@ function MufradatQuizContent() {
   const [isSprintMode, setIsSprintMode] = useState(false);
   const [timeLeft, setTimeLeft] = useState(10);
   const [timerActive, setTimerActive] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
@@ -198,6 +199,7 @@ function MufradatQuizContent() {
   }, [timerActive, isSprintMode, timeLeft, isFinished, loading]);
 
   const startQuiz = () => {
+    setHasStarted(true);
     setTimerActive(true);
     setTimeLeft(10);
   };
@@ -436,7 +438,8 @@ function MufradatQuizContent() {
     setWrongWords([]);
     setAttempts(prev => prev + 1);
     setTimeLeft(10);
-    setTimerActive(isSprintMode);
+    setHasStarted(false);
+    setTimerActive(false);
   };
 
   if (loading || isUserLoading || isUserDataLoading || isLeaderboardLoading) {
@@ -634,7 +637,7 @@ function MufradatQuizContent() {
 
       <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1.5 bg-slate-100 [&>div]:bg-[#D4AF37]" />
 
-      {!timerActive && currentIdx === 0 && !isFinished ? (
+      {!hasStarted && !isFinished ? (
         <Card className="border-4 border-[#D4AF37]/20 shadow-2xl overflow-hidden rounded-3xl bg-white p-8 text-center space-y-6">
           <div className="w-20 h-20 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto text-[#D4AF37]">
              <Zap className="w-10 h-10 fill-current" />

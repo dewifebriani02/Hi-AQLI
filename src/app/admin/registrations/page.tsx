@@ -6,7 +6,7 @@ import { useCollection } from "@/supabase/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, Phone, Mail, User, ImageIcon, ArrowLeft, ShieldAlert, BookOpen, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, Phone, Mail, User, ImageIcon, ArrowLeft, ShieldAlert, BookOpen, XCircle, Pencil, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -22,11 +22,25 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { History, LayoutList } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function AdminRegistrationsPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [editingReg, setEditingReg] = useState<any | null>(null);
+  const [editAmount, setEditAmount] = useState<string>("0");
+  const [editMonth, setEditMonth] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const regOptions = useMemo(() => ({
     filters: [{ column: 'status', operator: '==', value: 'pending_verification' }]
@@ -40,7 +54,34 @@ export default function AdminRegistrationsPage() {
     limit: 50
   }), []);
   
-  const { data: history, isLoading: isHistoryLoading } = useCollection("halaqah_registrations", historyOptions);
+  const { data: history, isLoading: isHistoryLoading, refresh: refreshHistory } = useCollection("halaqah_registrations", historyOptions);
+
+  const openEdit = (reg: any) => {
+    setEditingReg(reg);
+    setEditAmount(reg.amount?.toString() || "0");
+    setEditMonth(reg.billing_month || format(new Date(reg.verified_at || reg.created_at), 'yyyy-MM'));
+  };
+
+  const handleUpdateReg = async () => {
+    if (!editingReg) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from("halaqah_registrations").update({
+        amount: parseInt(editAmount),
+        billing_month: editMonth,
+        updated_at: new Date().toISOString()
+      }).eq('id', editingReg.id);
+
+      if (error) throw error;
+      toast({ title: "Data Diperbarui" });
+      refreshHistory();
+      setEditingReg(null);
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal memperbarui data." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleApprove = async (reg: any) => {
     if (!reg?.id || !reg?.user_id) {
@@ -322,7 +363,14 @@ export default function AdminRegistrationsPage() {
                         {reg.is_paid && (
                           <div className="flex items-center justify-between border-t pt-2 border-dashed border-slate-200">
                             <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Dana Terkirim</span>
-                            <span className="text-base font-black text-[#800000]">Rp {reg.amount?.toLocaleString('id-ID')}</span>
+                            <div className="flex flex-col items-end">
+                              <span className="text-base font-black text-[#800000]">Rp {reg.amount?.toLocaleString('id-ID')}</span>
+                              {Number(reg.amount) === 0 && (
+                                <span className="text-[8px] font-black text-rose-500 uppercase flex items-center gap-1">
+                                  <AlertCircle className="w-2.5 h-2.5" /> Peringatan: Nominal 0
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                         {reg.billing_month && (
@@ -387,7 +435,8 @@ export default function AdminRegistrationsPage() {
                       <TableHead className="text-[10px] font-black uppercase tracking-widest">Metode</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest">Dana</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest">Status</TableHead>
-                      <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-widest">Tgl Verifikasi</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest">Tgl Verifikasi</TableHead>
+                      <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-widest">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -425,8 +474,18 @@ export default function AdminRegistrationsPage() {
                              <CheckCircle2 className="w-3.5 h-3.5" /> Berhasil
                            </div>
                         </TableCell>
-                        <TableCell className="text-right pr-6 text-[10px] font-bold text-muted-foreground">
+                        <TableCell className="text-[10px] font-bold text-muted-foreground">
                            {reg.verified_at ? format(new Date(reg.verified_at), 'dd/MM/yyyy HH:mm') : '-'}
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                           <Button 
+                             size="icon" 
+                             variant="ghost" 
+                             className="h-8 w-8 text-slate-400 hover:text-[#800000] hover:bg-slate-100"
+                             onClick={() => openEdit(reg)}
+                           >
+                             <Pencil className="w-4 h-4" />
+                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -437,6 +496,68 @@ export default function AdminRegistrationsPage() {
           </div>
         </TabsContent>
       </Tabs>
+      {/* EDIT REGISTRATION DIALOG */}
+      <Dialog open={!!editingReg} onOpenChange={(open) => !open && setEditingReg(null)}>
+        <DialogContent className="max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-8 bg-[#800000] text-white">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+              <Pencil className="w-5 h-5" /> Edit Detail Pembayaran
+            </DialogTitle>
+            <DialogDescription className="text-white/70 font-bold uppercase tracking-widest text-[10px] mt-1">
+              Koreksi data untuk laporan keuangan
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-8 space-y-6 bg-white">
+             <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Nama Peserta</Label>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 font-bold text-sm text-slate-600">
+                  {editingReg?.user_name}
+                </div>
+             </div>
+
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Nominal Infaq</Label>
+                  <Input 
+                    type="number" 
+                    value={editAmount} 
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    className="h-12 border-2 rounded-xl font-black text-[#800000]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Bulan Tagihan</Label>
+                  <Input 
+                    type="text" 
+                    placeholder="YYYY-MM (Contoh: 2026-04)"
+                    value={editMonth} 
+                    onChange={(e) => setEditMonth(e.target.value)}
+                    className="h-12 border-2 rounded-xl font-black"
+                  />
+                </div>
+             </div>
+
+             <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <p className="text-[10px] text-amber-800 font-bold leading-relaxed italic">
+                  Perubahan nominal atau bulan akan langsung merubah angka di Monitor Keuangan pada periode yang dipilih.
+                </p>
+             </div>
+          </div>
+
+          <DialogFooter className="p-6 bg-slate-50 border-t flex gap-3">
+             <Button variant="ghost" className="flex-1 font-bold h-12" onClick={() => setEditingReg(null)}>Batal</Button>
+             <Button 
+               className="flex-[2] bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-12 rounded-xl shadow-lg"
+               onClick={handleUpdateReg}
+               disabled={isSaving}
+             >
+               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : "SIMPAN PERUBAHAN"}
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
