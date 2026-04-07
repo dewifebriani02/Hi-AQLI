@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle, Phone, ShieldAlert, GraduationCap, Trash2 } from "lucide-react";
+import { Search, UserCog, ShieldCheck, Mail, Loader2, ArrowLeft, CheckCircle2, Users, Calendar, UserPlus, UserCircle, Phone, ShieldAlert, GraduationCap, Trash2, CreditCard } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,

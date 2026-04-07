@@ -22,7 +22,6 @@ import {
   Shield,
   Heart,
   Luggage,
-  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/supabase";
