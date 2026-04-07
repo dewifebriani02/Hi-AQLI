@@ -46,12 +46,28 @@ export default function MutabaahPage() {
   const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
-  const [isSetupMode, setIsSetupMode] = useState(false);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [quote, setQuote] = useState(() => getRandomQuote());
   const [localLogs, setLocalLogs] = useState<any[]>([]); // For guest persistence
+  const [hijriData, setHijriData] = useState<any>(null);
 
-  const mutabaahActivities = useMemo(() => [
+  useEffect(() => {
+    const fetchHijri = async () => {
+      try {
+        const today = new Date();
+        const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+        const res = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}`);
+        const result = await res.json();
+        if (result.data && result.data.hijri) {
+          setHijriData(result.data.hijri);
+        }
+      } catch (e) {
+        console.error("Failed to fetch Hijri date", e);
+      }
+    };
+    fetchHijri();
+  }, []);
+
+  const baseActivities = useMemo(() => [
     { id: 'bangun', label: 'Doa Bangun Tidur', category: 'Malam & Bangun', dalil: 'HR. Bukhari: Mengidupkan hati setelah mati', icon: 'Sun' },
     { id: 'siwak', label: 'Bersiwak', category: 'Malam & Bangun', dalil: 'HR. Bukhari: Siwak membersihkan mulut & diridhai Allah', icon: 'Sparkles' },
     { id: 'tahajjud', label: 'Shalat Tahajjud', category: 'Malam & Bangun', dalil: 'HR. Muslim: Shalat malam paling utama setelah fardhu', icon: 'Moon' },
@@ -84,16 +100,6 @@ export default function MutabaahPage() {
 
   const { data: userData, refresh: reloadUser } = useDoc("users", user?.id);
 
-  useEffect(() => {
-    if (userData) {
-      const goals = userData.mutabaah_goals || [];
-      setSelectedGoals(goals);
-      if (goals.length === 0) {
-        setIsSetupMode(true);
-      }
-    }
-  }, [userData]);
-
   const todayStr = new Date().toISOString().split('T')[0];
   const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection("mutabaah_logs", {
     filters: [
@@ -111,16 +117,7 @@ export default function MutabaahPage() {
   }, [user, todayStr]);
 
   const saveGoals = async () => {
-    if (!user) return;
-    const { error } = await supabase
-      .from("users")
-      .update({ mutabaah_goals: selectedGoals })
-      .eq('id', user.id);
-    
-    if (!error) {
-      setIsSetupMode(false);
-      reloadUser();
-    }
+    // Legacy - removed
   };
 
   const toggleMutabaah = async (activityId: string) => {
@@ -164,15 +161,65 @@ export default function MutabaahPage() {
   };
 
   const activeActivities = useMemo(() => {
-    if (!user) return mutabaahActivities; // Spill all for guests
-    return mutabaahActivities.filter(a => selectedGoals.includes(a.id));
-  }, [user, mutabaahActivities, selectedGoals]);
+    const activities = [...baseActivities];
+    
+    // 1. Add Doa Sahur after Tahajjud
+    const tahajjudIdx = activities.findIndex(a => a.id === 'tahajjud');
+    if (tahajjudIdx !== -1) {
+      activities.splice(tahajjudIdx + 1, 0, { 
+        id: 'doa_sahur', 
+        label: 'Perbanyak Doa di Waktu Sahur', 
+        category: 'Malam & Bangun', 
+        dalil: 'HR. Bukhari & Muslim: Waktu mustajab di sepertiga malam', 
+        icon: 'MessageSquare' 
+      });
+    }
+
+    // 2. Add Monday/Thursday Fasting
+    const day = new Date().getDay();
+    if (day === 1 || day === 4) {
+      activities.push({ 
+        id: 'puasa_senin_kamis', 
+        label: 'Puasa Sunnah Senin Kamis', 
+        category: 'Umum', 
+        dalil: 'HR. Tirmidzi: Amalan diangkat pada hari tersebut', 
+        icon: 'Sun' 
+      });
+    }
+
+    // 3. Hijri-based activities
+    if (hijriData) {
+      const hDay = parseInt(hijriData.day);
+      // Ayyamul Bidh (13, 14, 15)
+      if ([13, 14, 15].includes(hDay)) {
+        activities.push({ 
+          id: 'ayyamul_bidh', 
+          label: 'Puasa Ayyamul Bidh', 
+          category: 'Umum', 
+          dalil: 'HR. Tirmidzi: Seperti puasa sepanjang tahun', 
+          icon: 'Star' 
+        });
+      }
+      // Sunnah Bekam (17, 19, 21)
+      if ([17, 19, 21].includes(hDay)) {
+        activities.push({ 
+          id: 'sunnah_bekam', 
+          label: 'Sunnah Berbekam', 
+          category: 'Kesehatan', 
+          dalil: 'HR. Tirmidzi: Kesembuhan pada tiga hal...', 
+          icon: 'Activity' 
+        });
+      }
+    }
+
+    return activities;
+  }, [baseActivities, hijriData]);
 
   const progressCount = useMemo(() => {
     if (!user) return localLogs.length;
     // @ts-ignore
-    return mutabaahLogs?.filter((l: any) => l.completed && selectedGoals.includes(l.activity_id)).length || 0;
-  }, [user, mutabaahLogs, selectedGoals, localLogs]);
+    return mutabaahLogs?.filter((l: any) => l.completed).length || 0;
+  }, [user, mutabaahLogs, localLogs]);
 
   const progressPercent = activeActivities.length > 0 ? Math.round((progressCount / activeActivities.length) * 100) : 0;
 
@@ -180,86 +227,7 @@ export default function MutabaahPage() {
     Sun, Moon, BookOpen, Clock, Star, Droplets, Shield, Activity, Book, MessageSquare, RotateCcw, Sparkles, Home, CheckSquare, Zap
   };
 
-  if (isSetupMode && user) {
-    return (
-      <div className="flex flex-col min-h-screen bg-white">
-        {/* Sticky Header for Setup Mode */}
-        <div className="sticky top-0 z-[60] bg-white/95 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
-          <Button variant="ghost" onClick={() => setIsSetupMode(false)} className="text-muted-foreground font-bold h-9">Batal</Button>
-          <div className="text-center">
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Pengaturan Target</h2>
-            <p className="text-[9px] font-bold text-muted-foreground">{selectedGoals.length} Amalan Terpilih</p>
-          </div>
-          <Button 
-            onClick={saveGoals} 
-            disabled={selectedGoals.length === 0}
-            className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-[10px] h-9 px-4 rounded-xl shadow-md"
-          >
-            SIMPAN
-          </Button>
-        </div>
-
-        <div className="p-6 space-y-6 max-w-2xl mx-auto w-full pt-10">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-black text-[#800000] uppercase italic">Pilih Targetmu</h1>
-            <p className="text-sm font-bold text-muted-foreground">"Sedikit tapi konsisten lebih dicintai Allah daripada banyak tapi terputus."</p>
-          </div>
-
-          <div className="space-y-6 pb-32">
-            {Array.from(new Set(mutabaahActivities.map(a => a.category))).map(category => (
-              <div key={category} className="space-y-3">
-                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">{category}</h3>
-                <div className="grid grid-cols-1 gap-2">
-                  {mutabaahActivities.filter(a => a.category === category).map(activity => {
-                    const isSelected = selectedGoals.includes(activity.id);
-                    return (
-                      <Card 
-                        key={activity.id}
-                        className={cn(
-                          "border-2 transition-all cursor-pointer",
-                          isSelected ? "border-[#800000] bg-[#800000]/5" : "border-slate-100 hover:border-orange-100"
-                        )}
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedGoals(prev => prev.filter(id => id !== activity.id));
-                          } else {
-                            setSelectedGoals(prev => [...prev, activity.id]);
-                          }
-                        }}
-                      >
-                        <CardContent className="p-4 flex items-center gap-4">
-                          <div className={cn(
-                            "w-6 h-6 rounded border-2 flex items-center justify-center",
-                            isSelected ? "bg-[#800000] border-[#800000]" : "border-slate-300"
-                          )}>
-                            {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
-                          </div>
-                          <div>
-                            <p className="text-sm font-black">{activity.label}</p>
-                            <p className="text-[10px] text-muted-foreground font-medium uppercase">{activity.dalil}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-slate-100 flex justify-center z-[60]">
-          <Button 
-            className="w-full max-w-md bg-[#800000] hover:bg-[#800000]/90 h-14 text-sm font-black uppercase rounded-2xl shadow-xl shadow-[#800000]/20"
-            disabled={selectedGoals.length === 0}
-            onClick={saveGoals}
-          >
-            SIMPAN TARGET & MULAI ({selectedGoals.length} AMALAN) <ArrowRight className="ml-2 w-5 h-5" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Setup mode removed
 
   return (
     <div className="flex flex-col min-h-screen bg-orange-50/30 pb-20">
@@ -288,11 +256,6 @@ export default function MutabaahPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {user && (
-            <Button variant="ghost" size="icon" className="rounded-full text-[#D4AF37]" onClick={() => setIsSetupMode(true)}>
-              <Settings2 className="w-5 h-5" />
-            </Button>
-          )}
           <Badge className="bg-[#800000] text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase">
             {user ? `${progressPercent}%` : 'PREVIEW'}
           </Badge>
@@ -400,7 +363,7 @@ export default function MutabaahPage() {
                               </p>
                               {isDone && (
                                 <Badge variant="outline" className="text-[7px] h-3 px-1 border-emerald-200 text-emerald-600 bg-emerald-50">
-                                  LULUS
+                                  ALHAMDULILLAH
                                 </Badge>
                               )}
                             </div>
@@ -427,13 +390,10 @@ export default function MutabaahPage() {
         {activeActivities.length === 0 && (
           <div className="py-20 text-center space-y-4">
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-              <Settings2 className="w-10 h-10 text-slate-300" />
+              <Activity className="w-10 h-10 text-slate-300" />
             </div>
             <div className="space-y-2">
-              <p className="text-lg font-black text-slate-400 uppercase">Belum ada target</p>
-              <Button onClick={() => setIsSetupMode(true)} variant="link" className="text-[#800000] font-bold">
-                Mulai Atur Sekarang
-              </Button>
+              <p className="text-lg font-black text-slate-400 uppercase">Memuat Amalan...</p>
             </div>
           </div>
         )}
