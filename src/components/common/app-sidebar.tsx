@@ -139,7 +139,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent className="bg-[#800000] overflow-y-auto custom-scrollbar">
-        <SidebarMenu className="p-4 pb-24">
+        <SidebarMenu className="p-4 pb-24 gap-2">
           <h2 className="mb-4 px-4 text-[10px] font-black uppercase tracking-widest text-white/50 group-data-[collapsible=icon]:hidden">
             Menu Admin
           </h2>
@@ -159,9 +159,11 @@ export function AppSidebar() {
                       )}
                       tooltip={item.label}
                     >
-                      <item.icon className="shrink-0" />
-                      <span className="font-bold flex-1">{item.label}</span>
-                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      <item.icon className="size-5 shrink-0" />
+                      <span className="font-bold flex-1 group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      <div className="group-data-[collapsible=icon]:hidden">
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </div>
                     </SidebarMenuButton>
                     
                     {isExpanded && (
@@ -198,13 +200,13 @@ export function AppSidebar() {
                   isActive={isActive}
                   tooltip={item.label}
                   className={cn(
-                    "transition-all duration-300",
+                    "transition-all duration-300 h-11",
                     isActive ? "bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90" : "text-white hover:bg-white/10"
                   )}
                 >
                   <Link href={item.href!} onClick={handleLinkClick}>
-                    <item.icon className={cn("shrink-0", isActive ? "text-black" : "text-white")} />
-                    <span className="font-bold">{item.label}</span>
+                    <item.icon className={cn("size-5 shrink-0", isActive ? "text-black" : "text-white")} />
+                    <span className="font-bold group-data-[collapsible=icon]:hidden">{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -218,11 +220,11 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Pengaturan Admin"
-              className="text-white hover:bg-white/10"
+              className="text-white hover:bg-white/10 h-11"
               onClick={handleLinkClick}
             >
-              <Settings className="text-white" />
-              <span className="font-bold">Pengaturan</span>
+              <Settings className="text-white size-5" />
+              <span className="font-bold group-data-[collapsible=icon]:hidden">Pengaturan</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
