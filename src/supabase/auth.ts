@@ -9,13 +9,21 @@ export async function initiateEmailSignIn(email: string, password: string) {
 
 /** Initiate Google sign-in. */
 export async function initiateGoogleSignIn(redirectTo?: string) {
-    const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
+    // Force official domain in production to avoid www/non-www mismatch issues
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const origin = isLocal ? window.location.origin : 'https://hiaqli.pro';
+    
+    const callbackUrl = new URL(`${origin}/auth/callback`);
     if (redirectTo) callbackUrl.searchParams.set('next', redirectTo);
 
     return supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
             redirectTo: callbackUrl.toString(),
+            queryParams: {
+                prompt: 'select_account',
+                access_type: 'offline',
+            }
         },
     });
 }
