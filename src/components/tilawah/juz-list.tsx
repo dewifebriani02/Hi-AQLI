@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { JUZ_PAGE_MAPPING, getPagesForJuz } from "@/lib/quran-mapping";
+import { JUZ_PAGE_MAPPING, getPagesForJuz, getJuzForPage } from "@/lib/quran-mapping";
 
 // Mapping Juz to starting surah and verse
 const JUZ_MAPPING: Record<number, { surah: number, verse: number, name: string }> = {
@@ -244,7 +244,7 @@ export function JuzList({
           const isAllPagesDone = finishedPagesCount === totalPages;
           
           const startPage = juzPages[0];
-          const isJuzUnlocked = variant === "tilawah" || startPage === 1 || completedPages.has(startPage - 1) || (unlockedJuz || []).includes(j);
+          const isJuzUnlocked = variant === "tilawah" || true; // Always unlocked for paid/promotional access
           const isExpanded = expandedJuz === j;
 
           // GRID VIEW (AYAT MODE) OR TILAWAH
@@ -409,7 +409,7 @@ export function JuzList({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 px-4 py-2 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200">
                   {juzPages.map((p) => {
                     const isDone = completedPages.has(p);
-                    const isUnlocked = p === 1 || completedPages.has(p - 1) || isDone;
+                    const isUnlocked = true; // Sequential page locking removed per user request
                     const stats = pageStats.get(p) || { maxScore: 0, attempts: 0, bestTime: Infinity };
                     return (
                       <Link 

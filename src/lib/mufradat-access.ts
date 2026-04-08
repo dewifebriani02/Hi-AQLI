@@ -152,27 +152,8 @@ export function getMufradatStatus(
     r.billing_month === nextMonthStr
   );
 
-  // --- HAK AKSES JUZ CHECK ---
-  // Default to restricted if no surah is specified, otherwise check list
-  if (sNum !== null) {
-     // Basic mapping for Surah to Juz (Approximation by start page)
-     // Surahs spanning multiple juz are simplified to their STARTING juz
-     const surahStartPage = (SURAH_START_PAGES as any)[sNum];
-     const juzId = surahStartPage ? getJuzForPage(surahStartPage) : null;
-     
-     const accessibleJuz = user.mufradat_accessible_juz || [];
-     const isJuzAccessible = juzId !== null && accessibleJuz.includes(juzId);
-     
-     if (!isJuzAccessible && !isFreeApril) {
-        return {
-          status: 'active',
-          isBlocked: true,
-          showSoftReminder: false,
-          message: `Ukhti belum memiliki akses untuk Juz ${juzId || 'ini'}. Silakan hubungi admin untuk pembukaan akses Juz.`,
-          buttonText: 'HUBUNGI ADMIN'
-        };
-     }
-  }
+  // Note: Juz-level restrictions have been removed per user request. 
+  // All active/paid users now have access to all Juz.
 
   // Check for PENDING verification (to show specialized message)
   const hasPendingNext = registrations.some(r => 

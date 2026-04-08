@@ -411,18 +411,7 @@ function MufradatMonitoringContent() {
                             {u.phone && <span className="text-[9px] font-bold text-emerald-600 flex items-center gap-0.5"><Phone className="w-2 h-2" /> WA Aktif</span>}
                           </div>
                           
-                          {/* JUZ ACCESS LIST */}
-                          <div className="flex flex-wrap gap-1 mt-1.5 focus-within:ring-1">
-                             {Array.isArray(u.mufradat_accessible_juz) && u.mufradat_accessible_juz.length > 0 ? (
-                               u.mufradat_accessible_juz.map((j: number) => (
-                                 <Badge key={j} variant="outline" className="text-[8px] h-4 font-black px-1.5 py-0 bg-slate-50 border-slate-200 text-slate-600 shadow-sm">
-                                   J{j}
-                                 </Badge>
-                               ))
-                             ) : (
-                               <span className="text-[8px] font-bold text-rose-500 uppercase tracking-tighter bg-rose-50 px-1 rounded italic">Akses Juz Kosong</span>
-                             )}
-                          </div>
+                          {/* JUZ ACCESS LIST (DEPRECATED: ALL NOW AUTO-UNLOCKED) */}
                         </div>
                     </div>
                   </TableCell>

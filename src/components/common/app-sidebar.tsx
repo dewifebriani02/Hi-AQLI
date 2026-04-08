@@ -50,7 +50,7 @@ const adminItems = [
       { href: "/admin/mufradat/groups", label: "Kelola Group" },
       { href: "/admin/mufradat", label: "Monitor Peserta & Group" },
       { href: "/admin/mufradat/leave", label: "Kelola Permohonan Cuti" },
-      { href: "/admin/mufradat/juz-access", label: "Hak Akses Juz" },
+      // { href: "/admin/mufradat/juz-access", label: "Hak Akses Juz" }, // Deprecated - replaced by auto-unlock
       { href: "/admin/registrations", label: "Verifikasi Pembayaran" },
       { href: "/admin/mufradat/reports", label: "Laporan Kinerja" },
       { href: "/admin/mufradat/mabar", label: "Kelola Mabar Terjadwal" },

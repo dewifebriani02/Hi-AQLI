@@ -138,14 +138,20 @@ function VerseDetailContent() {
     const isPrevVerseDone = completedVerseNumbers.has(vIdx - 1);
     
     // A verse is UNLOCKED if:
-    // 1. It is a Free Verse/April Promotion (Handled by mufradat-access.ts)
-    // 2. OR Access is NOT blocked (Handled by mufradat-access.ts which checks subscriptions, vouchers, and explicitly opened Juz)
-    // 3. It's the first verse of the Quran (1:1)
-    // 4. OR It's already completed
-    // 5. OR It's the first verse of a surah 
-    // 6. OR Previous verse in the same surah is done
-    // 7. OR User just came from a successful quiz (Optimistic)
-    const isUnlocked = access.isFree || !access.isBlocked || isFirstVerseOfQuran || isFirstVerseOfSurah || isCurrentVerseCompleted || isPrevVerseDone || success === 'true';
+    // 1. Subscription is active/paid (!access.isBlocked)
+    // 2. AND It's one of the "Start" conditions:
+    //    a. It's a Free Verse (Al-Fatihah, etc.)
+    //    b. It's the first verse of the Quran (1:1)
+    //    c. It's already completed
+    //    d. It's the first verse of a surah 
+    //    e. Previous verse in the same surah is done
+    //    f. User just came from a successful quiz (Optimistic)
+    
+    // Core check: User MUST have subscription access OR it's a free verse
+    const hasProgramAccess = access.isFree || !access.isBlocked;
+    const isSequentialPathDone = isFirstVerseOfQuran || isFirstVerseOfSurah || isCurrentVerseCompleted || isPrevVerseDone || success === 'true';
+
+    const isUnlocked = hasProgramAccess && isSequentialPathDone;
     
     if (!isUnlocked) {
       // Grace period: Wait 1500ms before redirecting to allow DB sync

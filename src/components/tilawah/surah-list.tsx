@@ -165,7 +165,8 @@ export function SurahList({
           const startPage = SURAH_START_PAGES[surah.id] || 1;
           const isFreeApril = new Date().toISOString().startsWith('2026-04');
           const isFreeSurah = [1, 112, 113, 114].includes(surah.id);
-          const isUnlocked = baseUrl !== "/mufradat" || isFreeSurah || isFreeApril || startPage === 1 || completedPageQuizzes.has(startPage - 1) || passedCount > 0;
+          // NEW RULES: If baseUrl is /mufradat, it's always unlocked for users who reach this page (access check handled by parent)
+          const isUnlocked = baseUrl !== "/mufradat" || isFreeSurah || isFreeApril || true; 
           const href = `${baseUrl}/${surah.id}`;
 
           const CardContent = (
