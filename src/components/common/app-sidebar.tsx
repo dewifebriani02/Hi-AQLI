@@ -109,9 +109,9 @@ export function AppSidebar() {
 
   const { data: isAdmin } = useDoc(user ? "roles_admin" : null, user?.id);
   const { data: isSuperAdmin } = useDoc(user ? "roles_superadmin" : null, user?.id);
-  const { data: userData } = useDoc(user ? "users" : null, user?.id);
 
-  const hasAdminAccess = !!isAdmin || !!isSuperAdmin || userData?.role_id === 'admin' || userData?.role_id === 'superadmin';
+  // Security Hardening: Only trust the dedicated RBAC tables
+  const hasAdminAccess = !!isAdmin?.id || !!isSuperAdmin?.id;
 
   const handleLinkClick = () => {
     if (isMobile) {

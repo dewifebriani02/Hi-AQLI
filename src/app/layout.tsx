@@ -107,7 +107,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [mounted, user, userData, isUserDocLoading]);
 
-  const hasAdminAccess = !!isAdminDoc || !!isSuperAdminDoc || userData?.role_id === 'admin' || userData?.role_id === 'superadmin';
+  const hasAdminAccess = !!isAdminDoc?.id || !!isSuperAdminDoc?.id;
   const points = userData?.points || 0;
   const isBlacklisted = !!userData?.is_blacklisted;
 
