@@ -9,9 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mic, BookOpen, Layers, ListFilter } from "lucide-react";
 import Link from "next/link";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMemo } from "react";
+import { useUser } from "@/supabase";
+import { useCollection } from "@/supabase/db";
+import { checkIsStudent } from "@/lib/access-control";
 
 export default function QuranPage() {
+  const { user } = useUser();
+  const { data: registrations } = useCollection("halaqah_registrations", user?.id ? {
+    filters: [{ column: 'user_id', operator: '==', value: user.id }]
+  } : undefined);
+
+  const isStudent = useMemo(() => checkIsStudent(registrations), [registrations]);
+
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-4xl mx-auto">
       <div className="flex flex-col gap-2 mt-4 px-1 text-center sm:text-left">
@@ -42,7 +52,7 @@ export default function QuranPage() {
               <h2 className="text-xl font-black font-headline text-slate-800 uppercase tracking-tight">Daftar Surat</h2>
               <Badge variant="outline" className="text-[10px] font-black text-[#800000] border-[#800000]/20 bg-[#800000]/5 h-6 px-3 uppercase">114 SURAT</Badge>
             </div>
-            <SurahList baseUrl="/tilawah" />
+            <SurahList baseUrl="/tilawah" isStudent={isStudent} />
           </div>
         </TabsContent>
 
@@ -52,12 +62,12 @@ export default function QuranPage() {
               <h2 className="text-xl font-black font-headline text-slate-800 uppercase tracking-tight">Daftar Juz</h2>
               <Badge variant="outline" className="text-[10px] font-black text-[#800000] border-[#800000]/20 bg-[#800000]/5 h-6 px-3 uppercase">30 JUZ</Badge>
             </div>
-            <JuzList baseUrl="/tilawah" variant="tilawah" />
+            <JuzList baseUrl="/tilawah" variant="tilawah" isStudent={isStudent} />
           </div>
         </TabsContent>
         
         <TabsContent value="mushaf" className="focus-visible:outline-none">
-          <MushafPage />
+          <MushafPage isStudent={isStudent} />
         </TabsContent>
       </Tabs>
     </div>

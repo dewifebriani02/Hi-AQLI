@@ -51,6 +51,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getMufradatStatus } from "@/lib/mufradat-access";
+import { checkIsStudent } from "@/lib/access-control";
 
 
 
@@ -207,6 +208,8 @@ function MufradatPageContent() {
       console.error("Error sending reaction:", err);
     }
   };
+
+  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
 
   const access = useMemo(() => {
     return getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
@@ -447,6 +450,7 @@ function MufradatPageContent() {
               baseUrl="/mufradat" 
               userProgress={progress || []} 
               showAudio={false}
+              isStudent={isStudent}
             />
           </div>
         </TabsContent>
@@ -457,6 +461,7 @@ function MufradatPageContent() {
             mode="ayat"
             variant="mufradat"
             unlockedJuz={userData?.mufradat_accessible_juz || []}
+            isStudent={isStudent}
           />
         </TabsContent>
 
@@ -466,6 +471,7 @@ function MufradatPageContent() {
             mode="halaman"
             variant="mufradat"
             unlockedJuz={userData?.mufradat_accessible_juz || []}
+            isStudent={isStudent}
           />
         </TabsContent>
 
@@ -626,7 +632,7 @@ function MufradatPageContent() {
       </Tabs>
 
       {/* Access Blocked Overlay - Only show if user is registered but blocked, not for guests on the main index */}
-      {user && access.isBlocked && (
+      {user && isStudent && access.isBlocked && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
           <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
              <div className="bg-rose-600 py-10 flex flex-col items-center gap-3 text-white">

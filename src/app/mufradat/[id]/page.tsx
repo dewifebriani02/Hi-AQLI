@@ -26,8 +26,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/supabase";
 import { useCollection, useDoc } from "@/supabase/db";
 import { SURAH_START_PAGES } from "@/lib/quran-mapping";
-import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { checkIsStudent } from "@/lib/access-control";
 
 interface Word {
   id: number;
@@ -118,6 +118,8 @@ export default function MufradatSurahDetailPage() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
+  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+
   const access = useMemo(() => {
     return getMufradatStatus(userData, registrations || [], id, undefined, redemptions || []);
   }, [userData, registrations, id, redemptions]);
@@ -205,8 +207,8 @@ export default function MufradatSurahDetailPage() {
     // 1. FREE SURAHS (Fatihah, 3 Qul, Baqarah)
     // 2. OR Access is NOT blocked (Handled by mufradat-access.ts which checks subscriptions, vouchers, and explicitly opened Juz)
     // 3. OR User has some progress already
-    // 4. OR Previous page quiz is done (Sequential logic)
-    const isUnlocked = isFreeSurah || !access.isBlocked || sId === 2 || currentSurahPassedVerses.size > 0 || completedPageQuizzes.has(startPage - 1);
+    // 5. OR User IS a registered student (Thalibah)
+    const isUnlocked = isFreeSurah || isStudent || !access.isBlocked || sId === 2 || currentSurahPassedVerses.size > 0 || completedPageQuizzes.has(startPage - 1);
     
     if (!isUnlocked) {
       router.push('/mufradat');

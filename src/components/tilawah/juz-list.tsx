@@ -49,6 +49,8 @@ const JUZ_VERSE_COUNTS: Record<number, number> = {
   21: 178, 22: 163, 23: 357, 24: 175, 25: 246, 26: 195, 27: 399, 28: 137, 29: 431, 30: 564
 };
 
+import { isJuzFree } from "@/lib/access-control";
+
 interface JuzListProps {
   baseUrl?: string;
   userProgress?: any[];
@@ -56,6 +58,7 @@ interface JuzListProps {
   selectedReciterId?: number;
   mode?: "ayat" | "halaman";
   unlockedJuz?: number[];
+  isStudent?: boolean;
 }
 
 export function JuzList({ 
@@ -64,7 +67,8 @@ export function JuzList({
   variant = "mufradat",
   selectedReciterId = 7,
   mode = "halaman",
-  unlockedJuz = []
+  unlockedJuz = [],
+  isStudent = false
 }: JuzListProps) {
   const [search, setSearch] = useState("");
   const [playingJuz, setPlayingJuz] = useState<number | null>(null);
@@ -244,7 +248,9 @@ export function JuzList({
           const isAllPagesDone = finishedPagesCount === totalPages;
           
           const startPage = juzPages[0];
-          const isJuzUnlocked = variant === "tilawah" || true; // Always unlocked for paid/promotional access
+          const isJuzUnlocked = variant === "tilawah" 
+            ? (isStudent || isJuzFree(j)) 
+            : (isStudent || unlockedJuz.includes(j));
           const isExpanded = expandedJuz === j;
 
           // GRID VIEW (AYAT MODE) OR TILAWAH

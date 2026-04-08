@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SURAH_START_PAGES } from "@/lib/quran-mapping";
 
+import { isSurahFree } from "@/lib/access-control";
+
 interface Surah {
   id: number;
   name_simple: string;
@@ -25,13 +27,15 @@ interface SurahListProps {
   userProgress?: any[];
   selectedReciterId?: number;
   showAudio?: boolean;
+  isStudent?: boolean;
 }
 
 export function SurahList({ 
   baseUrl = "/tilawah", 
   userProgress = [], 
   selectedReciterId = 7,
-  showAudio = true
+  showAudio = true,
+  isStudent = false
 }: SurahListProps) {
   const [surahs, setSurahs] = useState<Surah[]>(QURAN_CHAPTERS as Surah[]);
   const [search, setSearch] = useState("");
@@ -163,10 +167,7 @@ export function SurahList({
           const passedCount = completionMap.get(surah.id) || 0;
           const isCompleted = passedCount >= surah.verses_count;
           const startPage = SURAH_START_PAGES[surah.id] || 1;
-          const isFreeApril = new Date().toISOString().startsWith('2026-04');
-          const isFreeSurah = [1, 112, 113, 114].includes(surah.id);
-          // NEW RULES: If baseUrl is /mufradat, it's always unlocked for users who reach this page (access check handled by parent)
-          const isUnlocked = baseUrl !== "/mufradat" || isFreeSurah || isFreeApril || true; 
+          const isUnlocked = isStudent || isSurahFree(surah.id); 
           const href = `${baseUrl}/${surah.id}`;
 
           const CardContent = (

@@ -205,7 +205,8 @@ export default function AdminRegistrationsPage() {
       // --- END HI MUFRADAT ---
 
       // --- REFERRAL BONUS LOGIC ---
-      if (reg.referral_code_used) {
+      // No bonus if pendaftar used a voucher
+      if (reg.referral_code_used && reg.payment_method !== 'voucher') {
         const { data: referrer } = await supabase
           .from("users")
           .select("id, referral_balance")

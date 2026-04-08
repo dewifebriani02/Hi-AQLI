@@ -30,8 +30,28 @@ import { id as idLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
+import { checkIsStudent } from "@/lib/access-control";
+
 export default function MufradatMabarOverviewPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+  const registrationsOptions = useMemo(() => ({
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
+  }), [user?.id]);
+
+  const { data: registrations, isLoading: isRegLoading } = useCollection(
+    user ? "halaqah_registrations" : null, 
+    registrationsOptions
+  );
+
+  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+
+  useEffect(() => {
+    if (!isUserLoading && !isRegLoading && user && !isStudent) {
+      // Redirect or show message? User requested content gating, Mabar is a premium feature.
+    }
+  }, [user, isStudent, isUserLoading, isRegLoading]);
+
   const sessionOptions = useMemo(() => ({
     orderBy: { column: 'scheduled_at', ascending: true },
     filters: [{ column: 'status', operator: '!=', value: 'finished' }]
@@ -39,12 +59,29 @@ export default function MufradatMabarOverviewPage() {
 
   const { data: sessions, isLoading: isSessionsLoading } = useCollection("mufradat_mabar_sessions", sessionOptions);
 
-  if (isSessionsLoading) return (
+  if (isSessionsLoading || isUserLoading || isRegLoading) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
       <Loader2 className="animate-spin w-10 h-10 text-[#800000]" />
       <p className="text-sm font-bold uppercase tracking-widest text-[#800000]">Mencari Kompetisi...</p>
     </div>
   );
+
+  if (user && !isStudent) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 px-4 text-center space-y-6">
+        <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-3xl flex items-center justify-center mx-auto shadow-lg">
+          <Lock className="w-10 h-10" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-3xl font-black font-headline uppercase">Fitur Khusus Thalibah</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">Mabar Al-Qur'an adalah fitur eksklusif untuk thalibah yang terdaftar dalam program Hi AQLI. Mari bergabung sekarang!</p>
+        </div>
+        <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 h-14 px-10 rounded-2xl font-black uppercase shadow-xl">
+          <Link href="/study-circles/registration">DAFTAR PROGRAM SEKARANG</Link>
+        </Button>
+      </div>
+    );
+  }
 
   const activeSessions = sessions?.filter(s => s.status === 'active') || [];
   const pendingSessions = sessions?.filter(s => s.status === 'pending') || [];

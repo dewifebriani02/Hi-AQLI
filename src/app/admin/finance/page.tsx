@@ -29,6 +29,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Loader2,
   TrendingUp,
@@ -54,10 +63,12 @@ import {
   Gift,
   BookOpen,
   FileText,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { addMonths, format, parseISO, startOfMonth, addDays } from "date-fns";
 
 const FORMATTER = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -75,8 +86,19 @@ export default function MufradatFinancePage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewMonthData, setPreviewMonthData] = useState<any>(null);
 
+  // Manual Transaction States
+  const [isManualOpen, setIsManualOpen] = useState(false);
+  const [isManualLoading, setIsManualLoading] = useState(false);
+  const [manualUser, setManualUser] = useState<string>("");
+  const [manualHalaqah, setManualHalaqah] = useState<string>("");
+  const [manualAmount, setManualAmount] = useState<string>("0");
+  const [manualMonth, setManualMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
+  const [manualUniqueCode, setManualUniqueCode] = useState<string>("0");
+  const [manualType, setManualType] = useState<string>("monthly"); // 'initial' or 'monthly'
+
   const { data: usersData, isLoading: isUsersLoading } = useCollection("users");
   const { data: groups, isLoading: isGroupsLoading } = useCollection("mufradat_groups");
+  const { data: halaqahs, isLoading: isHalaqahsLoading } = useCollection("halaqahs");
 
   // Fetch ALL halaqah registrations for mufradat
   // Note: We need confirmed/verified registrations only
@@ -296,8 +318,140 @@ export default function MufradatFinancePage() {
 
     return history.sort((a, b) => b.month.localeCompare(a.month));
   }, [payouts]);
-
+  
   // 4. ACTION HANDLERS
+  const handleSubmitManualTransaction = async () => {
+    if (!manualUser || !manualHalaqah) {
+      toast({
+        title: "Gagal",
+        description: "Pilih Thalibah dan Program terlebih dahulu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsManualLoading(true);
+    try {
+      const selectedUser = usersData?.find((u: any) => u.id === manualUser);
+      const selectedHalaqah = halaqahs?.find((h: any) => h.id === manualHalaqah);
+
+      if (!selectedUser || !selectedHalaqah) throw new Error("Thalibah atau Program tidak valid.");
+
+      const isMufradatReg = selectedHalaqah.id === 'mufradat-premium' || selectedHalaqah.title?.toLowerCase().includes('mufradat');
+      const isTikrarReg = selectedHalaqah.id?.includes('tikrar') || selectedHalaqah.title?.toLowerCase().includes('tikrar');
+
+      const totalAmount = parseInt(manualAmount) + parseInt(manualUniqueCode);
+
+      // 1. Insert Verified Registration
+      const regData = {
+        user_id: selectedUser.id,
+        user_name: selectedUser.username || selectedUser.full_name || "Thalibah",
+        user_email: selectedUser.email,
+        whatsapp: selectedUser.whatsapp || selectedUser.phone || "-",
+        halaqah_id: selectedHalaqah.id,
+        halaqah_title: selectedHalaqah.title,
+        status: "verified",
+        verified_at: new Date().toISOString(),
+        start_date: new Date().toISOString(),
+        amount: totalAmount,
+        unique_code: parseInt(manualUniqueCode),
+        billing_month: manualMonth,
+        payment_method: "manual_transfer",
+        is_paid: true,
+        payment_type: manualType,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        referral_code_used: selectedUser.referral_code_used || null, // Fallback to provided if any
+      };
+
+      const { data: newReg, error: regError } = await supabase
+        .from("halaqah_registrations")
+        .insert(regData)
+        .select()
+        .single();
+
+      if (regError) throw regError;
+
+      // 2. User Profile Activation
+      const currentFollowed = selectedUser.followed_halaqahs || [];
+      const updateData: any = {
+        followed_halaqahs: currentFollowed.includes(selectedHalaqah.id) ? currentFollowed : [...currentFollowed, selectedHalaqah.id],
+        updated_at: new Date().toISOString()
+      };
+
+      // Auto-Grouping Logic for Mufradat
+      if (!selectedUser.mufradat_group_id && isMufradatReg) {
+        const { data: availableGroups } = await supabase
+          .from('mufradat_groups')
+          .select('*')
+          .lt('member_count', 50)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (availableGroups && availableGroups.length > 0) {
+          updateData.mufradat_group_id = availableGroups[0].id;
+          await supabase.from('mufradat_groups').update({ member_count: availableGroups[0].member_count + 1 }).eq('id', availableGroups[0].id);
+        } else {
+          const { data: allGroups } = await supabase.from('mufradat_groups').select('id');
+          const nextNum = (allGroups?.length || 0) + 1;
+          const { data: newGroup } = await supabase.from('mufradat_groups').insert({ name: `Grup ${nextNum}`, member_count: 1 }).select().single();
+          if (newGroup) updateData.mufradat_group_id = newGroup.id;
+        }
+      }
+
+      // Tikrar Specific
+      if (isTikrarReg) {
+        updateData.is_tikrar_paid = true;
+        updateData.tikrar_start_date = new Date().toISOString();
+      }
+
+      // Subscription logic for Hi Mufradat
+      if (isMufradatReg) {
+        updateData.mufradat_status = 'active';
+        if (manualType === 'monthly') {
+          const monthDate = parseISO(`${manualMonth}-01`);
+          updateData.mufradat_due_date = addDays(addMonths(monthDate, 1), 9).toISOString();
+        } else {
+          updateData.mufradat_due_date = addDays(addMonths(startOfMonth(new Date()), 1), 9).toISOString();
+        }
+      }
+
+      const { error: userError } = await supabase.from("users").update(updateData).eq('id', selectedUser.id);
+      if (userError) throw userError;
+
+      // 3. Referral Bonus Logic
+      if (selectedUser.referred_by_id) {
+        const { count } = await supabase
+          .from("halaqah_registrations")
+          .select("*", { count: 'exact', head: true })
+          .eq("user_id", selectedUser.id)
+          .eq("status", "verified");
+
+        if (count === 1) {
+          const { data: referrer } = await supabase.from("users").select("id, referral_balance").eq("id", selectedUser.referred_by_id).maybeSingle();
+          if (referrer) {
+            await supabase.from("users").update({ referral_balance: (referrer.referral_balance || 0) + 5000 }).eq("id", referrer.id);
+          }
+        }
+      }
+
+      toast({
+        title: "Transaksi Berhasil",
+        description: `Manual transaction ${selectedUser.username} telah dicatat dan akun diaktifkan.`,
+      });
+      setIsManualOpen(false);
+      refreshRegs();
+    } catch (err: any) {
+      toast({
+        title: "Gagal",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsManualLoading(false);
+    }
+  };
+
   const handleCairkan = async (monthData: any) => {
     const splits = calculateSplits(monthData);
 
@@ -447,22 +601,165 @@ export default function MufradatFinancePage() {
             Distribusi Fee Otomatis
           </p>
         </div>
-        <div className="bg-emerald-50 border-2 border-emerald-100 p-4 rounded-2xl flex items-center gap-4">
-          <div className="h-12 w-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
-            <DollarSign className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-emerald-800 uppercase tracking-tighter">
-              Total Omset Terverifikasi
-            </p>
-            <p className="text-2xl font-black text-emerald-900 tracking-tighter">
-              {FORMATTER.format(
-                mufradatRegistrations.reduce(
-                  (acc, r) => acc + (Number(r.amount) || 0),
-                  0,
-                ),
-              )}
-            </p>
+
+        <div className="flex items-center gap-3">
+          <Dialog open={isManualOpen} onOpenChange={setIsManualOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-12 rounded-xl shadow-lg gap-2">
+                <Plus className="w-5 h-5" />
+                <span className="hidden sm:inline">TRANSAKSI MANUAL</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+              <DialogHeader className="p-8 bg-[#800000] text-white">
+                <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+                  <Plus className="w-5 h-5" /> Input Transaksi Manual
+                </DialogTitle>
+                <DialogDescription className="text-white/70 font-bold uppercase tracking-widest text-[10px] mt-1">
+                  Mencatat pembayaran manual & aktivasi akses thalibah
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="p-8 space-y-6 bg-white overflow-y-auto max-h-[70vh]">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    Pilih Thalibah
+                  </Label>
+                  <Select value={manualUser} onValueChange={setManualUser}>
+                    <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                      <SelectValue placeholder="-- Pilih Thalibah --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {usersData?.map((u: any) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.username || u.full_name} ({u.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    Program & Paket
+                  </Label>
+                  <Select value={manualHalaqah} onValueChange={setManualHalaqah}>
+                    <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                      <SelectValue placeholder="-- Pilih Program --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {halaqahs?.map((h: any) => (
+                        <SelectItem key={h.id} value={h.id}>
+                          {h.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Nominal Transfer
+                    </Label>
+                    <Input
+                      type="number"
+                      value={manualAmount}
+                      onChange={(e) => setManualAmount(e.target.value)}
+                      className="h-12 border-2 rounded-xl font-black"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Kode Unik
+                    </Label>
+                    <Input
+                      type="number"
+                      value={manualUniqueCode}
+                      onChange={(e) => setManualUniqueCode(e.target.value)}
+                      className="h-12 border-2 rounded-xl font-black"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Bulan Laporan
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="YYYY-MM"
+                      value={manualMonth}
+                      onChange={(e) => setManualMonth(e.target.value)}
+                      className="h-12 border-2 rounded-xl font-black"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Tipe Transaksi
+                    </Label>
+                    <Select value={manualType} onValueChange={setManualType}>
+                      <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="initial">Pendaftaran Awal</SelectItem>
+                        <SelectItem value="monthly">Iuran Bulanan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-start gap-3">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <p className="text-[10px] text-emerald-800 font-bold leading-relaxed italic">
+                    Penginputan ini akan langsung memverifikasi akses thalibah
+                    dan muncul di laporan keuangan bulan terpilih.
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter className="p-6 bg-slate-50 border-t flex gap-3">
+                <Button
+                  variant="ghost"
+                  className="flex-1 font-bold h-12"
+                  onClick={() => setIsManualOpen(false)}
+                >
+                  Batal
+                </Button>
+                <Button
+                  className="flex-[2] bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-12 rounded-xl shadow-lg"
+                  onClick={handleSubmitManualTransaction}
+                  disabled={isManualLoading}
+                >
+                  {isManualLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "CATAT & AKTIFKAN AKSES"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <div className="bg-emerald-50 border-2 border-emerald-100 p-4 rounded-2xl flex items-center gap-4">
+            <div className="h-12 w-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
+              <DollarSign className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-emerald-800 uppercase tracking-tighter">
+                Total Omset Terverifikasi
+              </p>
+              <p className="text-2xl font-black text-emerald-900 tracking-tighter">
+                {FORMATTER.format(
+                  mufradatRegistrations.reduce(
+                    (acc, r) => acc + (Number(r.amount) || 0),
+                    0,
+                  ),
+                )}
+              </p>
+            </div>
           </div>
         </div>
       </div>

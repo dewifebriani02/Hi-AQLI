@@ -168,34 +168,29 @@ function RegistrationForm() {
 
     if ((effectiveReferralId || urlReferral) && !appliedReferral) {
       const fetchReferrer = async () => {
-        // Only apply persistent referral if this is truly the user's first registration ever
-        const isActuallyFirstTime = !registrationsHistory || registrationsHistory.length === 0;
-        
-        if (!isActuallyFirstTime) {
-           console.log("Not a first-time registration, persistent referral ignored.");
-           return;
-        }
-
         let referrer = null;
 
-        // Priority 1: From Profile (Persistent)
-        if (effectiveReferralId) {
-          const { data } = await supabase
-            .from("users")
-            .select("id, referral_code, username")
-            .eq("id", effectiveReferralId)
-            .maybeSingle();
-          referrer = data;
-        } 
-        
-        // Priority 2: From URL (Parameters) - fallback or override
-        if (!referrer && urlReferral) {
+        // Priority 1: From URL (Parameters) - explicit intent
+        if (urlReferral) {
           const { data } = await supabase
             .from("users")
             .select("id, referral_code, username")
             .eq("referral_code", urlReferral.toUpperCase())
             .maybeSingle();
           referrer = data;
+        }
+        
+        // Priority 2: From Profile (Persistent) - only for first-time registrations
+        if (!referrer && effectiveReferralId) {
+          const isActuallyFirstTime = !registrationsHistory || registrationsHistory.length === 0;
+          if (isActuallyFirstTime) {
+            const { data } = await supabase
+              .from("users")
+              .select("id, referral_code, username")
+              .eq("id", effectiveReferralId)
+              .maybeSingle();
+            referrer = data;
+          }
         }
         
         if (referrer) {
@@ -242,7 +237,7 @@ function RegistrationForm() {
   }, [user, registrationsHistory, circle, isMufradat, isTikrar]);
 
   const registrationFee = isFirstRegistration ? 10000 : 0;
-  const referralDiscount = appliedReferral ? 5000 : 0;
+  const referralDiscount = (appliedReferral && !appliedVoucher) ? 5000 : 0;
 
   const totalCalculated = useMemo(() => {
     if (!isPremiumProgram || appliedVoucher) return 0;
@@ -658,7 +653,7 @@ function RegistrationForm() {
                   <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100 shadow-sm animate-in zoom-in duration-300">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter flex items-center gap-1">
-                        <Zap className="w-2 h-2 fill-current" /> Hadiah Referral Aktif (-Rp 5.000)
+                        <Zap className="w-2 h-2 fill-current" /> {appliedVoucher ? 'Referral Non-Aktif (Voucher Digunakan)' : 'Hadiah Referral Aktif (-Rp 5.000)'}
                       </span>
                       <span className="text-sm font-black text-[#800000]">{appliedReferral.referral_code}</span>
                     </div>

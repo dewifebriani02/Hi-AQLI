@@ -36,6 +36,8 @@ interface Verse {
   words: WordData[];
 }
 
+import { checkIsStudent, isMushafPageFree } from "@/lib/access-control";
+
 export default function MufradatPageDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -43,6 +45,17 @@ export default function MufradatPageDetailPage() {
   const pageNum = parseInt(pageIdId);
 
   const { user, isUserLoading } = useUser();
+  const { data: registrations } = useCollection("halaqah_registrations", user?.id ? {
+    filters: [{ column: 'user_id', operator: '==', value: user.id }]
+  } : undefined);
+
+  const isStudent = useMemo(() => checkIsStudent(registrations), [registrations]);
+
+  useEffect(() => {
+    if (!isUserLoading && !isStudent && !isMushafPageFree(pageNum)) {
+      router.push('/mufradat');
+    }
+  }, [pageNum, isStudent, isUserLoading, router]);
 
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);

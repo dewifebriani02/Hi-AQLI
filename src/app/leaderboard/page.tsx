@@ -112,7 +112,7 @@ export default function LeaderboardPage() {
                 <>
                   <div className="relative">
                     <Avatar className="w-16 h-16 border-4 border-[#800000]">
-                      <AvatarImage src={topThree[1].photoURL} />
+                      <AvatarImage src={topThree[1].photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(topThree[1].username || topThree[1].email || 'U')}&background=800000&color=fff`} />
                       <AvatarFallback className="bg-[#800000] text-white font-bold">{topThree[1].username?.[0] || topThree[1].email?.[0]}</AvatarFallback>
                     </Avatar>
                     <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">2</div>
@@ -133,7 +133,7 @@ export default function LeaderboardPage() {
                   <Crown className="w-8 h-8 text-[#D4AF37] fill-current animate-bounce" />
                 </div>
                 <Avatar className="w-20 h-20 border-4 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20">
-                  <AvatarImage src={topThree[0].photoURL} />
+                  <AvatarImage src={topThree[0].photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(topThree[0].username || topThree[0].email || 'U')}&background=D4AF37&color=000`} />
                   <AvatarFallback className="bg-[#800000] text-white font-bold">{topThree[0].username?.[0] || topThree[0].email?.[0]}</AvatarFallback>
                 </Avatar>
                 <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">1</div>
@@ -151,7 +151,7 @@ export default function LeaderboardPage() {
                 <>
                   <div className="relative">
                     <Avatar className="w-16 h-16 border-4 border-[#800000]/60">
-                      <AvatarImage src={topThree[2].photoURL} />
+                      <AvatarImage src={topThree[2].photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(topThree[2].username || topThree[2].email || 'U')}&background=800000&color=fff`} />
                       <AvatarFallback className="bg-[#800000]/60 text-white font-bold">{topThree[2].username?.[0] || topThree[2].email?.[0]}</AvatarFallback>
                     </Avatar>
                     <div className="absolute -bottom-2 -right-2 bg-[#800000]/60 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">3</div>
@@ -179,7 +179,7 @@ export default function LeaderboardPage() {
                 <div className="flex items-center gap-4">
                   <span className="text-xs font-black text-muted-foreground w-4">{idx + 4}</span>
                   <Avatar className="h-10 w-10 border-2 border-white">
-                    <AvatarImage src={u.photoURL} />
+                    <AvatarImage src={u.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username || u.email || 'H')}&background=800000&color=fff`} />
                     <AvatarFallback className="bg-[#800000] text-white font-bold">{u.username?.[0] || u.email?.[0]}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">

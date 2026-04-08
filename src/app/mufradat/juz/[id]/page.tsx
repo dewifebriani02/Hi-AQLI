@@ -19,6 +19,7 @@ import { useCollection, useDoc } from "@/supabase/db";
 import { JUZ_PAGE_MAPPING, getJuzForPage } from "@/lib/quran-mapping";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { checkIsStudent } from "@/lib/access-control";
 
 interface Word {
   id: number;
@@ -73,6 +74,8 @@ export default function MufradatJuzDetailPage() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
+  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+
   const access = useMemo(() => {
     // For Juz access, we check if the user has access to the first page of this Juz
     const pageMapping = JUZ_PAGE_MAPPING[parseInt(id)];
@@ -111,9 +114,12 @@ export default function MufradatJuzDetailPage() {
   const { passedVerses, errorVerses, verseStatsMap } = progressData;
 
   useEffect(() => {
-    if (isUserLoading || isUserDataLoading || !access.isBlocked === false && parseInt(id) !== 1) return;
-    // Sequential guard can be added here if needed
-  }, [id, isUserLoading, access]);
+    if (isUserLoading || isUserDataLoading) return;
+    const isFreeJuz = parseInt(id) === 1;
+    if (!isStudent && !isFreeJuz && access.isBlocked) {
+      router.push('/mufradat?tab=juz');
+    }
+  }, [id, isUserLoading, isUserDataLoading, isStudent, access.isBlocked, router]);
 
   useEffect(() => {
     const savedReciter = localStorage.getItem('aqli_reciter_id');
@@ -278,7 +284,7 @@ export default function MufradatJuzDetailPage() {
             
             // Unified unlock logic
             const isFreeJuz = parseInt(id) === 1;
-            const isUnlocked = isFreeJuz || isCompleted || isPrevVerseDone || !access.isBlocked;
+            const isUnlocked = isFreeJuz || isStudent || isCompleted || isPrevVerseDone || !access.isBlocked;
 
             return (
               <div key={verse.id} id={`verse-${verseIdKey}`}>

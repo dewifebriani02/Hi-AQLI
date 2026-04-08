@@ -60,11 +60,34 @@ const RECITERS = [
   { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
 ];
 
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { checkIsStudent, isSurahFree } from "@/lib/access-control";
+
 export default function SurahDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const { toast } = useToast();
   const { user } = useUser();
+
+  const { data: registrations } = useCollection("halaqah_registrations", user?.id ? {
+    filters: [{ column: 'user_id', operator: '==', value: user.id }]
+  } : undefined);
+
+  const isStudent = useMemo(() => checkIsStudent(registrations), [registrations]);
+
+  useEffect(() => {
+    const sId = Number(id);
+    if (!isStudent && sId && !isSurahFree(sId)) {
+      toast({
+        variant: "destructive",
+        title: "Surat Terkunci",
+        description: "Ukhti perlu mendaftar program untuk membuka materi ini."
+      });
+      router.push('/tilawah');
+    }
+  }, [id, isStudent, router, toast]);
 
   const [surah, setSurah] = useState<SurahInfo | null>(() => {
     const sId = Number(id);
