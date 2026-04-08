@@ -115,12 +115,14 @@ export default function MutabaahPage() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-  const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection("mutabaah_logs", {
+  const logsOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
       { column: 'date', operator: '>=', value: thirtyDaysAgoStr }
     ]
-  });
+  }), [user?.id, thirtyDaysAgoStr]);
+
+  const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection("mutabaah_logs", logsOptions);
 
   const todayLogs = useMemo(() => 
     mutabaahLogs?.filter((l: any) => l.date === todayStr) || [],
@@ -271,6 +273,19 @@ export default function MutabaahPage() {
     );
     return uniqueCompleted.size;
   }, [user, todayLogs, localLogs, activeActivities]);
+
+  const currentWeek = useMemo(() => {
+    const today = new Date();
+    const day = today.getDay(); // 0 (Sun) to 6 (Sat)
+    // Adjust to Monday-start: 1 (Mon) to 7 (Sun)
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() + diffToMon + i);
+      return d.toISOString().split('T')[0];
+    });
+  }, []);
 
   const history30Days = useMemo(() => {
     return Array.from({ length: 30 }, (_, i) => {
@@ -537,15 +552,29 @@ export default function MutabaahPage() {
                               </div>
                             </div>
 
-                            <div className="flex flex-col items-end gap-1 shrink-0">
-                               <p className="text-[8px] font-bold text-muted-foreground uppercase">7-D</p>
+                             <div className="flex flex-col items-end gap-1 shrink-0">
+                               <p className="text-[8px] font-bold text-muted-foreground uppercase">SEN-MIN</p>
                                <div className="flex gap-0.5">
-                                  {history30Days.slice(-7).map((date, i) => {
+                                  {currentWeek.map((date, i) => {
                                     const wasDone = user
                                       ? mutabaahLogs?.find((l: any) => l.activity_id === activity.id && l.date === date)?.completed
                                       : guestHistoricalLogs.find((l: any) => l.activity_id === activity.id && l.date === date)?.completed;
+                                    
+                                    const dayName = ['S', 'S', 'R', 'K', 'J', 'S', 'M'][i];
+                                    const isToday = date === todayStr;
+
                                     return (
-                                      <div key={i} className={cn("w-1.5 h-1.5 rounded-full transition-all", wasDone ? "bg-emerald-500 scale-110" : "bg-slate-200")} title={date} />
+                                      <div 
+                                        key={i} 
+                                        className={cn(
+                                          "w-2 h-2 rounded-full flex items-center justify-center text-[5px] font-black transition-all", 
+                                          wasDone ? "bg-emerald-500 text-white scale-110 shadow-sm" : "bg-slate-100 text-slate-400",
+                                          isToday && !wasDone && "border border-emerald-300 animate-pulse"
+                                        )} 
+                                        title={date}
+                                      >
+                                        {dayName}
+                                      </div>
                                     );
                                   })}
                                </div>
