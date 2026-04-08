@@ -62,6 +62,23 @@ function AuthCallbackHandler() {
           return;
         }
 
+        // --- NEW: MANUAL FRAGMENT PARSING ---
+        // If we have a hash but no session, let's try to feed it to Supabase manually
+        if (hasAccessToken && !code) {
+           console.log('AUTH_DEBUG: Access token found in hash. Attempting manual setSession...');
+           const params = new URLSearchParams(hash.substring(1));
+           const accessToken = params.get('access_token');
+           const refreshToken = params.get('refresh_token');
+           
+           if (accessToken && refreshToken) {
+              const { error: setErr } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+              });
+              if (setErr) console.error('AUTH_DEBUG: Manual setSession error:', setErr);
+           }
+        }
+
         // 1. PKCE: Exchange code
         if (code) {
           console.log('AUTH_DEBUG: PKCE Flow detected. Exchanging code...');
@@ -74,36 +91,44 @@ function AuthCallbackHandler() {
           }
         }
 
-        // 2. CAPTURE SESSION (Implicit or After PKCE Exchange)
+        // 2. CAPTURE SESSION
         console.log('AUTH_DEBUG: Capturing session...');
-        
         let session = null;
         
-        // Strategy A: Immediate check
-        const { data: { session: initialSession }, error: sErr } = await supabase.auth.getSession();
+        // Immediate check
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (initialSession) {
             session = initialSession;
-            console.log('AUTH_DEBUG: Session found immediately');
         } else {
-            if (sErr) console.warn('AUTH_DEBUG: Initial getSession error:', sErr);
-            
-            // Strategy B: Wait for parse (up to 3 seconds)
-            console.log('AUTH_DEBUG: Waiting for Supabase to parse URL/Cookies...');
-            for (let i = 0; i < 6; i++) {
-                await new Promise(r => setTimeout(r, 500));
+            // Wait for up to 5 seconds with higher frequency (every 300ms)
+            for (let i = 0; i < 15; i++) {
+                await new Promise(r => setTimeout(r, 300));
                 const { data: { session: retrySession } } = await supabase.auth.getSession();
                 if (retrySession) {
                     session = retrySession;
-                    console.log(`AUTH_DEBUG: Session found after ${i+1} retries`);
+                    console.log(`AUTH_DEBUG: Session found after ${(i+1)*300}ms`);
                     break;
                 }
             }
         }
 
         if (!session && (code || hasAccessToken)) {
-          console.error('AUTH_DEBUG: Critical! Fragment/Code exists but no session resolved. Check 401 logs.');
-          setErrorMessage('Masalah Otentikasi (Error 401)');
-          setErrorDetails('Supabase menolak token Anda. Kemungkinan penyebab: Cache/Cookies dari project lama masih tertanam di browser ini.');
+          console.error('AUTH_DEBUG: Critical! Fragment/Code exists but no session resolved.');
+          
+          // DIAGNOSTIC: Decode token ref if exists in hash
+          let tokenRef = "Unknown";
+          if (hasAccessToken) {
+             try {
+                const at = new URLSearchParams(hash.substring(1)).get('access_token');
+                if (at) {
+                    const payload = JSON.parse(at.split('.')[1] ? atob(at.split('.')[1]) : '{}');
+                    tokenRef = payload.ref || "No ref in token";
+                }
+             } catch(e) {}
+          }
+
+          setErrorMessage(`Masalah Otentikasi (Error 401)`);
+          setErrorDetails(`Supabase menolak token Anda. Token ini ditujukan untuk project [${tokenRef}]. Pastikan ini sama dengan [lhqbqzrghdbbmstnhple].`);
           return;
         }
 
