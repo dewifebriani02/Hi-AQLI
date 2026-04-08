@@ -59,10 +59,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           }, { onConflict: 'id', ignoreDuplicates: true });
           
           if (error) {
-            console.error('Failed to auto-sync profile in layout:', error);
+            // If the error is about unique constraint, it means the trigger might have 
+            // already created it, which is fine.
+            if (!error.message?.includes('duplicate key')) {
+                console.warn('Sync Profile Info:', error.message || 'Row might already exist via Trigger');
+            }
           }
-        } catch (err) {
-          console.error('Failed to auto-sync profile in layout:', err);
+        } catch (err: any) {
+          console.error('System error during profile sync:', err.message || err);
         }
       };
       syncProfile();
