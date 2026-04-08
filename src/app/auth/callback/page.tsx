@@ -167,15 +167,12 @@ function AuthCallbackHandler() {
           }
           router.replace(next);
         } else {
-            // Landing here means no session was found AND no code/hash was present
-            console.warn('AUTH_DEBUG: Landing on callback without any auth markers.');
             setErrorMessage('Sesi Masuk Berakhir');
-            setErrorDetails('Ukhti tidak memiliki token aktif. Silakan login kembali.');
+            setErrorDetails('Ukhti tidak memiliki sesi aktif. Silakan login kembali.');
         }
       } catch (err: any) {
-        console.error('AUTH_DEBUG: Global Exception:', err);
         setErrorMessage(`Kesalahan Sistem`);
-        setErrorDetails(err.message || 'Unknown system error');
+        setErrorDetails(err.message || 'Terjadi kesalahan saat otentikasi.');
       }
     };
 
@@ -219,27 +216,9 @@ KEY: ${envKey.substring(0, 10)}...${envKey.substring(envKey.length - 10)} (${env
                disabled={isClearing}
                className="bg-[#800000] hover:bg-black text-white font-black py-6 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
              >
-               {isClearing ? <Loader2 className="w-5 h-5 animate-spin" /> : "BERSIHKAN CACHE & COBA LAGI"}
-             </Button>
-
-             <Button 
-               variant="outline"
-               onClick={() => setShowDiagnostics(!showDiagnostics)} 
-               className="text-[10px] text-slate-500 font-black border-slate-200 uppercase tracking-widest h-10 rounded-xl"
-             >
-               {showDiagnostics ? "HILANGKAN DIAGNOSA" : "LIHAT DIAGNOSA ENV"}
+               {isClearing ? <Loader2 className="w-5 h-5 animate-spin" /> : "COBA LAGI"}
              </Button>
           </div>
-
-          {showDiagnostics && (
-             <div className="mt-4 p-4 bg-slate-900 rounded-xl text-left font-mono text-[9px] text-emerald-400 overflow-hidden border-2 border-slate-700 shadow-inner">
-                <p className="text-slate-500 mb-1 font-bold border-b border-slate-800 pb-1 uppercase tracking-tighter">System Diagnostic (Encrypted View)</p>
-                <p className="whitespace-pre-wrap leading-tight">{diagnosticInfo}</p>
-                <div className="mt-2 text-slate-500 italic">
-                    *Pastikan KEY ini cocok dengan project: lhqbqzrghdbbmstnhple
-                </div>
-             </div>
-          )}
 
           <div className="pt-4 text-[10px] text-slate-400 font-medium">
              Ukhti juga bisa mencoba login lewat <b>Google Incognito</b> agar lebih bersih.
