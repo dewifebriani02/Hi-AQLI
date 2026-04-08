@@ -117,18 +117,27 @@ function AuthCallbackHandler() {
           
           // DIAGNOSTIC: Decode token ref if exists in hash
           let tokenRef = "Unknown";
+          let tokenIss = "Unknown";
           if (hasAccessToken) {
              try {
                 const at = new URLSearchParams(hash.substring(1)).get('access_token');
                 if (at) {
-                    const payload = JSON.parse(at.split('.')[1] ? atob(at.split('.')[1]) : '{}');
-                    tokenRef = payload.ref || "No ref in token";
+                    const parts = at.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1]));
+                        tokenRef = payload.ref || "No ref";
+                        tokenIss = payload.iss || "No iss";
+                    } else {
+                        tokenRef = "Malformed Token";
+                    }
                 }
-             } catch(e) {}
+             } catch(e) {
+                tokenRef = `Error Decode: ${e.message}`;
+             }
           }
 
           setErrorMessage(`Masalah Otentikasi (Error 401)`);
-          setErrorDetails(`Supabase menolak token Anda. Token ini ditujukan untuk project [${tokenRef}]. Pastikan ini sama dengan [lhqbqzrghdbbmstnhple].`);
+          setErrorDetails(`Supabase menolak token untuk project [${tokenRef}]. Pastikan environment variable Ukhti suda benar dan TIDAK ada spasi.`);
           return;
         }
 
@@ -175,11 +184,15 @@ function AuthCallbackHandler() {
 
   if (errorMessage) {
     const isProd = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'Not defined';
-    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'Not defined';
+    const envUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+    const envKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
+    
+    const hasSpaceUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').length !== envUrl.length;
+    const hasSpaceKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').length !== envKey.length;
+
     const diagnosticInfo = `
-URL: ${envUrl.substring(0, 30)}...
-Key: ${envKey.substring(0, 15)}...${envKey.substring(envKey.length - 10)}
+URL: ${envUrl.substring(0, 30)}... (${envUrl.length} chars) ${hasSpaceUrl ? '[ADA SPASI!]' : '[OK]'}
+KEY: ${envKey.substring(0, 10)}...${envKey.substring(envKey.length - 10)} (${envKey.length} chars) ${hasSpaceKey ? '[ADA SPASI!]' : '[OK]'}
     `.trim();
 
     return (
