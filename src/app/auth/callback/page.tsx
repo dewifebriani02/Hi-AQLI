@@ -15,57 +15,56 @@ export default function AuthCallbackPage() {
       const code = params.get('code');
       const next = params.get('next') || '/';
 
+      console.log('AUTH_CALLBACK: Starting exchange process', { hasCode: !!code, next });
+
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) {
-          console.error('Error exchanging code for session:', exchangeError);
+          console.error('AUTH_CALLBACK: Exchange error:', exchangeError);
           router.replace(`/login?error=${encodeURIComponent('Gagal menukar kode otentikasi: ' + exchangeError.message)}`);
           return;
         }
       }
 
+      // Small delay to let browser settle cookies in some environments
+      await new Promise(res => setTimeout(res, 300));
+
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
-        console.error('No session found after callback:', sessionError);
-        router.replace('/login?error=Sesi tidak ditemukan');
-        return;
+        console.error('AUTH_CALLBACK: No session found:', sessionError);
+        // Try one more time before giving up
+        const { data: { session: retrySession } } = await supabase.auth.getSession();
+        if (!retrySession) {
+          router.replace('/login?error=Sesi tidak ditemukan (Pastikan Ukhti menggunakan hiaqli.pro tanpa www)');
+          return;
+        }
       }
 
       // Auto-sync profile for OAuth users
-      const user = session.user;
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
+      const currentSession = session || (await supabase.auth.getSession()).data.session;
+      const user = currentSession?.user;
+      
+      if (user) {
+        try {
+          // Profile check logic remained the same but safer
+          const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
 
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-        }
-
-        if (!profile) {
-          // Create missing profile using upsert for better resilience
-          const { error: upsertError } = await supabase.from('users').upsert({
-            id: user.id,
-            username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
-            email: user.email,
-            role_id: 'learner',
-            points: 0,
-            followed_halaqahs: [],
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
-
-          if (upsertError) {
-            console.error('Error syncing profile in callback:', upsertError);
-            // We don't block the user; they can still access the app
-            // Although a missing profile might cause minor issues in some tabs
+          if (!profile) {
+            console.log('AUTH_CALLBACK: Profile missing, creating default...');
+            await supabase.from('users').upsert({
+              id: user.id,
+              username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
+              email: user.email,
+              role_id: 'learner',
+              points: 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'id' });
           }
+        } catch (err) {
+          console.error('AUTH_CALLBACK: Unexpected error in profile sync:', err);
         }
-      } catch (err) {
-        console.error('Unexpected error in profile sync:', err);
       }
       
       router.replace(next);
