@@ -1,88 +1,122 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       const next = params.get('next') || '/';
-
-      console.log('AUTH_CALLBACK: Starting exchange process', { hasCode: !!code, next });
-
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          console.error('AUTH_CALLBACK: Exchange error:', exchangeError);
-          router.replace(`/login?error=${encodeURIComponent('Gagal menukar kode otentikasi: ' + exchangeError.message)}`);
-          return;
-        }
-      }
-
-      // Small delay to let browser settle cookies in some environments
-      await new Promise(res => setTimeout(res, 300));
-
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session) {
-        console.error('AUTH_CALLBACK: No session found:', sessionError);
-        // Try one more time before giving up
-        const { data: { session: retrySession } } = await supabase.auth.getSession();
-        if (!retrySession) {
-          router.replace('/login?error=Sesi tidak ditemukan (Pastikan Ukhti menggunakan hiaqli.pro tanpa www)');
-          return;
-        }
-      }
+      const hostname = window.location.hostname;
+      const isWww = hostname.startsWith('www.');
 
-      // Auto-sync profile for OAuth users
-      const currentSession = session || (await supabase.auth.getSession()).data.session;
-      const user = currentSession?.user;
-      
-      if (user) {
-        try {
-          // Profile check logic remained the same but safer
-          const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      console.log('AUTH_DEBUG: Current URL:', window.location.href);
+      console.log('AUTH_DEBUG: Origin:', window.location.origin);
+      console.log('AUTH_DEBUG: Hostname:', hostname);
 
-          if (!profile) {
-            console.log('AUTH_CALLBACK: Profile missing, creating default...');
-            await supabase.from('users').upsert({
-              id: user.id,
-              username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
-              email: user.email,
-              role_id: 'learner',
-              points: 0,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'id' });
+      try {
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            console.error('AUTH_DEBUG: Exchange error:', exchangeError);
+            setErrorMessage(`Gagal menukar kode login: ${exchangeError.message}`);
+            setErrorDetails(`Kode Error: ${exchangeError.name || 'AuthError'} ${isWww ? '(Ukhti terdeteksi menggunakan www. - ini penyebab umum gagal login)' : ''}`);
+            return;
           }
-        } catch (err) {
-          console.error('AUTH_CALLBACK: Unexpected error in profile sync:', err);
         }
+
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          console.error('AUTH_DEBUG: Session error:', sessionError);
+          setErrorMessage(sessionError ? `Gagal memuat sesi: ${sessionError.message}` : 'Sesi tidak ditemukan setelah login.');
+          setErrorDetails(`Kemungkinan penyebab: Cookies browser tidak aktif atau domain mismatch.`);
+          return;
+        }
+
+        // Auto-sync profile logic
+        const user = session.user;
+        const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+
+        if (!profile) {
+          await supabase.from('users').upsert({
+            id: user.id,
+            username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
+            email: user.email,
+            role_id: 'learner',
+            points: 0,
+            created_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        }
+        
+        router.replace(next);
+      } catch (err: any) {
+        setErrorMessage(`Terjadi kesalahan sistem: ${err.message || 'Unknown Error'}`);
+        setErrorDetails(err.stack || 'No stack trace available');
       }
-      
-      router.replace(next);
     };
 
     handleAuthCallback();
   }, [router]);
 
+  if (errorMessage) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 text-center space-y-6">
+        <div className="p-8 bg-white rounded-3xl shadow-2xl border-t-4 border-red-500 max-w-md w-full space-y-4">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+          <h1 className="text-xl font-bold text-red-600">Ops! Ada Masalah</h1>
+          
+          <div className="space-y-2">
+            <p className="text-sm text-gray-800 font-bold bg-red-50 p-4 rounded-xl border border-red-100">
+              {errorMessage}
+            </p>
+            {errorDetails && (
+              <p className="text-[10px] text-gray-500 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100 break-words">
+                {errorDetails}
+              </p>
+            )}
+          </div>
+
+          <div className="pt-4 flex flex-col space-y-2 text-left bg-amber-50 p-4 rounded-xl border border-amber-100">
+             <h2 className="text-[10px] font-black uppercase text-amber-700 mb-1">Coba Langkah Ini:</h2>
+             <ul className="text-[10px] text-amber-800 font-medium list-disc list-inside space-y-1">
+                <li>Pastikan alamat di browser adalah <b>hiaqli.pro</b> (bukan www.hiaqli.pro)</li>
+                <li>Bersihkan Cache/Cookies browser Ukhti untuk domain ini</li>
+                <li>Gunakan mode Incognito/Privacy browser untuk mencoba lagi</li>
+             </ul>
+          </div>
+
+          <div className="pt-4 flex flex-col space-y-2">
+            <Button onClick={() => window.location.href = 'https://hiaqli.pro/login'} className="bg-[#800000] hover:bg-[#800000]/90 font-black uppercase text-xs h-12 rounded-xl">
+              Gunakan Alamat Resmi (Tanpa WWW)
+            </Button>
+            <Button variant="ghost" onClick={() => router.push('/login')} className="text-gray-500 text-[10px] font-bold uppercase">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-4">
-      <div className="p-8 bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border-none text-center space-y-6 animate-in zoom-in duration-500">
-        <div className="h-2 w-full bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] rounded-full absolute top-0 left-0" />
-        <div className="mx-auto w-16 h-16 rounded-full bg-[#800000]/5 flex items-center justify-center border-4 border-[#800000]/10">
-          <Loader2 className="w-8 h-8 text-[#800000] animate-spin" />
-        </div>
+      <div className="p-8 bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border-none text-center space-y-6">
+        <Loader2 className="w-12 h-12 text-[#800000] animate-spin mx-auto" />
         <div className="space-y-2">
-            <h1 className="text-xl font-black font-headline uppercase tracking-tight text-[#800000]">Memproses Masuk...</h1>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Alhamdulillah, sebentar lagi Ukhti masuk.</p>
+            <h1 className="text-xl font-black uppercase tracking-tight text-[#800000]">Memproses Masuk...</h1>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest italic">Mohon tunggu sebentar ya Ukhti.</p>
         </div>
       </div>
     </div>
