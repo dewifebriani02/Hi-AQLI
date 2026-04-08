@@ -10,7 +10,7 @@ import { BottomNav } from '@/components/common/bottom-nav';
 import { SupabaseProvider, useUser, supabase } from '@/supabase';
 import { signOut } from '@/supabase/auth';
 import { useDoc, useCollection } from '@/supabase/db';
-import { Trophy, Zap, Star, ShieldAlert, LogOut } from 'lucide-react';
+import { Trophy, Zap, Star, ShieldAlert, LogOut, Smartphone } from 'lucide-react';
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -38,8 +38,42 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { data: isAdminDoc } = useDoc("roles_admin", user?.id);
   const { data: isSuperAdminDoc } = useDoc("roles_superadmin", user?.id);
   const { data: userData, isLoading: isUserDocLoading } = useDoc("users", user?.id);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
 
   const hasAttemptedSync = useRef(false);
+
+  // PWA Install Logic
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.warn('Service Worker registration failed:', err);
+      });
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   // Auto-sync profile if missing
   useEffect(() => {
@@ -127,6 +161,19 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </div>
               
               <div className="flex items-center gap-3">
+                {/* PWA Install Button */}
+                {isInstallable && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleInstallClick}
+                    className="hidden sm:flex border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-tight gap-1.5 rounded-xl hover:bg-slate-50 transition-all border-2"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    UNDUH APP
+                  </Button>
+                )}
+                
                 {user && (
                   <Link href="/leaderboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 shadow-sm hover:bg-slate-100 transition-all group backdrop-blur-sm">
                     <Trophy className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
@@ -198,6 +245,7 @@ export default function RootLayout({
 
         <link rel="icon" href="/icon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
