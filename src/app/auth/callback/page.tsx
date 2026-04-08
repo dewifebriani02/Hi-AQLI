@@ -1,32 +1,45 @@
-
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/supabase';
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function AuthCallbackPage() {
+function AuthCallbackHandler() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-      const next = params.get('next') || '/';
+      const code = searchParams.get('code');
+      const next = searchParams.get('next') || '/';
+      const error = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
       
       const hostname = window.location.hostname;
       const isWww = hostname.startsWith('www.');
 
-      console.log('AUTH_DEBUG: Current URL:', window.location.href);
-      console.log('AUTH_DEBUG: Origin:', window.location.origin);
-      console.log('AUTH_DEBUG: Hostname:', hostname);
+      console.log('AUTH_DEBUG:', {
+        url: window.location.href,
+        hostname,
+        hasCode: !!code,
+        next,
+        error,
+        errorDescription
+      });
 
       try {
+        if (error) {
+          setErrorMessage(`Google Auth Error: ${error}`);
+          setErrorDetails(errorDescription || 'No description provided');
+          return;
+        }
+
         if (code) {
+          console.log('AUTH_DEBUG: Exchanging code for session...');
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) {
             console.error('AUTH_DEBUG: Exchange error:', exchangeError);
@@ -34,41 +47,56 @@ export default function AuthCallbackPage() {
             setErrorDetails(`Kode Error: ${exchangeError.name || 'AuthError'} ${isWww ? '(Ukhti terdeteksi menggunakan www. - ini penyebab umum gagal login)' : ''}`);
             return;
           }
+        } else {
+            console.warn('AUTH_DEBUG: No code found in search params.');
         }
 
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError || !session) {
-          console.error('AUTH_DEBUG: Session error:', sessionError);
-          setErrorMessage(sessionError ? `Gagal memuat sesi: ${sessionError.message}` : 'Sesi tidak ditemukan setelah login.');
-          setErrorDetails(`Kemungkinan penyebab: Cookies browser tidak aktif atau domain mismatch.`);
-          return;
+          console.error('AUTH_DEBUG: Session not found after exchange or init');
+          // If we had a code but still no session, it's a real failure
+          if (code) {
+            setErrorMessage('Sesi tidak ditemukan setelah penukaran kode.');
+            setErrorDetails('Kemungkinan penyebab: Cookies browser terblokir atau domain mismatch antara login dan callback.');
+            return;
+          }
+          // If no code and no session, maybe they are already logged in?
+          // Let's check onAuthStateChange state from the provider via getSession again or just wait
         }
 
-        // Auto-sync profile logic
-        const user = session.user;
-        const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+        if (session) {
+          console.log('AUTH_DEBUG: Session found, sync profile...');
+          const user = session.user;
+          const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
 
-        if (!profile) {
-          await supabase.from('users').upsert({
-            id: user.id,
-            username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
-            email: user.email,
-            role_id: 'learner',
-            points: 0,
-            created_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
+          if (!profile) {
+            await supabase.from('users').upsert({
+              id: user.id,
+              username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
+              email: user.email,
+              role_id: 'learner',
+              points: 0,
+              created_at: new Date().toISOString(),
+            }, { onConflict: 'id' });
+          }
+          
+          console.log('AUTH_DEBUG: Success, redirecting to:', next);
+          router.replace(next);
+        } else {
+            // Fallback for no code and no session landing
+            setErrorMessage('Sesi tidak ditemukan. Silakan masuk kembali.');
+            setErrorDetails('Jika Ukhti baru saja login, pastikan Ukhti tidak menggunakan www.hiaqli.pro');
         }
-        
-        router.replace(next);
       } catch (err: any) {
+        console.error('AUTH_DEBUG: System error:', err);
         setErrorMessage(`Terjadi kesalahan sistem: ${err.message || 'Unknown Error'}`);
         setErrorDetails(err.stack || 'No stack trace available');
       }
     };
 
     handleAuthCallback();
-  }, [router]);
+  }, [searchParams, router]);
 
   if (errorMessage) {
     return (
@@ -91,15 +119,15 @@ export default function AuthCallbackPage() {
           <div className="pt-4 flex flex-col space-y-2 text-left bg-amber-50 p-4 rounded-xl border border-amber-100">
              <h2 className="text-[10px] font-black uppercase text-amber-700 mb-1">Coba Langkah Ini:</h2>
              <ul className="text-[10px] text-amber-800 font-medium list-disc list-inside space-y-1">
-                <li>Pastikan alamat di browser adalah <b>hiaqli.pro</b> (bukan www.hiaqli.pro)</li>
-                <li>Bersihkan Cache/Cookies browser Ukhti untuk domain ini</li>
-                <li>Gunakan mode Incognito/Privacy browser untuk mencoba lagi</li>
+                <li>Gunakan alamat <b>hiaqli.pro</b> (tanpa <b>www</b>)</li>
+                <li>Bersihkan Cookies browser untuk domain ini</li>
+                <li>Gunakan mode Incognito/Privacy browser</li>
              </ul>
           </div>
 
           <div className="pt-4 flex flex-col space-y-2">
-            <Button onClick={() => window.location.href = 'https://hiaqli.pro/login'} className="bg-[#800000] hover:bg-[#800000]/90 font-black uppercase text-xs h-12 rounded-xl">
-              Gunakan Alamat Resmi (Tanpa WWW)
+            <Button onClick={() => window.location.href = 'https://hiaqli.pro/login'} className="bg-[#800000] hover:bg-[#800000]/90 font-black uppercase text-xs h-12 rounded-xl text-white">
+              Gunakan Alamat Resmi (hiaqli.pro)
             </Button>
             <Button variant="ghost" onClick={() => router.push('/login')} className="text-gray-500 text-[10px] font-bold uppercase">
               <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Login
@@ -120,5 +148,17 @@ export default function AuthCallbackPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+       <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-4">
+        <Loader2 className="w-12 h-12 text-[#800000] animate-spin" />
+      </div>
+    }>
+      <AuthCallbackHandler />
+    </Suspense>
   );
 }
