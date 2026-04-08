@@ -52,25 +52,7 @@ export default function MufradatMabarRoomPage() {
   const currentUserParticipant = participants?.find(p => p.user_id === user?.id);
   const isJoined = !!currentUserParticipant;
 
-  // 3. Sync Participants Realtime
-  useEffect(() => {
-    if (!id) return;
-
-    const channel = supabase
-      .channel(`mabar-${id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'mufradat_mabar_participants', filter: `session_id=eq.${id}` },
-        () => {
-          refreshParticipants();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [id]);
+  // 3. Realtime is already handled by useCollection hook in @/supabase/db
 
   // 4. Timer Logic
   useEffect(() => {
@@ -230,9 +212,9 @@ export default function MufradatMabarRoomPage() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                           <Button asChild size="lg" className="bg-white text-[#800000] hover:bg-[#D4AF37] hover:text-white font-black text-lg h-16 px-10 rounded-2xl shadow-xl transition-all active:scale-95 flex-1">
-                              <Link href={`/mufradat`}>
-                                 <BookOpen className="w-6 h-6 mr-3" /> MULAI HAFALAN
+                           <Button asChild size="lg" className="bg-white text-[#800000] hover:bg-[#D4AF37] hover:text-white font-black text-[12px] sm:text-lg h-16 px-6 sm:px-10 rounded-2xl shadow-xl transition-all active:scale-95 flex-1">
+                              <Link href={`/mufradat?tab=juz&target_juz=${session.juz_id}`}>
+                                 <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3" /> MULAI HAFALAN JUZ {session.juz_id}
                               </Link>
                            </Button>
                            <div className="flex flex-col justify-center sm:w-48 bg-black/10 rounded-2xl p-4 border border-white/5 backdrop-blur-sm">

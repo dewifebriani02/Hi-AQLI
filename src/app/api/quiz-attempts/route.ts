@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { getJuzForPage } from '@/lib/quran-mapping';
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,9 +71,10 @@ export async function POST(request: NextRequest) {
     // If perfect score, add points to user
     if (is_passed) {
       try {
+        // 1. UPDATE REGULAR USER POINTS
         const { data: userData, error: userFetchError } = await supabase
           .from('users')
-          .select('points')
+          .select('points, mufradat_group_id')
           .eq('id', user_id)
           .maybeSingle();
 
@@ -80,19 +82,58 @@ export async function POST(request: NextRequest) {
           console.error('Error fetching user points:', userFetchError);
         } else if (userData) {
           const currentPoints = userData.points || 0;
-          
-          // Try both updated_at and updatedAt just to be safe if RLS allows
-          const { error: updateError } = await supabase
+          await supabase
             .from('users')
             .update({
               points: currentPoints + 10,
               updated_at: new Date().toISOString(),
             } as any)
             .eq('id', user_id);
-          
-          if (updateError) {
-            console.error('Error updating user points:', updateError);
-            // We still return success: true because the quiz attempt was saved
+        }
+
+        // 2. MABAR POINT SYNC
+        // Find Juz ID for this attempt
+        let juzId = page_id ? getJuzForPage(Number(page_id)) : null;
+        
+        // If no page_id (old mode), we can try to derive from quiz_id if it's a page quiz
+        if (!juzId && quiz_id.startsWith('mufradat_page_')) {
+          const derivedPage = parseInt(quiz_id.replace('mufradat_page_', ''));
+          juzId = getJuzForPage(derivedPage);
+        }
+
+        if (juzId) {
+          // Check for active Mabar session for this Juz
+          const { data: activeSession } = await supabase
+            .from('mufradat_mabar_sessions')
+            .select('id')
+            .eq('juz_id', juzId)
+            .eq('status', 'active')
+            .maybeSingle();
+
+          if (activeSession) {
+            console.log(`MABAR_SYNC: Active session found for Juz ${juzId} [${activeSession.id}]`);
+            
+            // Increment participant points
+            // Note: We use a RPC or a select-then-update if no increment available
+            // In Supabase we can use .update({ points_earned: points_earned + 10 }) 
+            // but we need current points first.
+            const { data: participant } = await supabase
+              .from('mufradat_mabar_participants')
+              .select('points_earned')
+              .eq('session_id', activeSession.id)
+              .eq('user_id', user_id)
+              .maybeSingle();
+
+            if (participant) {
+              await supabase
+                .from('mufradat_mabar_participants')
+                .update({ 
+                  points_earned: (participant.points_earned || 0) + 10,
+                  last_activity_at: new Date().toISOString()
+                })
+                .eq('session_id', activeSession.id)
+                .eq('user_id', user_id);
+            }
           }
         }
       } catch (innerErr) {

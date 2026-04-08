@@ -21,11 +21,14 @@ function AuthCallbackHandler() {
       
       const hostname = window.location.hostname;
       const isWww = hostname.startsWith('www.');
+      const hash = typeof window !== 'undefined' ? window.location.hash : '';
+      const hasAccessToken = hash.includes('access_token=');
 
       console.log('AUTH_DEBUG:', {
         url: window.location.href,
         hostname,
         hasCode: !!code,
+        hasHashToken: hasAccessToken,
         next,
         error,
         errorDescription
@@ -38,6 +41,7 @@ function AuthCallbackHandler() {
           return;
         }
 
+        // 1. If we have a CODE (PKCE Flow), exchange it immediately
         if (code) {
           console.log('AUTH_DEBUG: Exchanging code for session...');
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -47,30 +51,49 @@ function AuthCallbackHandler() {
             setErrorDetails(`Kode Error: ${exchangeError.name || 'AuthError'} ${isWww ? '(Ukhti terdeteksi menggunakan www. - ini penyebab umum gagal login)' : ''}`);
             return;
           }
-        } else {
-            console.warn('AUTH_DEBUG: No code found in search params.');
         }
 
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        // 2. If we have a HASH (Implicit Flow) or JUST EXCHANGED, wait for session to be ready
+        // Supabase-js parses the hash automatically, but it might take a few ms.
+        console.log('AUTH_DEBUG: Waiting for session to be recognized...');
         
-        if (sessionError || !session) {
-          console.error('AUTH_DEBUG: Session not found after exchange or init');
-          // If we had a code but still no session, it's a real failure
-          if (code) {
-            setErrorMessage('Sesi tidak ditemukan setelah penukaran kode.');
-            setErrorDetails('Kemungkinan penyebab: Cookies browser terblokir atau domain mismatch antara login dan callback.');
+        let session = null;
+        let attempts = 0;
+        const maxAttempts = 10; // 5 seconds total (500ms intervals)
+
+        while (attempts < maxAttempts) {
+            const { data: { session: currentSession }, error: sErr } = await supabase.auth.getSession();
+            if (currentSession) {
+                session = currentSession;
+                console.log(`AUTH_DEBUG: Session found after ${attempts} attempts`);
+                break;
+            }
+            if (sErr) console.warn('AUTH_DEBUG: getSession attempt error:', sErr);
+            
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (!session) {
+          console.error('AUTH_DEBUG: Session not found after retry loop');
+          if (code || hasAccessToken) {
+            setErrorMessage('Sesi tidak ditemukan setelah penukaran.');
+            setErrorDetails('Penyebab: Cookies browser terblokir (Incognito/Cross-site tracking) atau domain mismatch antara login dan callback.');
             return;
           }
-          // If no code and no session, maybe they are already logged in?
-          // Let's check onAuthStateChange state from the provider via getSession again or just wait
         }
 
         if (session) {
-          console.log('AUTH_DEBUG: Session found, sync profile...');
+          console.log('AUTH_DEBUG: Session active, sync profile...');
           const user = session.user;
+          
+          // Ensure profile exists in public.users
+          // Smart Auto-Link Trigger should handle this on the DB side if triggered,
+          // but we do a client-side check as fallback/verification.
           const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
 
           if (!profile) {
+            console.log('AUTH_DEBUG: Profile missing in public.users, performing upsert fallback');
             await supabase.from('users').upsert({
               id: user.id,
               username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
@@ -81,12 +104,17 @@ function AuthCallbackHandler() {
             }, { onConflict: 'id' });
           }
           
-          console.log('AUTH_DEBUG: Success, redirecting to:', next);
+          console.log('AUTH_DEBUG: Login Success, Redirecting...');
+          
+          // Clear hash to avoid re-triggering if user hits back
+          if (window.history.replaceState) {
+            window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+          }
+          
           router.replace(next);
         } else {
-            // Fallback for no code and no session landing
             setErrorMessage('Sesi tidak ditemukan. Silakan masuk kembali.');
-            setErrorDetails('Jika Ukhti baru saja login, pastikan Ukhti tidak menggunakan www.hiaqli.pro');
+            setErrorDetails('Jika Ukhti baru saja login, pastikan Ukhti menggunakan hiaqli.pro tanpa www.');
         }
       } catch (err: any) {
         console.error('AUTH_DEBUG: System error:', err);
