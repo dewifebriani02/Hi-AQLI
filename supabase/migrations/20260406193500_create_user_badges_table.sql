@@ -15,12 +15,12 @@ CREATE TABLE IF NOT EXISTS public.user_badges (
 ALTER TABLE public.user_badges ENABLE ROW LEVEL SECURITY;
 
 -- Policies
-CREATE POLICY "Users can view their own badges" 
-ON public.user_badges FOR SELECT 
+DROP POLICY IF EXISTS "Users can view their own badges" ON public.user_badges;
+CREATE POLICY "Users can view their own badges" ON public.user_badges FOR SELECT 
 USING (auth.uid() = user_id);
 
-CREATE POLICY "Admin can view all badges" 
-ON public.user_badges FOR SELECT 
+DROP POLICY IF EXISTS "Admin can view all badges" ON public.user_badges;
+CREATE POLICY "Admin can view all badges" ON public.user_badges FOR SELECT 
 USING (
     EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid()) OR
     EXISTS (SELECT 1 FROM public.roles_superadmin WHERE id = auth.uid())
@@ -28,3 +28,4 @@ USING (
 
 -- Indexing
 CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON public.user_badges(user_id);
+

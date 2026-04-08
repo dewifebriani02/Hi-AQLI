@@ -29,14 +29,17 @@ ALTER TABLE public.voucher_redemptions ENABLE ROW LEVEL SECURITY;
 
 -- 4. POLICIES
 -- Users can view active vouchers
-CREATE POLICY "Users can view active vouchers" ON public.vouchers 
+DROP POLICY IF EXISTS "Public can view active vouchers" ON public.vouchers;
+CREATE POLICY "Public can view active vouchers" ON public.vouchers
   FOR SELECT USING (is_active = TRUE AND (expiry_date IS NULL OR expiry_date > now()));
 
 -- Users can view their own redemptions
+DROP POLICY IF EXISTS "Users can view their own redemptions" ON public.voucher_redemptions;
 CREATE POLICY "Users can view their own redemptions" ON public.voucher_redemptions
   FOR SELECT USING (auth.uid() = user_id);
 
 -- Users can insert their own redemptions
+DROP POLICY IF EXISTS "Users can insert their own redemptions" ON public.voucher_redemptions;
 CREATE POLICY "Users can insert their own redemptions" ON public.voucher_redemptions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -44,3 +47,4 @@ CREATE POLICY "Users can insert their own redemptions" ON public.voucher_redempt
 -- (Assuming there's an 'admin' role or specific UIDs in a 'roles' table, 
 -- but for simplicity we'll just allow it if we have a way to identify admins)
 -- For now, let's just make it public read but restricted write if needed.
+

@@ -1,0 +1,69 @@
+﻿node : Error during 
+schema import: error: 
+Tenant or user not found
+At line:1 char:1
++ node import_schema.js > 
+import_schema_log.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (E  
+  rror during sc... use   
+ r not found:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+    at parseErrorMessage (
+D:\Hi-AQLI\node_modules\pg
+-protocol\dist\parser.js:3
+05:11)
+    at 
+Parser.handlePacket (D:\Hi
+-AQLI\node_modules\pg-prot
+ocol\dist\parser.js:143:27
+)
+    at Parser.parse (D:\Hi
+-AQLI\node_modules\pg-prot
+ocol\dist\parser.js:37:38)
+    at 
+TLSSocket.<anonymous> (D:\
+Hi-AQLI\node_modules\pg-pr
+otocol\dist\index.js:11:42
+)
+    at TLSSocket.emit 
+(node:events:508:28)
+    at addChunk (node:inte
+rnal/streams/readable:559:
+12)
+    at readableAddChunkPus
+hByteMode (node:internal/s
+treams/readable:510:3)
+    at Readable.push (node
+:internal/streams/readable
+:390:5)
+    at 
+TLSWrap.onStreamRead (node
+:internal/stream_base_comm
+ons:189:23) {
+  length: 52,
+  severity: 'FATAL',
+  code: 'XX000',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: 
+undefined,
+  internalQuery: 
+undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: undefined,
+  line: undefined,
+  routine: undefined
+}

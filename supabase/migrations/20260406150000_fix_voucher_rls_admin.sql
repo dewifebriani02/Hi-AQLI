@@ -4,8 +4,7 @@
 -- 1. VOUCHERS TABLE
 -- Drop existing public policy to avoid confusion (it's already restrictive)
 DROP POLICY IF EXISTS "Admins can manage all vouchers" ON public.vouchers;
-CREATE POLICY "Admins can manage all vouchers" 
-ON public.vouchers FOR ALL 
+CREATE POLICY "Admins can manage all vouchers" ON public.vouchers FOR ALL 
 TO authenticated 
 USING (
   EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid()) OR
@@ -18,8 +17,7 @@ WITH CHECK (
 
 -- 2. VOUCHER REDEMPTIONS TABLE
 DROP POLICY IF EXISTS "Admins can view all redemptions" ON public.voucher_redemptions;
-CREATE POLICY "Admins can view all redemptions" 
-ON public.voucher_redemptions FOR SELECT 
+CREATE POLICY "Admins can view all redemptions" ON public.voucher_redemptions FOR SELECT 
 TO authenticated 
 USING (
   EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid()) OR
@@ -27,3 +25,4 @@ USING (
 );
 
 -- Note: Users can still see their own active vouchers and their own redemptions via existing policies.
+

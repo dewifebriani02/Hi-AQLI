@@ -24,8 +24,7 @@ WHERE NOT EXISTS (SELECT 1 FROM public.mufradat_groups LIMIT 1);
 ALTER TABLE public.mufradat_groups ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Admins can view all groups" ON public.mufradat_groups;
-CREATE POLICY "Admins can view all groups" 
-ON public.mufradat_groups FOR SELECT 
+CREATE POLICY "Admins can view all groups" ON public.mufradat_groups FOR SELECT 
 TO authenticated 
 USING (
     EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid())
@@ -33,10 +32,10 @@ USING (
 );
 
 DROP POLICY IF EXISTS "Admins can manage all groups" ON public.mufradat_groups;
-CREATE POLICY "Admins can manage all groups" 
-ON public.mufradat_groups FOR ALL
+CREATE POLICY "Admins can manage all groups" ON public.mufradat_groups FOR ALL
 TO authenticated 
 USING (
     EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid())
     OR EXISTS (SELECT 1 FROM public.roles_superadmin WHERE id = auth.uid())
 );
+

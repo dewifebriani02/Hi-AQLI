@@ -86,11 +86,11 @@ DROP POLICY IF EXISTS "Public select halaqahs" ON public.halaqahs;
 CREATE POLICY "Public select halaqahs" ON public.halaqahs FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Admin full access halaqahs" ON public.halaqahs;
-CREATE POLICY "Admin full access halaqahs" 
-ON public.halaqahs FOR ALL 
+CREATE POLICY "Admin full access halaqahs" ON public.halaqahs FOR ALL 
 TO authenticated 
 USING (EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid()))
 WITH CHECK (EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid()));
 
 -- SUCCESS MARKER
 SELECT 'Database schema successfully standardized for consistency (V7)!' as result;
+

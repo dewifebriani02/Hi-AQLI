@@ -7,7 +7,7 @@
 DO $$ 
 BEGIN 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='mutabaah_goals') THEN 
-    ALTER TABLE public.users ADD COLUMN mutabaah_goals TEXT[] DEFAULT '{}'; 
+    ALTER TABLE public.users ADD COLUMN mutabaah_goals JSONB DEFAULT '[]'; 
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='mufradat_target_verses') THEN 

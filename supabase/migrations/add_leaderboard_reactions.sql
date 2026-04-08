@@ -14,15 +14,13 @@ ALTER TABLE public.mufradat_reactions ENABLE ROW LEVEL SECURITY;
 
 -- 1. All authenticated users can see reactions to display on leaderboard
 DROP POLICY IF EXISTS "Users can see all reactions" ON public.mufradat_reactions;
-CREATE POLICY "Users can see all reactions" 
-ON public.mufradat_reactions FOR SELECT 
+CREATE POLICY "Users can see all reactions" ON public.mufradat_reactions FOR SELECT 
 TO authenticated 
 USING (true);
 
 -- 2. Users can only insert reactions from themselves
 DROP POLICY IF EXISTS "Users can insert their own reactions" ON public.mufradat_reactions;
-CREATE POLICY "Users can insert their own reactions" 
-ON public.mufradat_reactions FOR INSERT 
+CREATE POLICY "Users can insert their own reactions" ON public.mufradat_reactions FOR INSERT 
 TO authenticated 
 WITH CHECK (from_user_id = auth.uid());
 
@@ -32,3 +30,4 @@ CREATE INDEX IF NOT EXISTS idx_reactions_from_user ON public.mufradat_reactions(
 
 -- SUCCESS MARKER
 SELECT 'Mufradat reactions table created successfully!' as result;
+

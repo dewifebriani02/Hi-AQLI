@@ -44,3 +44,4 @@ CREATE POLICY "Users can insert their own attempts" ON public.quiz_attempts
 -- 5. Helpful index for leaderboard speed
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_quiz_id ON public.quiz_attempts(quiz_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user_id ON public.quiz_attempts(user_id);
+

@@ -1,0 +1,6 @@
+﻿Server:  UnKnown
+Address:  192.168.2.1
+
+Name:    db.lhqbqzrghdbbmstnhple.supabase.co
+Address:  2406:da18:243:740d:5e1d:c55:c20c:5289
+

@@ -27,20 +27,20 @@ ALTER TABLE public.quiz_attempts ENABLE ROW LEVEL SECURITY;
 
 -- 3. APPLY CLEAN POLICIES FOR USERS TABLE
 -- SELECT: Everyone can see all profiles
-CREATE POLICY "permissive_select_users" 
-ON public.users FOR SELECT 
+DROP POLICY IF EXISTS "permissive_select_users" ON public.users;
+CREATE POLICY "permissive_select_users" ON public.users FOR SELECT 
 TO authenticated 
 USING (true);
 
 -- INSERT: Users can only create their own profile during registration
-CREATE POLICY "permissive_insert_users" 
-ON public.users FOR INSERT 
+DROP POLICY IF EXISTS "permissive_insert_users" ON public.users;
+CREATE POLICY "permissive_insert_users" ON public.users FOR INSERT 
 TO authenticated 
 WITH CHECK (auth.uid() = id);
 
 -- UPDATE: Users update own, OR Admins/Superadmins update all
-CREATE POLICY "permissive_update_users" 
-ON public.users FOR UPDATE 
+DROP POLICY IF EXISTS "permissive_update_users" ON public.users;
+CREATE POLICY "permissive_update_users" ON public.users FOR UPDATE 
 TO authenticated 
 USING (
     auth.uid() = id 
@@ -55,8 +55,8 @@ WITH CHECK (
 
 -- 4. APPLY CLEAN POLICIES FOR QUIZ ATTEMPTS
 -- SELECT: Users see own, Admins see all
-CREATE POLICY "permissive_select_quiz" 
-ON public.quiz_attempts FOR SELECT 
+DROP POLICY IF EXISTS "permissive_select_quiz" ON public.quiz_attempts;
+CREATE POLICY "permissive_select_quiz" ON public.quiz_attempts FOR SELECT 
 TO authenticated 
 USING (
     user_id = auth.uid() 
@@ -65,8 +65,8 @@ USING (
 );
 
 -- INSERT: Functional for saving kuis
-CREATE POLICY "permissive_insert_quiz" 
-ON public.quiz_attempts FOR INSERT 
+DROP POLICY IF EXISTS "permissive_insert_quiz" ON public.quiz_attempts;
+CREATE POLICY "permissive_insert_quiz" ON public.quiz_attempts FOR INSERT 
 TO authenticated 
 WITH CHECK (user_id = auth.uid());
 
@@ -77,3 +77,4 @@ BEGIN
     ALTER TABLE public.users ADD COLUMN phone TEXT; 
   END IF; 
 END $$;
+

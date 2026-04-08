@@ -6,7 +6,7 @@
 DO $$ 
 BEGIN 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='followed_halaqahs') THEN 
-    ALTER TABLE public.users ADD COLUMN followed_halaqahs TEXT[] DEFAULT '{}'; 
+    ALTER TABLE public.users ADD COLUMN followed_halaqahs JSONB DEFAULT '[]'; 
   END IF; 
   
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='points') THEN 
@@ -65,8 +65,7 @@ END $$;
 
 -- 3. ENSURE RLS POLICIES USE THE NEW COLUMN NAMES
 DROP POLICY IF EXISTS "permissive_select_quiz" ON public.quiz_attempts;
-CREATE POLICY "permissive_select_quiz" 
-ON public.quiz_attempts FOR SELECT 
+CREATE POLICY "permissive_select_quiz" ON public.quiz_attempts FOR SELECT 
 TO authenticated 
 USING (
     user_id = auth.uid() 
@@ -75,7 +74,7 @@ USING (
 );
 
 DROP POLICY IF EXISTS "permissive_insert_quiz" ON public.quiz_attempts;
-CREATE POLICY "permissive_insert_quiz" 
-ON public.quiz_attempts FOR INSERT 
+CREATE POLICY "permissive_insert_quiz" ON public.quiz_attempts FOR INSERT 
 TO authenticated 
 WITH CHECK (user_id = auth.uid());
+

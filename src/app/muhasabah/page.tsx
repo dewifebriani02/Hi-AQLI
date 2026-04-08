@@ -23,7 +23,10 @@ import {
   Trophy,
   Target as TargetIcon,
   Sun,
+  Quote as QuoteIcon,
+  Flame,
 } from 'lucide-react';
+import { getRandomQuote } from "@/lib/mutabaah-quotes";
 import {
   Tabs,
   TabsContent,
@@ -43,6 +46,7 @@ export default function MuhasabahPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [localLogs, setLocalLogs] = useState<any[]>([]); // For guest persistence
+  const [quote, setQuote] = useState(() => getRandomQuote());
 
   const muhasabahItems = useMemo(() => [
     { id: 'm_wanita_shalat', label: 'Menjaga Shalat 5 Waktu', sub: '4 Syarat Wanita Surga', dalil: 'HR. Ahmad' },
@@ -77,27 +81,43 @@ export default function MuhasabahPage() {
     mutabaahLogs?.filter((l: any) => l.date === todayStr) || [],
   [mutabaahLogs, todayStr]);
 
-  // Load guest logs from local storage
+  // Load legacy/guest logs from local storage for monitoring
+  const [guestHistoricalLogs, setGuestHistoricalLogs] = useState<any[]>([]);
+
   useEffect(() => {
-    if (!user) {
-      const saved = localStorage.getItem(`muhasabah_guest_logs_${todayStr}`);
-      if (saved) setLocalLogs(JSON.parse(saved));
-    }
-  }, [user, todayStr]);
+    const saved = localStorage.getItem('muhasabah_guest_logs_history');
+    if (saved) setGuestHistoricalLogs(JSON.parse(saved));
+  }, []);
+
+  const saveToGuestHistory = (activityId: string, completed: boolean, date: string) => {
+    setGuestHistoricalLogs(prev => {
+      const newHistory = completed 
+        ? [...prev, { activity_id: activityId, completed, date }]
+        : prev.filter(l => !(l.activity_id === activityId && l.date === date));
+      
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const filtered = newHistory.filter(l => new Date(l.date) >= thirtyDaysAgo);
+      
+      localStorage.setItem('muhasabah_guest_logs_history', JSON.stringify(filtered));
+      return filtered;
+    });
+  };
 
   const toggleMutabaah = async (activityId: string) => {
     if (!user) {
       // Guest local persistence
       const existing = localLogs.find((l: any) => l.activity_id === activityId);
+      const completed = !existing?.completed;
       const newLogs = existing 
         ? localLogs.filter((l: any) => l.activity_id !== activityId)
         : [...localLogs, { activity_id: activityId, completed: true, date: todayStr }];
       
       setLocalLogs(newLogs);
-      localStorage.setItem(`muhasabah_guest_logs_${todayStr}`, JSON.stringify(newLogs));
+      saveToGuestHistory(activityId, completed, todayStr);
       
       toast({
-        title: "Evaluasi Disimpan (Lokal)",
+        title: "Langkah Tersimpan (Lokal)",
         description: "Masyallah! Login untuk simpan permanen & raih HI Poin.",
       });
       return;
@@ -118,47 +138,92 @@ export default function MuhasabahPage() {
   };
 
   const progressCount = useMemo(() => {
-    if (!user) return localLogs.length;
-    return muhasabahItems.filter(m => todayLogs?.find((l: any) => l.activity_id === m.id)?.completed).length;
+    const logs = user ? todayLogs : localLogs;
+    return muhasabahItems.filter(m => logs?.find((l: any) => l.activity_id === m.id)?.completed).length;
   }, [user, todayLogs, localLogs, muhasabahItems]);
 
-  const last7Days = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
+  const history30Days = useMemo(() => {
+    return Array.from({ length: 30 }, (_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
+      d.setDate(d.getDate() - (29 - i));
       return d.toISOString().split('T')[0];
     });
   }, []);
 
+  const progressPercent = Math.min(100, Math.round((progressCount / muhasabahItems.length) * 100));
+
   const monitoringStats = useMemo(() => {
-    if (!mutabaahLogs) return null;
+    const logsData = user ? mutabaahLogs : guestHistoricalLogs;
+    if (!logsData) return null;
+    
+    console.log("Trend Debug [Muhasabah]: logsData size", logsData.length);
     
     const itemStats = muhasabahItems.map(item => {
-      const logs = mutabaahLogs.filter((l: any) => l.activity_id === item.id);
-      const completedCount = logs.filter((l: any) => l.completed).length;
-      const percent = Math.round((completedCount / 30) * 100);
-      return { ...item, completedCount, percent };
+      const logs = logsData.filter((l: any) => l.activity_id === item.id);
+      const uniqueCompletedDates = new Set(
+        logs.filter((l: any) => l.completed).map((l: any) => l.date)
+      );
+      const percent = Math.round((uniqueCompletedDates.size / 30) * 100);
+      return { ...item, completedCount: uniqueCompletedDates.size, percent };
     });
 
     const averageMonthly = Math.round(
       itemStats.reduce((acc, curr) => acc + curr.percent, 0) / muhasabahItems.length
     ) || 0;
 
+    const yearlyProjection = Math.round(averageMonthly * 0.9);
+
+    // Calculate Current Streak (Istiqomah)
+    let currentStreak = 0;
+    let tempDate = new Date();
+    for (let i = 0; i < 30; i++) {
+      const dStr = tempDate.toISOString().split('T')[0];
+      const dayLogs = logsData.filter((l: any) => l.date === dStr && l.completed);
+      if (dayLogs.length > 0) {
+        currentStreak++;
+        tempDate.setDate(tempDate.getDate() - 1);
+      } else {
+        // If it's today and 0, we still check yesterday before breaking
+        if (i === 0) {
+          tempDate.setDate(tempDate.getDate() - 1);
+          continue; 
+        }
+        break;
+      }
+    }
+
+    // Unified 30-day History calculation for Heatmap and Trends
+    const heatmap = history30Days.map(dStr => {
+      const dayLogs = logsData.filter((l: any) => l.date === dStr && l.completed && l.activity_id.startsWith('m_'));
+      const uniqueDay = new Set(dayLogs.map((l: any) => l.activity_id));
+      const percent = muhasabahItems.length > 0 ? (uniqueDay.size / muhasabahItems.length) : 0;
+      
+      let level = 0;
+      if (percent > 0) level = 1;
+      if (percent > 0.3) level = 2;
+      if (percent > 0.6) level = 3;
+      if (percent > 0.8) level = 4;
+
+      return { date: dStr, level, count: uniqueDay.size };
+    });
+
+    const dailyTrend = history30Days.slice(-7).map(dStr => {
+      const dayLogs = logsData.filter((l: any) => l.date === dStr && l.completed && l.activity_id.startsWith('m_'));
+      const uniqueDay = new Set(dayLogs.map((l: any) => l.activity_id));
+      return {
+        date: dStr,
+        percent: muhasabahItems.length > 0 ? Math.min(100, Math.round((uniqueDay.size / muhasabahItems.length) * 100)) : 0
+      };
+    });
+
     return {
       averageMonthly,
-      consistent: itemStats.filter(s => s.percent >= 70).sort((a,b) => b.percent - a.percent).slice(0, 5),
-      needsImprovement: itemStats.filter(s => s.percent < 40).sort((a,b) => a.percent - b.percent).slice(0, 5),
-      dailyTrend: last7Days.map(date => {
-        const dayLogs = mutabaahLogs.filter((l: any) => l.date === date && l.completed && l.activity_id.startsWith('m_'));
-        return {
-          date,
-          percent: Math.round((dayLogs.length / muhasabahItems.length) * 100)
-        };
-      })
+      yearlyProjection,
+      currentStreak,
+      heatmap,
+      dailyTrend
     };
-  }, [mutabaahLogs, muhasabahItems, last7Days]);
-  
-  const progressPercent = Math.round((progressCount / muhasabahItems.length) * 100);
+  }, [user, mutabaahLogs, guestHistoricalLogs, muhasabahItems, history30Days]);
 
   return (
     <div className="flex flex-col min-h-screen bg-orange-50/30 pb-20">
@@ -248,44 +313,54 @@ export default function MuhasabahPage() {
                           key={item.id}
                           className={cn(
                             "border-none shadow-sm transition-all cursor-pointer active:scale-[0.98] group overflow-hidden relative",
-                            isDone ? "bg-amber-50/50" : "bg-white hover:bg-white/80"
+                            isDone ? "bg-amber-50/30" : "bg-white hover:bg-white/80"
                           )}
                           onClick={() => toggleMutabaah(item.id)}
                         >
+                          {isDone && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37]" />}
                           <CardContent className="p-4 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 flex-1">
+                              {/* LEFT: Checkbox Indentifier */}
                               <div className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                                isDone ? "bg-amber-100 text-[#D4AF37] shadow-inner scale-110" : "bg-orange-50/50 text-orange-200"
+                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm shrink-0 border-2",
+                                isDone 
+                                  ? "bg-[#D4AF37] border-[#D4AF37] text-white scale-105" 
+                                  : "bg-orange-50/50 border-orange-100 text-orange-200 group-hover:border-amber-200"
                               )}>
                                 {isDone ? (
-                                  <CheckCircle2 className="w-5 h-5 fill-current" />
+                                  <CheckSquare className="w-5 h-5" />
                                 ) : (
-                                   sub === '4 Syarat Wanita Surga' ? <Heart className="w-5 h-5" /> : <Shield className="w-5 h-5" />
+                                  <div className="w-5 h-5 rounded border-2 border-current opacity-20" />
                                 )}
                               </div>
-                              <div>
-                                <p className={cn("text-xs font-bold transition-all", isDone ? "text-muted-foreground line-through" : "text-black")}>
-                                  {item.label}
-                                </p>
-                                <div className="flex items-center gap-1.5 mt-1">
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <div className={cn("p-1 rounded-md shrink-0", isDone ? "bg-amber-100/50 text-[#D4AF37]" : "bg-slate-100 text-slate-400")}>
+                                     {sub === '4 Syarat Wanita Surga' ? <Heart className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
+                                  </div>
+                                  <p className={cn("text-xs font-bold transition-all truncate", isDone ? "text-amber-900" : "text-black")}>
+                                    {item.label}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-0.5">
                                   <Info className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-                                  <p className="text-[9px] text-muted-foreground font-medium uppercase line-clamp-1">
+                                  <p className="text-[9px] text-muted-foreground font-medium uppercase truncate">
                                     {item.dalil}
                                   </p>
                                 </div>
                               </div>
                             </div>
                             
-                            <div className="flex flex-col items-end gap-1">
-                               <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-0 group-hover:opacity-100 transition-opacity">7-Day</p>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                               <p className="text-[8px] font-bold text-muted-foreground uppercase">7-D</p>
                                <div className="flex gap-0.5">
-                                  {last7Days.map((date, i) => {
+                                  {history30Days.slice(-7).map((date, i) => {
                                     const wasDone = user
                                       ? mutabaahLogs?.find((l: any) => l.activity_id === item.id && l.date === date)?.completed
-                                      : false;
+                                      : guestHistoricalLogs.find((l: any) => l.activity_id === item.id && l.date === date)?.completed;
                                     return (
-                                      <div key={i} className={cn("w-1.5 h-1.5 rounded-full transition-all", wasDone ? "bg-[#D4AF37] scale-110" : "bg-slate-200")} />
+                                      <div key={i} className={cn("w-1.5 h-1.5 rounded-full transition-all", wasDone ? "bg-[#D4AF37] scale-110" : "bg-slate-200")} title={date} />
                                     );
                                   })}
                                </div>
@@ -304,21 +379,95 @@ export default function MuhasabahPage() {
         <TabsContent value="monitoring" className="mt-0 outline-none">
           <div className="p-4 max-w-2xl mx-auto w-full space-y-6">
             {/* Stats Overview */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Harian', value: progressPercent, icon: Sun, color: 'text-orange-500', bg: 'bg-orange-50' },
-                { label: 'Bulanan', value: monitoringStats?.averageMonthly || 0, icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50' },
-                { label: 'Tahunan', value: Math.round((monitoringStats?.averageMonthly || 0) * 0.92), icon: TrendingUp, color: 'text-[#800000]', bg: 'bg-orange-50' },
-              ].map((stat, i) => (
-                <Card key={i} className="border-none shadow-sm text-center p-4">
-                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2", stat.bg)}>
-                    <stat.icon className={cn("w-4 h-4", stat.color)} />
+            {/* Main Consistency Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Streak Card */}
+              <Card className="bg-gradient-to-br from-[#800000] to-red-600 border-none shadow-lg p-6 text-white relative overflow-hidden h-full flex flex-col justify-between">
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2 opacity-90">
+                    <Flame className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Istiqomah Beruntun</span>
                   </div>
-                  <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">{stat.label}</p>
-                  <p className="text-xl font-black text-black">{stat.value}%</p>
-                </Card>
-              ))}
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-black">{monitoringStats?.currentStreak || 0}</span>
+                    <span className="text-sm font-bold opacity-80 uppercase tracking-tighter">Hari</span>
+                  </div>
+                </div>
+                <div className="relative z-10 mt-4">
+                  <p className="text-[10px] font-medium leading-relaxed opacity-90">
+                    Masyallah! Terus jaga muhasabahmu. {monitoringStats?.currentStreak && monitoringStats.currentStreak > 3 ? 'Pertahankan api semangat ini!' : 'Mulai langkah istiqomahmu hari ini.'}
+                  </p>
+                </div>
+                {/* Background Decoration */}
+                <Flame className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10 rotate-12" />
+              </Card>
+
+              {/* Today's Target Card */}
+              <Card className="border-none shadow-sm p-6 bg-white flex flex-col justify-between h-full">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-1.5 bg-orange-50 rounded-lg">
+                      <TargetIcon className="w-3.5 h-3.5 text-orange-600" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Evaluasi Hari Ini</span>
+                  </div>
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span className="text-4xl font-black text-slate-800">{progressCount}</span>
+                    <span className="text-sm font-black text-slate-400 uppercase tracking-tighter">/ {muhasabahItems.length} evaluasi</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-orange-500 h-full transition-all duration-1000" 
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] font-bold text-orange-600 mt-4 uppercase tracking-wide">
+                  {progressPercent >= 100 ? '🎉 Masyallah! Sempurna.' : 'Semangat! Teruskan muhasabahnya.'}
+                </p>
+              </Card>
             </div>
+
+            {/* Kalender Kebaikan (Heatmap) */}
+            <Card className="border-none shadow-sm p-6 bg-white overflow-hidden">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Kalender Muhasabah (30 Hari)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                   <span className="text-[8px] font-bold text-slate-400">Jarang</span>
+                   {[0,1,2,3,4].map(l => (
+                     <div key={l} className={cn(
+                       "w-2.5 h-2.5 rounded-sm",
+                       l === 0 ? "bg-slate-100" : 
+                       l === 1 ? "bg-amber-100" :
+                       l === 2 ? "bg-amber-300" :
+                       l === 3 ? "bg-orange-500" : "bg-orange-700"
+                     )} />
+                   ))}
+                   <span className="text-[8px] font-bold text-slate-400">Istiqomah</span>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-1.5 justify-between">
+                {monitoringStats?.heatmap.map((day, i) => (
+                  <div 
+                    key={i} 
+                    className={cn(
+                      "w-[calc(100%/10-6px)] aspect-square rounded-sm transition-all duration-500",
+                      day.level === 0 ? "bg-slate-100" : 
+                      day.level === 1 ? "bg-amber-100" :
+                      day.level === 2 ? "bg-amber-300" :
+                      day.level === 3 ? "bg-orange-500" : "bg-orange-700"
+                    )}
+                    title={`${day.date}: ${day.count} amalan`}
+                  />
+                ))}
+              </div>
+            </Card>
 
             {/* Daily Trend Chart (Simple Bar) */}
             <Card className="border-none shadow-sm p-6 overflow-hidden">
@@ -346,48 +495,47 @@ export default function MuhasabahPage() {
                </div>
             </Card>
 
-            {/* Consistency Analysis */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Bintang Istiqomah */}
-              <Card className="border-none shadow-sm p-5 border-t-4 border-emerald-500">
-                <div className="flex items-center gap-2 mb-4">
-                  <Trophy className="w-4 h-4 text-emerald-500" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Kebaikan Terjaga</h4>
+            {/* Nutrisi Qolbu (Spiritual Motivation) */}
+            <Card className="border-none shadow-sm bg-white overflow-hidden relative border-t-4 border-[#800000]">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-orange-50 p-2 rounded-xl">
+                    <QuoteIcon className="w-4 h-4 text-[#800000]" />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Nutrisi Qolbu</h4>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase mt-0.5">Renungan Muhasabah Diri</p>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  {monitoringStats?.consistent.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground italic">Mulailah hari ini untuk membangun keistiqomahan.</p>
-                  ) : (
-                    monitoringStats?.consistent.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-[10px] font-black text-slate-700 truncate mr-2">{item.label}</span>
-                        <Badge className="bg-emerald-100 text-emerald-700 h-4 text-[8px] border-none">{item.percent}%</Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </Card>
 
-              {/* Peluang Kebaikan */}
-              <Card className="border-none shadow-sm p-5 border-t-4 border-amber-400">
-                <div className="flex items-center gap-2 mb-4">
-                  <TargetIcon className="w-4 h-4 text-amber-500" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-700">Perlu Perhatian</h4>
-                </div>
-                <div className="space-y-3">
-                  {monitoringStats?.needsImprovement.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground italic">Maa syaa Allah, semua amalan berjalan baik!</p>
-                  ) : (
-                    monitoringStats?.needsImprovement.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-[10px] font-black text-slate-700 truncate mr-2">{item.label}</span>
-                        <Badge className="bg-amber-100 text-amber-700 h-4 text-[8px] border-none">{item.percent}%</Badge>
+                <div className="space-y-4">
+                  <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100 flex gap-4">
+                    <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-1" />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[7px] h-3.5 px-1 font-black uppercase border-amber-200 text-amber-600 bg-amber-50/50">
+                          {quote.type === 'ayat' ? 'Al-Qur\'an' : 'Hadits Shahih'}
+                        </Badge>
                       </div>
-                    ))
-                  )}
+                      <p className="text-sm font-medium italic leading-relaxed text-amber-900">
+                        "{quote.text}"
+                      </p>
+                      <div className="flex items-center justify-between">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">{quote.source}</p>
+                         <Button 
+                           variant="ghost" 
+                           size="sm" 
+                           className="h-6 text-[9px] font-black uppercase text-amber-600 hover:bg-amber-100"
+                           onClick={() => setQuote(getRandomQuote())}
+                         >
+                           Hikmah Selanjutnya
+                         </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </Card>
-            </div>
+              </CardContent>
+            </Card>
             
             {/* Total Poin Card */}
             <Card className="bg-gradient-to-r from-[#D4AF37] to-[#800000] p-6 rounded-3xl text-white shadow-xl shadow-[#800000]/20">

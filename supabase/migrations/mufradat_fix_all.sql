@@ -151,3 +151,4 @@ AND mufradat_status = 'inactive';
 
 -- SUCCESS MARKER
 SELECT 'Database successfully standardized and secured (v6 Final)!' as result;
+

@@ -10,8 +10,8 @@ DROP POLICY IF EXISTS "Group-based select for quiz_attempts" ON public.quiz_atte
 
 -- 2. CREATE ROBUST GROUP-BASED SELECT POLICY
 -- Matches scores if the AUTHOR (user_id) belongs to the same GROUP as the VIEWER (auth.uid()).
-CREATE POLICY "Group-based select for quiz_attempts" 
-ON public.quiz_attempts FOR SELECT 
+DROP POLICY IF EXISTS "Group-based select for quiz_attempts" ON public.quiz_attempts;
+CREATE POLICY "Group-based select for quiz_attempts" ON public.quiz_attempts FOR SELECT 
 TO authenticated 
 USING (
   user_id = auth.uid() 
@@ -24,13 +24,8 @@ USING (
 );
 
 -- 3. ENSURE INSERT IS STILL ALLOWED FOR OWN ATTEMPTS
-DROP POLICY IF EXISTS "Allow users to insert own attempts" ON public.quiz_attempts;
-DROP POLICY IF EXISTS "Users can insert their own attempts" ON public.quiz_attempts;
-DROP POLICY IF EXISTS "permissive_insert_quiz" ON public.quiz_attempts;
 DROP POLICY IF EXISTS "Users can insert own attempts with group check" ON public.quiz_attempts;
-
-CREATE POLICY "Users can insert own attempts" 
-ON public.quiz_attempts FOR INSERT 
+CREATE POLICY "Users can insert own attempts with group check" ON public.quiz_attempts FOR INSERT 
 TO authenticated 
 WITH CHECK (user_id = auth.uid());
 
@@ -44,3 +39,4 @@ END $$;
 
 -- 5. SUCCESS MARKER
 SELECT 'Leaderboard Group Fix v2 (Robust) successfully applied!' as result;
+

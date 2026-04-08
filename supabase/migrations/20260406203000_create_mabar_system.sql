@@ -27,29 +27,29 @@ ALTER TABLE public.mufradat_mabar_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mufradat_mabar_participants ENABLE ROW LEVEL SECURITY;
 
 -- 3. POLICIES: Sessions
-CREATE POLICY "Anyone can view sessions" 
-ON public.mufradat_mabar_sessions FOR SELECT 
+DROP POLICY IF EXISTS "Anyone can view sessions" ON public.mufradat_mabar_sessions;
+CREATE POLICY "Anyone can view sessions" ON public.mufradat_mabar_sessions FOR SELECT 
 TO authenticated USING (true);
 
-CREATE POLICY "Admins can manage sessions" 
-ON public.mufradat_mabar_sessions FOR ALL 
+DROP POLICY IF EXISTS "Admins can manage sessions" ON public.mufradat_mabar_sessions;
+CREATE POLICY "Admins can manage sessions" ON public.mufradat_mabar_sessions FOR ALL 
 USING (
     EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid()) OR
     EXISTS (SELECT 1 FROM public.roles_superadmin WHERE id = auth.uid())
 );
 
 -- 4. POLICIES: Participants
-CREATE POLICY "Anyone can view participants" 
-ON public.mufradat_mabar_participants FOR SELECT 
+DROP POLICY IF EXISTS "Anyone can view participants" ON public.mufradat_mabar_participants;
+CREATE POLICY "Anyone can view participants" ON public.mufradat_mabar_participants FOR SELECT 
 TO authenticated USING (true);
 
-CREATE POLICY "Users can join sessions" 
-ON public.mufradat_mabar_participants FOR INSERT 
+DROP POLICY IF EXISTS "Users can join sessions" ON public.mufradat_mabar_participants;
+CREATE POLICY "Users can join sessions" ON public.mufradat_mabar_participants FOR INSERT 
 TO authenticated 
 WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can update their own score" 
-ON public.mufradat_mabar_participants FOR UPDATE 
+DROP POLICY IF EXISTS "Users can update their own score" ON public.mufradat_mabar_participants;
+CREATE POLICY "Users can update their own score" ON public.mufradat_mabar_participants FOR UPDATE 
 TO authenticated 
 USING (auth.uid() = user_id);
 
@@ -61,3 +61,4 @@ USING (auth.uid() = user_id);
 -- 6. INDEXING
 CREATE INDEX IF NOT EXISTS idx_mabar_sessions_scheduled ON public.mufradat_mabar_sessions(scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_mabar_participants_score ON public.mufradat_mabar_participants(points_earned DESC);
+
