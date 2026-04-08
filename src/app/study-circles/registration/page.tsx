@@ -82,10 +82,10 @@ function RegistrationForm() {
     
     // Virtual ID mapping to programType
     if (selectedHalaqahId === 'mufradat-premium') {
-      return allHalaqahs.find(h => (h.program_type || h.programType) === 'hi_mufradat')?.id || selectedHalaqahId;
+      return allHalaqahs.find(h => h.program_type === 'hi_mufradat')?.id || selectedHalaqahId;
     }
     if (selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1') {
-      return allHalaqahs.find(h => (h.program_type || h.programType) === 'tikrar_daily')?.id || selectedHalaqahId;
+      return allHalaqahs.find(h => h.program_type === 'tikrar_daily')?.id || selectedHalaqahId;
     }
     
     return selectedHalaqahId;
@@ -213,12 +213,12 @@ function RegistrationForm() {
   const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
 
   const isPremiumProgram = useMemo(() => {
-    return (circle?.is_premium || circle?.isPremium) === true || isMufradat || isTikrar;
-  }, [circle?.is_premium, circle?.isPremium, isMufradat, isTikrar]);
+    return circle?.is_premium === true || isMufradat || isTikrar;
+  }, [circle?.is_premium, isMufradat, isTikrar]);
 
   // Minimum Infaq Calculation
   const minInfaq = useMemo(() => {
-    const adminBase = (circle?.base_price || circle?.basePrice) || 0;
+    const adminBase = circle?.base_price || 0;
     
     if (isMufradat) {
       return Math.max(20000, adminBase);
@@ -312,7 +312,7 @@ function RegistrationForm() {
       }
 
       // 3. Check Program ID
-      const programType = (circle?.program_type || circle?.programType) || (isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : ''));
+      const programType = circle?.program_type || (isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : ''));
       if (voucher.program_id !== 'all' && !programType.includes(voucher.program_id) && voucher.program_id !== 'mufradat') {
          // Fallback check for mufradat-premium id
          if (!(selectedHalaqahId === 'mufradat-premium' && voucher.program_id === 'mufradat')) {
@@ -443,7 +443,7 @@ function RegistrationForm() {
       if (finalHalaqahId && !uuidRegex.test(finalHalaqahId)) {
         console.log("Resolving virtual ID:", finalHalaqahId);
         const pType = finalHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
-        const { data: hData } = await supabase.from("halaqahs").select("id").or(`program_type.eq.${pType},programType.eq.${pType}`).maybeSingle();
+        const { data: hData } = await supabase.from("halaqahs").select("id").eq("program_type", pType).maybeSingle();
         if (hData?.id) {
           verifiedUuid = hData.id;
         }
@@ -612,7 +612,7 @@ function RegistrationForm() {
                   <SelectContent>
                     {(allHalaqahs || []).map(h => (
                       <SelectItem key={h.id} value={h.id} className="font-bold py-3 text-xs">
-                        {h.title} {(h.is_premium || h.isPremium) ? '(Premium)' : '(Gratis)'}
+                        {h.title} {h.is_premium ? '(Premium)' : '(Gratis)'}
                       </SelectItem>
                     ))}
                     {!allHalaqahs?.length && (

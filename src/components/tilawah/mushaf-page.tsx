@@ -54,6 +54,8 @@ export function MushafPage() {
   const [showReciterDialog, setShowReciterDialog] = useState(false);
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
+  const [isAutoplayEnabled, setIsAutoplayEnabled] = useState(false);
+  const isAutoplayEnabledRef = React.useRef(false);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   // Tooltip persistence state
@@ -65,6 +67,13 @@ export function MushafPage() {
 
     const savedSize = localStorage.getItem('aqli_mushaf_font_size');
     if (savedSize) setFontSize(parseInt(savedSize));
+
+    const savedAutoplay = localStorage.getItem('aqli_mushaf_autoplay');
+    if (savedAutoplay) {
+      const enabled = savedAutoplay === 'true';
+      setIsAutoplayEnabled(enabled);
+      isAutoplayEnabledRef.current = enabled;
+    }
 
     async function fetchPageVerses(p: number, isPrefetch = false) {
       if (!isPrefetch && pageCache[p]) {
@@ -109,6 +118,12 @@ export function MushafPage() {
     };
   }, [page]);
 
+  const handleAutoplayToggle = (enabled: boolean) => {
+    setIsAutoplayEnabled(enabled);
+    isAutoplayEnabledRef.current = enabled;
+    localStorage.setItem('aqli_mushaf_autoplay', enabled.toString());
+  };
+
   const selectReciter = (reciterId: number) => {
     setSelectedReciterId(reciterId);
     localStorage.setItem('aqli_reciter_id', reciterId.toString());
@@ -152,9 +167,11 @@ export function MushafPage() {
       audio.onended = () => {
         setPlayingKey(null);
         // Autoplay next verse if possible
-        const currentIndex = verses.findIndex(v => v.verse_key === verseKey);
-        if (currentIndex !== -1 && currentIndex < verses.length - 1) {
-          setTimeout(() => toggleAudio(verses[currentIndex + 1].verse_key), 300);
+        if (isAutoplayEnabledRef.current) {
+          const currentIndex = verses.findIndex(v => v.verse_key === verseKey);
+          if (currentIndex !== -1 && currentIndex < verses.length - 1) {
+            setTimeout(() => toggleAudio(verses[currentIndex + 1].verse_key), 300);
+          }
         }
       };
 
@@ -233,6 +250,18 @@ export function MushafPage() {
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(4)} title="Perbesar Font">
                 <Plus className="h-3 w-3" />
               </Button>
+            </div>
+
+            <div className="flex items-center space-x-2 bg-muted/20 px-3 py-1.5 rounded-full border">
+              <Switch 
+                id="autoplay-toggle" 
+                checked={isAutoplayEnabled} 
+                onCheckedChange={handleAutoplayToggle}
+                className="data-[state=checked]:bg-[#800000]"
+              />
+              <Label htmlFor="autoplay-toggle" className="text-[9px] font-bold uppercase tracking-widest cursor-pointer text-muted-foreground">
+                Autoplay
+              </Label>
             </div>
 
             <div className="flex items-center space-x-2 bg-muted/20 px-3 py-1.5 rounded-full border">

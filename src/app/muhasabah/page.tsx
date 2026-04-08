@@ -65,10 +65,12 @@ export default function MuhasabahPage() {
     { id: 'm_akhlak_infaq', label: 'Berinfaq/Sedekah Hari Ini', sub: 'Kebaikan & Akhlak', dalil: 'HR. Bukhari: Malaikat mendoakan' },
   ], []);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const thirtyDaysAgoStr = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  }, []);
 
   const logsOptions = useMemo(() => ({
     filters: [
@@ -146,7 +148,7 @@ export default function MuhasabahPage() {
       return;
     }
 
-    reloadMutabaah();
+    // reloadMutabaah(); // Optimization: Removed redundant reload; handled by useCollection real-time sync
   };
 
   const progressCount = useMemo(() => {

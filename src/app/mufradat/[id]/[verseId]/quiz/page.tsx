@@ -77,18 +77,22 @@ function MufradatQuizContent() {
     }
   }, [user, isUserLoading, router, id]);
 
-  // Fetch leaderboard data (RLS will automatically filter by group)
-  const { data: allAttempts, isLoading: isLeaderboardLoading, refresh: refreshLeaderboard } = useCollection("quiz_attempts", {
+  const leaderboardOptions = useMemo(() => ({
     filters: [
       { column: 'quiz_id', operator: '==', value: `mufradat_${verseKey}` }
     ],
     orderBy: { column: 'score', ascending: false }
-  });
+  }), [verseKey]);
+
+  // Fetch leaderboard data (RLS will automatically filter by group)
+  const { data: allAttempts, isLoading: isLeaderboardLoading, refresh: refreshLeaderboard } = useCollection("quiz_attempts", leaderboardOptions);
 
   const userIds = useMemo(() => [...new Set(allAttempts?.map(a => a.user_id) || [])], [allAttempts]);
-  const { data: leaderboardUsers } = useCollection(userIds.length > 0 ? "users" : null, {
+  const usersOptions = useMemo(() => ({
     filters: [{ column: 'id', operator: 'in', value: userIds }]
-  });
+  }), [userIds]);
+
+  const { data: leaderboardUsers } = useCollection(userIds.length > 0 ? "users" : null, usersOptions);
 
   const uniqueLeaderboard = useMemo(() => {
     if (!allAttempts) return [];

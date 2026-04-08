@@ -73,40 +73,70 @@ function MufradatPageContent() {
     progressOptions
   );
 
-  const { data: registrations, isLoading: isRegLoading } = useCollection(user ? "halaqah_registrations" : null, {
+  const registrationsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
-  });
+  }), [user?.id]);
 
-  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection(user ? "voucher_redemptions" : null, {
+  const { data: registrations, isLoading: isRegLoading } = useCollection(
+    user ? "halaqah_registrations" : null, 
+    registrationsOptions
+  );
+
+  const redemptionsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }],
     select: "*, vouchers(*)"
-  });
+  }), [user?.id]);
+
+  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection(
+    user ? "voucher_redemptions" : null, 
+    redemptionsOptions
+  );
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
   // FETCH BADGES
-  const { data: userBadges, isLoading: isBadgesLoading } = useCollection(user ? "user_badges" : null, {
+  const badgesOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
-  });
+  }), [user?.id]);
+
+  const { data: userBadges, isLoading: isBadgesLoading } = useCollection(
+    user ? "user_badges" : null, 
+    badgesOptions
+  );
 
   const isRankTab = activeTab === 'rank';
   const group_id = userData?.mufradat_group_id;
 
   // GROUP LEADERBOARD DATA (Lazy load only when on rank tab)
-  const { data: allGroupUsers, isLoading: isGroupUsersLoading } = useCollection(isRankTab && group_id ? "users" : null, {
+  const groupUsersOptions = useMemo(() => ({
     filters: [{ column: 'mufradat_group_id', operator: '==', value: group_id }]
-  });
+  }), [group_id]);
 
-  const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(isRankTab && group_id ? "quiz_attempts" : null, {
+  const { data: allGroupUsers, isLoading: isGroupUsersLoading } = useCollection(
+    isRankTab && group_id ? "users" : null, 
+    groupUsersOptions
+  );
+
+  const groupAttemptsOptions = useMemo(() => ({
     filters: [
       { column: 'group_id', operator: '==', value: group_id },
       { column: 'is_passed', operator: '==', value: true }
     ]
-  });
+  }), [group_id]);
 
-  const { data: allReactions, refresh: refreshReactions } = useCollection(isRankTab && group_id ? "mufradat_reactions" : null, {
+  const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(
+    isRankTab && group_id ? "quiz_attempts" : null, 
+    groupAttemptsOptions
+  );
+
+  const reactionsOptions = useMemo(() => ({
     filters: [{ column: 'group_id', operator: '==', value: group_id }]
-  });
+  }), [group_id]);
+
+  const { data: allReactions, refresh: refreshReactions } = useCollection(
+    isRankTab && group_id ? "mufradat_reactions" : null, 
+    reactionsOptions
+  );
 
   const groupRankings = useMemo(() => {
     if (!allGroupUsers || !isRankTab) return [];

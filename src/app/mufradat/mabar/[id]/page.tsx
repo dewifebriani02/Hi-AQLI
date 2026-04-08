@@ -43,11 +43,16 @@ export default function MufradatMabarRoomPage() {
   const { data: session, isLoading: isSessionLoading } = useDoc("mufradat_mabar_sessions", id as string);
   
   // 2. Fetch Participants (Realtime enabled via useCollection if configured)
-  const { data: participants, refresh: refreshParticipants } = useCollection("mufradat_mabar_participants", {
+  const participantOptions = useMemo(() => ({
     filters: [{ column: 'session_id', operator: '==', value: id }],
     orderBy: { column: 'points_earned', ascending: false },
     limit: 50
-  });
+  }), [id]);
+
+  const { data: participants, refresh: refreshParticipants } = useCollection(
+    "mufradat_mabar_participants", 
+    participantOptions
+  );
 
   const currentUserParticipant = participants?.find(p => p.user_id === user?.id);
   const isJoined = !!currentUserParticipant;

@@ -62,8 +62,8 @@ export default function DashboardPage() {
   const points = userData?.points || 0;
 
   // Mutaba'ah Progress Calculation - only fetch if user is logged in
-  const todayStr = new Date().toISOString().split('T')[0];
-  const thirtyDaysAgoStr = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const thirtyDaysAgoStr = useMemo(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], []);
   
   const mutabaahOptions = useMemo(() => (user?.id ? {
     filters: [

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useState, useEffect } from "react";
 import { useCollection } from "@/supabase/db";
 import { useUser, supabase } from "@/supabase";
 import { 
@@ -31,10 +32,12 @@ import { Badge } from "@/components/ui/badge";
 
 export default function MufradatMabarOverviewPage() {
   const { user } = useUser();
-  const { data: sessions, isLoading: isSessionsLoading } = useCollection("mufradat_mabar_sessions", {
+  const sessionOptions = useMemo(() => ({
     orderBy: { column: 'scheduled_at', ascending: true },
     filters: [{ column: 'status', operator: '!=', value: 'finished' }]
-  });
+  }), []);
+
+  const { data: sessions, isLoading: isSessionsLoading } = useCollection("mufradat_mabar_sessions", sessionOptions);
 
   if (isSessionsLoading) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">

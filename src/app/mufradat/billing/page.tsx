@@ -43,21 +43,29 @@ export default function MufradatBillingPage() {
   const { toast } = useToast();
   
   const { data: userData, refresh: refreshUser } = useDoc("users", user?.id);
-  const { data: registrations, refresh: refreshRegs } = useCollection("halaqah_registrations", {
+  const registrationsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
-  });
-  const { data: redemptions, refresh: refreshRedemptions } = useCollection("voucher_redemptions", {
+  }), [user?.id]);
+
+  const { data: registrations, refresh: refreshRegs } = useCollection("halaqah_registrations", registrationsOptions);
+
+  const redemptionsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }],
     select: "*, vouchers(*)"
-  });
+  }), [user?.id]);
+
+  const { data: redemptions, refresh: refreshRedemptions } = useCollection("voucher_redemptions", redemptionsOptions);
 
   const { data: groupData } = useDoc(userData?.mufradat_group_id ? "mufradat_groups" : null, userData?.mufradat_group_id);
-  const { data: progress } = useCollection(user ? "quiz_attempts" : null, {
+
+  const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
       { column: 'is_passed', operator: '==', value: true }
     ]
-  });
+  }), [user?.id]);
+
+  const { data: progress } = useCollection(user ? "quiz_attempts" : null, progressOptions);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mode, setMode] = useState<'view' | 'pay' | 'leave'>('view');

@@ -85,21 +85,36 @@ export default function MufradatSurahDetailPage() {
 
   // Fetch progress for the current surah to handle locking
   // Unified global progress fetch (no surah filter to avoid type/sync issues)
-  const { data: userProgress, isLoading: isUserProgressLoading } = useCollection(user ? "quiz_attempts" : null, {
+  const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
       { column: 'surah_id', operator: '==', value: Number(id) }
     ]
-  });
+  }), [user?.id, id]);
 
-  const { data: registrations, isLoading: isRegLoading } = useCollection(user ? "halaqah_registrations" : null, {
+  const { data: userProgress, isLoading: isUserProgressLoading } = useCollection(
+    user ? "quiz_attempts" : null, 
+    progressOptions
+  );
+
+  const registrationsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
-  });
+  }), [user?.id]);
 
-  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection(user ? "voucher_redemptions" : null, {
+  const { data: registrations, isLoading: isRegLoading } = useCollection(
+    user ? "halaqah_registrations" : null, 
+    registrationsOptions
+  );
+
+  const redemptionsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }],
     select: "*, vouchers(*)"
-  });
+  }), [user?.id]);
+
+  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection(
+    user ? "voucher_redemptions" : null, 
+    redemptionsOptions
+  );
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 

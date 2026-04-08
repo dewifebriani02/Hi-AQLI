@@ -108,12 +108,14 @@ export default function MutabaahPage() {
     { id: 'istighfar', label: 'Beristighfar (70-100x)', category: 'Umum', dalil: 'HR. Bukhari: Rasulullah >70x', icon: 'RotateCcw' },
   ], []);
 
-  const { data: userData, refresh: reloadUser } = useDoc("users", user?.id);
+  const { data: userData } = useDoc("users", user?.id);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const thirtyDaysAgoStr = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  }, []);
 
   const logsOptions = useMemo(() => ({
     filters: [
@@ -195,13 +197,13 @@ export default function MutabaahPage() {
       return;
     }
 
-    reloadMutabaah();
+    // reloadMutabaah(); // Optimization: Removed redundant reload; handled by useCollection real-time sync
     // Update points if completed
     if (completed) {
       const currentPoints = userData?.points || 0;
       const { error: pointError } = await supabase.from("users").update({ points: currentPoints + 5 }).eq('id', user.id);
       if (pointError) console.error("DEBUG [Mutabaah]: Points update failed", pointError);
-      reloadUser();
+      // reloadUser(); // Optimization: Removed redundant reload; handled by useDoc real-time sync
     }
   };
 
