@@ -23,8 +23,11 @@ export async function initiateGoogleSignIn(redirectTo?: string) {
             queryParams: {
                 prompt: 'select_account',
                 access_type: 'offline',
-            }
-        },
+            },
+            // PKCE is standard in newer supabase-js v2, 
+            // but we can try to force it via the redirectTo structure 
+            // if the library type doesn't support the explicit flowType property.
+        } as any,
     });
 }
 
