@@ -183,14 +183,23 @@ export default function MutabaahPage() {
         completed
       }, { onConflict: 'user_id,activity_id,date' });
 
-    if (!error) {
-      reloadMutabaah();
-      // Update points if completed
-      if (completed) {
-        const currentPoints = userData?.points || 0;
-        await supabase.from("users").update({ points: currentPoints + 5 }).eq('id', user.id);
-        reloadUser();
-      }
+    if (error) {
+      console.error("DEBUG [Mutabaah]: Save failed", error);
+      toast({
+        title: "Gagal Menyimpan",
+        description: `Error: ${error.message}. Mohon hubungi admin.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    reloadMutabaah();
+    // Update points if completed
+    if (completed) {
+      const currentPoints = userData?.points || 0;
+      const { error: pointError } = await supabase.from("users").update({ points: currentPoints + 5 }).eq('id', user.id);
+      if (pointError) console.error("DEBUG [Mutabaah]: Points update failed", pointError);
+      reloadUser();
     }
   };
 

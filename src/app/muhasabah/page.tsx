@@ -134,7 +134,17 @@ export default function MuhasabahPage() {
         completed
       }, { onConflict: 'user_id,activity_id,date' });
 
-    if (!error) reloadMutabaah();
+    if (error) {
+      console.error("DEBUG [Muhasabah]: Save failed", error);
+      toast({
+        title: "Gagal Menyimpan",
+        description: `Error: ${error.message}. Mohon hubungi admin.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    reloadMutabaah();
   };
 
   const progressCount = useMemo(() => {
