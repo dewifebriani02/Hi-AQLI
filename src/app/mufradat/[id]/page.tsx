@@ -348,7 +348,9 @@ export default function MufradatSurahDetailPage() {
     }
   };
 
-  if (loading || isUserLoading || isRegLoading || isUserDataLoading || isUserProgressLoading || isRedemptionsLoading) {
+  const isInitialLoading = loading || isUserLoading || (isRegLoading && (registrations || []).length === 0) || (isUserDataLoading && !userData) || (isUserProgressLoading && (userProgress || []).length === 0) || isRedemptionsLoading;
+
+  if (isInitialLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />

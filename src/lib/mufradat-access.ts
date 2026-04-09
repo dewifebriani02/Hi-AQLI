@@ -136,6 +136,11 @@ export function getMufradatStatus(
   // 2. Regular monthly payments must match the billing_month.
   // 3. Status must be 'verified' to be considered 'paid'.
   
+  const hasAnyVerifiedRegistration = registrations.some(r => 
+    r.status === 'verified' && 
+    (r.halaqah_id === 'mufradat-premium' || r.halaqah_id === user.mufradat_group_id || r.halaqah_title?.toLowerCase().includes('mufradat'))
+  );
+
   const hasPaidCurrent = registrations.some(r => 
     r.status === 'verified' && 
     (r.halaqah_id === 'mufradat-premium' || r.halaqah_id === user.mufradat_group_id || r.halaqah_title?.toLowerCase().includes('mufradat')) &&
@@ -145,6 +150,11 @@ export function getMufradatStatus(
       (!r.payment_type && !r.created_at) // Fallback for legacy
     )
   );
+
+  // If verified participant, they are generally NOT blocked for content access.
+  // The monthly check is primarily for billing reminders.
+  const isVerifiedStudent = hasAnyVerifiedRegistration || isStudent;
+
   
   const hasPaidNext = registrations.some(r => 
     r.status === 'verified' && 
@@ -224,8 +234,8 @@ export function getMufradatStatus(
   } 
 
   // OUTSIDE SAFE ZONE: 11th to 27th
-  // BLOCKING IS ACTIVE IF UNPAID.
-  if (!hasPaidCurrent) {
+  // BLOCKING IS ACTIVE IF UNPAID AND NOT PREVIOUSLY VERIFIED.
+  if (!hasPaidCurrent && !hasAnyVerifiedRegistration) {
     const msg = hasPendingCurrent
       ? "Bukti Infaq Ukhti sedang menunggu verifikasi Musyrifah. Akses akan terbuka otomatis setelah diverifikasi."
       : "Akses Terhenti. Infaq Hi Mufradat Ukhti belum terverifikasi untuk bulan ini. Hi AQLI membutuhkan dana untuk biaya operasional.";
@@ -239,10 +249,11 @@ export function getMufradatStatus(
     };
   }
 
+  // If we reach here, either they paid for current month, or they are a previously verified student (thalibah)
   return {
-    status: 'active',
+    status: hasPaidCurrent || hasAnyVerifiedRegistration ? 'active' : 'grace_period',
     isBlocked: false,
-    showSoftReminder: false,
+    showSoftReminder: !hasPaidCurrent && !hasAnyVerifiedRegistration,
     message: "Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!"
   };
 }

@@ -245,16 +245,17 @@ function VerseDetailContent() {
       [idx]: (prev[idx] || 0) + 1
     }));
   };
-
   const resetWordCounts = () => {
     setWordCounts({});
   };
 
-  if (loading || isUserLoading || isRegLoading || isUserDataLoading || isProgressLoading || isRedemptionsLoading) {
+  const isInitialLoading = loading || isUserLoading || (isRegLoading && (registrations || []).length === 0) || (isUserDataLoading && !userData) || (isProgressLoading && (progress || []).length === 0) || isRedemptionsLoading;
+
+  if (isInitialLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
-        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Menyiapkan Penjabaran...</p>
+        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Menyiapkan Surah...</p>
       </div>
     );
   }

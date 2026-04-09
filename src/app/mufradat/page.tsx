@@ -263,7 +263,9 @@ function MufradatPageContent() {
     checkWeeklyReset();
   }, [user, userData]);
 
-  if (isUserLoading && !user) {
+  const isInitialLoading = isUserLoading || (isRegLoading && registrations.length === 0) || (isUserDataLoading && !userData) || (isProgressLoading && (progress || []).length === 0);
+
+  if (isInitialLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
