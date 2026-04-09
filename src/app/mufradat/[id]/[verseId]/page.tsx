@@ -83,8 +83,15 @@ function VerseDetailContent() {
   const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || [], id, verseId, redemptions || []);
-  }, [userData, registrations, id, verseId, redemptions]);
+    return getMufradatStatus({
+      user: userData, 
+      registrations: registrations || [], 
+      isStudent, 
+      surahId: id, 
+      verseId: verseId, 
+      redemptions: redemptions || []
+    });
+  }, [userData, registrations, isStudent, id, verseId, redemptions]);
 
   const completedVerseNumbers = useMemo(() => {
     const passed = new Set<number>();

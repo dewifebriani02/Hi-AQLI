@@ -80,8 +80,14 @@ export default function MufradatJuzDetailPage() {
     // For Juz access, we check if the user has access to the first page of this Juz
     const pageMapping = JUZ_PAGE_MAPPING[parseInt(id)];
     const startPage = pageMapping?.startPage;
-    return getMufradatStatus(userData, registrations || [], undefined, startPage, redemptions || []);
-  }, [userData, registrations, id, redemptions]);
+    return getMufradatStatus({
+      user: userData, 
+      registrations: registrations || [], 
+      isStudent, 
+      pageId: startPage, 
+      redemptions: redemptions || []
+    });
+  }, [userData, registrations, isStudent, id, redemptions]);
 
   const progressData = useMemo(() => {
     const passedVerses = new Set<string>(); // "surahId:verseId"

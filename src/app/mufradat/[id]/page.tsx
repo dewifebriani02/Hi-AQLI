@@ -122,8 +122,14 @@ export default function MufradatSurahDetailPage() {
   const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || [], id, undefined, redemptions || []);
-  }, [userData, registrations, id, redemptions]);
+    return getMufradatStatus({
+      user: userData, 
+      registrations: registrations || [], 
+      isStudent, 
+      surahId: id, 
+      redemptions: redemptions || []
+    });
+  }, [userData, registrations, isStudent, id, redemptions]);
 
   const isProgressLoading = isUserProgressLoading;
 

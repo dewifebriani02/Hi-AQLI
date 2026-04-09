@@ -216,11 +216,13 @@ function MufradatPageContent() {
   const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
 
   const access = useMemo(() => {
-    const today = new Date();
-    const day = today.getDate();
-    const summary = getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
-    return summary;
-  }, [userData, registrations, redemptions]);
+    return getMufradatStatus({
+      user: userData, 
+      registrations: registrations || [], 
+      isStudent, 
+      redemptions: redemptions || []
+    });
+  }, [userData, registrations, redemptions, isStudent]);
 
 
 

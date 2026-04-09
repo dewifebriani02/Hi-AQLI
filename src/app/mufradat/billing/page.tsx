@@ -81,7 +81,11 @@ export default function MufradatBillingPage() {
   const [leaveEnd, setLeaveEnd] = useState("");
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
+    return getMufradatStatus({
+      user: userData, 
+      registrations: registrations || [], 
+      redemptions: redemptions || []
+    });
   }, [userData, registrations, redemptions]);
 
   const [voucherCode, setVoucherCode] = useState("");

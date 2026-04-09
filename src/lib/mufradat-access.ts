@@ -21,6 +21,16 @@ export interface MufradatAccessSummary {
   dueDate?: Date;
 }
 
+export interface GetMufradatStatusOptions {
+  user: any;
+  registrations?: any[];
+  isStudent?: boolean;
+  surahId?: string | number;
+  verseId?: string | number;
+  pageId?: string | number;
+  redemptions?: any[];
+}
+
 /**
  * Evaluates the Hi Mufradat subscription status for a user.
  * 
@@ -29,17 +39,19 @@ export interface MufradatAccessSummary {
  * 2. Grace period until the 10th of THAT month.
  * 3. Blocking starts after the 11th if unpaid.
  * 4. Leave (Cuti) exempts from billing but blocks verse access.
- * 5. Surah 1 (Al-Fatihah) Verses 1-5 are always FREE for everyone.
+ * 5. Surah 1 (Al-Fatihah) and last 3 surahs are always FREE for everyone.
  */
-export function getMufradatStatus(
-  user: any, 
-  registrations: any[] = [], 
-  isStudent: boolean = false, 
-  surahId?: string | number, 
-  redemptions: any[] = [],
-  verseId?: string | number,
-  pageId?: string | number
-): MufradatAccessSummary {
+export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAccessSummary {
+  const { 
+    user, 
+    registrations = [], 
+    isStudent = false, 
+    surahId, 
+    verseId, 
+    pageId, 
+    redemptions = [] 
+  } = options;
+
   const sNum = surahId ? parseInt(surahId.toString()) : null;
   const vNum = verseId ? parseInt(verseId.toString()) : null;
   const pNum = pageId ? parseInt(pageId.toString()) : null;

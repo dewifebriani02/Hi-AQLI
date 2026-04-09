@@ -415,7 +415,11 @@ export default function AdminUsersPage() {
                         {(() => {
                            const userRegs = registrations?.filter(r => r.user_id === u.id) || [];
                            const userReds = redemptions?.filter(r => r.user_id === u.id) || [];
-                           const access = getMufradatStatus(u, userRegs, false, undefined, userReds);
+                           const access = getMufradatStatus({
+                             user: u, 
+                             registrations: userRegs, 
+                             redemptions: userReds
+                           });
                            const status = access.status;
                            
                            return (
