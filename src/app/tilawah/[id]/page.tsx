@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight } from "lucide-react";
@@ -60,8 +60,6 @@ const RECITERS = [
   { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
 ];
 
-import { useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { checkIsStudent, isSurahFree } from "@/lib/access-control";
 
 export default function SurahDetailPage() {
