@@ -219,7 +219,7 @@ function MufradatPageContent() {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'juz' || tab === 'surah') {
+    if (tab === 'juz' || tab === 'surah' || tab === 'murajaah' || tab === 'rank') {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -263,7 +263,7 @@ function MufradatPageContent() {
     checkWeeklyReset();
   }, [user, userData]);
 
-  if (isUserLoading || isRegLoading || isUserDataLoading || isProgressLoading || isRedemptionsLoading || isBadgesLoading) {
+  if (isUserLoading && !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />

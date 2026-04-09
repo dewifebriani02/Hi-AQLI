@@ -197,23 +197,25 @@ export default function MufradatSurahDetailPage() {
 
   // Strict Sequential Guard: Redirect if Surah's starting page is locked
   useEffect(() => {
-    if (isUserLoading || isUserProgressLoading || !user || !userProgress) return;
+    // WAIT for ALL essential data to be ready before making a decision
+    if (isUserLoading || isUserProgressLoading || isRegLoading || isUserDataLoading || isRedemptionsLoading || !user || !userProgress) return;
+    
     const hasAnyProgress = currentSurahPassedVerses.size > 0;
     const sId = Number(id);
     const startPage = SURAH_START_PAGES[sId] || 1;
     const isFreeSurah = [1, 112, 113, 114].includes(sId);
     
-    // Lenient Surah Lock: 
-    // 1. FREE SURAHS (Fatihah, 3 Qul, Baqarah)
-    // 2. OR Access is NOT blocked (Handled by mufradat-access.ts which checks subscriptions, vouchers, and explicitly opened Juz)
-    // 3. OR User has some progress already
-    // 5. OR User IS a registered student (Thalibah)
-    const isUnlocked = isFreeSurah || isStudent || !access.isBlocked || sId === 2 || currentSurahPassedVerses.size > 0 || completedPageQuizzes.has(startPage - 1);
+    // Lenient Surah Lock
+    const isUnlocked = isFreeSurah || isStudent || !access.isBlocked || sId === 2 || currentSurahPassedVerses.size > 0 || (startPage > 1 && completedPageQuizzes.has(startPage - 1));
     
     if (!isUnlocked) {
-      router.push('/mufradat');
+      // Safety timeout to prevent race conditions during initial rendering
+      const timer = setTimeout(() => {
+        router.push('/mufradat');
+      }, 1500);
+      return () => clearTimeout(timer);
     }
-  }, [id, isUserProgressLoading, completedPageQuizzes, router, currentSurahPassedVerses]);
+  }, [id, isUserLoading, isUserProgressLoading, isRegLoading, isUserDataLoading, isRedemptionsLoading, user, userProgress, completedPageQuizzes, router, currentSurahPassedVerses, isStudent, access.isBlocked]);
 
   useEffect(() => {
     const savedReciter = localStorage.getItem('aqli_reciter_id');

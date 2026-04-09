@@ -18,7 +18,7 @@ export function useDoc<T = any>(
 
     const fetchData = useCallback(async () => {
         if (!table || !id) return;
-        setIsLoading(true);
+        if (!data) setIsLoading(true);
         setError(null);
         const { data, error } = await supabase
             .from(table)
@@ -86,7 +86,7 @@ export function useCollection<T = any>(
 
     const fetchData = useCallback(async () => {
         if (!table) return;
-        setIsLoading(true);
+        if (data.length === 0) setIsLoading(true);
         setError(null);
 
         let q = supabase.from(table).select(options?.select || '*');

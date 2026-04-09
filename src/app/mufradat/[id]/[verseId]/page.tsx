@@ -130,7 +130,8 @@ function VerseDetailContent() {
 
   // Sequential Learning Guard
   useEffect(() => {
-    if (isUserLoading || isProgressLoading || !user || !verse || !progress) return;
+    // WAIT for ALL essential data to be ready before making a decision
+    if (isUserLoading || isProgressLoading || isRegLoading || isUserDataLoading || isRedemptionsLoading || !user || !verse || !progress) return;
     
     // 1. BYPASS for Free Surahs (Al-Fatihah, etc.)
     if (access.isFree) return;
@@ -139,16 +140,6 @@ function VerseDetailContent() {
     const isFirstVerseOfQuran = parseInt(id) === 1 && vIdx === 1;
     const isFirstVerseOfSurah = vIdx === 1;
     const isPrevVerseDone = completedVerseNumbers.has(vIdx - 1);
-    
-    // A verse is UNLOCKED if:
-    // 1. Subscription is active/paid (!access.isBlocked)
-    // 2. AND It's one of the "Start" conditions:
-    //    a. It's a Free Verse (Al-Fatihah, etc.)
-    //    b. It's the first verse of the Quran (1:1)
-    //    c. It's already completed
-    //    d. It's the first verse of a surah 
-    //    e. Previous verse in the same surah is done
-    //    f. User just came from a successful quiz (Optimistic)
     
     // Core check: User MUST have subscription access OR it's a free verse OR user is a registered student
     const hasProgramAccess = access.isFree || !access.isBlocked || isStudent;
@@ -164,7 +155,7 @@ function VerseDetailContent() {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [verse, progress, isProgressLoading, isUserLoading, user, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers, access.isFree]);
+  }, [verse, progress, isProgressLoading, isUserLoading, isRegLoading, isUserDataLoading, isRedemptionsLoading, user, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers, access.isFree, isStudent, access.isBlocked, success]);
   
   // Fetch latest attempt for THIS specific verse to get wrong_words
   const lastAttemptOptions = useMemo(() => ({
