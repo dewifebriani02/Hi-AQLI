@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from './index';
+import { supabase } from './client';
 
 export interface UseDocResult<T> {
     data: (T & { id: string }) | null;
@@ -20,7 +20,7 @@ export function useDoc<T = any>(
         if (!table || !id) return;
         if (!data) setIsLoading(true);
         setError(null);
-        const { data, error } = await supabase
+        const { data: result, error } = await supabase
             .from(table)
             .select('*')
             .eq('id', id)
@@ -30,15 +30,19 @@ export function useDoc<T = any>(
             setError(error);
             setData(null);
         } else {
-            setData(data as T & { id: string });
+            setData(result as T & { id: string });
         }
         setIsLoading(false);
     }, [table, id]);
 
     useEffect(() => {
         if (!table || !id) {
-            setData(null);
-            setIsLoading(false);
+            // Keep data but set isLoading if table/id actually changed to null
+            // Only wipe data if the table changes to null completely (e.g. sign out)
+            if (!table) {
+                setData(null);
+                setIsLoading(false);
+            }
             setError(null);
             return;
         }
@@ -94,7 +98,7 @@ export function useCollection<T = any>(
         if (options?.filters) {
             // Skip if any filter value is undefined
             if (options.filters.some(f => f.value === undefined)) {
-                setData([]);
+                // Keep existing data to avoid UI jump, but stop loading if previously loading
                 setIsLoading(false);
                 setError(null);
                 return;
@@ -117,12 +121,12 @@ export function useCollection<T = any>(
             q = q.limit(options.limit);
         }
 
-        const { data, error } = await q;
+        const { data: result, error } = await q;
 
         if (error) {
             setError(error);
         } else {
-            setData(data as unknown as (T & { id: string })[]);
+            setData(result as unknown as (T & { id: string })[]);
         }
         setIsLoading(false);
     }, [table, optionsKey]);
@@ -180,12 +184,12 @@ export function useCount(
             });
         }
 
-        const { count, error } = await q;
+        const { count: resultCount, error } = await q;
 
         if (error) {
             setError(error);
         } else {
-            setCount(count);
+            setCount(resultCount);
         }
         setIsLoading(false);
     }, [table, optionsKey]);

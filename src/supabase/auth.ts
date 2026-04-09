@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from './index';
+import { supabase } from './client';
 
 /** Initiate email/password sign-in. */
 export async function initiateEmailSignIn(email: string, password: string) {

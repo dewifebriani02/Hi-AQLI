@@ -28,6 +28,7 @@ import { useCollection, useDoc } from "@/supabase/db";
 import { SURAH_START_PAGES } from "@/lib/quran-mapping";
 import { Card, CardContent } from "@/components/ui/card";
 import { checkIsStudent } from "@/lib/access-control";
+import { cn } from "@/lib/utils";
 
 interface Word {
   id: number;
