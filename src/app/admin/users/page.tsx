@@ -48,6 +48,9 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { getMufradatStatus } from "@/lib/mufradat-access";
+import { format, addMonths } from "date-fns";
+import { id } from "date-fns/locale";
 
 const ROLES = [
   { id: "learner", name: "Thalibah / User" }, // Dynamic label handling
@@ -57,9 +60,10 @@ const ROLES = [
 ];
 
 const INITIAL_ADD_FORM = {
+  full_name: "",
   username: "",
   email: "",
-  phone: "",
+  whatsapp: "",
   role_id: "learner",
   bank_name: "",
   bank_account_number: "",
@@ -79,10 +83,17 @@ export default function AdminUsersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState(INITIAL_ADD_FORM);
 
-  const { data: users, isLoading, refresh: refreshUsers } = useCollection("users");
+  const { data: users, isLoading: isUsersLoading, refresh: refreshUsers } = useCollection("users");
+  const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations");
+  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection("voucher_redemptions", { 
+    select: "*, vouchers(*)" 
+  });
+
+  const isLoading = isUsersLoading || isRegLoading || isRedemptionsLoading;
 
   const filteredUsers = users?.filter(u =>
     u.username?.toLowerCase().includes(search.toLowerCase()) ||
+    u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -90,9 +101,10 @@ export default function AdminUsersPage() {
     if (!editingUser?.id) return;
 
     const updateData: any = {
+      full_name: editingUser.full_name || "",
       username: editingUser.username,
       role_id: editingUser.role_id,
-      phone: editingUser.phone || "",
+      whatsapp: editingUser.whatsapp || editingUser.phone || "",
       bank_name: editingUser.bank_name || "",
       bank_account_number: editingUser.bank_account_number || "",
       bank_account_holder: editingUser.bank_account_holder || "",
@@ -163,9 +175,10 @@ export default function AdminUsersPage() {
     try {
       addDocumentNonBlocking("users", {
         id: tempId,
+        full_name: addForm.full_name,
         username: addForm.username,
         email: addForm.email,
-        phone: addForm.phone,
+        whatsapp: addForm.whatsapp,
         role_id: addForm.role_id,
         bank_name: addForm.bank_name,
         bank_account_number: addForm.bank_account_number,
@@ -186,6 +199,27 @@ export default function AdminUsersPage() {
       setAddForm(INITIAL_ADD_FORM);
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal menambah user." });
+    }
+  };
+
+  const handleActivateUser = async (userId: string, username: string) => {
+    if (!confirm(`Aktifkan akses Hi Mufradat untuk ${username} selama 1 bulan dari sekarang?`)) return;
+
+    try {
+      const nextMonth = addMonths(new Date(), 1).toISOString();
+      updateDocumentNonBlocking("users", userId, { 
+        mufradat_due_date: nextMonth,
+        mufradat_status: 'active'
+      });
+      
+      toast({
+        title: "Akses Diaktifkan",
+        description: `Masa aktif ${username} telah diperpanjang hingga ${format(new Date(nextMonth), 'd MMMM yyyy', { locale: id })}.`
+      });
+      
+      refreshUsers();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal aktivasi", description: err.message });
     }
   };
 
@@ -222,11 +256,19 @@ export default function AdminUsersPage() {
             </DialogHeader>
             <div className="grid gap-6 py-4">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase">Nama Pengguna</Label>
+                <Label className="text-xs font-bold uppercase">Nama Lengkap Sesuai KTP</Label>
                 <Input
-                  placeholder="Contoh: Mu'allimah Fatimah"
+                  placeholder="Contoh: Fatimah Az-Zahra"
+                  value={addForm.full_name}
+                  onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase">Username</Label>
+                <Input
+                  placeholder="Contoh: fatimah_88"
                   value={addForm.username}
-                  onChange={(e) => setAddForm({ ...addForm, username: e.target.value })}
+                  onChange={(e) => setAddForm({ ...addForm, username: e.target.value.toLowerCase().replace(/\s/g, '_') })}
                 />
               </div>
               <div className="space-y-2">
@@ -242,8 +284,8 @@ export default function AdminUsersPage() {
                 <Label className="text-xs font-bold uppercase">Nomor WhatsApp</Label>
                 <Input
                   placeholder="Contoh: 62812345678"
-                  value={addForm.phone}
-                  onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+                  value={addForm.whatsapp}
+                  onChange={(e) => setAddForm({ ...addForm, whatsapp: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -324,13 +366,14 @@ export default function AdminUsersPage() {
               <TableRow className="bg-muted/10">
                 <TableHead className="text-[10px] font-black uppercase">Nama & Email</TableHead>
                 <TableHead className="text-[10px] font-black uppercase">Peran</TableHead>
+                <TableHead className="text-[10px] font-black uppercase">Masa Aktif</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!filteredUsers || filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-20 text-muted-foreground italic text-sm">
+                  <TableCell colSpan={4} className="text-center py-20 text-muted-foreground italic text-sm">
                     Tidak ada data yang ditemukan.
                   </TableCell>
                 </TableRow>
@@ -339,10 +382,11 @@ export default function AdminUsersPage() {
                   <TableRow key={u.id} className="hover:bg-muted/5">
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-foreground">{u.username || 'Tanpa Nama'}</span>
+                        <span className="text-sm font-bold text-foreground">{u.full_name || u.username || 'Tanpa Nama'}</span>
                         <div className="flex items-center gap-3">
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" /> {u.email}</span>
-                          {u.phone && <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><Phone className="w-3 h-3" /> {u.phone}</span>}
+                          {(u.whatsapp || u.phone) && <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><Phone className="w-3 h-3" /> {u.whatsapp || u.phone}</span>}
+                          {u.username && <span className="text-[10px] text-slate-400 font-medium">@{u.username}</span>}
                         </div>
                       </div>
                     </TableCell>
@@ -364,6 +408,62 @@ export default function AdminUsersPage() {
                             BLACKLISTED
                           </Badge>
                         )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {(() => {
+                           const userRegs = registrations?.filter(r => r.user_id === u.id) || [];
+                           const userReds = redemptions?.filter(r => r.user_id === u.id) || [];
+                           const access = getMufradatStatus(u, userRegs, false, undefined, userReds);
+                           const status = access.status;
+                           
+                           return (
+                             <>
+                               {access.dueDate ? (
+                                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/30 w-fit">
+                                   <Calendar className={cn(
+                                     "w-3 h-3",
+                                     status === 'active' ? "text-emerald-600" : 
+                                     status === 'grace_period' ? "text-amber-500" : "text-rose-600"
+                                   )} />
+                                   <span className={cn(
+                                     "text-[10px] font-black uppercase tracking-tight",
+                                     status === 'active' ? "text-emerald-700" : 
+                                     status === 'grace_period' ? "text-amber-700" : "text-rose-700"
+                                   )}>
+                                     {format(access.dueDate, 'd MMM yyyy', { locale: id })}
+                                   </span>
+                                 </div>
+                               ) : (
+                                 <div className="flex flex-col gap-1">
+                                   <span className="text-[10px] text-muted-foreground italic font-medium px-2">Belum Aktif</span>
+                                   <Button 
+                                     size="sm" 
+                                     variant="outline"
+                                     onClick={() => handleActivateUser(u.id, u.username || u.full_name)}
+                                     className="h-6 px-2 text-[8px] font-black uppercase tracking-tighter border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                                   >
+                                     <UserPlus className="w-2.5 h-2.5 mr-1" /> AKTIFKAN
+                                   </Button>
+                                 </div>
+                               )}
+                               <div className="flex items-center gap-3 px-2">
+                                 {u.created_at && (
+                                   <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-tighter">Reg: {new Date(u.created_at).toLocaleDateString('id-ID')}</span>
+                                 )}
+                                 <span className={cn(
+                                   "text-[7px] font-black px-1.5 rounded-sm uppercase tracking-widest",
+                                   status === 'active' ? "bg-emerald-100 text-emerald-700" : 
+                                   status === 'grace_period' ? "bg-amber-100 text-amber-700" : 
+                                   "bg-rose-100 text-rose-700"
+                                 )}>
+                                   {status}
+                                 </span>
+                               </div>
+                             </>
+                           );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -392,10 +492,18 @@ export default function AdminUsersPage() {
                           </DialogHeader>
                           <div className="grid gap-6 py-4">
                             <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Nama Pengguna</Label>
+                              <Label className="text-xs font-bold uppercase text-muted-foreground">Nama Lengkap</Label>
+                              <Input
+                                value={editingUser?.full_name || ""}
+                                onChange={(e) => setEditingUser({ ...editingUser, full_name: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase text-muted-foreground">Username</Label>
                               <Input
                                 value={editingUser?.username || ""}
-                                onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                                onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value.toLowerCase().replace(/\s/g, '_') })}
                               />
                             </div>
 
@@ -403,8 +511,8 @@ export default function AdminUsersPage() {
                               <Label className="text-xs font-bold uppercase text-muted-foreground">Nomor WhatsApp</Label>
                               <Input
                                 placeholder="Contoh: 62812345678"
-                                value={editingUser?.phone || ""}
-                                onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                                value={editingUser?.whatsapp || editingUser?.phone || ""}
+                                onChange={(e) => setEditingUser({ ...editingUser, whatsapp: e.target.value })}
                               />
                             </div>
 

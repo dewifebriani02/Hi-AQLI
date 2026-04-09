@@ -10,10 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff, Zap } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import Link from 'next/link';
 import { Logo } from '@/components/common/logo';
 import { Suspense } from 'react';
+import { validateEmail } from '@/lib/utils';
 
 function RegisterContent() {
   const { user, isUserLoading } = useUser();
@@ -27,9 +30,27 @@ function RegisterContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  
+  // Referral Validation State
+  const [referralStatus, setReferralStatus] = useState<{
+    isLoading: boolean;
+    isValid: boolean;
+    referrerName: string | null;
+  }>({ isLoading: false, isValid: false, referrerName: null });
+
+  // Password Strength State
+  const passwordStrength = useMemo(() => {
+    if (!password) return 0;
+    let strength = 0;
+    if (password.length >= 8) strength += 25;
+    if (/[0-9]/.test(password)) strength += 25;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength += 25;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+    return strength;
+  }, [password]);
   
   // Bot Protection
   const [hasMounted, setHasMounted] = useState(false);
@@ -43,6 +64,34 @@ function RegisterContent() {
     const b = Math.floor(Math.random() * 9) + 1;
     setCaptchaChallenge({ a, b, result: a + b });
   }, []);
+
+  // Referral Validation Effect
+  useEffect(() => {
+    async function validateRef() {
+      if (!referralCode) {
+        setReferralStatus({ isLoading: false, isValid: false, referrerName: null });
+        return;
+      }
+
+      setReferralStatus(prev => ({ ...prev, isLoading: true }));
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('username')
+          .eq('referral_code', referralCode.toUpperCase())
+          .maybeSingle();
+
+        if (data) {
+          setReferralStatus({ isLoading: false, isValid: true, referrerName: data.username });
+        } else {
+          setReferralStatus({ isLoading: false, isValid: false, referrerName: null });
+        }
+      } catch (e) {
+        setReferralStatus({ isLoading: false, isValid: false, referrerName: null });
+      }
+    }
+    validateRef();
+  }, [referralCode]);
 
   useEffect(() => {
     if (user && !isUserLoading) {
@@ -102,8 +151,26 @@ function RegisterContent() {
       return; 
     }
 
+    if (!validateEmail(email)) {
+      setError('Format email tidak valid. Silakan periksa kembali.');
+      setLoading(false);
+      return;
+    }
+
     if (!captchaChallenge || parseInt(userCaptcha) !== captchaChallenge.result) {
       setError(`Jawaban keamanan salah. ${captchaChallenge?.a} + ${captchaChallenge?.b} = ?`);
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Kata sandi tidak cocok. Mohon ulangi kembali.');
+      setLoading(false);
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setError('Ukhti harus setuju dengan Syarat & Ketentuan untuk melanjutkan.');
       setLoading(false);
       return;
     }
@@ -164,14 +231,30 @@ function RegisterContent() {
           )}
 
           {referralCode && (
-            <Alert className="bg-emerald-50 border-emerald-200 text-emerald-800 animate-in slide-in-from-top-2 duration-500">
+            <Alert className={cn(
+              "animate-in slide-in-from-top-2 duration-500",
+              referralStatus.isLoading ? "bg-slate-50 border-slate-200" :
+              referralStatus.isValid ? "bg-emerald-50 border-emerald-200 text-emerald-800" : 
+              "bg-rose-50 border-rose-200 text-rose-800"
+            )}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500 rounded-lg text-white">
-                  <Zap className="w-4 h-4 fill-current" />
+                <div className={cn(
+                  "p-2 rounded-lg text-white",
+                  referralStatus.isLoading ? "bg-slate-400" :
+                  referralStatus.isValid ? "bg-emerald-500" : "bg-rose-500"
+                )}>
+                  {referralStatus.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 
+                   referralStatus.isValid ? <Zap className="w-4 h-4 fill-current" /> : <AlertTriangle className="w-4 h-4" />}
                 </div>
                 <AlertDescription className="text-[10px] font-black uppercase tracking-wider leading-tight">
-                  Alhamdulillah! Kode Referal <span className="text-emerald-600 underline">{referralCode}</span> Berhasil Terpasang. <br/>
-                  <span className="opacity-70">Ukhti akan mendapatkan potongan Rp 5.000 saat pendaftaran program.</span>
+                  {referralStatus.isLoading ? "Memvalidasi Kode Referral..." : 
+                   referralStatus.isValid ? (
+                     <>Alhamdulillah! Kode <span className="text-emerald-600 underline">{referralCode}</span> dari {referralStatus.referrerName} Aktif. <br/>
+                     <span className="opacity-70 text-[9px]">Potongan Rp 5.000 otomatis berlaku.</span></>
+                   ) : (
+                     <>Maaf, Kode <span className="text-rose-600 underline">{referralCode}</span> Tidak Valid. <br/>
+                     <span className="opacity-70 text-[9px]">Ukhti tetap bisa mendaftar tanpa potongan.</span></>
+                   )}
                 </AlertDescription>
               </div>
             </Alert>
@@ -249,7 +332,19 @@ function RegisterContent() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Kata Sandi</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Kata Sandi</Label>
+                {password && (
+                  <span className={cn(
+                    "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full",
+                    passwordStrength <= 25 ? "bg-rose-100 text-rose-600" :
+                    passwordStrength <= 75 ? "bg-amber-100 text-amber-600" :
+                    "bg-emerald-100 text-emerald-600"
+                  )}>
+                    {passwordStrength <= 25 ? "Lemah" : passwordStrength <= 75 ? "Sedang" : "Kuat"}
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -273,6 +368,37 @@ function RegisterContent() {
                     <Eye className="h-4 w-4" />
                   )}
                 </button>
+              </div>
+              {password && (
+                <div className="px-1">
+                  <Progress value={passwordStrength} className="h-1" indicatorClassName={cn(
+                    passwordStrength <= 25 ? "bg-rose-500" :
+                    passwordStrength <= 75 ? "bg-amber-500" :
+                    "bg-emerald-500"
+                  )} />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Ulangi Kata Sandi</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Ketik ulang kata sandi"
+                  className={cn(
+                    "pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]",
+                    password && confirmPassword && password !== confirmPassword && "border-rose-400 focus-visible:ring-rose-400"
+                  )}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+                {password && confirmPassword && password === confirmPassword && (
+                  <ShieldCheck className="absolute right-3 top-3.5 h-5 w-5 text-emerald-500" />
+                )}
               </div>
             </div>
 
@@ -308,10 +434,27 @@ function RegisterContent() {
               </div>
             )}
 
+            <div className="flex items-start space-x-3 py-2">
+              <Checkbox 
+                id="terms" 
+                checked={agreedToTerms} 
+                onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                className="mt-1 border-[#800000] data-[state=checked]:bg-[#800000]"
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label
+                  htmlFor="terms"
+                  className="text-[10px] font-bold text-slate-600 leading-tight peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Saya setuju dengan <Link href="/syarat-ketentuan" className="text-[#800000] underline">Syarat & Ketentuan</Link> Hi AQLI dan berkomitmen untuk beramal dengan Itqan.
+                </label>
+              </div>
+            </div>
+
             <Button
               type="submit"
               className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-14 rounded-xl shadow-lg transition-all active:scale-[0.98] uppercase tracking-widest"
-              disabled={loading || googleLoading}
+              disabled={loading || googleLoading || !agreedToTerms}
             >
               {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : <><UserPlus className="mr-2 h-5 w-5" /> Daftar Sekarang</>}
             </Button>

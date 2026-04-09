@@ -1,5 +1,6 @@
 'use client';
 
+import { parseISO, addMonths } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
 import { useUser, supabase } from "@/supabase";
 import { useCollection, useDoc } from "@/supabase/db";
@@ -105,7 +106,10 @@ export default function MufradatBillingPage() {
                "Pendaftaran Program",
         amount: reg.amount || 0,
         status: reg.status,
-        paymentType: reg.payment_type
+        paymentType: reg.payment_type,
+        halaqahId: reg.halaqah_id,
+        halaqahTitle: reg.halaqah_title,
+        verifiedAt: reg.verified_at
       });
     });
 
@@ -120,67 +124,72 @@ export default function MufradatBillingPage() {
         status: 'verified', // Vouchers are instant
         paymentType: 'voucher',
         voucherCode: red.vouchers?.code,
-        programId: red.vouchers?.program_id
+        programId: red.vouchers?.program_id,
+        halaqahId: red.vouchers?.program_id
       });
     });
 
     return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [registrations, redemptions]);
 
-  const billingDeadlines = useMemo(() => {
-    // Determine which month we are looking at for the next deadline
-    const today = new Date();
-    const day = today.getDate();
-    
-    // If access has a specific nextBillingMonth, use it. 
-    // Otherwise, calculate based on current date (if after 10th, look at next month)
-    let targetMonthStr = access.nextBillingMonth;
-    if (!targetMonthStr) {
-      if (day > 10) {
-        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-        targetMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`;
-      } else {
-        targetMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-      }
-    }
 
-    const [year, month] = targetMonthStr.split('-').map(Number);
-    const toleranceDate = new Date(year, month - 1, 10);
-    const idealDate = new Date(year, month - 1, 0); // Last day of previous month
-    
-    return { idealDate, toleranceDate, monthName: new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(toleranceDate) };
-  }, [access.nextBillingMonth]);
 
   const activeVoucher = useMemo(() => {
     return redemptions?.find(r => r.vouchers?.program_id === 'mufradat' || r.vouchers?.program_id === 'all');
   }, [redemptions]);
 
-  const targetEstimations = useMemo(() => {
-    const totalVerses = 6236;
-    const passedVerses = new Set(progress?.map(p => `${p.surah_id}:${p.verse_id}`) || []).size;
-    const remainingVerses = Math.max(0, totalVerses - passedVerses);
-    
-    // User Weekly Target
-    const weeklyTarget = userData?.mufradat_target_verses || 5;
-    const weeksToFinishByAyat = Math.ceil(remainingVerses / (weeklyTarget || 5));
-    
-    const targetAyatDate = new Date();
-    targetAyatDate.setDate(targetAyatDate.getDate() + (weeksToFinishByAyat * 7));
+  const verifiedRegsCount = useMemo(() => {
+    return combinedHistory?.filter(h => 
+      h.status?.toLowerCase() === 'verified' && 
+      (
+        h.halaqahId?.toLowerCase().includes('mufradat') || 
+        h.halaqahTitle?.toLowerCase().includes('mufradat') || 
+        h.halaqahId === 'all' || 
+        h.halaqahId === userData?.mufradat_group_id
+      ) && 
+      h.paymentType !== 'leave_request'
+    ).length || 0;
+  }, [combinedHistory, userData?.mufradat_group_id]);
 
-    // Target by Page (1 page per week - Request: Konsisten 1 Halaman Sepekan)
-    // 604 pages total
-    const startDate = groupData?.start_date ? new Date(groupData.start_date) : new Date();
-    const targetPageDate = new Date(startDate);
-    targetPageDate.setDate(targetPageDate.getDate() + (604 * 7));
+  const activationDate = useMemo(() => {
+    const verifiedPayments = combinedHistory?.filter(h => 
+      h.status?.toLowerCase() === 'verified' && 
+      (
+        h.halaqahId?.toLowerCase().includes('mufradat') || 
+        h.halaqahTitle?.toLowerCase().includes('mufradat') || 
+        h.halaqahId === 'all' || 
+        h.halaqahId === userData?.mufradat_group_id
+      ) && 
+      h.paymentType !== 'leave_request'
+    ) || [];
+    if (verifiedPayments.length === 0) return null;
+    const firstVer = [...verifiedPayments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+    return firstVer.verifiedAt || firstVer.date;
+  }, [combinedHistory, userData?.mufradat_group_id]);
 
-    return {
-      passedVerses,
-      remainingVerses,
-      targetAyatDate,
-      targetPageDate,
-      weeklyTarget
-    };
-  }, [progress, userData, groupData]);
+  const displayDueDate = useMemo(() => {
+    let finalDueDate = null;
+
+    if (activationDate) {
+      const baseDate = new Date(activationDate);
+      finalDueDate = addMonths(baseDate, Math.max(1, verifiedRegsCount));
+    }
+
+    // Fallback to mufradat_due_date ONLY if no registrations found
+    if (!finalDueDate && userData?.mufradat_due_date) {
+      finalDueDate = parseISO(userData.mufradat_due_date);
+    }
+
+    return finalDueDate;
+  }, [activationDate, verifiedRegsCount, userData?.mufradat_due_date]);
+
+  const dueDate = useMemo(() => {
+    return displayDueDate;
+  }, [displayDueDate]);
+
+
+  // Target Estimations removed per user request (discouraging dates)
+
 
   // Auto-set sender name from profile
   useEffect(() => {
@@ -449,53 +458,19 @@ export default function MufradatBillingPage() {
                    )}
                 </div>
                 <div className="space-y-1">
-                   <span className="text-[9px] font-black text-amber-800/50 uppercase tracking-widest">Mulai Program</span>
+                   <span className="text-[9px] font-black text-amber-800/50 uppercase tracking-widest">Mulai Program (Group)</span>
                    <p className="text-sm font-black text-amber-900">
                       {groupData.start_date ? new Date(groupData.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
                    </p>
                 </div>
+                <div className="space-y-1">
+                   <span className="text-[9px] font-black text-amber-800/50 uppercase tracking-widest">Tanggal Verifikasi</span>
+                   <p className="text-sm font-black text-emerald-700">
+                      {activationDate ? new Date(activationDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                   </p>
+                </div>
              </div>
 
-             <div className="pt-4 border-t border-amber-200/50 space-y-4">
-                <div className="flex items-center gap-2">
-                   <Target className="w-4 h-4 text-amber-600" />
-                   <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-800">Estimasi Target Selesai</h4>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                   <div className="p-4 bg-white rounded-2xl border border-amber-200 shadow-sm space-y-2">
-                      <div className="flex items-center justify-between">
-                         <span className="text-[9px] font-black text-muted-foreground uppercase">Mode Ayat ({targetEstimations?.weeklyTarget}/Pekan)</span>
-                         <Badge variant="outline" className="text-[8px] font-bold">MODE DETAIL</Badge>
-                      </div>
-                      <p className="text-sm font-black text-slate-800">
-                         {targetEstimations?.targetAyatDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                      </p>
-                      <p className="text-[9px] text-muted-foreground italic font-medium leading-tight">
-                         *Dihitung dari sisa {targetEstimations?.remainingVerses} ayat.
-                      </p>
-                   </div>
-
-                   <div className="p-4 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-100 space-y-2">
-                      <div className="flex items-center justify-between">
-                         <span className="text-[9px] font-black text-emerald-100 uppercase">Mode Halaman (1/Pekan)</span>
-                         <Badge variant="secondary" className="text-[8px] font-bold bg-white/20 text-white border-none">TARGET PROGRAM</Badge>
-                      </div>
-                      <p className="text-sm font-black">
-                         {targetEstimations?.targetPageDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                      </p>
-                      <p className="text-[9px] text-emerald-100/70 italic font-medium leading-tight">
-                         *Estimasi jika konsisten lulus 1 halaman mushaf sepekan.
-                      </p>
-                   </div>
-                </div>
-                
-                <Button asChild variant="ghost" className="w-full text-[10px] font-black text-amber-700 hover:text-amber-900 hover:bg-amber-100 rounded-xl gap-2 h-10">
-                   <Link href="/mufradat?tab=juz">
-                      KEJAR TARGET HALAMAN LEWAT KUIS MURAJAAH <ChevronRight className="w-3 h-3" />
-                   </Link>
-                </Button>
-             </div>
           </CardContent>
         </Card>
       )}
@@ -534,7 +509,7 @@ export default function MufradatBillingPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-muted/30 rounded-2xl border border-dashed flex flex-col gap-1">
                <span className="text-[9px] font-black text-muted-foreground uppercase">
-                 {hasActiveVoucher ? "Masa Berlaku Voucher" : "Batas Infaq (Toleransi)"}
+                 {hasActiveVoucher ? "Masa Berlaku Voucher" : "Batas Aktif Akses"}
                </span>
                <span className="text-xs font-bold flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#800000]" />
@@ -542,13 +517,15 @@ export default function MufradatBillingPage() {
                     activeVoucher?.vouchers?.expiry_date ? 
                       new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(activeVoucher.vouchers.expiry_date)) :
                       "Selamanya"
+                  ) : dueDate ? (
+                    new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(dueDate)
                   ) : (
-                    new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(billingDeadlines.toleranceDate)
+                    "Belum Aktif"
                   )}
                </span>
-               {!hasActiveVoucher && (
+               {!hasActiveVoucher && displayDueDate && (
                  <span className="text-[8px] text-muted-foreground font-medium italic">
-                   *Ideal: {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(billingDeadlines.idealDate)}
+                   *Akses terbuka hingga tanggal di atas.
                  </span>
                )}
             </div>

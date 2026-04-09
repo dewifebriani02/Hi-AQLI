@@ -59,6 +59,7 @@ interface JuzListProps {
   mode?: "ayat" | "halaman";
   unlockedJuz?: number[];
   isStudent?: boolean;
+  externalSearch?: string;
 }
 
 export function JuzList({ 
@@ -68,9 +69,11 @@ export function JuzList({
   selectedReciterId = 7,
   mode = "halaman",
   unlockedJuz = [],
-  isStudent = false
+  isStudent = false,
+  externalSearch = ""
 }: JuzListProps) {
   const [search, setSearch] = useState("");
+  const effectiveSearch = externalSearch || search;
   const [playingJuz, setPlayingJuz] = useState<number | null>(null);
   const [loadingAudioJuz, setLoadingAudioJuz] = useState<number | null>(null);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
@@ -163,8 +166,8 @@ export function JuzList({
   const { completedPages, completedExams, pagesWithAnyProgress, pageStats } = progressData;
 
   const filteredJuz = juzArray.filter(j => 
-    `Juz ${j}`.toLowerCase().includes(search.toLowerCase()) ||
-    JUZ_MAPPING[j].name.toLowerCase().includes(search.toLowerCase())
+    `Juz ${j}`.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+    JUZ_MAPPING[j].name.toLowerCase().includes(effectiveSearch.toLowerCase())
   );
 
   useEffect(() => {
@@ -415,7 +418,7 @@ export function JuzList({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 px-4 py-2 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200">
                   {juzPages.map((p) => {
                     const isDone = completedPages.has(p);
-                    const isUnlocked = true; // Sequential page locking removed per user request
+                    const isUnlocked = isStudent || p === 1 || p === 604; 
                     const stats = pageStats.get(p) || { maxScore: 0, attempts: 0, bestTime: Infinity };
                     return (
                       <Link 

@@ -4,7 +4,7 @@
  */
 
 export const FREE_SURAHS = [1, 112, 113, 114];
-export const FREE_JUZ = [1, 30];
+export const FREE_JUZ = [1];
 
 /**
  * Checks if a specific surah is free for all users

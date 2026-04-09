@@ -531,17 +531,65 @@ function RegistrationForm() {
               {isActuallyActive ? "Akses Aktif" : "Menunggu Verifikasi"}
             </h2>
           </div>
-          <CardContent className="pt-8 pb-10 space-y-6">
-            <div className="space-y-2">
+          <CardContent className="pt-8 pb-10 space-y-8">
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive
-                  ? `Pendaftaran Ukhti untuk ${circle?.title} sudah tuntas. Silakan masuk ke dalam kelas.`
+                  ? `Pendaftaran Ukhti untuk ${circle?.title} sudah tuntas. Jazakillah khair!`
                   : `Pendaftaran Ukhti untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
               </p>
+              
+              {/* Visual Progress Tracker */}
+              <div className="relative pt-4 pb-8 px-2">
+                <div className="absolute top-7 left-0 w-full h-0.5 bg-slate-100 -z-10" />
+                <div 
+                  className="absolute top-7 left-0 h-0.5 bg-emerald-500 transition-all duration-1000 -z-10" 
+                  style={{ width: isActuallyActive ? '100%' : '66%' }}
+                />
+                
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center border-4 border-white shadow-sm">
+                      <Check className="w-3 h-3" />
+                    </div>
+                    <span className="text-[8px] font-black uppercase text-emerald-600">Terdaftar</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center border-4 border-white shadow-sm">
+                      <Check className="w-3 h-3" />
+                    </div>
+                    <span className="text-[8px] font-black uppercase text-emerald-600">Bukti Diterima</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center border-4 border-white shadow-sm transition-all animate-pulse",
+                      isActuallyActive ? "bg-emerald-500 text-white" : "bg-amber-500 text-white"
+                    )}>
+                      {isActuallyActive ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                    </div>
+                    <span className={cn("text-[8px] font-black uppercase", isActuallyActive ? "text-emerald-600" : "text-amber-600")}>
+                      {isActuallyActive ? "Verified" : "Verifikasi"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center border-4 border-white shadow-sm",
+                      isActuallyActive ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-400"
+                    )}>
+                      <Zap className="w-3 h-3" />
+                    </div>
+                    <span className={cn("text-[8px] font-black uppercase", isActuallyActive ? "text-emerald-600" : "text-slate-400")}>Aktif</span>
+                  </div>
+                </div>
+              </div>
+
               {isActuallyPending && (
                 <div className="space-y-4">
-                  <div className="p-4 bg-muted/50 rounded-xl text-[10px] font-bold text-amber-700 italic border border-amber-200">
-                    Mohon tunggu maksimal 1x24 jam untuk aktivasi akses oleh Admin.
+                  <div className="p-4 bg-[#800000]/5 rounded-xl border border-[#800000]/10 flex gap-3 text-left">
+                     <Zap className="w-5 h-5 text-amber-500 shrink-0 animate-pulse" />
+                     <p className="text-[10px] font-bold text-[#800000] leading-normal italic">
+                        🎁 BONUS AKSES INSTAN: Sambil menunggu verifikasi manual musyrifah, Ukhti sudah bisa mulai belajar sekarang selama 24 jam ke depan. Selamat menghafal!
+                     </p>
                   </div>
                   {(!existingReg?.proof_file_name || Number(existingReg.amount) === 0) && (
                     <Button 
@@ -556,8 +604,8 @@ function RegistrationForm() {
               )}
             </div>
             <Button asChild className={cn("w-full font-black h-14 rounded-xl text-lg shadow-lg", isActuallyActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#800000]")}>
-              <Link href={isActuallyActive ? (halaqahId === 'tikrar-j30-b1' || selectedHalaqahId === 'tikrar-premium' ? '/tikrar' : `/study-circles/${circle?.id}`) : "/"}>
-                {isActuallyActive ? <><PlayCircle className="mr-2 w-6 h-6" /> MASUK KELAS</> : "KEMBALI KE DASBOR"}
+              <Link href={isActuallyActive ? (halaqahId === 'tikrar-j30-b1' || selectedHalaqahId === 'tikrar-premium' ? '/tikrar' : `/study-circles/${circle?.id}`) : (isActuallyPending ? '/mufradat' : "/")}>
+                {isActuallyActive ? <><PlayCircle className="mr-2 w-6 h-6" /> MASUK KELAS</> : (isActuallyPending ? "MULAI BELAJAR SEKARANG" : "KEMBALI KE DASBOR")}
               </Link>
             </Button>
           </CardContent>
@@ -575,8 +623,11 @@ function RegistrationForm() {
               <CheckCircle2 className="h-12 w-12" />
             </div>
             <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">Jazakallahu Khairan, pendaftaran Ukhti sedang kami proses. Cek status di menu Hi Ngaji secara berkala.</p>
-            <Button onClick={() => router.push('/')} className="w-full bg-[#800000] font-bold h-12">Kembali ke Beranda</Button>
+            <p className="text-muted-foreground text-sm leading-relaxed px-4">
+              Jazakallahu Khairan, pendaftaran Ukhti sedang kami proses. <br/>
+              <span className="text-[#800000] font-black italic">🎁 Ukhti sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
+            </p>
+            <Button onClick={() => router.push(isMufradat ? '/mufradat' : '/')} className="w-full bg-[#800000] font-black h-14 rounded-xl shadow-lg">Mulai Sekarang</Button>
           </CardContent>
         </Card>
       </div>
@@ -1055,15 +1106,32 @@ function RegistrationForm() {
                     </div>
                   )}
 
-                  <div className="flex justify-between items-center text-sm pt-1">
-                    <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Kode Unik</span>
-                    <span className="font-black text-slate-700">+{uniqueCode}</span>
+                  <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-200/50">
+                    <div className="flex flex-col">
+                      <span className="text-[#800000] font-black uppercase text-[10px] tracking-widest">Kode Unik</span>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase">*Infaq Hi Berbagi</span>
+                    </div>
+                    <span className="font-black text-[#800000] text-lg">+{uniqueCode}</span>
                   </div>
+                </div>
 
-                  <div className="pt-4 border-t-2 border-dashed border-slate-200 mt-2 flex justify-between items-center">
-                    <span className="text-sm font-black text-[#800000] uppercase tracking-widest">Total Bayar</span>
-                    <span className="text-2xl font-black text-[#800000]">Rp {totalCalculated.toLocaleString('id-ID')}</span>
-                  </div>
+                <div className="bg-amber-100/50 p-4 rounded-2xl border border-amber-200/50 mt-4 flex gap-3">
+                  <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                  <p className="text-[10px] text-amber-800 font-bold leading-relaxed italic">
+                    Syukran Ukhti. Nominal kode unik & kelebihan transfer Ukhti akan dialokasikan sebagai infaq jariyah melalui <span className="underline font-black">Hi Berbagi</span>. Semoga menjadi asbab keberkahan hafalan Ukhti.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[#800000]/10 p-8 rounded-3xl border-2 border-[#800000]/20 text-center space-y-3 shadow-inner">
+                <span className="text-[10px] font-black text-[#800000] uppercase tracking-widest opacity-60">Total yang harus ditransfer</span>
+                <div className="flex flex-col gap-1 items-center">
+                   <h2 className="text-4xl font-black text-[#800000] tracking-tighter">
+                     Rp {totalCalculated.toLocaleString('id-ID')}
+                   </h2>
+                   <div className="flex items-center gap-1.5 bg-[#800000] text-white px-3 py-1 rounded-full text-[10px] font-black uppercase animate-pulse">
+                     <Zap className="w-3 h-3 fill-current" /> Transfer Tepat Nominal
+                   </div>
                 </div>
               </div>
 

@@ -4,11 +4,22 @@
 import { useUser, signOut, supabase } from '@/supabase';
 import { useDoc, useCollection, useCount } from '@/supabase/db';
 import { updateDocumentNonBlocking } from '@/supabase/non-blocking-updates';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   LogOut,
   Mail,
@@ -26,7 +37,9 @@ import {
   Zap,
   ArrowRight,
   Copy,
-  Fingerprint
+  Fingerprint,
+  Loader2,
+  User as UserIcon
 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -45,8 +58,16 @@ import { useToast } from '@/hooks/use-toast';
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isBootstrapping, setIsBootstrapping] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Form states
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
 
   // Check Admin Roles
   const { data: adminRole, isLoading: isAdminLoading } = useDoc("roles_admin", user?.id);
@@ -78,9 +99,64 @@ export default function ProfilePage() {
     }
   }, [user, isUserLoading, router]);
 
+  // Sync form with userData
+  useEffect(() => {
+    if (userData) {
+      setFullName(userData.full_name || user?.user_metadata?.full_name || "");
+      setUsername(userData.username || "");
+      setWhatsapp(userData.whatsapp || "");
+    }
+  }, [userData, user]);
+
+  // Open edit modal if ?edit=true
+  useEffect(() => {
+    if (searchParams.get('edit') === 'true') {
+      setIsEditDialogOpen(true);
+    }
+  }, [searchParams]);
+
   const handleSignOut = async () => {
     await signOut();
     router.push('/');
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: fullName,
+          username: username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
+          whatsapp: whatsapp
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Profil Diperbarui",
+        description: "Data Ukhti berhasil disimpan.",
+      });
+      setIsEditDialogOpen(false);
+      
+      // Clear query param
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('edit');
+      router.replace(`/profile?${params.toString()}`);
+
+    } catch (err: any) {
+      toast({
+        title: "Gagal Memperbarui",
+        description: err.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const copyUid = () => {
@@ -146,9 +222,70 @@ export default function ProfilePage() {
               <Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive/10 font-bold" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" /> Keluar
               </Button>
-              <Button size="sm" className="bg-[#800000] hover:bg-[#800000]/90 font-bold">
-                Edit Profil
-              </Button>
+              
+              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="bg-[#800000] hover:bg-[#800000]/90 font-bold">
+                    Edit Profil
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold font-headline text-[#800000] flex items-center gap-2">
+                       <UserIcon className="w-5 h-5" /> Edit Profil Ukhti
+                    </DialogTitle>
+                    <DialogDescription className="text-xs font-medium">
+                      Perbarui informasi identitas Ukhti untuk pengalaman belajar yang lebih personal.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleUpdateProfile} className="space-y-6 py-4">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="full_name" className="text-xs font-black uppercase tracking-widest text-slate-500">Nama Lengkap</Label>
+                        <Input 
+                          id="full_name" 
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="Nama Sesuai KTP/Rekening"
+                          className="h-12 border-2 rounded-xl font-bold"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="username" className="text-xs font-black uppercase tracking-widest text-slate-500">Username Cantik</Label>
+                        <Input 
+                          id="username" 
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_]/g, ''))}
+                          placeholder="misal: thalibah_hijrah"
+                          className="h-12 border-2 rounded-xl font-bold"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="whatsapp" className="text-xs font-black uppercase tracking-widest text-slate-500">Nomor WhatsApp</Label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-3.5 text-sm font-bold text-slate-400">+62</span>
+                          <Input 
+                            id="whatsapp" 
+                            value={whatsapp}
+                            onChange={(e) => setWhatsapp(e.target.value)}
+                            placeholder="8123456xxxx"
+                            className="h-12 border-2 rounded-xl font-bold pl-12"
+                            required
+                          />
+                        </div>
+                        <p className="text-[10px] text-amber-600 font-bold italic">*Wajib untuk koordinasi halaqah/program.</p>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={isUpdating} className="w-full h-14 bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase tracking-widest rounded-xl">
+                        {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : "SIMPAN PERUBAHAN"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </CardHeader>

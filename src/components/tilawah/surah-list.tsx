@@ -28,6 +28,7 @@ interface SurahListProps {
   selectedReciterId?: number;
   showAudio?: boolean;
   isStudent?: boolean;
+  externalSearch?: string;
 }
 
 export function SurahList({ 
@@ -35,10 +36,13 @@ export function SurahList({
   userProgress = [], 
   selectedReciterId = 7,
   showAudio = true,
-  isStudent = false
+  isStudent = false,
+  externalSearch = ""
 }: SurahListProps) {
   const [surahs, setSurahs] = useState<Surah[]>(QURAN_CHAPTERS as Surah[]);
   const [search, setSearch] = useState("");
+  
+  const effectiveSearch = externalSearch || search;
   const [loading, setLoading] = useState(true);
   
   const [playingId, setPlayingId] = useState<number | null>(null);
@@ -136,8 +140,8 @@ export function SurahList({
   }, [userProgress]);
 
   const filteredSurahs = surahs.filter((s) =>
-    s.name_simple.toLowerCase().includes(search.toLowerCase()) ||
-    s.translated_name.toLowerCase().includes(search.toLowerCase())
+    s.name_simple.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+    s.translated_name.toLowerCase().includes(effectiveSearch.toLowerCase())
   );
 
   if (loading) {

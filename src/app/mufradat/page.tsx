@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import { checkIsStudent } from "@/lib/access-control";
 
@@ -61,6 +62,9 @@ function MufradatPageContent() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("surah");
   const [rankMode, setRankMode] = useState<'ayat' | 'halaman'>('ayat');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSeasonRecap, setShowSeasonRecap] = useState(false);
+  const [previousLeague, setPreviousLeague] = useState<string | null>(null);
 
   // Fetch all passed attempts for the current user
   const progressOptions = useMemo(() => ({
@@ -212,7 +216,10 @@ function MufradatPageContent() {
   const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
 
   const access = useMemo(() => {
-    return getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
+    const today = new Date();
+    const day = today.getDate();
+    const summary = getMufradatStatus(userData, registrations || [], undefined, undefined, redemptions || []);
+    return summary;
   }, [userData, registrations, redemptions]);
 
 
@@ -250,6 +257,10 @@ function MufradatPageContent() {
 
       // If last reset was before this week's Monday, reset!
       if (!lastResetAt || lastResetAt < mostRecentMonday) {
+        // Capture previous league for the recap dialog
+        setPreviousLeague(userData.mufradat_league || 'Perunggu');
+        setShowSeasonRecap(true);
+
         await supabase
           .from('users')
           .update({
@@ -298,7 +309,9 @@ function MufradatPageContent() {
                     <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
-                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground line-clamp-1">Langganan</span>
+                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground line-clamp-1">
+                      {access.daysRemaining !== undefined ? `SISA ${access.daysRemaining} HARI` : 'LANGGANAN'}
+                    </span>
                     <span className="text-[10px] sm:text-xs font-bold text-slate-800 uppercase line-clamp-1">Status</span>
                   </div>
                 </Link>
@@ -429,6 +442,28 @@ function MufradatPageContent() {
           <Trophy className="absolute -bottom-6 -right-6 w-48 h-48 text-white/5 rotate-12 group-hover:scale-110 transition-transform duration-700" />
         </div>
       </Link>
+      
+      {/* GLOBAL SEARCH FOR ALL TABS */}
+      <div className="relative group px-1">
+        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-muted-foreground group-focus-within:text-[#800000] transition-colors" />
+        </div>
+        <Input
+          type="text"
+          placeholder="Cari surat, juz, atau tema hafalan..."
+          className="h-14 pl-12 pr-4 bg-white border-none shadow-xl rounded-2xl text-base font-medium ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[#800000]/20 transition-all"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button 
+            onClick={() => setSearchQuery("")}
+            className="absolute inset-y-0 right-4 flex items-center text-muted-foreground hover:text-[#800000]"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+        )}
+      </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
@@ -453,6 +488,7 @@ function MufradatPageContent() {
               userProgress={progress || []} 
               showAudio={false}
               isStudent={isStudent}
+              externalSearch={searchQuery}
             />
           </div>
         </TabsContent>
@@ -464,6 +500,7 @@ function MufradatPageContent() {
             variant="mufradat"
             unlockedJuz={userData?.mufradat_accessible_juz || []}
             isStudent={isStudent}
+            externalSearch={searchQuery}
           />
         </TabsContent>
 
@@ -474,6 +511,7 @@ function MufradatPageContent() {
             variant="mufradat"
             unlockedJuz={userData?.mufradat_accessible_juz || []}
             isStudent={isStudent}
+            externalSearch={searchQuery}
           />
         </TabsContent>
 
@@ -667,6 +705,37 @@ function MufradatPageContent() {
           </Card>
         </div>
       )}
+
+      {/* Season Recap Dialog (Weekly Reset) */}
+      <Dialog open={showSeasonRecap} onOpenChange={setShowSeasonRecap}>
+        <DialogContent className="sm:max-w-md bg-white rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl">
+           <div className="bg-gradient-to-br from-[#800000] via-[#A52A2A] to-amber-600 p-8 text-center text-white relative">
+              <PartyPopper className="w-16 h-16 mx-auto mb-4 animate-bounce" />
+              <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">Musim Baru Dimulai!</h2>
+              <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold backdrop-blur-sm">
+                SENIN BERKAH
+              </div>
+           </div>
+           <div className="p-8 text-center space-y-6">
+              <div className="space-y-2">
+                 <p className="text-lg font-bold text-slate-800 leading-tight">
+                    Barakallah fiik! Musim lalu Ukhti berhasil masuk <span className="text-[#800000] font-black">Liga {previousLeague}</span>.
+                 </p>
+                 <p className="text-sm text-muted-foreground font-medium italic">
+                    Poin mingguan telah direset. Mari mulai dari awal dengan semangat Itqan!
+                 </p>
+              </div>
+              <div className="pt-4">
+                 <Button 
+                    onClick={() => setShowSeasonRecap(false)}
+                    className="w-full h-14 bg-[#800000] hover:bg-[#800000]/90 text-white font-black rounded-2xl shadow-xl uppercase tracking-[0.2em] text-xs"
+                 >
+                    PERTAHANKAN SEMANGAT!
+                 </Button>
+              </div>
+           </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

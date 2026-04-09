@@ -168,36 +168,39 @@ export default function AdminRegistrationsPage() {
       // --- HI MUFRADAT SUBSCRIPTION LOGIC ---
       if (isMufradatReg) {
         const type = reg.payment_type || 'initial';
-        const billingMonth = reg.billing_month || format(new Date(), 'yyyy-MM');
         
+        // Fetch current user data to see current due date
+        const { data: currentUsr } = await supabase
+          .from('users')
+          .select('mufradat_due_date, mufradat_leave_balance')
+          .eq('id', reg.user_id)
+          .single();
+
         let subUpdate: any = {
            mufradat_status: 'active',
            updated_at: new Date().toISOString()
         };
 
-        if (type === 'monthly') {
-          // Set due date to the 10th of the month AFTER the billing month
-          const monthDate = parseISO(`${billingMonth}-01`);
-          const nextDueDate = addDays(addMonths(monthDate, 1), 9); // 10th of next month
+        const now = new Date();
+        const currentDue = currentUsr?.mufradat_due_date ? parseISO(currentUsr.mufradat_due_date) : null;
+        
+        // Base starting point for the new 1-month period
+        // If current due date is in the future, we stack. If in the past, we start from now.
+        const baseDate = (currentDue && currentDue > now) ? currentDue : now;
+
+        if (type === 'monthly' || type === 'initial' || type === 're_registration') {
+          const nextDueDate = addMonths(baseDate, 1);
           subUpdate.mufradat_due_date = nextDueDate.toISOString();
           subUpdate.mufradat_status = 'active';
         } 
         else if (type === 'leave_request') {
-          // Set to on_leave until end of billing month
-          const monthDate = parseISO(`${billingMonth}-01`);
-          const leaveUntil = addDays(addMonths(monthDate, 1), -1); // End of billing month
+          // Leave for 1 month from now or from end of current access
+          const leaveUntil = addMonths(baseDate, 1);
           subUpdate.mufradat_status = 'on_leave';
           subUpdate.mufradat_leave_until = leaveUntil.toISOString();
           
-          // Decrement leave balance (assuming single month per request)
-          const { data: currentUsr } = await supabase.from('users').select('mufradat_leave_balance').eq('id', reg.user_id).single();
+          // Decrement leave balance
           subUpdate.mufradat_leave_balance = Math.max(0, (currentUsr?.mufradat_leave_balance || 3) - 1);
-        }
-        else if (type === 'initial' || type === 're_registration') {
-           // Set initial due date to the 10th of the month following the current month
-           const nextD = addDays(addMonths(startOfMonth(new Date()), 1), 9);
-           subUpdate.mufradat_due_date = nextD.toISOString();
-           subUpdate.mufradat_status = 'active';
         }
 
         await supabase.from("users").update(subUpdate).eq('id', reg.user_id);

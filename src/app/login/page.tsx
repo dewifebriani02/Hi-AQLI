@@ -14,6 +14,7 @@ import { Loader2, LogIn, Mail, Lock, Eye, EyeOff, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/common/logo';
 import { Suspense } from 'react';
+import { validateEmail } from '@/lib/utils';
 
 function LoginContent() {
   const { user } = useUser();
@@ -37,17 +38,20 @@ function LoginContent() {
     }
 
     if (user && !loading) {
-      // Use window.location for hard redirect as fallback
-      if (typeof window !== 'undefined') {
-        window.location.href = redirectTo;
-      }
+      router.push(redirectTo);
     }
-  }, [user, loading, redirectTo, searchParams]);
+  }, [user, loading, redirectTo, searchParams, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!validateEmail(email)) {
+      setLoading(false);
+      setError('Format email tidak valid. Silakan periksa kembali.');
+      return;
+    }
 
     const { error } = await initiateEmailSignIn(email, password);
 
@@ -60,8 +64,7 @@ function LoginContent() {
         title: "Selamat Datang!",
         description: "Masyallah, Ukhti telah masuk ke Hi AQLI.",
       });
-      // Reset loading after short delay for auth state to update
-      setTimeout(() => setLoading(false), 500);
+      setLoading(false);
     }
   };
 

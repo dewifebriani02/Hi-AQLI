@@ -41,7 +41,10 @@ import {
   Share2,
   MessageSquare,
   Download,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  User as UserIcon
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser, supabase } from "@/supabase";
@@ -49,11 +52,29 @@ import { useDoc, useCollection } from "@/supabase/db";
 import { useToast } from "@/hooks/use-toast";
 import { QURAN_CHAPTERS, SURAH_MAP_STR } from "@/lib/quran-data";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+const MAJOR_CITIES = [
+  { name: "Jakarta", lat: -6.2088, lon: 106.8456 },
+  { name: "Surabaya", lat: -7.2575, lon: 112.7521 },
+  { name: "Bandung", lat: -6.9175, lon: 107.6191 },
+  { name: "Medan", lat: 3.5952, lon: 98.6722 },
+  { name: "Makassar", lat: -5.1476, lon: 119.4327 },
+  { name: "Yogyakarta", lat: -7.7956, lon: 110.3695 }
+];
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const [streakDays, setStreakDays] = useState(0);
+  const [historyPage, setHistoryPage] = useState(0);
   const [nextPrayer, setNextPrayer] = useState<{ name: string, time: string, location?: string } | null>(null);
+  const [manualCity, setManualCity] = useState<string | null>(null);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const { toast } = useToast();
 
@@ -186,7 +207,10 @@ export default function DashboardPage() {
       }
     };
 
-    if (navigator.geolocation) {
+    if (manualCity) {
+      const city = MAJOR_CITIES.find(c => c.name === manualCity);
+      if (city) fetchPrayerTimes(city.lat, city.lon);
+    } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude),
         () => fetchPrayerTimes(-6.2088, 106.8456)
@@ -194,7 +218,7 @@ export default function DashboardPage() {
     } else {
       fetchPrayerTimes(-6.2088, 106.8456);
     }
-  }, []);
+  }, [manualCity]);
 
   // Hitung Streak Belajar dan Repetisi dari quiz_attempts
   useEffect(() => {
@@ -425,17 +449,91 @@ export default function DashboardPage() {
       });
     });
 
-    return activities
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 10);
-  }, [quizAttempts, userDonations, mutabaahHistory, ngajiRegs]);
+    // 5. Add Demo Data for Guest Mode
+    if (!user) {
+      activities.push(
+        {
+          id: 'demo-1',
+          type: 'quiz',
+          program: 'Hi Mufradat',
+          status: 'Simulasi',
+          title: 'Surat Al-Baqarah: 1-5',
+          subtitle: 'Contoh Progres Hafalan',
+          timestamp: new Date().toISOString(),
+          is_passed: true,
+          icon: Book,
+          color: 'text-emerald-500 opacity-60'
+        },
+        {
+          id: 'demo-2',
+          type: 'mutabaah',
+          program: 'Hi Mutabaah',
+          status: 'Simulasi',
+          title: 'Tilawah 1 Juz',
+          subtitle: 'Target Harian Sahabat',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          icon: Sun,
+          color: 'text-amber-500 opacity-60'
+        },
+        {
+          id: 'demo-3',
+          type: 'donation',
+          program: 'Hi Berbagi',
+          status: 'Simulasi',
+          title: 'Sedekah Subuh',
+          subtitle: 'Kebaikan Berkelanjutan',
+          timestamp: new Date(Date.now() - 7200000).toISOString(),
+          icon: HeartPulse,
+          color: 'text-rose-500 opacity-60'
+        }
+      );
+    }
 
-  const isMufradatRegistered = useMemo(() => {
-    return userData?.mufradat_group_id || ngajiRegs?.some(r => 
-      (r.halaqah_id === 'mufradat-premium' || r.halaqah_title?.toLowerCase().includes('mufradat')) && 
+    return activities
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [quizAttempts, userDonations, mutabaahHistory, ngajiRegs, user]);
+
+  const isRegistered = useMemo(() => {
+    return !!userData?.mufradat_group_id || !!userData?.is_tikrar_paid || ngajiRegs?.some(r => 
       ['active', 'verified', 'pending_verification'].includes(r.status)
     );
   }, [userData, ngajiRegs]);
+
+  // ONBOARDING CHECKLIST LOGIC
+  const onboardingSteps = useMemo(() => {
+    if (!user) return [];
+    
+    return [
+      {
+        id: "profile",
+        title: "Lengkapi Profil",
+        subtitle: "Pasang nomor WhatsApp Ukhti",
+        isDone: !!userData?.whatsapp,
+        href: "/profile?edit=true",
+        icon: UserIcon
+      },
+      {
+        id: "quiz",
+        title: "Kuis Perdana",
+        subtitle: "Coba kuis Mufradat gratis",
+        isDone: (quizAttempts?.length || 0) > 0,
+        href: "/mufradat",
+        icon: Sparkles
+      },
+      {
+        id: "program",
+        title: "Daftar Program",
+        subtitle: "Gabung di Hi Mufradat/Tikrar",
+        isDone: isRegistered,
+        href: "/study-circles/registration?id=mufradat-premium",
+        icon: BookOpen
+      }
+    ];
+  }, [user, userData, quizAttempts, ngajiRegs]);
+
+  const onboardingDoneCount = onboardingSteps.filter(s => s.isDone).length;
+  const onboardingPercent = Math.round((onboardingDoneCount / onboardingSteps.length) * 100);
+  const showOnboarding = user && onboardingPercent < 100;
 
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
@@ -489,12 +587,96 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <div className="text-2xl sm:text-3xl font-black text-[#D4AF37] tracking-tighter">{nextPrayer.time}</div>
-                  <Badge className="bg-white/20 hover:bg-white/20 backdrop-blur border-none text-[8px] font-black text-white p-0 h-auto gap-1">
-                    <Star className="w-2 h-2 fill-[#D4AF37] text-[#D4AF37]" /> {nextPrayer.location?.toUpperCase()}
-                  </Badge>
+                  
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Badge className="bg-white/20 hover:bg-white/30 backdrop-blur border-none text-[8px] font-black text-white p-0 h-auto gap-1 cursor-pointer transition-colors px-1">
+                        <Star className="w-2 h-2 fill-[#D4AF37] text-[#D4AF37]" /> {nextPrayer.location?.toUpperCase()}
+                      </Badge>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md bg-white rounded-3xl">
+                      <DialogHeader>
+                        <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest">Pilih Lokasi Ukhti</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-2 gap-3 py-4">
+                        {MAJOR_CITIES.map((city) => (
+                          <Button
+                            key={city.name}
+                            variant={manualCity === city.name ? "default" : "outline"}
+                            className={cn(
+                              "rounded-xl font-bold uppercase text-[10px] tracking-wider h-12",
+                              manualCity === city.name ? "bg-[#800000] text-white" : "border-slate-200"
+                            )}
+                            onClick={() => {
+                              setManualCity(city.name);
+                              if (typeof window !== 'undefined') {
+                                localStorage.removeItem(`prayer_times_${todayStr}_`); // Partial clear to force refetch
+                              }
+                            }}
+                          >
+                            {city.name}
+                          </Button>
+                        ))}
+                      </div>
+                      <p className="text-[9px] text-center text-slate-400 font-medium italic">Jadwal shalat akan menyesuaikan dengan koordinat kota yang dipilih.</p>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardContent>
             </div>
+          </Card>
+        </div>
+      )}
+
+      {/* 0. ONBOARDING CHECKLIST */}
+      {showOnboarding && (
+        <div className="mx-1 animate-in slide-in-from-top-4 duration-500">
+          <Card className="border-none shadow-2xl overflow-hidden rounded-3xl bg-white border-b-4 border-amber-400">
+            <CardContent className="p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black text-[#800000] uppercase tracking-tight">Ahlan Wa Sahlan!</h3>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Selesaikan langkah awal Ukhti</p>
+                </div>
+                <div className="flex flex-col items-end">
+                   <span className="text-xl font-black text-[#800000] leading-none">{onboardingPercent}%</span>
+                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Selesai</span>
+                </div>
+              </div>
+              
+              <Progress value={onboardingPercent} className="h-2 bg-slate-100" indicatorClassName="bg-amber-400 transition-all duration-1000" />
+
+              <div className="grid gap-3">
+                {onboardingSteps.map((step) => (
+                  <Link key={step.id} href={step.isDone ? "#" : step.href}>
+                    <div className={cn(
+                      "group flex items-center justify-between p-4 rounded-2xl border-2 transition-all active:scale-[0.98]",
+                      step.isDone ? "bg-emerald-50 border-emerald-100 opacity-80" : "bg-white border-slate-100 hover:border-[#800000]/20 hover:shadow-md"
+                    )}>
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                          step.isDone ? "bg-emerald-100 text-emerald-600" : "bg-slate-50 text-slate-400 group-hover:bg-[#800000]/5 group-hover:text-[#800000]"
+                        )}>
+                          {step.isDone ? <CheckCircle2 className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className={cn("text-xs font-black uppercase tracking-tight", step.isDone ? "text-emerald-700 line-through" : "text-slate-800")}>
+                            {step.title}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{step.subtitle}</span>
+                        </div>
+                      </div>
+                      {!step.isDone && (
+                        <div className="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center group-hover:bg-[#800000] group-hover:border-[#800000] transition-colors">
+                           <ArrowRight className="w-3 h-3 text-slate-300 group-hover:text-white" />
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
           </Card>
         </div>
       )}
@@ -529,7 +711,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 1. GUEST PROMO (Moved right above Layanan Utama) */}
-      {!isMufradatRegistered && (
+      {!isRegistered && (
         <div className="mx-1 mt-2 mb-2">
           <Link href={user ? "/study-circles/registration?id=mufradat-premium" : "/register"}>
             <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] to-[#500000] shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:shadow-[#800000]/20">
@@ -708,16 +890,19 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Riwayat Terkini Section - Moved below Layanan Utama */}
-      {user && recentActivities.length > 0 && (
+      {/* Riwayat Terkini Section - Visible for everyone (including guest demo) */}
+      {(user || !user) && (
         <section className="px-1 mb-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-black">
-              <Clock className="w-5 h-5 text-[#800000]" /> Riwayat Terkini
+              <Clock className="w-5 h-5 text-[#800000]" /> {user ? "Riwayat Terkini" : "Simulasi Aktivitas"}
             </h2>
+            {!user && (
+              <Badge variant="outline" className="text-[7px] font-black border-[#800000]/20 text-[#800000] bg-[#800000]/5 px-2">GUEST MODE</Badge>
+            )}
           </div>
           <div className="space-y-4">
-            {recentActivities.map((activity) => (
+            {recentActivities.slice(historyPage * 5, (historyPage + 1) * 5).map((activity) => (
               <div key={`${activity.type}-${activity.id}`} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-[#800000]/10 hover:bg-[#800000]/[0.02] transition-all group shadow-sm">
                 <div className="flex items-center gap-4 flex-1">
                   <div className={cn(
@@ -757,6 +942,32 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+
+          {recentActivities.length > 5 && (
+            <div className="flex items-center justify-between mt-6 px-1">
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
+                 disabled={historyPage === 0}
+                 className="text-[10px] font-black uppercase tracking-widest gap-1 hover:text-[#800000]"
+               >
+                 <ChevronLeft className="w-3 h-3" /> SEBELUMNYA
+               </Button>
+               <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                 Halaman {historyPage + 1} dari {Math.ceil(recentActivities.length / 5)}
+               </span>
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 onClick={() => setHistoryPage(p => Math.min(Math.ceil(recentActivities.length / 5) - 1, p + 1))}
+                 disabled={(historyPage + 1) * 5 >= recentActivities.length}
+                 className="text-[10px] font-black uppercase tracking-widest gap-1 hover:text-[#800000]"
+               >
+                 LANJUT <ChevronRight className="w-3 h-3" />
+               </Button>
+            </div>
+          )}
         </section>
       )}
 

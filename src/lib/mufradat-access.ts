@@ -1,4 +1,4 @@
-import { subMonths, format, getDate, isAfter, parseISO, startOfMonth, addDays } from "date-fns";
+import { subMonths, format, getDate, isAfter, parseISO, startOfMonth, addDays, differenceInHours, addMonths } from "date-fns";
 import { SURAH_START_PAGES, getJuzForPage } from "./quran-mapping";
 
 export type MufradatAccessStatus = 
@@ -16,7 +16,9 @@ export interface MufradatAccessSummary {
   nextBillingMonth?: string;
   redirectTo?: string;
   buttonText?: string;
-  isFree?: boolean; // New: True for Al-Fatihah etc.
+  isFree?: boolean; 
+  daysRemaining?: number;
+  dueDate?: Date;
 }
 
 /**
@@ -32,29 +34,26 @@ export interface MufradatAccessSummary {
 export function getMufradatStatus(
   user: any, 
   registrations: any[] = [], 
+  isStudent: boolean = false, 
   surahId?: string | number, 
+  redemptions: any[] = [],
   verseId?: string | number,
-  redemptions: any[] = []
+  pageId?: string | number
 ): MufradatAccessSummary {
-  // 0. FREE ACCESS OVERRIDE: Al-Fatihah (1) Verses 1-5
   const sNum = surahId ? parseInt(surahId.toString()) : null;
   const vNum = verseId ? parseInt(verseId.toString()) : null;
+  const pNum = pageId ? parseInt(pageId.toString()) : null;
   
   const today = new Date();
-  const currentMonthStr = format(today, 'yyyy-MM');
-
-  // SPECIAL: FREE APRIL 2026 PROMOTION
-  // All logged in users get free access to Hi Mufradat in April 2026
-  const isFreeApril = currentMonthStr === '2026-04';
 
   const freeSurahs = [1, 112, 113, 114];
-  if (sNum !== null && freeSurahs.includes(sNum)) {
+  if ((sNum !== null && freeSurahs.includes(sNum)) || (pNum !== null && (pNum === 1 || pNum === 604))) {
     return {
       status: 'active',
       isBlocked: false,
       isFree: true,
       showSoftReminder: false,
-      message: "Selamat Datang! Ukhti sedang menikmati akses gratis surat pilihan."
+      message: "Selamat Datang! Ukhti sedang menikmati akses gratis halaman pertama/terakhir Al-Quran."
     };
   }
 
@@ -72,21 +71,8 @@ export function getMufradatStatus(
     };
   }
 
-
-  // Handle Global Promotions (e.g. Free April)
-  // ONLY for users who have at least registered (joined a group)
-  if (isFreeApril && user?.mufradat_group_id) {
-    return {
-      status: 'active',
-      isBlocked: false,
-      showSoftReminder: false,
-      message: "🎉 BERKAH RAMADAN: Akses Hi Mufradat GRATIS untuk seluruh peserta selama bulan April! Selamat menghafal, Ukhti."
-    };
-  }
-
   // 1. GUEST ACCESS: Not logged in or no baseline profile
   if (!user || user.mufradat_status === 'inactive' || !user.mufradat_group_id) {
-    // If not logged in at all, redirect to registration with automated funnel back to program registration
     if (!user) {
       return {
         status: 'inactive',
@@ -110,11 +96,9 @@ export function getMufradatStatus(
 
   // Handle Leave status
   if (user.mufradat_status === 'on_leave') {
-    const today = new Date();
     const leaveFrom = user.mufradat_leave_from ? parseISO(user.mufradat_leave_from) : null;
     const leaveUntil = user.mufradat_leave_until ? parseISO(user.mufradat_leave_until) : null;
     
-    // Check if Today is between From and Until
     const isAfterFrom = !leaveFrom || today >= leaveFrom;
     const isBeforeUntil = !leaveUntil || today <= leaveUntil;
     
@@ -128,132 +112,98 @@ export function getMufradatStatus(
     }
   }
 
-  const dayOfMonth = getDate(today);
-  const nextMonthStr = format(subMonths(today, -1), 'yyyy-MM');
-
-  // Logic: 
-  // 1. Initial registration (no payment_type) counts for the month it was created.
-  // 2. Regular monthly payments must match the billing_month.
-  // 3. Status must be 'verified' to be considered 'paid'.
-  
-  const hasAnyVerifiedRegistration = registrations.some(r => 
-    r.status === 'verified' && 
-    (r.halaqah_id === 'mufradat-premium' || r.halaqah_id === user.mufradat_group_id || r.halaqah_title?.toLowerCase().includes('mufradat'))
-  );
-
-  const hasPaidCurrent = registrations.some(r => 
-    r.status === 'verified' && 
-    (r.halaqah_id === 'mufradat-premium' || r.halaqah_id === user.mufradat_group_id || r.halaqah_title?.toLowerCase().includes('mufradat')) &&
-    (
-      (r.payment_type === 'monthly' && r.billing_month === currentMonthStr) ||
-      (!r.payment_type && r.created_at && format(parseISO(r.created_at), 'yyyy-MM') === currentMonthStr) ||
-      (!r.payment_type && !r.created_at) // Fallback for legacy
+  // ANNIVERSARY BILLING LOGIC: 1 Month per verified registration from first activation
+  const verifiedRegs = registrations
+    ?.filter(r => 
+      r.status?.toLowerCase() === 'verified' && 
+      (
+        r.halaqah_id?.toLowerCase().includes('mufradat') || 
+        r.halaqah_title?.toLowerCase().includes('mufradat') || 
+        r.halaqah_id === 'all' || 
+        r.halaqah_id === user.mufradat_group_id
+      )
     )
-  );
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) || [];
 
-  // If verified participant, they are generally NOT blocked for content access.
-  // The monthly check is primarily for billing reminders.
-  const isVerifiedStudent = hasAnyVerifiedRegistration || isStudent;
+  let dueDate = null;
 
-  
-  const hasPaidNext = registrations.some(r => 
-    r.status === 'verified' && 
-    r.payment_type === 'monthly' && 
-    r.billing_month === nextMonthStr
-  );
+  if (verifiedRegs.length > 0) {
+    const firstVer = verifiedRegs[0];
+    const baseDate = parseISO(firstVer.verified_at || firstVer.created_at);
+    // Count how many verified months/regs (usually 1 per monthly, but handles legacy)
+    dueDate = addMonths(baseDate, verifiedRegs.length);
+  }
 
-  // Note: Juz-level restrictions have been removed per user request. 
-  // All active/paid users now have access to all Juz.
+  // Fallback to mufradat_due_date ONLY if no registrations found
+  // This allows legacy/manually added users to remain active while transition is in progress
+  if (!dueDate && user.mufradat_due_date) {
+    dueDate = parseISO(user.mufradat_due_date);
+  }
 
-  // Check for PENDING verification (to show specialized message)
-  const hasPendingNext = registrations.some(r => 
-    r.status === 'pending_verification' && 
-    r.payment_type === 'monthly' && 
-    r.billing_month === nextMonthStr
-  );
-
-  const hasPendingCurrent = registrations.some(r => 
-    r.status === 'pending_verification' && 
-    (
-      (r.payment_type === 'monthly' && r.billing_month === currentMonthStr) ||
-      (!r.payment_type)
-    )
-  );
-
-  // SAFE ZONE: 28th to 10th
-  // ACCESS IS NEVER BLOCKED HERE.
-  const isSafeZone = dayOfMonth >= 28 || dayOfMonth <= 10;
-
-  if (isSafeZone) {
-    // If 28th-31st: Reminding for NEXT month
-    if (dayOfMonth >= 28) {
-      if (hasPaidNext) {
-        return {
-          status: 'active',
-          isBlocked: false,
-          showSoftReminder: false,
-          message: "Akses Aktif. Jazakillah Khair atas infaqnya, Ukhti!"
-        };
-      }
-      
-      const msg = hasPendingNext 
-        ? "Bukti Infaq periode depan sedang diverifikasi Musyrifah. Mohon ditunggu ya, Ukhti."
-        : "Masa Infaq (28 s/d 10): Silakan konfirmasi infaq Hi Mufradat Ukhti untuk periode berikutnya. Syukran.";
-
-      return {
-        status: 'grace_period',
-        isBlocked: false, // NO POPUP DURING SAFE ZONE
-        showSoftReminder: true,
-        nextBillingMonth: nextMonthStr,
-        message: msg
-      };
-    } 
-    // If 1st-10th: Reminding for CURRENT month
-    else {
-      if (hasPaidCurrent) {
-        return {
-          status: 'active',
-          isBlocked: false,
-          showSoftReminder: false,
-          message: "Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!"
-        };
-      }
-
-      const msg = hasPendingCurrent
-        ? "Bukti Infaq bulan ini sedang diverifikasi Musyrifah. Mohon ditunggu ya, Ukhti."
-        : "Masa Tenggang: Mohon konfirmasi infaq Hi Mufradat Ukhti untuk bulan ini sebelum tanggal 10 agar akses tidak terputus.";
-
-      return {
-        status: 'grace_period',
-        isBlocked: false, // NO POPUP DURING SAFE ZONE
-        showSoftReminder: true,
-        nextBillingMonth: currentMonthStr,
-        message: msg
-      };
-    }
-  } 
-
-  // OUTSIDE SAFE ZONE: 11th to 27th
-  // BLOCKING IS ACTIVE IF UNPAID AND NOT PREVIOUSLY VERIFIED.
-  if (!hasPaidCurrent && !hasAnyVerifiedRegistration) {
-    const msg = hasPendingCurrent
-      ? "Bukti Infaq Ukhti sedang menunggu verifikasi Musyrifah. Akses akan terbuka otomatis setelah diverifikasi."
-      : "Akses Terhenti. Infaq Hi Mufradat Ukhti belum terverifikasi untuk bulan ini. Hi AQLI membutuhkan dana untuk biaya operasional.";
-
+  // If still no due date, they are effectively inactive/unpaid
+  if (!dueDate) {
     return {
-      status: 'blocked',
-      isBlocked: !hasPendingCurrent, // Only block if NO pending verification
-      showSoftReminder: hasPendingCurrent,
-      message: msg,
+      status: 'inactive',
+      isBlocked: true,
+      showSoftReminder: false,
+      message: "Masa aktif akses Ukhti belum tersedia. Silakan lakukan aktivasi pembayaran.",
       redirectTo: '/mufradat/billing'
     };
   }
 
-  // If we reach here, either they paid for current month, or they are a previously verified student (thalibah)
+  // Grace Period: 3 Days
+  const graceDate = addDays(dueDate, 3);
+  const isExpired = today > dueDate;
+  const isGraceEnded = today > graceDate;
+
+  if (isGraceEnded) {
+    const hasPendingCurrent = registrations.some(r => 
+      r.status === 'pending_verification' && 
+      (r.halaqah_id === 'mufradat-premium' || r.halaqah_id === user.mufradat_group_id) &&
+      (differenceInHours(today, parseISO(r.created_at)) < 48) // Allow 48h buffer for pending
+    );
+
+    if (hasPendingCurrent) {
+       return {
+         status: 'active',
+         isBlocked: false,
+         showSoftReminder: true,
+         message: "Bukti Infaq Ukhti sedang menunggu verifikasi Musyrifah. Akses tetap terbuka sementara."
+       };
+    }
+
+    return {
+      status: 'blocked',
+      isBlocked: true,
+      showSoftReminder: false,
+      dueDate: dueDate,
+      message: "Akses Terhenti. Masa aktif Hi Mufradat Ukhti sudah habis. Mohon lakukan konfirmasi infaq.",
+      redirectTo: '/mufradat/billing'
+    };
+  }
+
+  if (isExpired) {
+    return {
+      status: 'grace_period',
+      isBlocked: false,
+      showSoftReminder: true,
+      dueDate: dueDate,
+      message: `Masa aktif akses Ukhti telah berakhir pada ${format(dueDate, 'd MMM')}. Mohon segera konfirmasi pendaftaran.`
+    };
+  }
+
+  // Calculate days remaining
+  const diffTime = dueDate.getTime() - today.getTime();
+  const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
   return {
-    status: hasPaidCurrent || hasAnyVerifiedRegistration ? 'active' : 'grace_period',
+    status: 'active',
     isBlocked: false,
-    showSoftReminder: !hasPaidCurrent && !hasAnyVerifiedRegistration,
-    message: "Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!"
+    showSoftReminder: daysRemaining <= 3,
+    daysRemaining,
+    dueDate,
+    message: daysRemaining <= 3 
+      ? `Akses aktif. Sisa masa aktif Ukhti tinggal ${daysRemaining} hari lagi.` 
+      : "Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!"
   };
 }
