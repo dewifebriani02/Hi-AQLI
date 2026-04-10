@@ -58,6 +58,7 @@ export default function MutabaahPage() {
   const { toast } = useToast();
   const [quote, setQuote] = useState(() => getRandomQuote());
   const [localLogs, setLocalLogs] = useState<any[]>([]); // For guest persistence
+  const [optimisticLogs, setOptimisticLogs] = useState<Record<string, boolean>>({});
   const [hijriData, setHijriData] = useState<any>(null);
 
   useEffect(() => {
@@ -126,9 +127,25 @@ export default function MutabaahPage() {
 
   const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection("mutabaah_logs", logsOptions);
 
-  const todayLogs = useMemo(() => 
-    mutabaahLogs?.filter((l: any) => l.date === todayStr) || [],
-  [mutabaahLogs, todayStr]);
+  const todayLogs = useMemo(() => {
+    // Combine real logs with optimistic changes
+    const fetched = mutabaahLogs?.filter((l: any) => l.date === todayStr) || [];
+    
+    // Create a working set of logs
+    const result = [...fetched];
+    
+    // Apply optimistic overrides
+    Object.entries(optimisticLogs).forEach(([activityId, completed]) => {
+      const idx = result.findIndex(l => l.activity_id === activityId);
+      if (idx !== -1) {
+        result[idx] = { ...result[idx], completed };
+      } else if (completed) {
+        result.push({ activity_id: activityId, completed: true, date: todayStr });
+      }
+    });
+
+    return result;
+  }, [mutabaahLogs, todayStr, optimisticLogs]);
 
   // Load legacy/guest logs from local storage for monitoring
   const [guestHistoricalLogs, setGuestHistoricalLogs] = useState<any[]>([]);
@@ -178,6 +195,9 @@ export default function MutabaahPage() {
     const existing = todayLogs?.find((l: any) => l.activity_id === activityId);
     const completed = !existing?.completed;
 
+    // Optimistic Update
+    setOptimisticLogs(prev => ({ ...prev, [activityId]: completed }));
+
     const { error } = await supabase
       .from("mutabaah_logs")
       .upsert({
@@ -188,6 +208,12 @@ export default function MutabaahPage() {
       }, { onConflict: 'user_id,activity_id,date' });
 
     if (error) {
+      // Rollback optimistic update
+      setOptimisticLogs(prev => {
+        const next = { ...prev };
+        delete next[activityId];
+        return next;
+      });
       console.error("DEBUG [Mutabaah]: Save failed", error);
       toast({
         title: "Gagal Menyimpan",
@@ -196,6 +222,11 @@ export default function MutabaahPage() {
       });
       return;
     }
+
+    // After successful sync, we can optionally clear the optimistic state 
+    // when the real-time update arrives, but for now we'll keep it to ensure snappiness.
+    // Explicitly reload to sync faster
+    reloadMutabaah();
 
     // reloadMutabaah(); // Optimization: Removed redundant reload; handled by useCollection real-time sync
     // Update points if completed
