@@ -1,6 +1,6 @@
 # HI AQLI - Al-Qur'an Excellence Companion
 
-HI AQLI adalah aplikasi pendamping santri thalibah untuk mencapai kualitas hafalan yang *Itqan* (kuat dan akurat) menggunakan metode Tikrar terstruktur.
+Hi AQLI adalah aplikasi pendamping santri thalibah untuk mencapai kualitas hafalan yang *Itqan* (kuat dan akurat) menggunakan metode Tikrar terstruktur.
 
 ## Fitur Utama
 - **Tikrar Daily**: Sistem repetisi blok (Maqta) 40x dan gabungan 10x untuk setiap halaman Al-Qur'an.
