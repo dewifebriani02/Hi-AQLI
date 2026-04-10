@@ -14,13 +14,6 @@ import {
   TooltipTrigger,
   TooltipPortal,
 } from "@/components/ui/tooltip";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
@@ -79,8 +72,6 @@ export default function TilawahJuzDetailPage() {
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
-  const [showReciterDialog, setShowReciterDialog] = useState(false);
-  const [searchReciter, setSearchReciter] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const verseRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -129,12 +120,14 @@ export default function TilawahJuzDetailPage() {
   const selectReciter = (reciterId: number) => {
     setSelectedReciterId(reciterId);
     localStorage.setItem('aqli_reciter_id', reciterId.toString());
-    setShowReciterDialog(false);
   };
 
   const toggleAudio = async (verseKey: string) => {
     if (!selectedReciterId) {
-      setShowReciterDialog(true);
+      toast({
+        title: "Qari Belum Dipilih",
+        description: "Silakan pilih Qari di halaman utama Tilawah terlebih dahulu."
+      });
       return;
     }
 
@@ -180,9 +173,6 @@ export default function TilawahJuzDetailPage() {
     }
   };
 
-  const filteredReciters = useMemo(() => {
-    return RECITERS.filter(r => r.name.toLowerCase().includes(searchReciter.toLowerCase()));
-  }, [searchReciter]);
 
   if (loading) return <div className="flex justify-center py-32"><Loader2 className="animate-spin text-[#800000]" /></div>;
 
@@ -205,34 +195,6 @@ export default function TilawahJuzDetailPage() {
                 <Plus className="h-3 w-3" />
               </Button>
             </div>
-            <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span>Qari</span></Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-                <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
-                <div className="px-1 py-4 flex flex-col gap-4 overflow-hidden">
-                   <div className="relative">
-                      <input 
-                        type="text" 
-                        placeholder="Cari Qari..." 
-                        className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]/20"
-                        value={searchReciter}
-                        onChange={(e) => setSearchReciter(e.target.value)}
-                      />
-                      <Mic2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                   </div>
-                   <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
-                    {filteredReciters.map((r) => (
-                      <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => selectReciter(r.id)} className="w-full justify-between font-bold h-12 rounded-xl">
-                        <span className="truncate">{r.name} {r.style && <span className="text-[10px] opacity-60 ml-1">({r.style})</span>}</span>
-                        {selectedReciterId === r.id && <Check className="h-4 w-4 shrink-0" />}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
         <div className="sm:hidden flex justify-center">

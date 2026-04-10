@@ -31,14 +31,7 @@ interface Verse {
   }[];
 }
 
-const RECITERS = [
-  { id: 7, name: "Mishary Rashid Alafasy" },
-  { id: 2, name: "AbdulBaset AbdulSamad (Murattal)" },
-  { id: 3, name: "Abdur-Rahman as-Sudais" },
-  { id: 6, name: "Mahmoud Khalil Al-Husary" },
-  { id: 12, name: "Saud al-Shuraim" },
-  { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
-];
+import { RECITERS } from "@/lib/quran-reciters";
 
 import { isMushafPageFree } from "@/lib/access-control";
 
@@ -53,7 +46,6 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
   
   const { toast } = useToast();
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
-  const [showReciterDialog, setShowReciterDialog] = useState(false);
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
   const [isAutoplayEnabled, setIsAutoplayEnabled] = useState(false);
@@ -129,12 +121,14 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
   const selectReciter = (reciterId: number) => {
     setSelectedReciterId(reciterId);
     localStorage.setItem('aqli_reciter_id', reciterId.toString());
-    setShowReciterDialog(false);
   };
 
   const toggleAudio = async (verseKey: string) => {
     if (!selectedReciterId) {
-      setShowReciterDialog(true);
+      toast({
+        title: "Qari Belum Dipilih",
+        description: "Silakan pilih Qari di halaman utama Tilawah terlebih dahulu."
+      });
       return;
     }
 
@@ -293,35 +287,6 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
               </Label>
             </div>
 
-            <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold h-9 rounded-full bg-[#800000]/5 border border-[#800000]/10 hover:bg-[#800000]/10 transition-colors">
-                  <Mic2 className="h-4 w-4" />
-                  <span className="text-[10px] uppercase tracking-wider">Qari</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="rounded-3xl border-none shadow-2xl">
-                <DialogHeader>
-                  <DialogTitle className="text-center font-headline text-[#800000] uppercase tracking-widest text-lg pt-4">Pilih Qari</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-2 py-6 max-h-[60vh] overflow-y-auto px-1">
-                  {RECITERS.map((r) => (
-                    <Button 
-                      key={r.id} 
-                      variant={selectedReciterId === r.id ? "default" : "outline"} 
-                      onClick={() => selectReciter(r.id)} 
-                      className={cn(
-                        "justify-between font-bold h-12 rounded-xl transition-all",
-                        selectedReciterId === r.id ? "bg-[#800000] text-white shadow-lg" : "hover:border-[#800000] hover:text-[#800000]"
-                      )}
-                    >
-                      <span className="text-xs uppercase tracking-tight">{r.name}</span>
-                      {selectedReciterId === r.id && <Check className="h-4 w-4" />}
-                    </Button>
-                  ))}
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
       </div>

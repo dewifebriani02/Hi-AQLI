@@ -1,11 +1,10 @@
 "use client";
 
-import { Search } from "lucide-react";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Type, Minus, Plus, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { RECITERS } from "@/lib/quran-reciters";
@@ -16,13 +15,6 @@ import {
   TooltipTrigger,
   TooltipPortal,
 } from "@/components/ui/tooltip";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/supabase";
 import { useCollection } from "@/supabase/db";
@@ -97,8 +89,6 @@ export default function SurahDetailPage() {
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
-  const [showReciterDialog, setShowReciterDialog] = useState(false);
-  const [searchReciter, setSearchReciter] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const verseRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -175,16 +165,15 @@ export default function SurahDetailPage() {
   const selectReciter = (reciterId: number) => {
     setSelectedReciterId(reciterId);
     localStorage.setItem('aqli_reciter_id', reciterId.toString());
-    setShowReciterDialog(false);
   };
 
-  const filteredReciters = useMemo(() => {
-    return RECITERS.filter(r => r.name.toLowerCase().includes(searchReciter.toLowerCase()));
-  }, [searchReciter]);
 
   const toggleAudio = async (verseKey: string) => {
     if (!selectedReciterId) {
-      setShowReciterDialog(true);
+      toast({
+        title: "Qari Belum Dipilih",
+        description: "Silakan pilih Qari di halaman utama Tilawah terlebih dahulu."
+      });
       return;
     }
 
@@ -251,45 +240,6 @@ export default function SurahDetailPage() {
                 <Plus className="h-3 w-3" />
               </Button>
             </div>
-            <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-[#800000] font-bold"><Mic2 className="h-4 w-4" /><span>Qari</span></Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-[2rem] border-none shadow-2xl">
-                <DialogHeader><DialogTitle className="text-center font-black uppercase tracking-tighter text-xl text-[#800000]">Library Qari Al-Qur'an</DialogTitle></DialogHeader>
-                <div className="px-1 py-4 flex flex-col gap-4 overflow-hidden">
-                   <div className="relative group">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-[#800000] transition-colors" />
-                      <input 
-                        type="text" 
-                        placeholder="Cari Qari favorit Ukhti..." 
-                        className="w-full h-14 pl-12 pr-4 rounded-2xl bg-slate-50 border-none text-base font-medium focus:outline-none focus:ring-2 focus:ring-[#800000]/10 shadow-inner"
-                        value={searchReciter}
-                        onChange={(e) => setSearchReciter(e.target.value)}
-                      />
-                   </div>
-                   <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar p-1">
-                    {filteredReciters.map((r) => (
-                      <Button 
-                        key={r.id} 
-                        variant={selectedReciterId === r.id ? "default" : "outline"} 
-                        onClick={() => selectReciter(r.id)} 
-                        className={cn(
-                          "w-full justify-between font-bold h-14 rounded-2xl transition-all active:scale-[0.98]",
-                          selectedReciterId === r.id ? "bg-[#800000] hover:bg-[#800000]/90 text-white shadow-lg" : "hover:border-[#800000]/30 hover:bg-[#800000]/5 text-slate-700"
-                        )}
-                      >
-                        <div className="flex flex-col items-start leading-tight">
-                          <span className="text-sm">{r.name}</span>
-                          {r.style && <span className={cn("text-[9px] uppercase tracking-widest", selectedReciterId === r.id ? "text-white/60" : "text-muted-foreground")}>{r.style}</span>}
-                        </div>
-                        {selectedReciterId === r.id && <Check className="h-5 w-5 shrink-0" />}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
         <div className="sm:hidden flex justify-center">
