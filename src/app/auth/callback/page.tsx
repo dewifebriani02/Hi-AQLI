@@ -95,18 +95,22 @@ function AuthCallbackHandler() {
         console.log('AUTH_DEBUG: Capturing session...');
         let session = null;
         
+        // Brief pause to allow setSession or exchangeCode background logic to settle
+        await new Promise(r => setTimeout(r, 500));
+
         // Immediate check
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        const { data: { session: initialSession }, error: initialErr } = await supabase.auth.getSession();
         if (initialSession) {
             session = initialSession;
         } else {
+            if (initialErr) console.warn('AUTH_DEBUG: Initial getSession error (possible clock skew):', initialErr.message);
             // Wait for up to 5 seconds with higher frequency (every 300ms)
             for (let i = 0; i < 15; i++) {
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 400));
                 const { data: { session: retrySession } } = await supabase.auth.getSession();
                 if (retrySession) {
                     session = retrySession;
-                    console.log(`AUTH_DEBUG: Session found after ${(i+1)*300}ms`);
+                    console.log(`AUTH_DEBUG: Session found after ${(i+1)*400 + 500}ms`);
                     break;
                 }
             }

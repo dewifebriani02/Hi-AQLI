@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useCollection } from "@/supabase/db";
 import { useUser, supabase } from "@/supabase";
 import { 
@@ -22,7 +23,8 @@ import {
   Award,
   Zap,
   Globe,
-  Loader2
+  Loader2,
+  Lock
 } from "lucide-react";
 import Link from "next/link";
 import { format, isAfter, isBefore, addMinutes } from "date-fns";
