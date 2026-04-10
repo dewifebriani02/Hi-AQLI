@@ -19,7 +19,7 @@ import {
 import { useUser } from "@/supabase";
 import { useCollection, useDoc } from "@/supabase/db";
 import { cn } from "@/lib/utils";
-import { checkIsStudent } from "@/lib/access-control";
+import { checkIsStudent, checkIsVerifiedStudent } from "@/lib/access-control";
 
 interface WordData {
   id: number;
@@ -81,6 +81,7 @@ function VerseDetailContent() {
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
   const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+  const isVerifiedStudent = useMemo(() => checkIsVerifiedStudent(registrations || []), [registrations]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -148,8 +149,8 @@ function VerseDetailContent() {
     const isFirstVerseOfSurah = vIdx === 1;
     const isPrevVerseDone = completedVerseNumbers.has(vIdx - 1);
     
-    // Core check: User MUST have subscription access OR it's a free verse OR user is a registered student
-    const hasProgramAccess = access.isFree || !access.isBlocked || isStudent;
+    // Core check: User MUST have subscription access OR it's a free verse OR user is a verified student
+    const hasProgramAccess = access.isFree || !access.isBlocked || isVerifiedStudent;
     const isSequentialPathDone = isFirstVerseOfQuran || isFirstVerseOfSurah || isCurrentVerseCompleted || isPrevVerseDone || success === 'true';
 
     const isUnlocked = hasProgramAccess && isSequentialPathDone;

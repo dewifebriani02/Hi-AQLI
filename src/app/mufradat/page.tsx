@@ -52,7 +52,7 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { getMufradatStatus } from "@/lib/mufradat-access";
-import { checkIsStudent } from "@/lib/access-control";
+import { checkIsStudent, checkIsVerifiedStudent } from "@/lib/access-control";
 
 
 
@@ -214,6 +214,7 @@ function MufradatPageContent() {
   };
 
   const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+  const isVerifiedStudent = useMemo(() => checkIsVerifiedStudent(registrations || []), [registrations]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -359,22 +360,44 @@ function MufradatPageContent() {
         </div>
       </div>
 
-      {/* Soft Reminder Banner - Only for registered users */}
-      {user && access.showSoftReminder && (
-        <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
+      {/* Multi-state Access Banner */}
+      {user && (access.showSoftReminder || access.status === 'trial') && (
+        <div className={cn(
+          "p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm",
+          access.status === 'trial' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+        )}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-              <Heart className="w-5 h-5 fill-amber-500" />
+            <div className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+              access.status === 'trial' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+            )}>
+              {access.status === 'trial' ? <Gift className="w-5 h-5 animate-bounce" /> : <Heart className="w-5 h-5 fill-amber-500" />}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
-              <p className="text-[11px] font-medium text-amber-900 leading-tight">
+              <div className="flex items-center gap-2">
+                <p className={cn(
+                  "text-[10px] font-black uppercase tracking-tight",
+                  access.status === 'trial' ? "text-emerald-800" : "text-amber-800"
+                )}>
+                  {access.status === 'trial' ? "Akses Trial Aktif" : "Support Hi AQLI"}
+                </p>
+                {access.status === 'trial' && <Badge className="bg-emerald-500 text-white text-[8px] h-4">24 JAM</Badge>}
+              </div>
+              <p className={cn(
+                "text-[11px] font-medium leading-tight",
+                access.status === 'trial' ? "text-emerald-900" : "text-amber-900"
+              )}>
                 {access.message}
               </p>
             </div>
           </div>
-          <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-9 px-4 rounded-xl shrink-0">
-            <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
+          <Button asChild size="sm" className={cn(
+            "font-black text-[10px] h-9 px-4 rounded-xl shrink-0 shadow-sm",
+            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
+          )}>
+            <Link href="/mufradat/billing">
+              {access.status === 'trial' ? 'LIHAT STATUS' : 'INFAQ SEKARANG'}
+            </Link>
           </Button>
         </div>
       )}
@@ -489,7 +512,7 @@ function MufradatPageContent() {
               baseUrl="/mufradat" 
               userProgress={progress || []} 
               showAudio={false}
-              isStudent={isStudent}
+              isStudent={isVerifiedStudent || access.status === 'trial'}
               externalSearch={searchQuery}
             />
           </div>
@@ -501,7 +524,7 @@ function MufradatPageContent() {
             mode="ayat"
             variant="mufradat"
             unlockedJuz={userData?.mufradat_accessible_juz || []}
-            isStudent={isStudent}
+            isStudent={isVerifiedStudent || access.status === 'trial'}
             externalSearch={searchQuery}
           />
         </TabsContent>
@@ -512,7 +535,7 @@ function MufradatPageContent() {
             mode="halaman"
             variant="mufradat"
             unlockedJuz={userData?.mufradat_accessible_juz || []}
-            isStudent={isStudent}
+            isStudent={isVerifiedStudent || access.status === 'trial'}
             externalSearch={searchQuery}
           />
         </TabsContent>

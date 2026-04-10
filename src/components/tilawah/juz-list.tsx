@@ -114,8 +114,14 @@ export function JuzList({
           bestTime: Math.min(current.bestTime, time)
         });
 
-        if ((attempt.is_passed || Number(attempt.score) === Number(attempt.total_questions)) && attempt.quiz_id.startsWith('mufradat_page_')) {
-          completedPages.add(pNum);
+        if (attempt.is_passed || Number(attempt.score) === Number(attempt.total_questions)) {
+          if (attempt.quiz_id.startsWith('mufradat_page_')) {
+            completedPages.add(pNum);
+          } else if (!attempt.quiz_id.startsWith('mufradat_juz_exam_')) {
+            // Verse completion: If any verse on page P is passed, we count it as "completed" for unlocking P+1
+            // This ensures the Halaman tab is in sync with the Juz/Surah tabs.
+            completedPages.add(pNum);
+          }
         }
       }
       
@@ -418,7 +424,15 @@ export function JuzList({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 px-4 py-2 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200">
                   {juzPages.map((p) => {
                     const isDone = completedPages.has(p);
-                    const isUnlocked = isStudent || p === 1 || p === 604; 
+                    const startPageOfJuz = juzPages[0];
+                    const isFirstPageOfJuz = p === startPageOfJuz;
+                    
+                    // A page P is unlocked if:
+                    // 1. It is globally free (1, 604)
+                    // 2. OR it is Juz 1 (Tilawah mode usually lets you browse Juz 1)
+                    // 3. OR the user is a verified student AND (it's the first page of their chosen Juz OR the previous page is completed)
+                    const isUnlocked = p === 1 || p === 604 || (isStudent && (isFirstPageOfJuz || completedPages.has(p - 1)));
+                    
                     const stats = pageStats.get(p) || { maxScore: 0, attempts: 0, bestTime: Infinity };
                     return (
                       <Link 

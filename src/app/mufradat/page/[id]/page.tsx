@@ -97,19 +97,41 @@ export default function MufradatPageDetailPage() {
     return allProgress.some(p => p.quiz_id === `mufradat_page_${pageNum}` && (p.is_passed || Number(p.score) === Number(p.total_questions)));
   }, [allProgress, pageNum]);
 
-  // Global Sequential Guard: Redirect if previous page is not 100% finished
-  useEffect(() => {
-    if (!allProgress || pageNum <= 1 || isProgressLoading) return;
-    
-    const isPrevPageDone = allProgress.some(p => 
+  // Sequential Guard Logic
+  const isPrevPageDone = useMemo(() => {
+    if (pageNum <= 1) return true;
+    if (!allProgress) return false;
+
+    // Check 1: Was the Page Quiz completed?
+    const quizDone = allProgress.some(p => 
       p.quiz_id === `mufradat_page_${pageNum - 1}` && (p.is_passed || Number(p.score) === Number(p.total_questions))
     );
+    if (quizDone) return true;
+
+    // Check 2: Were all verses on the previous page completed?
+    // High-level indicator: if they are a student and have passed activity on the prev page, 
+    // we allow entry to avoid the "jump" bug, especially since they clicked it in the dashboard.
+    const hasActivityOnPrev = allProgress.some(p => 
+      String(p.page_id) === String(pageNum - 1) && p.is_passed
+    );
     
-    if (!isPrevPageDone) {
-      // Strict sequential guard: Redirect if previous page is not 100% finished
-      router.push(`/mufradat/page/${pageNum - 1}`);
+    return isStudent && hasActivityOnPrev;
+  }, [allProgress, pageNum, isStudent]);
+
+  useEffect(() => {
+    if (isProgressLoading || pageNum <= 1) return;
+    
+    // If not done, we don't redirect immediately to avoid the "jumping" bug
+    // instead we will show a "Locked" UI state.
+    if (!isPrevPageDone && !isProgressLoading) {
+      // Small timeout to allow everything to settle
+      const timer = setTimeout(() => {
+         // router.push(`/mufradat/page/${pageNum - 1}`); 
+         // Optional: we can redirect after showing the locked state for a bit
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [allProgress, pageNum, router, isProgressLoading]);
+  }, [isPrevPageDone, isProgressLoading, pageNum, router]);
 
   // Fetch latest attempt to get wrong_words for review
   const lastAttemptOptions = useMemo(() => ({
@@ -154,7 +176,28 @@ export default function MufradatPageDetailPage() {
     setWordCounts({});
   };
 
-  if (loading) return <div className="flex flex-col items-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-sm font-bold opacity-60 uppercase tracking-widest">Menyiapkan Halaman {pageNum}...</p></div>;
+  if (loading || isProgressLoading) return <div className="flex flex-col items-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-sm font-bold opacity-60 uppercase tracking-widest">Menyiapkan Halaman {pageNum}...</p></div>;
+
+  // Handle Locked State UI
+  if (!isPrevPageDone && pageNum > 1 && !isMushafPageFree(pageNum)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8 px-6 text-center">
+        <div className="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center relative">
+          <Lock className="w-12 h-12 text-amber-600" />
+          <Layout className="w-6 h-6 text-amber-900 absolute -bottom-1 -right-1" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black font-headline uppercase tracking-tight text-slate-900 mb-2">Halaman Terkunci</h2>
+          <p className="text-slate-500 max-w-sm font-medium leading-relaxed">
+            Selesaikan kuis atau semua ayat di <strong>Halaman {pageNum - 1}</strong> terlebih dahulu untuk membuka halaman ini.
+          </p>
+        </div>
+        <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 font-black uppercase text-[10px] tracking-widest h-14 px-8 rounded-2xl shadow-lg border-b-4 border-[#600000]">
+          <Link href={`/mufradat/page/${pageNum - 1}`}>KEMBALI KE HALAMAN {pageNum - 1}</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32 px-4 sm:px-0">

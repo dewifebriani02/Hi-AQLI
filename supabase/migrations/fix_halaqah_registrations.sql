@@ -6,6 +6,24 @@ BEGIN
   -- 1. Ensure all expected columns exist in halaqah_registrations
   -- Standardizing and adding missing tracking columns
   
+  -- RENAME CAMELCASE IF EXIST
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='halaqah_registrations' AND column_name='updatedAt') THEN 
+    ALTER TABLE public.halaqah_registrations RENAME COLUMN "updatedAt" TO updated_at; 
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='halaqah_registrations' AND column_name='createdAt') THEN 
+    ALTER TABLE public.halaqah_registrations RENAME COLUMN "createdAt" TO created_at; 
+  END IF;
+
+  -- ADD COLUMNS IF MISSING
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='halaqah_registrations' AND column_name='updated_at') THEN 
+    ALTER TABLE public.halaqah_registrations ADD COLUMN updated_at TIMESTAMPTZ DEFAULT now(); 
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='halaqah_registrations' AND column_name='created_at') THEN 
+    ALTER TABLE public.halaqah_registrations ADD COLUMN created_at TIMESTAMPTZ DEFAULT now(); 
+  END IF;
+
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='halaqah_registrations' AND column_name='registration_fee') THEN 
     ALTER TABLE public.halaqah_registrations ADD COLUMN registration_fee NUMERIC DEFAULT 0; 
   END IF;

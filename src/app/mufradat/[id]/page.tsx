@@ -388,22 +388,44 @@ export default function MufradatSurahDetailPage() {
           </div>
         </div>
 
-      {/* Soft Reminder Banner */}
-      {access.showSoftReminder && (
-        <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
+      {/* Multi-state Access Banner */}
+      {user && (access.showSoftReminder || access.status === 'trial') && (
+        <div className={cn(
+          "mx-4 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm",
+          access.status === 'trial' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+        )}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-              <Heart className="w-5 h-5 fill-amber-500" />
+            <div className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+              access.status === 'trial' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+            )}>
+              {access.status === 'trial' ? <Zap className="w-5 h-5 fill-current" /> : <Heart className="w-5 h-5 fill-amber-500" />}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
-              <p className="text-[11px] font-medium text-amber-900 leading-tight">
+              <div className="flex items-center gap-2">
+                <p className={cn(
+                  "text-[10px] font-black uppercase tracking-tight",
+                  access.status === 'trial' ? "text-emerald-800" : "text-amber-800"
+                )}>
+                  {access.status === 'trial' ? "Mode Trial Aktif" : "Support Hi AQLI"}
+                </p>
+                {access.status === 'trial' && <Badge className="bg-emerald-500 text-white text-[8px] h-4">AKSES PENUH</Badge>}
+              </div>
+              <p className={cn(
+                "text-[11px] font-medium leading-tight",
+                access.status === 'trial' ? "text-emerald-900" : "text-amber-900"
+              )}>
                 {access.message}
               </p>
             </div>
           </div>
-          <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-9 px-4 rounded-xl shrink-0">
-            <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
+          <Button asChild size="sm" className={cn(
+            "font-black text-[10px] h-9 px-4 rounded-xl shrink-0 shadow-sm",
+            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
+          )}>
+            <Link href="/mufradat/billing">
+              {access.status === 'trial' ? 'STATUS' : 'INFAQ SEKARANG'}
+            </Link>
           </Button>
         </div>
       )}

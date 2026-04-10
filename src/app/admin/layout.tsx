@@ -25,6 +25,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [isUserLoading, isAdminLoading, isSuperAdminLoading]);
 
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.replace('/login');
+    }
+  }, [user, isUserLoading, router]);
+
   // 1. Loading State
   if (isUserLoading || isAuthorizing) {
     return (
@@ -35,9 +41,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // 2. Not Logged In
+  // 2. Not Logged In (Redirect handled in useEffect, but return null to prevent flash)
   if (!user) {
-    router.replace('/login');
     return null;
   }
 

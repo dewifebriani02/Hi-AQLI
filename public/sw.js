@@ -12,7 +12,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Only handle http/https requests
+  if (!event.request.url.startsWith('http')) return;
+
   // We don't cache much here to let Next.js handle it, 
   // but a fetch listener is REQUIRED for PWA installation.
-  event.respondWith(fetch(event.request));
+  event.respondWith(
+    fetch(event.request)
+      .catch((error) => {
+        console.error('[SW] Fetch failed:', error);
+        // Fallback or just let it fail without a generic promise rejection error
+        return new Response('Network error occurred', {
+          status: 408,
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      })
+  );
 });

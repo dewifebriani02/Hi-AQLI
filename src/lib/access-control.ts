@@ -21,12 +21,23 @@ export function isJuzFree(juzId: number): boolean {
 }
 
 /**
- * Checks if a user has student status (any active/verified registration)
+ * Checks if a user has student status (any active/verified/pending registration)
  */
 export function checkIsStudent(registrations: any[]): boolean {
   if (!registrations) return false;
   return registrations.some(reg => 
     ['active', 'verified', 'pending_verification'].includes(reg.status)
+  );
+}
+
+/**
+ * Checks if a user has a VERIFIED student status (strictly verified or active)
+ */
+export function checkIsVerifiedStudent(registrations: any[]): boolean {
+  if (!registrations) return false;
+  return registrations.some(reg => 
+    ['active', 'verified'].includes(reg.status) &&
+    (reg.halaqah_id?.toLowerCase().includes('mufradat') || reg.halaqah_title?.toLowerCase().includes('mufradat'))
   );
 }
 

@@ -19,7 +19,7 @@ import { useCollection, useDoc } from "@/supabase/db";
 import { JUZ_PAGE_MAPPING, getJuzForPage } from "@/lib/quran-mapping";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { checkIsStudent } from "@/lib/access-control";
+import { checkIsStudent, checkIsVerifiedStudent } from "@/lib/access-control";
 
 interface Word {
   id: number;
@@ -75,6 +75,7 @@ export default function MufradatJuzDetailPage() {
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
   const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+  const isVerifiedStudent = useMemo(() => checkIsVerifiedStudent(registrations || []), [registrations]);
 
   const access = useMemo(() => {
     // For Juz access, we check if the user has access to the first page of this Juz
@@ -122,10 +123,10 @@ export default function MufradatJuzDetailPage() {
   useEffect(() => {
     if (isUserLoading || isUserDataLoading) return;
     const isFreeJuz = parseInt(id) === 1;
-    if (!isStudent && !isFreeJuz && access.isBlocked) {
+    if (!(isVerifiedStudent || access.status === 'trial') && !isFreeJuz && access.isBlocked) {
       router.push('/mufradat?tab=juz');
     }
-  }, [id, isUserLoading, isUserDataLoading, isStudent, access.isBlocked, router]);
+  }, [id, isUserLoading, isUserDataLoading, isVerifiedStudent, access.isBlocked, access.status, router]);
 
   useEffect(() => {
     const savedReciter = localStorage.getItem('aqli_reciter_id');
@@ -288,9 +289,12 @@ export default function MufradatJuzDetailPage() {
             const isCompleted = passedVerses.has(verse.verse_key);
             const isPrevVerseDone = index === 0 || passedVerses.has(verses[index-1].verse_key);
             
-            // Unified unlock logic
+            // Unified unlock logic: Check program access AND sequential progress
             const isFreeJuz = parseInt(id) === 1;
-            const isUnlocked = isFreeJuz || isStudent || isCompleted || isPrevVerseDone || !access.isBlocked;
+            const hasProgramAccess = isFreeJuz || isVerifiedStudent || access.status === 'trial' || !access.isBlocked;
+            const isSequentialDone = index === 0 || isCompleted || isPrevVerseDone;
+            
+            const isUnlocked = hasProgramAccess && (isFreeJuz || isSequentialDone);
 
             return (
               <div key={verse.id} id={`verse-${verseIdKey}`}>
