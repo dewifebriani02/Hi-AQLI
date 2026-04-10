@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { checkIsStudent } from "@/lib/access-control";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 export default function QuranPage() {
   const { user } = useUser();
