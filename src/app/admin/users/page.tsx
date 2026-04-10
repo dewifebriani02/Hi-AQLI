@@ -135,32 +135,43 @@ export default function AdminUsersPage() {
     if (!userToDelete?.id) return;
 
     try {
-      // Use .select() to confirm if a row was actually deleted
+      // First, try to remove from roles_admin manually just in case
+      await supabase.from('roles_admin').delete().eq('id', userToDelete.id);
+
+      // Now delete the user. The DB should handle cascading for quiz_attempts, voucher_redemptions, etc.
       const { data, error } = await supabase.from('users').delete().eq('id', userToDelete.id).select();
-      if (error) throw error;
+      
+      if (error) {
+        // Handle the specific foreign key error with a helpful message if DB migration hasn't run yet
+        if (error.code === '23503') {
+          throw new Error("Gagal menghapus: Masih ada data terkait (seperti kuis atau registrasi) yang bergantung pada user ini. Silakan jalankan migrasi database terbaru atau hubungi developer.");
+        }
+        throw error;
+      }
       
       if (!data || data.length === 0) {
         toast({
           variant: "destructive",
           title: "Gagal menghapus",
-          description: "Data thalibah tidak ditemukan atau akses ditolak. Pastikan Ukhti memiliki izin admin.",
+          description: "Data thalibah tidak ditemukan atau akses ditolak.",
         });
         setIsDeleteDialogOpen(false);
         return;
       }
       
-      // Also try to remove from roles_admin if they were an admin
-      await supabase.from('roles_admin').delete().eq('id', userToDelete.id);
-
       toast({
         title: "User Dihapus",
-        description: `Profil ${userToDelete.username} telah berhasil dihapus dari database.`,
+        description: `Profil ${userToDelete.username || userToDelete.full_name} telah berhasil dihapus.`,
       });
       setIsDeleteDialogOpen(false);
       setUserToDelete(null);
       refreshUsers();
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Gagal menghapus", description: err.message });
+      toast({ 
+        variant: "destructive", 
+        title: "Gagal menghapus", 
+        description: err.message || "Terjadi kesalahan internal saat menghapus user."
+      });
     }
   };
 
