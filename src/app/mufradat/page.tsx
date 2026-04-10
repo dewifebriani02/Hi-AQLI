@@ -606,14 +606,14 @@ function MufradatPageContent() {
                           <Avatar className="h-12 w-12 border-2 border-white shadow-sm ring-2 ring-slate-50 group-hover:ring-[#800000]/10 transition-all">
                             <AvatarImage src={u.avatar_url || undefined} />
                             <AvatarFallback className="bg-slate-100 text-slate-400 font-bold">
-                              {String(u.username || u.full_name || 'U').charAt(0).toUpperCase()}
+                              {String(u.full_name || u.username || 'U').charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-slate-800 leading-tight group-hover:text-[#800000] transition-colors">
-                                {typeof u.username === 'string' ? u.username : (typeof u.full_name === 'string' ? u.full_name : 'Ukhti')}
+                                {u.full_name || u.username || 'Ukhti'}
                               </span>
                               {user?.id === u.id && (
                                 <span className="text-[9px] bg-[#800000]/10 text-[#800000] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Saya</span>
