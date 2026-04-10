@@ -87,8 +87,15 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
     };
   }
 
-  // 1. GUEST ACCESS & PENDING REGISTRATION
-  if (!user || user.mufradat_status === 'inactive' || !user.mufradat_group_id) {
+  // 0. PENDING REGISTRATION CHECK (Bonus 24h Access for New/Re-registering Users)
+  // This applies to anyone who doesn't have a verified subscription but just registered
+  const pendingReg = registrations?.find(r => 
+    r.status === 'pending_verification' && 
+    (r.halaqah_id === 'mufradat-premium' || r.halaqah_title?.toLowerCase().includes('mufradat'))
+  );
+
+  // 1. GUEST ACCESS & PENDING REGISTRATION TRIAL
+  if (!user || user.mufradat_status === 'inactive' || !user.mufradat_group_id || !user.mufradat_due_date) {
     if (!user) {
       return {
         status: 'inactive',
@@ -100,12 +107,6 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
         buttonText: 'DAFTAR PROGRAM SEKARANG'
       };
     }
-
-    // Check for pending registrations for this user
-    const pendingReg = registrations?.find(r => 
-      r.status === 'pending_verification' && 
-      (r.halaqah_id === 'mufradat-premium' || r.halaqah_title?.toLowerCase().includes('mufradat'))
-    );
 
     if (pendingReg) {
       const hoursSinceReg = differenceInHours(today, parseISO(pendingReg.created_at));
@@ -216,17 +217,21 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
   if (isGraceEnded) {
     const hasPendingCurrent = registrations.some(r => 
       r.status === 'pending_verification' && 
-      (r.halaqah_id === 'mufradat-premium' || r.halaqah_id === user.mufradat_group_id) &&
+      (
+        r.halaqah_id === 'mufradat-premium' || 
+        r.halaqah_id === user.mufradat_group_id ||
+        r.halaqah_title?.toLowerCase().includes('mufradat')
+      ) &&
       (differenceInHours(today, parseISO(r.created_at)) < 48) // Allow 48h buffer for pending
     );
 
     if (hasPendingCurrent) {
        return {
-         status: 'active',
+         status: 'trial', // Show as trial/pending mode
          isBlocked: false,
          isVerified,
          showSoftReminder: true,
-         message: "Bukti Infaq Ukhti sedang menunggu verifikasi Musyrifah. Akses tetap terbuka sementara."
+         message: "Bukti Infaq Ukhti sedang menunggu verifikasi Musyrifah. Akses tetap terbuka sementara (Mode Trial)."
        };
     }
 

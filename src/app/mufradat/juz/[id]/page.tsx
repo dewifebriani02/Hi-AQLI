@@ -3,8 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, GraduationCap, Check } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, GraduationCap, Check, Grid3X3, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import {
   Tooltip,
@@ -49,6 +50,7 @@ export default function MufradatJuzDetailPage() {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(32);
+  const [isIndexOpen, setIsIndexOpen] = useState(false);
 
   const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
   const [playingKey, setPlayingKey] = useState<string | null>(null);
@@ -120,6 +122,47 @@ export default function MufradatJuzDetailPage() {
 
   const { passedVerses, errorVerses, verseStatsMap } = progressData;
 
+  // Group verses by Surah for the Index
+  const groupedVerses = useMemo(() => {
+    const groups: { surahId: number; surahName: string; verses: Verse[] }[] = [];
+    verses.forEach(v => {
+      const sId = parseInt(v.verse_key.split(':')[0]);
+      let group = groups.find(g => g.surahId === sId);
+      if (!group) {
+        const surahInfo = QURAN_CHAPTERS.find(c => c.id === sId);
+        group = { 
+          surahId: sId, 
+          surahName: surahInfo?.name_simple || `Surah ${sId}`, 
+          verses: [] 
+        };
+        groups.push(group);
+      }
+      group.verses.push(v);
+    });
+    return groups;
+  }, [verses]);
+
+  const scrollToVerse = (verseKey: string) => {
+    const verseIdKey = verseKey.replace(':', '-');
+    const element = document.getElementById(`verse-${verseIdKey}`);
+    if (element) {
+      const headerOffset = 180; // Account for sticky header
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+      
+      // Flash highlight
+      element.classList.add('bg-[#800000]/5');
+      setTimeout(() => element.classList.remove('bg-[#800000]/5'), 2000);
+      
+      setIsIndexOpen(false); // Close index after jumping on mobile
+    }
+  };
+
   useEffect(() => {
     if (isUserLoading || isUserDataLoading) return;
     const isFreeJuz = parseInt(id) === 1;
@@ -169,11 +212,8 @@ export default function MufradatJuzDetailPage() {
       
       if (lastCompletedKey) {
         const timer = setTimeout(() => {
-          const element = document.getElementById(`verse-${lastCompletedKey.replace(':', '-')}`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 800);
+          scrollToVerse(lastCompletedKey);
+        }, 1200); // Slightly longer delay to ensure full rendering
         return () => clearTimeout(timer);
       }
     }
@@ -252,6 +292,19 @@ export default function MufradatJuzDetailPage() {
             <p className="text-[10px] uppercase font-black tracking-widest text-[#800000]">Hi Mufradat • Tadabbur per Juz</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsIndexOpen(!isIndexOpen)}
+                className={cn(
+                  "gap-2 font-bold transition-all rounded-full px-4 border-2",
+                  isIndexOpen ? "bg-[#800000] text-white border-[#800000]" : "text-[#800000] border-[#800000]/10 hover:border-[#800000]/30"
+                )}
+            >
+                <Grid3X3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Daftar Ayat</span>
+                {isIndexOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </Button>
             <div className="hidden sm:flex items-center gap-1 bg-muted/30 p-1 rounded-lg border mr-2">
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(-4)}>
                 <Minus className="h-3 w-3" />
@@ -263,6 +316,55 @@ export default function MufradatJuzDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Verse Index Grid Overlay/Section */}
+        {isIndexOpen && (
+          <div className="absolute top-full left-0 right-0 bg-white border-b shadow-2xl z-20 max-h-[70vh] overflow-y-auto animate-in slide-in-from-top-4 duration-300">
+            <div className="p-6 space-y-6">
+               <div className="flex items-center justify-between border-b pb-4">
+                  <h3 className="font-black text-sm uppercase tracking-widest text-slate-800">Indeks Ayat Juz {id}</h3>
+                  <div className="flex gap-4">
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                       <div className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" /> Selesai
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                       <div className="w-2.5 h-2.5 rounded-full border border-slate-200" /> Belum
+                    </div>
+                  </div>
+               </div>
+
+               <div className="space-y-8">
+                  {groupedVerses.map(group => (
+                    <div key={group.surahId} className="space-y-3">
+                       <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]/40">Surah</span>
+                          <h4 className="font-black text-xs uppercase tracking-tight text-slate-600 border-b-2 border-slate-100 pb-1">{group.surahId}. {group.surahName}</h4>
+                       </div>
+                       <div className="grid grid-cols-6 sm:grid-cols-10 md:grid-cols-12 gap-2">
+                          {group.verses.map(v => {
+                            const isDone = passedVerses.has(v.verse_key);
+                            return (
+                              <button
+                                key={v.id}
+                                onClick={() => scrollToVerse(v.verse_key)}
+                                className={cn(
+                                  "h-10 rounded-xl text-[10px] font-black transition-all active:scale-90 flex items-center justify-center border shadow-sm",
+                                  isDone 
+                                    ? "bg-[#D4AF37] text-black border-[#800000]/10" 
+                                    : "bg-white text-slate-400 border-slate-100 hover:border-[#800000]/20 hover:text-[#800000]"
+                                )}
+                              >
+                                {v.verse_key.split(':')[1]}
+                              </button>
+                            );
+                          })}
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          </div>
+        )}
 
         {access.showSoftReminder && (
             <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
@@ -285,6 +387,12 @@ export default function MufradatJuzDetailPage() {
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>
           {verses.map((verse, index) => {
+            const prevVerse = index > 0 ? verses[index - 1] : null;
+            const surahId = parseInt(verse.verse_key.split(':')[0]);
+            const prevSurahId = prevVerse ? parseInt(prevVerse.verse_key.split(':')[0]) : null;
+            const isNewSurah = surahId !== prevSurahId;
+            const surahInfo = isNewSurah ? QURAN_CHAPTERS.find(c => c.id === surahId) : null;
+
             const verseIdKey = verse.verse_key.replace(':', '-');
             const isCompleted = passedVerses.has(verse.verse_key);
             const isPrevVerseDone = index === 0 || passedVerses.has(verses[index-1].verse_key);
@@ -298,6 +406,17 @@ export default function MufradatJuzDetailPage() {
 
             return (
               <div key={verse.id} id={`verse-${verseIdKey}`}>
+                {isNewSurah && surahInfo && (
+                  <div className="bg-[#800000]/5 py-8 px-6 border-y border-[#800000]/10 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#800000]/60">Bagian Surah</p>
+                      <h2 className="text-xl font-black font-headline text-[#800000]">{surahInfo.id}. {surahInfo.name_simple}</h2>
+                    </div>
+                    <div className="text-right">
+                       <p className="text-2xl font-arabic text-[#800000]">{surahInfo.name_arabic}</p>
+                    </div>
+                  </div>
+                )}
                 <div className={cn("py-12 px-4 space-y-8 transition-opacity border-b border-dashed border-slate-100", !isUnlocked && "opacity-60")}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-[#800000] opacity-40">

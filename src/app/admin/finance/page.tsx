@@ -64,6 +64,7 @@ import {
   BookOpen,
   FileText,
   Plus,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -95,6 +96,17 @@ export default function MufradatFinancePage() {
   const [manualMonth, setManualMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
   const [manualUniqueCode, setManualUniqueCode] = useState<string>("0");
   const [manualType, setManualType] = useState<string>("monthly"); // 'initial' or 'monthly'
+
+  // Edit Transaction States
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isEditLoading, setIsEditLoading] = useState(false);
+  const [editingReg, setEditingReg] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editUniqueCode, setEditUniqueCode] = useState("");
+  const [editRegFee, setEditRegFee] = useState("");
+  const [editMonth, setEditMonth] = useState("");
+  const [editType, setEditType] = useState("monthly");
 
   const { data: usersData, isLoading: isUsersLoading } = useCollection("users");
   const { data: groups, isLoading: isGroupsLoading } = useCollection("mufradat_groups");
@@ -547,6 +559,56 @@ export default function MufradatFinancePage() {
     }
   };
 
+  const openEditDialog = (reg: any) => {
+    setEditingReg(reg);
+    setEditName(reg.user_name || "");
+    setEditAmount((Number(reg.amount) - (Number(reg.unique_code) || (Number(reg.amount) % 1000))).toString());
+    setEditUniqueCode((Number(reg.unique_code) || (Number(reg.amount) % 1000)).toString());
+    setEditRegFee((Number(reg.registration_fee) || 0).toString());
+    setEditMonth(getMonthFallback(reg));
+    setEditType(reg.payment_type || "monthly");
+    setIsEditOpen(true);
+  };
+
+  const handleEditRegistration = async () => {
+    if (!editingReg) return;
+
+    setIsEditLoading(true);
+    try {
+      const totalAmount = parseInt(editAmount) + parseInt(editUniqueCode);
+      
+      const { error } = await supabase
+        .from("halaqah_registrations")
+        .update({
+          user_name: editName,
+          amount: totalAmount,
+          unique_code: parseInt(editUniqueCode),
+          registration_fee: parseInt(editRegFee),
+          billing_month: editMonth,
+          payment_type: editType,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", editingReg.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Perubahan Disimpan",
+        description: `Data transaksi ${editName} berhasil diperbarui.`,
+      });
+      setIsEditOpen(false);
+      refreshRegs();
+    } catch (err: any) {
+      toast({
+        title: "Gagal Menyimpan",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsEditLoading(false);
+    }
+  };
+
   const filteredHistory = useMemo(() => {
     if (!mufradatRegistrations) return [];
     return mufradatRegistrations
@@ -737,6 +799,137 @@ export default function MufradatFinancePage() {
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     "CATAT & AKTIFKAN AKSES"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* EDIT TRANSACTION DIALOG */}
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogContent className="max-w-lg rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+              <DialogHeader className="p-8 bg-blue-600 text-white">
+                <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+                  <Pencil className="w-5 h-5" /> Koreksi Data Transaksi
+                </DialogTitle>
+                <DialogDescription className="text-white/70 font-bold uppercase tracking-widest text-[10px] mt-1">
+                  Memperbarui data pendaftaran & rincian finansial thalibah
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="p-8 space-y-6 bg-white overflow-y-auto max-h-[70vh]">
+                {editMonth && financeData[editMonth]?.isDisbursed && (
+                  <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex items-start gap-3 animate-pulse">
+                    <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                    <p className="text-[10px] text-rose-800 font-black leading-relaxed italic">
+                      PERINGATAN: Bulan ini sudah dicairkan. Mengubah data ini akan menyebabkan ketidaksinkronan dengan laporan payout yang sudah ada.
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    Nama Thalibah (Internal)
+                  </Label>
+                  <Input 
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="h-12 border-2 rounded-xl font-bold"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Nominal Infaq (Base)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      className="h-12 border-2 rounded-xl font-black text-[#800000]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Kode Unik
+                    </Label>
+                    <Input
+                      type="number"
+                      value={editUniqueCode}
+                      onChange={(e) => setEditUniqueCode(e.target.value)}
+                      className="h-12 border-2 rounded-xl font-black"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Biaya Pendaftaran (Gross)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={editRegFee}
+                      onChange={(e) => setEditRegFee(e.target.value)}
+                      className="h-12 border-2 rounded-xl font-black text-blue-600"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Bulan Laporan
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="YYYY-MM"
+                      value={editMonth}
+                      onChange={(e) => setEditMonth(e.target.value)}
+                      className="h-12 border-2 rounded-xl font-black"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    Tipe Transaksi
+                  </Label>
+                  <Select value={editType} onValueChange={setEditType}>
+                    <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="initial">Pendaftaran Awal</SelectItem>
+                      <SelectItem value="monthly">Iuran Bulanan</SelectItem>
+                      <SelectItem value="leave_request">Cuti (0 Nom)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-3">
+                  <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+                  <p className="text-[10px] text-blue-800 font-bold leading-relaxed italic">
+                    Koreksi data ini hanya memengaruhi rekaman finansial. Hak akses thalibah menyesuaikan dengan status terbaru di profil user.
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter className="p-6 bg-slate-50 border-t flex gap-3">
+                <Button
+                  variant="ghost"
+                  className="flex-1 font-bold h-12"
+                  onClick={() => setIsEditOpen(false)}
+                >
+                  Batal
+                </Button>
+                <Button
+                  className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-black h-12 rounded-xl shadow-lg"
+                  onClick={handleEditRegistration}
+                  disabled={isEditLoading}
+                >
+                  {isEditLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "SIMPAN PERUBAHAN"
                   )}
                 </Button>
               </DialogFooter>
@@ -1422,16 +1615,26 @@ export default function MufradatFinancePage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          onClick={() =>
-                            handleDeleteRegistration(reg.id, reg.user_name)
-                          }
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                            onClick={() => openEditDialog(reg)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            onClick={() =>
+                              handleDeleteRegistration(reg.id, reg.user_name)
+                            }
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
