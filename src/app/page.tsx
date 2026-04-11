@@ -59,6 +59,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ReferralCard } from "../components/dashboard/ReferralCard";
 
 const MAJOR_CITIES = [
   { name: "Jakarta", lat: -6.2088, lon: 106.8456 },
@@ -85,7 +86,7 @@ export default function DashboardPage() {
   // Mutaba'ah Progress Calculation - only fetch if user is logged in
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const thirtyDaysAgoStr = useMemo(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], []);
-  
+
   const mutabaahOptions = useMemo(() => (user?.id ? {
     filters: [
       { column: 'user_id', operator: '==', value: user.id },
@@ -270,11 +271,11 @@ export default function DashboardPage() {
   const repetisiPercent = Math.min(Math.round((todayQuizCount / 5) * 100), 100);
 
   // Date Formatting
-  const gregorianDate = new Intl.DateTimeFormat('id-ID', { 
-    weekday: 'long', 
-    day: 'numeric', 
-    month: 'long', 
-    year: 'numeric' 
+  const gregorianDate = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
   }).format(new Date());
 
   const [hijriDate, setHijriDate] = useState<string>("");
@@ -310,7 +311,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const generateReferralCode = async () => {
       if (!user || userData?.referral_code || isGeneratingCode) return;
-      
+
       setIsGeneratingCode(true);
       try {
         const firstName = (user.user_metadata?.full_name?.split(' ')[0] || 'AQLI').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -357,15 +358,15 @@ export default function DashboardPage() {
   // Combine activities for "Riwayat Terkini"
   const recentActivities = useMemo(() => {
     const activities: any[] = [];
-    
+
     // 1. Add Quiz Attempts (Mufradat / Irab)
     quizAttempts?.forEach((q: any) => {
       const isMufradat = q.quiz_id?.startsWith('mufradat');
       const isIrab = q.quiz_id?.startsWith('irab');
-      
+
       let programName = isMufradat ? 'Hi Mufradat' : isIrab ? 'Hi Irab' : 'Kuis';
       let statusLabel = q.is_passed ? 'Lulus' : 'Kuis';
-      
+
       let title = "";
       let subtitle = "";
 
@@ -420,7 +421,7 @@ export default function DashboardPage() {
         'subuh': 'Shalat Subuh', 'dhuha': 'Shalat Dhuha', 'quran': 'Tilawah Quran',
         'al_mulk': 'Baca Al-Mulk', 'dzikir_pagi': 'Dzikir Pagi', 'dzikir_petang': 'Dzikir Petang'
       };
-      
+
       activities.push({
         id: m.id,
         type: 'mutabaah',
@@ -494,7 +495,7 @@ export default function DashboardPage() {
   }, [quizAttempts, userDonations, mutabaahHistory, ngajiRegs, user]);
 
   const isRegistered = useMemo(() => {
-    return !!userData?.mufradat_group_id || !!userData?.is_tikrar_paid || ngajiRegs?.some(r => 
+    return !!userData?.mufradat_group_id || !!userData?.is_tikrar_paid || ngajiRegs?.some(r =>
       ['active', 'verified', 'pending_verification'].includes(r.status)
     );
   }, [userData, ngajiRegs]);
@@ -502,7 +503,7 @@ export default function DashboardPage() {
   // ONBOARDING CHECKLIST LOGIC
   const onboardingSteps = useMemo(() => {
     if (!user) return [];
-    
+
     return [
       {
         id: "profile",
@@ -587,7 +588,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <div className="text-2xl sm:text-3xl font-black text-[#D4AF37] tracking-tighter">{nextPrayer.time}</div>
-                  
+
                   <Dialog>
                     <DialogTrigger asChild>
                       <Badge className="bg-white/20 hover:bg-white/30 backdrop-blur border-none text-[8px] font-black text-white p-0 h-auto gap-1 cursor-pointer transition-colors px-1">
@@ -639,11 +640,11 @@ export default function DashboardPage() {
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Selesaikan langkah awal Ukhti</p>
                 </div>
                 <div className="flex flex-col items-end">
-                   <span className="text-xl font-black text-[#800000] leading-none">{onboardingPercent}%</span>
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Selesai</span>
+                  <span className="text-xl font-black text-[#800000] leading-none">{onboardingPercent}%</span>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Selesai</span>
                 </div>
               </div>
-              
+
               <Progress value={onboardingPercent} className="h-2 bg-slate-100" indicatorClassName="bg-amber-400 transition-all duration-1000" />
 
               <div className="grid gap-3">
@@ -669,7 +670,7 @@ export default function DashboardPage() {
                       </div>
                       {!step.isDone && (
                         <div className="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center group-hover:bg-[#800000] group-hover:border-[#800000] transition-colors">
-                           <ArrowRight className="w-3 h-3 text-slate-300 group-hover:text-white" />
+                          <ArrowRight className="w-3 h-3 text-slate-300 group-hover:text-white" />
                         </div>
                       )}
                     </div>
@@ -710,6 +711,16 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Widget Saldo Referral */}
+      {user && userData?.referral_code && (
+        <div className="mx-1 mt-4">
+          <ReferralCard
+            referralCode={userData.referral_code}
+            balance={userData.referral_balance || 0}
+          />
+        </div>
+      )}
+
       {/* 1. GUEST PROMO (Moved right above Layanan Utama) */}
       {!isRegistered && (
         <div className="mx-1 mt-2 mb-2">
@@ -730,12 +741,12 @@ export default function DashboardPage() {
                   </p>
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
                     <div className="flex items-center gap-2">
-                       <Sparkles className="w-4 h-4 text-amber-400" />
-                       <span className="text-[10px] font-black text-white uppercase tracking-wider">Diskon Referral 5rb</span>
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Diskon Referral 5rb</span>
                     </div>
                     <div className="flex items-center gap-2">
-                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                       <span className="text-[10px] font-black text-white uppercase tracking-wider">Mulai dari 20rb</span>
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Mulai dari 20rb</span>
                     </div>
                   </div>
                 </div>
@@ -828,15 +839,15 @@ export default function DashboardPage() {
           <Card className="border-none shadow-2xl overflow-hidden rounded-[2.5rem] bg-white border border-amber-100 flex flex-col sm:flex-row min-h-[180px] group transition-all">
             {/* Promo Image (Premium Preview) */}
             <div className="relative w-full sm:w-1/3 bg-[#800000] overflow-hidden">
-               <img 
-                src="/images/promo-hiaqli.png" 
-                alt="Promo Hi AQLI" 
+              <img
+                src="/images/promo-hiaqli.png"
+                alt="Promo Hi AQLI"
                 className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#800000] via-transparent to-transparent sm:bg-gradient-to-r" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="p-3 bg-white/10 backdrop-blur rounded-2xl border border-white/20">
-                   <Sparkles className="w-6 h-6 text-amber-400 animate-pulse" />
+                  <Sparkles className="w-6 h-6 text-amber-400 animate-pulse" />
                 </div>
               </div>
             </div>
@@ -855,10 +866,10 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex flex-col gap-1 mb-6">
-                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kode Referral Ukhti</p>
-                    <div className="text-2xl font-black text-[#800000] tracking-[0.3em] font-mono">
-                      {userData.referral_code}
-                    </div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kode Referral Ukhti</p>
+                  <div className="text-2xl font-black text-[#800000] tracking-[0.3em] font-mono">
+                    {userData.referral_code}
+                  </div>
                 </div>
               </div>
 
@@ -867,9 +878,9 @@ export default function DashboardPage() {
                 const origin = "https://hiaqli.pro";
                 const referralLink = `${origin}/register?ref=${userData.referral_code}&redirectTo=${encodeURIComponent(`/study-circles/registration?ref=${userData.referral_code}`)}`;
                 const commonPromoText = `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ✨\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group (Cuma 20rb!).\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n💬 WhatsApp: https://hiaqli.pro/whatsapp\n📢 Telegram: https://hiaqli.pro/telegram\n\nKunjungi Website Kami:\n🌐 www.hiaqli.pro\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏✨`;
-                
+
                 return (
-                  <Button 
+                  <Button
                     variant="outline"
                     className="w-full rounded-2xl h-16 font-black uppercase text-[12px] tracking-[0.2em] gap-3 bg-[#800000] text-white border-2 border-[#800000] hover:bg-white hover:text-[#800000] transition-all shadow-xl shadow-[#800000]/20 group/btn"
                     onClick={() => {
@@ -880,7 +891,7 @@ export default function DashboardPage() {
                       });
                     }}
                   >
-                    <Download className="w-5 h-5 group-hover/btn:-translate-y-1 transition-transform" /> 
+                    <Download className="w-5 h-5 group-hover/btn:-translate-y-1 transition-transform" />
                     SALIN PESAN PROMOSI
                   </Button>
                 );
@@ -908,9 +919,9 @@ export default function DashboardPage() {
                   <div className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110",
                     activity.type === 'quiz' && activity.is_passed ? "bg-emerald-50 text-emerald-600" :
-                    activity.type === 'quiz' && !activity.is_passed ? "bg-rose-50 text-rose-600" :
-                    activity.type === 'donation' ? "bg-blue-50 text-blue-600" :
-                    activity.type === 'mutabaah' ? "bg-amber-50 text-amber-600" : "bg-primary/5 text-primary"
+                      activity.type === 'quiz' && !activity.is_passed ? "bg-rose-50 text-rose-600" :
+                        activity.type === 'donation' ? "bg-blue-50 text-blue-600" :
+                          activity.type === 'mutabaah' ? "bg-amber-50 text-amber-600" : "bg-primary/5 text-primary"
                   )}>
                     <activity.icon className="w-6 h-6" />
                   </div>
@@ -919,9 +930,9 @@ export default function DashboardPage() {
                       <span className={cn(
                         "text-[9px] font-black uppercase tracking-[0.15em]",
                         activity.type === 'quiz' && activity.is_passed ? "text-emerald-600" :
-                        activity.type === 'quiz' && !activity.is_passed ? "text-rose-600" :
-                        activity.type === 'donation' ? "text-blue-600" :
-                        "text-[#800000]"
+                          activity.type === 'quiz' && !activity.is_passed ? "text-rose-600" :
+                            activity.type === 'donation' ? "text-blue-600" :
+                              "text-[#800000]"
                       )}>
                         {activity.status} • {activity.program}
                       </span>
@@ -945,27 +956,27 @@ export default function DashboardPage() {
 
           {recentActivities.length > 5 && (
             <div className="flex items-center justify-between mt-6 px-1">
-               <Button 
-                 variant="ghost" 
-                 size="sm" 
-                 onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
-                 disabled={historyPage === 0}
-                 className="text-[10px] font-black uppercase tracking-widest gap-1 hover:text-[#800000]"
-               >
-                 <ChevronLeft className="w-3 h-3" /> SEBELUMNYA
-               </Button>
-               <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                 Halaman {historyPage + 1} dari {Math.ceil(recentActivities.length / 5)}
-               </span>
-               <Button 
-                 variant="ghost" 
-                 size="sm" 
-                 onClick={() => setHistoryPage(p => Math.min(Math.ceil(recentActivities.length / 5) - 1, p + 1))}
-                 disabled={(historyPage + 1) * 5 >= recentActivities.length}
-                 className="text-[10px] font-black uppercase tracking-widest gap-1 hover:text-[#800000]"
-               >
-                 LANJUT <ChevronRight className="w-3 h-3" />
-               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
+                disabled={historyPage === 0}
+                className="text-[10px] font-black uppercase tracking-widest gap-1 hover:text-[#800000]"
+              >
+                <ChevronLeft className="w-3 h-3" /> SEBELUMNYA
+              </Button>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                Halaman {historyPage + 1} dari {Math.ceil(recentActivities.length / 5)}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setHistoryPage(p => Math.min(Math.ceil(recentActivities.length / 5) - 1, p + 1))}
+                disabled={(historyPage + 1) * 5 >= recentActivities.length}
+                className="text-[10px] font-black uppercase tracking-widest gap-1 hover:text-[#800000]"
+              >
+                LANJUT <ChevronRight className="w-3 h-3" />
+              </Button>
             </div>
           )}
         </section>
@@ -977,36 +988,36 @@ export default function DashboardPage() {
           <p className="text-[10px] font-black text-[#800000] uppercase tracking-[0.2em]">Gabung Komunitas Kami</p>
           <h3 className="text-lg font-black text-slate-800 font-headline">Lebih Dekat Dengan Al-Qur'an</h3>
         </div>
-        
+
         <div className="grid grid-cols-3 gap-2 w-full max-w-md px-1">
-          <Link 
-            href="/whatsapp" 
-            target="_blank" 
+          <Link
+            href="/whatsapp"
+            target="_blank"
             className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-500/10"
           >
             <MessageSquare className="w-4 h-4 fill-white" />
             <span className="text-[8px] font-black uppercase tracking-wider">Grup WA</span>
           </Link>
-          
-          <Link 
-            href="/channel" 
-            target="_blank" 
+
+          <Link
+            href="/channel"
+            target="_blank"
             className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-700/10"
           >
             <Zap className="w-4 h-4 fill-white" />
             <span className="text-[8px] font-black uppercase tracking-wider">Channel WA</span>
           </Link>
-          
-          <Link 
-            href="/telegram" 
-            target="_blank" 
+
+          <Link
+            href="/telegram"
+            target="_blank"
             className="bg-sky-500 hover:bg-sky-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-sky-500/10"
           >
             <ExternalLink className="w-4 h-4" />
             <span className="text-[8px] font-black uppercase tracking-wider">Telegram</span>
           </Link>
         </div>
-        
+
         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">www.hiaqli.pro • Teruslah Istiqomah ✨</p>
       </div>
     </div>
