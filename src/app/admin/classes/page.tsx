@@ -62,6 +62,7 @@ export default function AdminClassesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHalaqah, setEditingHalaqah] = useState<any>(null);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Participant Management State
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
@@ -178,20 +179,30 @@ export default function AdminClassesPage() {
       quota: form.quota
     };
 
+    setIsSaving(true);
     try {
       if (editingHalaqah) {
-        updateDocumentNonBlocking("halaqahs", editingHalaqah.id, finalData);
+        const { error } = await supabase.from("halaqahs").update(finalData).eq('id', editingHalaqah.id);
+        if (error) throw error;
         toast({ title: "Kelas Diperbarui" });
       } else {
-        addDocumentNonBlocking("halaqahs", {
+        const { error } = await supabase.from("halaqahs").insert({
           ...finalData,
           created_at: new Date().toISOString()
         });
+        if (error) throw error;
         toast({ title: "Kelas Berhasil Ditambahkan" });
       }
       setIsDialogOpen(false);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Gagal menyimpan data." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ 
+        variant: "destructive", 
+        title: "Gagal menyimpan data",
+        description: e.message || "Pastikan Ukhti memiliki izin akses (Admin/SuperAdmin)."
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -719,8 +730,9 @@ export default function AdminClassesPage() {
           </div>
 
           <DialogFooter className="shrink-0 pt-4">
-            <Button onClick={handleSave} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black gap-2 h-12 shadow-xl">
-              <CheckCircle2 className="w-5 h-5" /> SIMPAN PROGRAM
+            <Button onClick={handleSave} disabled={isSaving} className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black gap-2 h-12 shadow-xl">
+              {isSaving ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+              {isSaving ? "SEDANG MENYIMPAN..." : "SIMPAN PROGRAM"}
             </Button>
           </DialogFooter>
         </DialogContent>
