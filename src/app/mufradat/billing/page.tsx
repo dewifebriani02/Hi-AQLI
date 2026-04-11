@@ -606,7 +606,7 @@ export default function MufradatBillingPage() {
               <div className="flex gap-2 pt-2">
                 {access.status === 'inactive' ? (
                   <Button asChild className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-10 rounded-xl">
-                    <Link href="/study-circles/registration?id=mufradat-premium">DAFTAR PROGRAM SEKARANG</Link>
+                    <Link href="/programs">DAFTAR PROGRAM SEKARANG</Link>
                   </Button>
                 ) : (
                   <>

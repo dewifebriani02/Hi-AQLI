@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUser, initiateEmailSignUp, initiateGoogleSignIn, supabase } from '@/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import Link from 'next/link';
 import { Logo } from '@/components/common/logo';
 import { Suspense } from 'react';
-import { validateEmail } from '@/lib/utils';
+import { validateEmail, cn } from '@/lib/utils';
 
 function RegisterContent() {
   const { user, isUserLoading } = useUser();
@@ -33,7 +33,9 @@ function RegisterContent() {
   const [error, setError] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
   // Referral Validation State
   const [referralStatus, setReferralStatus] = useState<{
     isLoading: boolean;
@@ -183,7 +185,7 @@ function RegisterContent() {
       setError(signUpError.message);
       setLoading(false);
     } else {
-        // Sign up success! 
+        // Sign up success!
         // If email confirmation is ON, Supabase return user but session is null.
         // If email confirmation is OFF, session is returned and useUser state will change.
         setLoading(false);
@@ -192,8 +194,11 @@ function RegisterContent() {
               title: "Masyallah, Pendaftaran Berhasil!",
               description: "Selamat datang di Hi AQLI, Ukhti otomatis masuk.",
             });
-            // Give a tiny delay for toast
-            setTimeout(() => router.push(redirectTo), 100);
+            // Redirect to programs page to choose what to do next (unless specific redirectTo is set)
+            setTimeout(() => {
+              const destination = redirectTo !== '/' ? redirectTo : '/programs';
+              router.push(destination);
+            }, 100);
         } else {
             // This case is unlikely if error is null but no user
             router.push('/login');

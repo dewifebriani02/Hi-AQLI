@@ -59,7 +59,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ReferralCard } from "../components/dashboard/ReferralCard";
 
 const MAJOR_CITIES = [
   { name: "Jakarta", lat: -6.2088, lon: 106.8456 },
@@ -526,7 +525,7 @@ export default function DashboardPage() {
         title: "Daftar Program",
         subtitle: "Gabung di Hi Mufradat/Tikrar",
         isDone: isRegistered,
-        href: "/study-circles/registration?id=mufradat-premium",
+        href: "/programs",
         icon: BookOpen
       }
     ];
@@ -711,20 +710,10 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Widget Saldo Referral */}
-      {user && userData?.referral_code && (
-        <div className="mx-1 mt-4">
-          <ReferralCard
-            referralCode={userData.referral_code}
-            balance={userData.referral_balance || 0}
-          />
-        </div>
-      )}
-
       {/* 1. GUEST PROMO (Moved right above Layanan Utama) */}
       {!isRegistered && (
         <div className="mx-1 mt-2 mb-2">
-          <Link href={user ? "/study-circles/registration?id=mufradat-premium" : "/register"}>
+          <Link href={user ? "/programs" : "/register"}>
             <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] to-[#500000] shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:shadow-[#800000]/20">
               <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 blur-3xl -mr-20 -mt-20 rounded-full animate-pulse" />
               <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
@@ -876,7 +865,9 @@ export default function DashboardPage() {
               {/* Common Promo Text Generator */}
               {(() => {
                 const origin = "https://hiaqli.pro";
-                const referralLink = `${origin}/register?ref=${userData.referral_code}&redirectTo=${encodeURIComponent(`/study-circles/registration?ref=${userData.referral_code}`)}`;
+                // Simplified referral link - redirect to register with referral code only
+                // The register page will handle the program selection
+                const referralLink = `${origin}/register?ref=${userData.referral_code}`;
                 const commonPromoText = `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ✨\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group (Cuma 20rb!).\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n💬 WhatsApp: https://hiaqli.pro/whatsapp\n📢 Telegram: https://hiaqli.pro/telegram\n\nKunjungi Website Kami:\n🌐 www.hiaqli.pro\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏✨`;
 
                 return (

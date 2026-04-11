@@ -4,6 +4,7 @@
 import { useState, useMemo } from "react";
 import { useUser, supabase } from "@/supabase";
 import { useCollection, useDoc } from "@/supabase/db";
+import { useUserPermissions } from "@/lib/permissions";
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/supabase/non-blocking-updates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ const DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 export default function AdminClassesPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { canDelete } = useUserPermissions(user?.id);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHalaqah, setEditingHalaqah] = useState<any>(null);
@@ -88,6 +90,31 @@ export default function AdminClassesPage() {
 
   // Fetch Users for Selection
   const { data: allUsers } = useCollection("users");
+
+  // Filter Muallimah and Musyrifah
+  const muallimahList = useMemo(() => {
+    if (!allUsers) return [];
+    return allUsers
+      .filter(u => u.role_id === 'muallimah')
+      .map(u => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.full_name || u.username
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [allUsers]);
+
+  const musyrifahList = useMemo(() => {
+    if (!allUsers) return [];
+    return allUsers
+      .filter(u => u.role_id === 'musyrifah')
+      .map(u => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.full_name || u.username
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [allUsers]);
 
   // Fetch Registrations for Selected Halaqah (Detailed view in Dialog)
   const participantOptions = useMemo(() => ({
@@ -395,9 +422,11 @@ export default function AdminClassesPage() {
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => handleOpenEdit(h)}>
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5" onClick={() => handleDelete(h.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {canDelete() && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5" onClick={() => handleDelete(h.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -549,11 +578,46 @@ export default function AdminClassesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div className="space-y-2">
                 <Label className="text-xs font-black uppercase">Mu'allimah</Label>
-                <Input value={form.muallimah} onChange={(e) => setForm({ ...form, muallimah: e.target.value })} placeholder="Nama Mu'allimah" />
+                <Select
+                  value={form.muallimah}
+                  onValueChange={(value) => setForm({ ...form, muallimah: value })}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Pilih Mu'allimah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {muallimahList.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        Tidak ada muallimah tersedia
+                      </div>
+                    ) : (
+                      muallimahList.map((muallimah) => (
+                        <SelectItem key={muallimah.id} value={muallimah.displayName}>
+                          {muallimah.displayName}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase">Musyrifah</Label>
-                <Input value={form.musyrifah} onChange={(e) => setForm({ ...form, musyrifah: e.target.value })} placeholder="Nama Musyrifah (Opsional)" />
+                <Select
+                  value={form.musyrifah}
+                  onValueChange={(value) => setForm({ ...form, musyrifah: value })}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Pilih Musyrifah (Opsional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tidak Ada</SelectItem>
+                    {musyrifahList.map((musyrifah) => (
+                      <SelectItem key={musyrifah.id} value={musyrifah.displayName}>
+                        {musyrifah.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

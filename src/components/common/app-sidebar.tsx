@@ -36,6 +36,7 @@ const Logo = dynamic(() => import('./logo').then(mod => mod.Logo), { ssr: false 
 import { cn } from "@/lib/utils";
 import { useUser } from "@/supabase";
 import { useDoc } from "@/supabase/db";
+import { useUserPermissions } from "@/lib/permissions";
 
 const adminItems = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
@@ -102,16 +103,50 @@ export function AppSidebar() {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const toggleExpand = (label: string) => {
-    setExpandedItems(prev => 
+    setExpandedItems(prev =>
       prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label]
     );
   };
 
   const { data: isAdmin } = useDoc(user ? "roles_admin" : null, user?.id);
   const { data: isSuperAdmin } = useDoc(user ? "roles_superadmin" : null, user?.id);
+  const { isSuperUser, canAccessProgram, isMusyrifah } = useUserPermissions(user?.id);
 
   // Security Hardening: Only trust the dedicated RBAC tables
-  const hasAdminAccess = !!isAdmin?.id || !!isSuperAdmin?.id;
+  const hasAdminAccess = !!isAdmin?.id || !!isSuperAdmin?.id || isMusyrifah;
+
+  // Define program mapping for menu filtering
+  const programMenuMap: Record<string, string[]> = {
+    hi_mufradat: ["/admin/mufradat", "/admin/mufradat/groups", "/admin/mufradat/leave", "/admin/mufradat/reports", "/admin/mufradat/mabar"],
+    hi_tikrar: ["/admin/tikrar"],
+    hi_ngaji: ["/admin/classes"],
+    hi_berbagi: ["/admin/donations", "/admin/campaigns"],
+    hi_mutabaah: ["/admin/mutabaah"],
+    hi_muhasabah: ["/admin/muhasabah"],
+  };
+
+  // Filter menu items based on user permissions
+  const filteredItems = adminItems.map(item => {
+    // For non-subItems (single level items), show for superusers only
+    if (!item.subItems) {
+      return isSuperUser ? item : null;
+    }
+
+    // For superusers, show all subItems
+    if (isSuperUser) return item;
+
+    // For musyrifah, filter subItems based on assigned programs
+    const allowedSubItems = item.subItems.filter(sub => {
+      const program = Object.entries(programMenuMap).find(([_, paths]) => paths.includes(sub.href));
+      return program ? canAccessProgram(program[0] as any) : false;
+    });
+
+    // Return item with filtered subItems
+    return { ...item, subItems: allowedSubItems };
+  }).filter(item => {
+    // Remove null items and items with no subItems left
+    return item && (!item.subItems || item.subItems.length > 0);
+  });
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -143,7 +178,7 @@ export function AppSidebar() {
           <h2 className="mb-4 px-4 text-[10px] font-black uppercase tracking-widest text-white/50 group-data-[collapsible=icon]:hidden">
             Menu Admin
           </h2>
-          {adminItems.map((item) => {
+          {filteredItems.map((item) => {
             if (item.subItems) {
               const isExpanded = expandedItems.includes(item.label);
               const isAnySubActive = item.subItems.some(sub => pathname === sub.href);

@@ -103,7 +103,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
         isVerified: false,
         showSoftReminder: false,
         message: "Program ini membutuhkan pendaftaran untuk mengakses seluruh ayat. Mari bergabung menjadi peserta Hi Mufradat!",
-        redirectTo: '/register?redirectTo=/study-circles/registration?id=mufradat-premium',
+        redirectTo: '/programs',
         buttonText: 'DAFTAR PROGRAM SEKARANG'
       };
     }
@@ -142,7 +142,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isVerified: false,
       showSoftReminder: false,
       message: "Ukhti belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu.",
-      redirectTo: '/study-circles/registration?id=mufradat-premium',
+      redirectTo: '/programs',
       buttonText: 'DAFTAR PROGRAM SEKARANG'
     };
   }

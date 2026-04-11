@@ -167,10 +167,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                     variant="outline" 
                     size="sm" 
                     onClick={handleInstallClick}
-                    className="hidden sm:flex border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-tight gap-1.5 rounded-xl hover:bg-slate-50 transition-all border-2"
+                    className="flex border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-tight gap-1.5 rounded-xl hover:bg-slate-50 transition-all border-2"
                   >
                     <Smartphone className="w-3.5 h-3.5" />
-                    UNDUH APP
+                    <span className="hidden sm:inline">UNDUH APP</span>
                   </Button>
                 )}
                 

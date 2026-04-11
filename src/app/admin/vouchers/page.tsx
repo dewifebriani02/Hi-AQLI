@@ -3,6 +3,8 @@
 import { useState, useMemo } from "react";
 import { supabase } from "@/supabase";
 import { useCollection } from "@/supabase/db";
+import { useUser } from "@/supabase";
+import { useUserPermissions } from "@/lib/permissions";
 import { 
   Card, 
   CardContent, 
@@ -51,7 +53,9 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 export default function AdminVouchersPage() {
+  const { user } = useUser();
   const { toast } = useToast();
+  const { canDelete } = useUserPermissions(user?.id);
   
   const voucherOptions = useMemo(() => ({
     orderBy: { column: 'created_at', ascending: false }
@@ -338,19 +342,21 @@ export default function AdminVouchersPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right pr-6">
-                    <Button 
-                       variant="ghost" 
-                       size="icon" 
-                       className="rounded-full text-rose-300 hover:text-rose-600 hover:bg-rose-50"
-                       onClick={() => {
-                          if (confirm(`Hapus voucher ${v.code}? Tindakan ini tidak dapat dibatalkan.`)) {
-                             handleDeleteVoucher(v.id);
-                          }
-                       }}
-                       disabled={isDeleting === v.id}
-                    >
-                       {isDeleting === v.id ? <Loader2 className="w-4 h-4 animate-spin text-rose-600" /> : <Trash2 className="w-4 h-4" />}
-                    </Button>
+                    {canDelete() && (
+                      <Button
+                         variant="ghost"
+                         size="icon"
+                         className="rounded-full text-rose-300 hover:text-rose-600 hover:bg-rose-50"
+                         onClick={() => {
+                            if (confirm(`Hapus voucher ${v.code}? Tindakan ini tidak dapat dibatalkan.`)) {
+                               handleDeleteVoucher(v.id);
+                            }
+                         }}
+                         disabled={isDeleting === v.id}
+                      >
+                         {isDeleting === v.id ? <Loader2 className="w-4 h-4 animate-spin text-rose-600" /> : <Trash2 className="w-4 h-4" />}
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

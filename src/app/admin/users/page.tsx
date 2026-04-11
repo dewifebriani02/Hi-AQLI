@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser, supabase } from "@/supabase";
 import { useCollection } from "@/supabase/db";
 import { updateDocumentNonBlocking, addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
@@ -27,6 +27,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -59,6 +60,15 @@ const ROLES = [
   { id: "admin", name: "Administrator" },
 ];
 
+const PROGRAM_OPTIONS = [
+  { id: "hi_mufradat", name: "Hi Mufradat" },
+  { id: "hi_tikrar", name: "Hi Tikrar" },
+  { id: "hi_ngaji", name: "Hi Ngaji" },
+  { id: "hi_berbagi", name: "Hi Berbagi" },
+  { id: "hi_mutabaah", name: "Hi Mutabaah" },
+  { id: "hi_muhasabah", name: "Hi Muhasabah" },
+];
+
 const INITIAL_ADD_FORM = {
   full_name: "",
   username: "",
@@ -68,6 +78,7 @@ const INITIAL_ADD_FORM = {
   bank_name: "",
   bank_account_number: "",
   bank_account_holder: "",
+  assigned_programs: [] as string[],
 };
 
 export default function AdminUsersPage() {
@@ -83,6 +94,9 @@ export default function AdminUsersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState(INITIAL_ADD_FORM);
 
+  // Musyrifah Programs State
+  const [editingAssignedPrograms, setEditingAssignedPrograms] = useState<string[]>([]);
+
   const { data: users, isLoading: isUsersLoading, refresh: refreshUsers } = useCollection("users");
   const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations");
   const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection("voucher_redemptions", { 
@@ -97,8 +111,31 @@ export default function AdminUsersPage() {
     u.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Load musyrifah programs when editingUser changes
+  useEffect(() => {
+    async function loadMusyrifahPrograms() {
+      if (editingUser?.role_id === 'musyrifah') {
+        const { data } = await supabase
+          .from('roles_musyrifah')
+          .select('assigned_programs')
+          .eq('id', editingUser.id)
+          .maybeSingle();
+        setEditingAssignedPrograms(data?.assigned_programs || []);
+      } else {
+        setEditingAssignedPrograms([]);
+      }
+    }
+    loadMusyrifahPrograms();
+  }, [editingUser?.id, editingUser?.role_id]);
+
   const handleUpdateUser = async () => {
     if (!editingUser?.id) return;
+
+    // Validate musyrifah has at least one program
+    if (editingUser.role_id === 'musyrifah' && editingAssignedPrograms.length === 0) {
+      toast({ variant: "destructive", title: "Musyrifah harus memiliki minimal 1 program." });
+      return;
+    }
 
     const updateData: any = {
       full_name: editingUser.full_name || "",
@@ -116,8 +153,27 @@ export default function AdminUsersPage() {
       const { error } = await supabase.from('users').update(updateData).eq('id', editingUser.id);
       if (error) throw error;
 
+      // Handle Admin Role
       if (editingUser.role_id === 'admin') {
         await supabase.from('roles_admin').upsert({ id: editingUser.id });
+      } else {
+        // Remove admin role if changed from admin
+        await supabase.from('roles_admin').delete().eq('id', editingUser.id);
+      }
+
+      // Handle Musyrifah Role with Program Assignments
+      if (editingUser.role_id === 'musyrifah') {
+        if (editingAssignedPrograms.length > 0) {
+          await supabase.from('roles_musyrifah').upsert({
+            id: editingUser.id,
+            assigned_programs: editingAssignedPrograms
+          });
+        } else {
+          await supabase.from('roles_musyrifah').delete().eq('id', editingUser.id);
+        }
+      } else {
+        // Remove musyrifah role if changed from musyrifah
+        await supabase.from('roles_musyrifah').delete().eq('id', editingUser.id);
       }
 
       toast({
@@ -181,6 +237,12 @@ export default function AdminUsersPage() {
       return;
     }
 
+    // Validate musyrifah has at least one program
+    if (addForm.role_id === 'musyrifah' && addForm.assigned_programs.length === 0) {
+      toast({ variant: "destructive", title: "Musyrifah harus memiliki minimal 1 program." });
+      return;
+    }
+
     const tempId = `user_${Date.now()}`;
 
     try {
@@ -200,6 +262,14 @@ export default function AdminUsersPage() {
 
       if (addForm.role_id === 'admin') {
         addDocumentNonBlocking("roles_admin", { id: tempId });
+      }
+
+      // Handle Musyrifah Role with Program Assignments
+      if (addForm.role_id === 'musyrifah' && addForm.assigned_programs.length > 0) {
+        addDocumentNonBlocking("roles_musyrifah", {
+          id: tempId,
+          assigned_programs: addForm.assigned_programs
+        });
       }
 
       toast({
@@ -313,6 +383,45 @@ export default function AdminUsersPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Program Assignment for Musyrifah in Add Form */}
+              {addForm.role_id === 'musyrifah' && (
+                <div className="space-y-3 p-4 bg-emerald-50 rounded-2xl border-2 border-emerald-200">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <Label className="text-xs font-black uppercase text-emerald-700 tracking-wider">Program yang Dikelola</Label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {PROGRAM_OPTIONS.map((program) => (
+                      <div key={program.id} className="flex items-center space-x-2 bg-white p-3 rounded-xl border border-emerald-100">
+                        <Checkbox
+                          id={`add-program-${program.id}`}
+                          checked={addForm.assigned_programs.includes(program.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setAddForm({ ...addForm, assigned_programs: [...addForm.assigned_programs, program.id] });
+                            } else {
+                              setAddForm({ ...addForm, assigned_programs: addForm.assigned_programs.filter(p => p !== program.id) });
+                            }
+                          }}
+                          className="border-emerald-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                        />
+                        <label
+                          htmlFor={`add-program-${program.id}`}
+                          className="text-[11px] font-bold text-slate-700 cursor-pointer select-none"
+                        >
+                          {program.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {addForm.assigned_programs.length === 0 && (
+                    <p className="text-[10px] text-rose-600 font-medium bg-rose-50 p-2 rounded-lg">
+                      ⚠️ Pilih minimal 1 program untuk musyrifah
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* BANK DETAILS IN ADD FORM */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid gap-4">
@@ -541,8 +650,8 @@ export default function AdminUsersPage() {
                                 <SelectContent>
                                   {ROLES.map(r => (
                                     <SelectItem key={r.id} value={r.id}>
-                                      {r.id === 'learner' 
-                                        ? (editingUser?.followed_halaqahs?.length > 0 ? "Thalibah" : "User Umum") 
+                                      {r.id === 'learner'
+                                        ? (editingUser?.followed_halaqahs?.length > 0 ? "Thalibah" : "User Umum")
                                         : r.name
                                       }
                                     </SelectItem>
@@ -550,6 +659,45 @@ export default function AdminUsersPage() {
                                 </SelectContent>
                               </Select>
                             </div>
+
+                            {/* Program Assignment for Musyrifah */}
+                            {editingUser?.role_id === 'musyrifah' && (
+                              <div className="space-y-3 p-4 bg-emerald-50 rounded-2xl border-2 border-emerald-200">
+                                <div className="flex items-center gap-2">
+                                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                  <Label className="text-xs font-black uppercase text-emerald-700 tracking-wider">Program yang Dikelola</Label>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {PROGRAM_OPTIONS.map((program) => (
+                                    <div key={program.id} className="flex items-center space-x-2 bg-white p-3 rounded-xl border border-emerald-100">
+                                      <Checkbox
+                                        id={`edit-program-${program.id}`}
+                                        checked={editingAssignedPrograms.includes(program.id)}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            setEditingAssignedPrograms([...editingAssignedPrograms, program.id]);
+                                          } else {
+                                            setEditingAssignedPrograms(editingAssignedPrograms.filter(p => p !== program.id));
+                                          }
+                                        }}
+                                        className="border-emerald-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                                      />
+                                      <label
+                                        htmlFor={`edit-program-${program.id}`}
+                                        className="text-[11px] font-bold text-slate-700 cursor-pointer select-none"
+                                      >
+                                        {program.name}
+                                      </label>
+                                    </div>
+                                  ))}
+                                </div>
+                                {editingAssignedPrograms.length === 0 && (
+                                  <p className="text-[10px] text-rose-600 font-medium bg-rose-50 p-2 rounded-lg">
+                                    ⚠️ Pilih minimal 1 program untuk musyrifah
+                                  </p>
+                                )}
+                              </div>
+                            )}
 
                             <div className="space-y-2">
                               <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 grid gap-4">

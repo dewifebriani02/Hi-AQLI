@@ -3,6 +3,8 @@
 import { useState, useMemo } from "react";
 import { useCollection } from "@/supabase/db";
 import { supabase } from "@/supabase";
+import { useUser } from "@/supabase";
+import { useUserPermissions } from "@/lib/permissions";
 import { 
   Card, 
   CardContent, 
@@ -20,6 +22,14 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { 
   Loader2, 
   Users, 
@@ -52,7 +62,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 export default function MufradatGroupsPage() {
+  const { user } = useUser();
   const { toast } = useToast();
+  const { canDelete } = useUserPermissions(user?.id);
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{
@@ -96,6 +108,33 @@ export default function MufradatGroupsPage() {
   });
 
   const { data: allUsers } = useCollection("users");
+
+  // Filter Muallimah and Musyrifah for dropdowns
+  const muallimahList = useMemo(() => {
+    if (!allUsers) return [];
+    return allUsers
+      .filter(u => u.role_id === 'muallimah')
+      .map(u => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.full_name || u.username,
+        phone: u.whatsapp || u.phone || ''
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [allUsers]);
+
+  const musyrifahList = useMemo(() => {
+    if (!allUsers) return [];
+    return allUsers
+      .filter(u => u.role_id === 'musyrifah')
+      .map(u => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.full_name || u.username,
+        phone: u.whatsapp || u.phone || ''
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [allUsers]);
 
   const groupMembers = useMemo(() => {
     if (!viewingGroupId || !allUsers) return [];
@@ -480,15 +519,37 @@ export default function MufradatGroupsPage() {
                       <TableCell>
                         {isEditing ? (
                           <div className="space-y-2">
-                            <Input 
-                              placeholder="Nama Musyrifah"
-                              value={editValues.musyrifah_name} 
-                              onChange={e => setEditValues(v => ({ ...v, musyrifah_name: e.target.value }))}
-                              className="h-8 text-[10px]"
-                            />
-                            <Input 
-                              placeholder="No. WA (62812...)"
-                              value={editValues.musyrifah_phone} 
+                            <Select
+                              value={editValues.musyrifah_name}
+                              onValueChange={(value) => {
+                                const selected = musyrifahList.find(m => m.displayName === value);
+                                setEditValues(v => ({
+                                  ...v,
+                                  musyrifah_name: value,
+                                  musyrifah_phone: selected?.phone || ''
+                                }));
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-[10px] bg-white">
+                                <SelectValue placeholder="Pilih Musyrifah" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {musyrifahList.length === 0 ? (
+                                  <div className="p-2 text-[9px] text-muted-foreground text-center">
+                                    Tidak ada musyrifah
+                                  </div>
+                                ) : (
+                                  musyrifahList.map((musyrifah) => (
+                                    <SelectItem key={musyrifah.id} value={musyrifah.displayName} className="text-[10px]">
+                                      {musyrifah.displayName}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              placeholder="No. WA"
+                              value={editValues.musyrifah_phone}
                               onChange={e => setEditValues(v => ({ ...v, musyrifah_phone: e.target.value }))}
                               className="h-8 text-[10px]"
                             />
@@ -503,15 +564,37 @@ export default function MufradatGroupsPage() {
                       <TableCell>
                         {isEditing ? (
                           <div className="space-y-2">
-                            <Input 
-                              placeholder="Nama Muallimah"
-                              value={editValues.muallimah_name} 
-                              onChange={e => setEditValues(v => ({ ...v, muallimah_name: e.target.value }))}
-                              className="h-8 text-[10px]"
-                            />
-                            <Input 
-                              placeholder="No. WA (62812...)"
-                              value={editValues.muallimah_phone} 
+                            <Select
+                              value={editValues.muallimah_name}
+                              onValueChange={(value) => {
+                                const selected = muallimahList.find(m => m.displayName === value);
+                                setEditValues(v => ({
+                                  ...v,
+                                  muallimah_name: value,
+                                  muallimah_phone: selected?.phone || ''
+                                }));
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-[10px] bg-white">
+                                <SelectValue placeholder="Pilih Muallimah" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {muallimahList.length === 0 ? (
+                                  <div className="p-2 text-[9px] text-muted-foreground text-center">
+                                    Tidak ada muallimah
+                                  </div>
+                                ) : (
+                                  muallimahList.map((muallimah) => (
+                                    <SelectItem key={muallimah.id} value={muallimah.displayName} className="text-[10px]">
+                                      {muallimah.displayName}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              placeholder="No. WA"
+                              value={editValues.muallimah_phone}
                               onChange={e => setEditValues(v => ({ ...v, muallimah_phone: e.target.value }))}
                               className="h-8 text-[10px]"
                             />
@@ -588,14 +671,16 @@ export default function MufradatGroupsPage() {
                              <Button variant="outline" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3 border-2" onClick={() => handleStartEdit(group)}>
                                  Edit
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 text-[9px] sm:text-[10px] font-black uppercase text-rose-600 hover:bg-rose-50 px-2 sm:px-3" 
-                                onClick={() => setConfirmDeleteId(group.id)}
-                              >
-                                 <Trash2 className="w-3.5 h-3.5 mr-1" /> Hapus
-                              </Button>
+                              {canDelete() && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-[9px] sm:text-[10px] font-black uppercase text-rose-600 hover:bg-rose-50 px-2 sm:px-3"
+                                  onClick={() => setConfirmDeleteId(group.id)}
+                                >
+                                   <Trash2 className="w-3.5 h-3.5 mr-1" /> Hapus
+                                </Button>
+                              )}
                           </div>
                         )}
                       </TableCell>
@@ -625,25 +710,89 @@ export default function MufradatGroupsPage() {
                    className="h-12 rounded-xl focus:border-[#800000]/30"
                  />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Musyrifah</label>
-                    <Input 
-                      placeholder="Nama"
-                      value={newGroup.musyrifah_name}
-                      onChange={e => setNewGroup(v => ({ ...v, musyrifah_name: e.target.value }))}
-                      className="h-11 text-xs"
-                    />
-                 </div>
-                 <div className="space-y-1.5 pt-5.5">
-                    <Input 
-                      placeholder="No. WA"
-                      value={newGroup.musyrifah_phone}
-                      onChange={e => setNewGroup(v => ({ ...v, musyrifah_phone: e.target.value }))}
-                      className="h-11 text-xs"
-                    />
-                 </div>
+
+              {/* Musyrifah Selection */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Musyrifah</label>
+                <Select
+                  value={newGroup.musyrifah_name}
+                  onValueChange={(value) => {
+                    const selected = musyrifahList.find(m => m.displayName === value);
+                    setNewGroup(v => ({
+                      ...v,
+                      musyrifah_name: value,
+                      musyrifah_phone: selected?.phone || ''
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="h-11 text-xs bg-white">
+                    <SelectValue placeholder="Pilih Musyrifah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {musyrifahList.length === 0 ? (
+                      <div className="p-2 text-xs text-muted-foreground text-center">
+                        Tidak ada musyrifah tersedia
+                      </div>
+                    ) : (
+                      musyrifahList.map((musyrifah) => (
+                        <SelectItem key={musyrifah.id} value={musyrifah.displayName}>
+                          {musyrifah.displayName}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {newGroup.musyrifah_name && (
+                  <Input
+                    placeholder="No. WA Musyrifah (auto)"
+                    value={newGroup.musyrifah_phone}
+                    onChange={e => setNewGroup(v => ({ ...v, musyrifah_phone: e.target.value }))}
+                    className="h-10 text-xs"
+                  />
+                )}
               </div>
+
+              {/* Muallimah Selection */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Muallimah</label>
+                <Select
+                  value={newGroup.muallimah_name}
+                  onValueChange={(value) => {
+                    const selected = muallimahList.find(m => m.displayName === value);
+                    setNewGroup(v => ({
+                      ...v,
+                      muallimah_name: value,
+                      muallimah_phone: selected?.phone || ''
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="h-11 text-xs bg-white">
+                    <SelectValue placeholder="Pilih Muallimah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {muallimahList.length === 0 ? (
+                      <div className="p-2 text-xs text-muted-foreground text-center">
+                        Tidak ada muallimah tersedia
+                      </div>
+                    ) : (
+                      muallimahList.map((muallimah) => (
+                        <SelectItem key={muallimah.id} value={muallimah.displayName}>
+                          {muallimah.displayName}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {newGroup.muallimah_name && (
+                  <Input
+                    placeholder="No. WA Muallimah (auto)"
+                    value={newGroup.muallimah_phone}
+                    onChange={e => setNewGroup(v => ({ ...v, muallimah_phone: e.target.value }))}
+                    className="h-10 text-xs"
+                  />
+                )}
+              </div>
+
               <div className="space-y-1.5">
                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tanggal Mulai</label>
                  <Input 
