@@ -43,7 +43,7 @@ const PROGRAMS = [
     color: "from-purple-500 to-violet-600",
     price: "Sesuai Kelas",
     features: ["Metode Tartil", "Muallimah Berpengalaman", "Kelas Reguler & Intensif", "Sertifikat", "Evaluasi Berkala"],
-    href: "/study-circles/registration",
+    href: "/study-circles/registration?program=hi_ngaji",
     popular: false
   }
 ];

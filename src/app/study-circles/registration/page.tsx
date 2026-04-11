@@ -60,11 +60,34 @@ function RegistrationForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const halaqahId = searchParams.get('id');
+  const programParam = searchParams.get('program'); // e.g., 'hi_ngaji', 'hi_mufradat', 'tikrar_daily'
 
   // Fetch ALL available halaqahs for selection
   const { data: allHalaqahs, isLoading: isHalaqahsLoading } = useCollection("halaqahs", {
     orderBy: { column: 'created_at', ascending: false }
   });
+
+  // Filter halaqahs based on program parameter
+  const filteredHalaqahs = useMemo(() => {
+    if (!allHalaqahs) return [];
+    if (!programParam) return allHalaqahs;
+    return allHalaqahs.filter(h => h.program_type === programParam);
+  }, [allHalaqahs, programParam]);
+
+  // Get display name for the program type
+  const programDisplayName = useMemo(() => {
+    if (!programParam) return null;
+    const names: Record<string, string> = {
+      'hi_ngaji': 'Hi Ngaji',
+      'hi_mufradat': 'Hi Mufradat',
+      'tikrar_daily': 'Hi Tikrar',
+      'hi_tikrar': 'Hi Tikrar',
+      'hi_berbagi': 'Hi Berbagi',
+      'hi_mutabaah': 'Hi Mutaba\'ah',
+      'hi_muhasabah': 'Hi Muhasabah',
+    };
+    return names[programParam] || programParam;
+  }, [programParam]);
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(user ? "users" : null, user?.id);
 
@@ -72,24 +95,28 @@ function RegistrationForm() {
 
   // Auto-find the circle if ID is in params
   const circle = useMemo(() => {
-    if (!selectedHalaqahId || !allHalaqahs) return null;
-    return allHalaqahs.find(h => h.id === selectedHalaqahId);
-  }, [selectedHalaqahId, allHalaqahs]);
+    const searchPool = programParam ? filteredHalaqahs : allHalaqahs;
+    if (!selectedHalaqahId || !searchPool) return null;
+    return searchPool.find(h => h.id === selectedHalaqahId);
+  }, [selectedHalaqahId, allHalaqahs, filteredHalaqahs, programParam]);
 
   // 2. Resolve Virtual IDs to real UUIDs for database operations
   const resolvedHalaqahId = useMemo(() => {
-    if (!selectedHalaqahId || !allHalaqahs) return selectedHalaqahId;
-    
-    // Virtual ID mapping to programType
-    if (selectedHalaqahId === 'mufradat-premium') {
-      return allHalaqahs.find(h => h.program_type === 'hi_mufradat')?.id || selectedHalaqahId;
+    const searchPool = programParam ? filteredHalaqahs : allHalaqahs;
+    if (!selectedHalaqahId || !searchPool) return selectedHalaqahId;
+
+    // Virtual ID mapping to programType (only applies when not filtered by program)
+    if (!programParam) {
+      if (selectedHalaqahId === 'mufradat-premium') {
+        return allHalaqahs?.find(h => h.program_type === 'hi_mufradat')?.id || selectedHalaqahId;
+      }
+      if (selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1') {
+        return allHalaqahs?.find(h => h.program_type === 'tikrar_daily')?.id || selectedHalaqahId;
+      }
     }
-    if (selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1') {
-      return allHalaqahs.find(h => h.program_type === 'tikrar_daily')?.id || selectedHalaqahId;
-    }
-    
+
     return selectedHalaqahId;
-  }, [selectedHalaqahId, allHalaqahs]);
+  }, [selectedHalaqahId, allHalaqahs, filteredHalaqahs, programParam]);
 
   // Check for ANY existing registration for this halaqah to prevent duplicates
   const regOptions = useMemo(() => {
@@ -179,20 +206,17 @@ function RegistrationForm() {
             .maybeSingle();
           referrer = data;
         }
-        
-        // Priority 2: From Profile (Persistent) - only for first-time registrations
+
+        // Priority 2: From Profile (Persistent) - ALWAYS apply if user has referred_by_id
         if (!referrer && effectiveReferralId) {
-          const isActuallyFirstTime = !registrationsHistory || registrationsHistory.length === 0;
-          if (isActuallyFirstTime) {
-            const { data } = await supabase
-              .from("users")
-              .select("id, referral_code, username")
-              .eq("id", effectiveReferralId)
-              .maybeSingle();
-            referrer = data;
-          }
+          const { data } = await supabase
+            .from("users")
+            .select("id, referral_code, username")
+            .eq("id", effectiveReferralId)
+            .maybeSingle();
+          referrer = data;
         }
-        
+
         if (referrer) {
            setAppliedReferral(referrer);
            setReferralCodeInput(referrer.referral_code || "");
@@ -201,11 +225,12 @@ function RegistrationForm() {
       };
       fetchReferrer();
     }
-  }, [userData?.referred_by_id, searchParams, appliedReferral, registrationsHistory]);
+  }, [userData?.referred_by_id, searchParams, appliedReferral]);
 
   // Program Detection
   const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
   const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
+  const isNgaji = (circle?.program_type || circle?.programType) === 'hi_ngaji' || programParam === 'hi_ngaji';
 
   const isPremiumProgram = useMemo(() => {
     return circle?.is_premium === true || isMufradat || isTikrar;
@@ -395,6 +420,10 @@ function RegistrationForm() {
         toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Commitment Tikrar" });
         return;
       }
+    if (isNgaji && !akadAccepted) {
+      toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Komitmen Hi Ngaji" });
+      return;
+    }
     if (isPremiumProgram && infaqAmount < minInfaq && !appliedVoucher) {
       toast({ variant: "destructive", title: `Minimal infaq untuk target ini adalah Rp ${minInfaq.toLocaleString('id-ID')}` });
       return;
@@ -454,7 +483,7 @@ function RegistrationForm() {
         user_email: user?.email,
         whatsapp: whatsapp,
         halaqah_id: verifiedUuid,
-        halaqah_title: circle?.title || (isMufradat ? 'Hi Mufradat' : 'Halaqah'),
+        halaqah_title: circle?.title || (isMufradat ? 'Hi Mufradat' : (isTikrar ? 'Hi Tikrar' : (isNgaji ? 'Hi Ngaji' : (programDisplayName || 'Halaqah')))),
         is_paid: isPremiumProgram || !!appliedVoucher,
         level: isTikrar ? parseInt(level) : null,
         target_juz: isTikrar ? parseInt(targetJuz) : null,
@@ -480,6 +509,18 @@ function RegistrationForm() {
           voucher_code: appliedVoucher?.code || null,
           referral_code: appliedReferral?.referral_code || null,
           is_resume: forceShowForm
+        } : isNgaji ? {
+          akadAccepted: true,
+          infaqBase: infaqAmount,
+          voucher_code: appliedVoucher?.code || null,
+          referral_code: appliedReferral?.referral_code || null,
+        } : isTikrar ? {
+          akadAccepted: true,
+          target: targetJuz,
+          level: level,
+          infaqBase: infaqAmount,
+          voucher_code: appliedVoucher?.code || null,
+          referral_code: appliedReferral?.referral_code || null,
         } : (appliedVoucher ? { voucher_code: appliedVoucher.code } : null)
       };
 
@@ -642,7 +683,7 @@ function RegistrationForm() {
           <div className="mx-auto bg-white/20 rounded-full p-4 w-fit mb-4 border-2 border-white/10"><BookOpen className="h-8 w-8 text-amber-300" /></div>
           <CardTitle className="font-headline text-3xl font-black">Pendaftaran Halaqah</CardTitle>
           <CardDescription className="text-white/80 font-medium tracking-wide uppercase text-[10px] mt-1">
-            {circle?.title || (isMufradat ? 'Hi Mufradat' : (isTikrar ? 'Hi Tikrar' : 'Pendaftaran')) || (selectedHalaqahId ? 'Program Terpilih' : 'Silakan Pilih Program')}
+            {circle?.title || (isMufradat ? 'Hi Mufradat' : (isTikrar ? 'Hi Tikrar' : (isNgaji ? 'Hi Ngaji' : (programDisplayName || 'Pendaftaran')))) || (selectedHalaqahId ? 'Program Terpilih' : 'Silakan Pilih Program')}
           </CardDescription>
         </CardHeader>
 
@@ -653,19 +694,24 @@ function RegistrationForm() {
                 <Label className="text-xs font-black uppercase text-[#800000] tracking-widest">Pilih Program</Label>
                 <Select value={selectedHalaqahId || ""} onValueChange={setSelectedHalaqahId}>
                   <SelectTrigger className="h-14 border-2 font-black text-sm">
-                    <SelectValue placeholder="-- Pilih Program Halaqah --" />
+                    <SelectValue placeholder={programDisplayName ? `-- Pilih Kelas ${programDisplayName} --` : "-- Pilih Program Halaqah --"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {(allHalaqahs || []).map(h => (
+                    {(programParam ? filteredHalaqahs : (allHalaqahs || [])).map(h => (
                       <SelectItem key={h.id} value={h.id} className="font-bold py-3 text-xs">
                         {h.title} {h.is_premium ? '(Premium)' : '(Gratis)'}
                       </SelectItem>
                     ))}
-                    {!allHalaqahs?.length && (
+                    {(!programParam && !allHalaqahs?.length) && (
                       <>
                         <SelectItem value="mufradat-premium" className="font-bold">Hi Mufradat</SelectItem>
                         <SelectItem value="tikrar-premium" className="font-bold">Hi Tikrar</SelectItem>
                       </>
+                    )}
+                    {(programParam && filteredHalaqahs?.length === 0) && (
+                      <div className="p-4 text-center text-xs text-muted-foreground italic">
+                        Belum ada kelas {programParam === 'hi_ngaji' ? 'Hi Ngaji' : programParam.replace('_', ' ')} yang tersedia saat ini.
+                      </div>
                     )}
                   </SelectContent>
                 </Select>
@@ -1068,6 +1114,39 @@ function RegistrationForm() {
                       <Badge variant="outline" className="bg-white border-[#800000]/20 text-[#800000] font-black text-[10px]">PROGRAM PREMIUM</Badge>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Hi Ngaji Akad Section */}
+              {isNgaji && (
+                <div className="p-6 bg-purple-50/50 rounded-2xl border-2 border-purple-200/50 space-y-4 animate-in fade-in zoom-in">
+                  <div className="flex items-center gap-2 text-[#800000]">
+                    <ShieldCheck className="w-5 h-5" />
+                    <h4 className="font-black text-sm uppercase tracking-widest text-[#800000]">Akad Belajar Hi Ngaji</h4>
+                  </div>
+                  <div className="space-y-3 text-[11px] text-purple-900 leading-relaxed font-medium">
+                    <p>Dengan mendaftar Hi Ngaji, saya berkomitmen untuk:</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li><strong>Serius</strong>: Mengikuti kelas dengan tertib dan disiplin sesuai jadwal yang telah ditentukan.</li>
+                      <li><strong>Aktif</strong>: Berpartisipasi dalam setiap sesi pembelajaran dan mengerjakan tugas yang diberikan muallimah.</li>
+                      <li><strong>Sopan</strong>: Memuliakan Al-Qur'an dengan cara membacanya sesuai adab dan kaidah tajwid yang benar.</li>
+                      <li><strong>Ikhlas</strong>: Niat semata-mata karena Allah untuk memperbaiki bacaan Al-Qur'an.</li>
+                    </ul>
+                  </div>
+                  <div className="flex items-start gap-3 pt-2">
+                     <div
+                      onClick={() => setAkadAccepted(!akadAccepted)}
+                      className={cn(
+                        "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 mt-0.5",
+                        akadAccepted ? "bg-[#800000] border-[#800000]" : "bg-white border-purple-300"
+                      )}
+                    >
+                      {akadAccepted && <Check className="w-3.5 h-3.5 text-white" />}
+                    </div>
+                    <Label className="text-[10px] font-bold text-purple-900 leading-tight cursor-pointer" onClick={() => setAkadAccepted(!akadAccepted)}>
+                      Saya setuju dengan Akad & Komitmen Hi Ngaji di atas.
+                    </Label>
+                  </div>
                 </div>
               )}
 
