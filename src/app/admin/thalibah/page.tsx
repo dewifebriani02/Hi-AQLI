@@ -23,11 +23,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Users, BookOpen, ShieldAlert, ShieldCheck, Trash2, Loader2, ArrowLeft, Calendar, MessageCircle, Send } from "lucide-react";
+import { Search, Users, BookOpen, ShieldAlert, ShieldCheck, Trash2, Loader2, ArrowLeft, Calendar, MessageCircle, Send, Phone } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+
+function formatWaLink(phone: string | undefined | null): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+  let normalized = digits;
+  if (normalized.startsWith('0')) normalized = '62' + normalized.slice(1);
+  else if (!normalized.startsWith('62')) normalized = '62' + normalized;
+  return `https://wa.me/${normalized}`;
+}
 
 export default function AdminThalibahPage() {
   const { user } = useUser();
@@ -287,7 +297,7 @@ export default function AdminThalibahPage() {
                       <span className="text-[10px] text-muted-foreground font-bold">
                         {thalibah.email}
                       </span>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-[9px] font-black">
                           {thalibah.totalPrograms} Program
                         </Badge>
@@ -296,7 +306,25 @@ export default function AdminThalibahPage() {
                             Aktif
                           </Badge>
                         )}
+                        {thalibah.created_at && (
+                          <span className="text-[9px] text-muted-foreground font-bold flex items-center gap-0.5">
+                            <Calendar className="w-2.5 h-2.5" />
+                            {format(new Date(thalibah.created_at), 'dd MMM yyyy')}
+                          </span>
+                        )}
                       </div>
+                      {thalibah.whatsapp && (
+                        <a
+                          href={formatWaLink(thalibah.whatsapp) || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 flex items-center gap-1 text-[9px] font-black text-emerald-600 hover:text-emerald-700 transition-colors"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          {thalibah.whatsapp}
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -336,6 +364,18 @@ export default function AdminThalibahPage() {
 
                   {/* Actions */}
                   <div className="flex lg:flex-col gap-2 lg:w-auto">
+                    {formatWaLink(thalibah.whatsapp) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="font-black text-[10px] uppercase gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                        asChild
+                      >
+                        <a href={formatWaLink(thalibah.whatsapp)!} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle className="w-3.5 h-3.5" /> Chat WA
+                        </a>
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -403,7 +443,36 @@ export default function AdminThalibahPage() {
                 </div>
                 <div>
                   <Label className="text-[10px] font-black uppercase text-muted-foreground">WhatsApp</Label>
-                  <p className="font-bold">{selectedUser.whatsapp || '-'}</p>
+                  {formatWaLink(selectedUser.whatsapp) ? (
+                    <a
+                      href={formatWaLink(selectedUser.whatsapp)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 transition-colors"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      {selectedUser.whatsapp}
+                    </a>
+                  ) : (
+                    <p className="font-bold text-muted-foreground">-</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Bergabung Aplikasi</Label>
+                  <p className="font-bold flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                    {selectedUser.created_at ? format(new Date(selectedUser.created_at), 'dd MMM yyyy, HH:mm') : '-'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Status</Label>
+                  <p className="font-bold">
+                    {selectedUser.is_blacklisted ? (
+                      <span className="text-rose-600">Blacklisted</span>
+                    ) : (
+                      <span className="text-emerald-600">Aktif</span>
+                    )}
+                  </p>
                 </div>
               </div>
 
@@ -443,7 +512,17 @@ export default function AdminThalibahPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {selectedUser && formatWaLink(selectedUser.whatsapp) && (
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black gap-2 sm:mr-auto"
+                asChild
+              >
+                <a href={formatWaLink(selectedUser.whatsapp)!} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="w-4 h-4" /> Chat di WhatsApp
+                </a>
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Tutup
             </Button>

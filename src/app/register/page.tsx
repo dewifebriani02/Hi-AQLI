@@ -24,7 +24,7 @@ function RegisterContent() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/';
   const referralCode = searchParams.get('ref');
-  
+
   const { toast } = useToast();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -53,12 +53,12 @@ function RegisterContent() {
     if (/[^A-Za-z0-9]/.test(password)) strength += 25;
     return strength;
   }, [password]);
-  
+
   // Bot Protection
   const [hasMounted, setHasMounted] = useState(false);
   const [honeypot, setHoneypot] = useState('');
   const [userCaptcha, setUserCaptcha] = useState('');
-  const [captchaChallenge, setCaptchaChallenge] = useState<{a: number, b: number, result: number} | null>(null);
+  const [captchaChallenge, setCaptchaChallenge] = useState<{ a: number, b: number, result: number } | null>(null);
 
   useEffect(() => {
     setHasMounted(true);
@@ -114,7 +114,7 @@ function RegisterContent() {
               .select('id, referral_balance')
               .eq('referral_code', referralCode.toUpperCase())
               .maybeSingle();
-            
+
             if (referrer) {
               referrerId = referrer.id;
               console.log('Detected persistent referral from:', referrerId);
@@ -150,7 +150,7 @@ function RegisterContent() {
     if (honeypot) {
       // Bot filled the hidden field
       setLoading(false);
-      return; 
+      return;
     }
 
     if (!validateEmail(email)) {
@@ -185,24 +185,24 @@ function RegisterContent() {
       setError(signUpError.message);
       setLoading(false);
     } else {
-        // Sign up success!
-        // If email confirmation is ON, Supabase return user but session is null.
-        // If email confirmation is OFF, session is returned and useUser state will change.
-        setLoading(false);
-        if (signUpData.user) {
-            toast({
-              title: "Masyallah, Pendaftaran Berhasil!",
-              description: "Selamat datang di Hi AQLI, Ukhti otomatis masuk.",
-            });
-            // Redirect to programs page to choose what to do next (unless specific redirectTo is set)
-            setTimeout(() => {
-              const destination = redirectTo !== '/' ? redirectTo : '/programs';
-              router.push(destination);
-            }, 100);
-        } else {
-            // This case is unlikely if error is null but no user
-            router.push('/login');
-        }
+      // Sign up success!
+      // If email confirmation is ON, Supabase return user but session is null.
+      // If email confirmation is OFF, session is returned and useUser state will change.
+      setLoading(false);
+      if (signUpData.user) {
+        toast({
+          title: "Masyallah, Pendaftaran Berhasil!",
+          description: "Selamat datang di Hi AQLI, Ukhti otomatis masuk.",
+        });
+        // Redirect to programs page to choose what to do next (unless specific redirectTo is set)
+        setTimeout(() => {
+          const destination = redirectTo !== '/' ? redirectTo : '/programs';
+          router.push(destination);
+        }, 100);
+      } else {
+        // This case is unlikely if error is null but no user
+        router.push('/login');
+      }
     }
   };
 
@@ -239,27 +239,27 @@ function RegisterContent() {
             <Alert className={cn(
               "animate-in slide-in-from-top-2 duration-500",
               referralStatus.isLoading ? "bg-slate-50 border-slate-200" :
-              referralStatus.isValid ? "bg-emerald-50 border-emerald-200 text-emerald-800" : 
-              "bg-rose-50 border-rose-200 text-rose-800"
+                referralStatus.isValid ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
+                  "bg-rose-50 border-rose-200 text-rose-800"
             )}>
               <div className="flex items-center gap-3">
                 <div className={cn(
                   "p-2 rounded-lg text-white",
                   referralStatus.isLoading ? "bg-slate-400" :
-                  referralStatus.isValid ? "bg-emerald-500" : "bg-rose-500"
+                    referralStatus.isValid ? "bg-emerald-500" : "bg-rose-500"
                 )}>
-                  {referralStatus.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 
-                   referralStatus.isValid ? <Zap className="w-4 h-4 fill-current" /> : <AlertTriangle className="w-4 h-4" />}
+                  {referralStatus.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                    referralStatus.isValid ? <Zap className="w-4 h-4 fill-current" /> : <AlertTriangle className="w-4 h-4" />}
                 </div>
                 <AlertDescription className="text-[10px] font-black uppercase tracking-wider leading-tight">
-                  {referralStatus.isLoading ? "Memvalidasi Kode Referral..." : 
-                   referralStatus.isValid ? (
-                     <>Alhamdulillah! Kode <span className="text-emerald-600 underline">{referralCode}</span> dari {referralStatus.referrerName} Aktif. <br/>
-                     <span className="opacity-70 text-[9px]">Potongan Rp 5.000 otomatis berlaku.</span></>
-                   ) : (
-                     <>Maaf, Kode <span className="text-rose-600 underline">{referralCode}</span> Tidak Valid. <br/>
-                     <span className="opacity-70 text-[9px]">Ukhti tetap bisa mendaftar tanpa potongan.</span></>
-                   )}
+                  {referralStatus.isLoading ? "Memvalidasi Kode Referral..." :
+                    referralStatus.isValid ? (
+                      <>Alhamdulillah! Kode <span className="text-emerald-600 underline">{referralCode}</span> dari {referralStatus.referrerName} Aktif. <br />
+                        <span className="opacity-70 text-[9px]">Potongan Rp 5.000 otomatis berlaku.</span></>
+                    ) : (
+                      <>Maaf, Kode <span className="text-rose-600 underline">{referralCode}</span> Tidak Valid. <br />
+                        <span className="opacity-70 text-[9px]">Ukhti tetap bisa mendaftar tanpa potongan.</span></>
+                    )}
                 </AlertDescription>
               </div>
             </Alert>
@@ -313,7 +313,7 @@ function RegisterContent() {
                 <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="username"
-                  placeholder="Contoh: hamba_allah"
+                  placeholder="Contoh: Hamba Allah"
                   className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -343,8 +343,8 @@ function RegisterContent() {
                   <span className={cn(
                     "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full",
                     passwordStrength <= 25 ? "bg-rose-100 text-rose-600" :
-                    passwordStrength <= 75 ? "bg-amber-100 text-amber-600" :
-                    "bg-emerald-100 text-emerald-600"
+                      passwordStrength <= 75 ? "bg-amber-100 text-amber-600" :
+                        "bg-emerald-100 text-emerald-600"
                   )}>
                     {passwordStrength <= 25 ? "Lemah" : passwordStrength <= 75 ? "Sedang" : "Kuat"}
                   </span>
@@ -378,8 +378,8 @@ function RegisterContent() {
                 <div className="px-1">
                   <Progress value={passwordStrength} className="h-1" indicatorClassName={cn(
                     passwordStrength <= 25 ? "bg-rose-500" :
-                    passwordStrength <= 75 ? "bg-amber-500" :
-                    "bg-emerald-500"
+                      passwordStrength <= 75 ? "bg-amber-500" :
+                        "bg-emerald-500"
                   )} />
                 </div>
               )}
@@ -424,7 +424,7 @@ function RegisterContent() {
                     Verifikasi keamanan: Selesaikan hitungan di atas.
                   </span>
                 </div>
-                
+
                 {/* Honeypot field - Hidden from users */}
                 <div className="absolute opacity-0 -z-50 pointer-events-none left-[-9999px]">
                   <Input
@@ -440,9 +440,9 @@ function RegisterContent() {
             )}
 
             <div className="flex items-start space-x-3 py-2">
-              <Checkbox 
-                id="terms" 
-                checked={agreedToTerms} 
+              <Checkbox
+                id="terms"
+                checked={agreedToTerms}
                 onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
                 className="mt-1 border-[#800000] data-[state=checked]:bg-[#800000]"
               />
@@ -468,8 +468,8 @@ function RegisterContent() {
         <CardFooter className="bg-muted/30 py-6 border-t">
           <p className="text-center text-sm text-muted-foreground w-full">
             Sudah punya akun?{' '}
-            <Link 
-              href={`/login?redirectTo=${encodeURIComponent(redirectTo)}${referralCode ? `&ref=${referralCode}` : ''}`} 
+            <Link
+              href={`/login?redirectTo=${encodeURIComponent(redirectTo)}${referralCode ? `&ref=${referralCode}` : ''}`}
               className="text-[#800000] font-black hover:underline uppercase text-xs tracking-wider"
             >
               Masuk ke Akun

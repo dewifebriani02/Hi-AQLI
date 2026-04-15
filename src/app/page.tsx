@@ -981,32 +981,32 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-2 w-full max-w-md px-1">
-          <Link
-            href="/whatsapp"
-            target="_blank"
+          <a
+            href="https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq"
+            rel="noopener noreferrer"
             className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-500/10"
           >
             <MessageSquare className="w-4 h-4 fill-white" />
             <span className="text-[8px] font-black uppercase tracking-wider">Grup WA</span>
-          </Link>
+          </a>
 
-          <Link
-            href="/channel"
-            target="_blank"
+          <a
+            href="https://whatsapp.com/channel/0029Vb5sNGZ9mrGkJGzEh421"
+            rel="noopener noreferrer"
             className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-700/10"
           >
             <Zap className="w-4 h-4 fill-white" />
             <span className="text-[8px] font-black uppercase tracking-wider">Channel WA</span>
-          </Link>
+          </a>
 
-          <Link
-            href="/telegram"
-            target="_blank"
+          <a
+            href="https://t.me/rq_aqli"
+            rel="noopener noreferrer"
             className="bg-sky-500 hover:bg-sky-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-sky-500/10"
           >
             <ExternalLink className="w-4 h-4" />
             <span className="text-[8px] font-black uppercase tracking-wider">Telegram</span>
-          </Link>
+          </a>
         </div>
 
         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">www.hiaqli.pro • Teruslah Istiqomah ✨</p>
