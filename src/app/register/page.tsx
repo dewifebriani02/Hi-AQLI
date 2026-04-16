@@ -18,6 +18,16 @@ import { Logo } from '@/components/common/logo';
 import { Suspense } from 'react';
 import { validateEmail, cn } from '@/lib/utils';
 
+// Debug check for components to avoid Error #130
+if (typeof window !== 'undefined') {
+  console.log('RegisterPage Component Check:', {
+    Alert: !!Alert,
+    AlertDescription: !!AlertDescription,
+    Loader2: !!Loader2,
+    Logo: !!Logo
+  });
+}
+
 function RegisterContent() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
@@ -182,7 +192,8 @@ function RegisterContent() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      console.error('Signup Error:', signUpError);
+      setError(signUpError.message || 'Pendaftaran gagal. Silakan coba lagi.');
       setLoading(false);
     } else {
       // Sign up success!
@@ -195,8 +206,12 @@ function RegisterContent() {
           description: "Selamat datang di Hi AQLI, Ukhti otomatis masuk.",
         });
         // Redirect to programs page to choose what to do next (unless specific redirectTo is set)
+        // IMPROVEMENT: If joining via referral, automatically show the registration form
         setTimeout(() => {
-          const destination = redirectTo !== '/' ? redirectTo : '/programs';
+          const destination = redirectTo !== '/' 
+            ? redirectTo 
+            : (referralCode ? `/study-circles/registration?ref=${referralCode}` : '/programs');
+            
           router.push(destination);
         }, 100);
       } else {
@@ -209,7 +224,14 @@ function RegisterContent() {
   const handleGoogleRegister = async () => {
     setGoogleLoading(true);
     setError(null);
-    const { error: googleError } = await initiateGoogleSignIn(redirectTo);
+    
+    // Determine the final destination after Google callback
+    // IMPROVEMENT: If joining via referral, automatically show the registration form
+    const googleRedirect = redirectTo !== '/' 
+      ? redirectTo 
+      : (referralCode ? `/study-circles/registration?ref=${referralCode}` : '/programs');
+
+    const { error: googleError } = await initiateGoogleSignIn(googleRedirect);
     if (googleError) {
       setError(googleError.message);
       setGoogleLoading(false);
@@ -248,8 +270,9 @@ function RegisterContent() {
                   referralStatus.isLoading ? "bg-slate-400" :
                     referralStatus.isValid ? "bg-emerald-500" : "bg-rose-500"
                 )}>
-                  {referralStatus.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> :
-                    referralStatus.isValid ? <Zap className="w-4 h-4 fill-current" /> : <AlertTriangle className="w-4 h-4" />}
+                  {referralStatus.isLoading ? (Loader2 ? <Loader2 className="w-4 h-4 animate-spin" /> : '...') :
+                    referralStatus.isValid ? (Zap ? <Zap className="w-4 h-4 fill-current" /> : '✓') : 
+                    (AlertTriangle ? <AlertTriangle className="w-4 h-4" /> : '⚠')}
                 </div>
                 <AlertDescription className="text-[10px] font-black uppercase tracking-wider leading-tight">
                   {referralStatus.isLoading ? "Memvalidasi Kode Referral..." :

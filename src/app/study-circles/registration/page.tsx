@@ -645,7 +645,10 @@ function RegistrationForm() {
               )}
             </div>
             <Button asChild className={cn("w-full font-black h-14 rounded-xl text-lg shadow-lg", isActuallyActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#800000]")}>
-              <Link href={isActuallyActive ? (halaqahId === 'tikrar-j30-b1' || selectedHalaqahId === 'tikrar-premium' ? '/tikrar' : `/study-circles/${circle?.id}`) : (isActuallyPending ? '/mufradat' : "/")}>
+              <Link href={isActuallyActive ? 
+                (halaqahId === 'tikrar-j30-b1' || selectedHalaqahId === 'tikrar-premium' ? '/tikrar' : 
+                 (selectedHalaqahId === 'mufradat-premium' || isMufradat ? '/mufradat' : '/')) 
+                : (isActuallyPending ? '/mufradat' : "/")}>
                 {isActuallyActive ? <><PlayCircle className="mr-2 w-6 h-6" /> MASUK KELAS</> : (isActuallyPending ? "MULAI BELAJAR SEKARANG" : "KEMBALI KE DASBOR")}
               </Link>
             </Button>

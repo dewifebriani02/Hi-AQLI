@@ -46,6 +46,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // PWA Install Logic
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the default browser-provided "Add to Home Screen" banner
+      // so we can show our custom "UNDUH APP" button in the UI instead.
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);

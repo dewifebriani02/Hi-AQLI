@@ -24,7 +24,8 @@ import {
   Zap,
   Globe,
   Loader2,
-  Lock
+  Lock,
+  RotateCcw
 } from "lucide-react";
 import Link from "next/link";
 import { format, isAfter, isBefore, addMinutes } from "date-fns";
@@ -41,12 +42,19 @@ export default function MufradatMabarOverviewPage() {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   }), [user?.id]);
 
-  const { data: registrations, isLoading: isRegLoading } = useCollection(
+  const { data: registrations, isLoading: isRegLoading, refresh: refreshRegs } = useCollection(
     user ? "halaqah_registrations" : null, 
     registrationsOptions
   );
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+
+  const handleRefreshStatus = async () => {
+    setIsRefreshing(true);
+    await refreshRegs();
+    setIsRefreshing(false);
+  };
 
   useEffect(() => {
     if (!isUserLoading && !isRegLoading && user && !isStudent) {
@@ -78,9 +86,23 @@ export default function MufradatMabarOverviewPage() {
           <h2 className="text-3xl font-black font-headline uppercase">Fitur Khusus Thalibah</h2>
           <p className="text-muted-foreground max-w-md mx-auto">Mabar Al-Qur'an adalah fitur eksklusif untuk thalibah yang terdaftar dalam program Hi AQLI. Mari bergabung sekarang!</p>
         </div>
-        <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 h-14 px-10 rounded-2xl font-black uppercase shadow-xl">
-          <Link href="/study-circles/registration">DAFTAR PROGRAM SEKARANG</Link>
-        </Button>
+        <div className="flex flex-col gap-3">
+          <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 h-14 px-10 rounded-2xl font-black uppercase shadow-xl">
+            <Link href="/study-circles/registration">DAFTAR PROGRAM SEKARANG</Link>
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={handleRefreshStatus} 
+            disabled={isRefreshing}
+            className="text-xs font-bold text-muted-foreground hover:text-[#800000] gap-2"
+          >
+            {isRefreshing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+            SUDAH DAFTAR? CEK STATUS PENDAFTARAN
+          </Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground/60 italic font-medium">
+          Mendaftar dengan status "Menunggu Verifikasi" sudah cukup untuk mengakses halaman ini.
+        </p>
       </div>
     );
   }

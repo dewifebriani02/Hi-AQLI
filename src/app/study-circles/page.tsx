@@ -108,7 +108,9 @@ export default function StudyCirclesPage() {
 
     let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
-      href = circle.id === 'tikrar-j30-b1' ? '/tikrar' : `/study-circles/${circle.id}`;
+      if (circle.id === 'tikrar-j30-b1') href = '/tikrar';
+      else if (circle.id === 'mufradat-premium') href = '/mufradat';
+      else href = '/';
     }
 
     return (

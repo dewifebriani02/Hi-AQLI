@@ -2,12 +2,18 @@
 
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { Search, CheckCircle2, Star, ChevronDown, ChevronRight, Lock, GraduationCap, ArrowRight, Play, Pause, Loader2 } from "lucide-react";
+import { Search, CheckCircle2, Star, ChevronDown, ChevronRight, Lock, Unlock, GraduationCap, ArrowRight, Play, Pause, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { JUZ_PAGE_MAPPING, getPagesForJuz, getJuzForPage } from "@/lib/quran-mapping";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Mapping Juz to starting surah and verse
 const JUZ_MAPPING: Record<number, { surah: number, verse: number, name: string }> = {
@@ -56,7 +62,7 @@ interface JuzListProps {
   userProgress?: any[];
   variant?: "mufradat" | "tilawah";
   selectedReciterId?: number;
-  mode?: "ayat" | "halaman";
+  mode?: "ayat" | "halaman" | "exam";
   unlockedJuz?: number[];
   isStudent?: boolean;
   externalSearch?: string;
@@ -89,12 +95,13 @@ export function JuzList({
   };
 
   const progressData = useMemo(() => {
-    const completedPages = new Set<number>();
+    const pageQuizzesDone = new Set<number>();
+    const pagesWithUnlockedVerses = new Set<number>();
     const pagesWithAnyProgress = new Set<number>();
     const completedExams = new Set<number>();
     const pageStats = new Map<number, { maxScore: number, attempts: number, bestTime: number }>();
     
-    if (!userProgress) return { completedPages, completedExams, pagesWithAnyProgress, pageStats };
+    if (!userProgress) return { pageQuizzesDone, pagesWithUnlockedVerses, completedExams, pagesWithAnyProgress, pageStats };
 
     userProgress.forEach(attempt => {
       let pNum = attempt.page_id ? Number(attempt.page_id) : null;
@@ -116,11 +123,11 @@ export function JuzList({
 
         if (attempt.is_passed || Number(attempt.score) === Number(attempt.total_questions)) {
           if (attempt.quiz_id.startsWith('mufradat_page_')) {
-            completedPages.add(pNum);
+            pageQuizzesDone.add(pNum);
+            pagesWithUnlockedVerses.add(pNum); // Completion also implies unlocking
           } else if (!attempt.quiz_id.startsWith('mufradat_juz_exam_')) {
-            // Verse completion: If any verse on page P is passed, we count it as "completed" for unlocking P+1
-            // This ensures the Halaman tab is in sync with the Juz/Surah tabs.
-            completedPages.add(pNum);
+            // Verse completion: Only unlocks the page, doesn't mark it as 'page done'
+            pagesWithUnlockedVerses.add(pNum);
           }
         }
       }
@@ -131,7 +138,7 @@ export function JuzList({
       }
     });
 
-    return { completedPages, completedExams, pagesWithAnyProgress, pageStats };
+    return { pageQuizzesDone, pagesWithUnlockedVerses, completedExams, pagesWithAnyProgress, pageStats };
   }, [userProgress]);
 
   const verseCompletionMap = useMemo(() => {
@@ -169,7 +176,7 @@ export function JuzList({
     return finalMap;
   }, [userProgress]);
 
-  const { completedPages, completedExams, pagesWithAnyProgress, pageStats } = progressData;
+  const { pageQuizzesDone, pagesWithUnlockedVerses, completedExams, pagesWithAnyProgress, pageStats } = progressData;
 
   const filteredJuz = juzArray.filter(j => 
     `Juz ${j}`.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
@@ -246,14 +253,15 @@ export function JuzList({
 
       <div className={cn(
         "grid gap-3 pb-4",
-        mode === 'ayat' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+        mode === 'ayat' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : 
+        mode === 'exam' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
       )}>
         {filteredJuz.map((j) => {
           const mapping = JUZ_MAPPING[j];
           const juzPages = getPagesForJuz(j);
           const isExamPassed = completedExams.has(j);
           const totalPages = juzPages.length;
-          const finishedPagesCount = juzPages.filter(p => completedPages.has(p)).length;
+          const finishedPagesCount = juzPages.filter(p => pageQuizzesDone.has(p)).length;
           const isAllPagesDone = finishedPagesCount === totalPages;
           
           const startPage = juzPages[0];
@@ -263,7 +271,7 @@ export function JuzList({
           const isExpanded = expandedJuz === j;
 
           // GRID VIEW (AYAT MODE) OR TILAWAH
-          if (mode === 'ayat' || variant === 'tilawah') {
+          if ((mode === 'ayat' && variant !== 'mufradat') || variant === 'tilawah') {
             const passedVersesCount = verseCompletionMap.get(j) || 0;
             const totalVerses = JUZ_VERSE_COUNTS[j] || 1;
             const isJuzCompleted = passedVersesCount >= totalVerses;
@@ -294,7 +302,7 @@ export function JuzList({
                       className="w-8 h-8 rounded-full bg-primary/5 text-primary"
                       onClick={(e) => togglePlay(e, j)}
                     >
-                      {loadingAudioJuz === j ? <Loader2 className="w-4 h-4 animate-spin" /> : playingJuz === j ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                      {loadingAudioJuz === j ? <Loader2 className="w-4 h-4 animate-spin" /> : playingJuz === j ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
                     </Button>
                   )}
                   {isJuzCompleted && !isExamPassed && (
@@ -331,7 +339,7 @@ export function JuzList({
             );
           }
 
-          // HALAMAN MODE (EXPANDING)
+          // HALAMAN OR EXAM MODE (EXPANDING)
           return (
             <div key={j} className="flex flex-col gap-2">
               <div className="relative group">
@@ -421,51 +429,112 @@ export function JuzList({
               </div>
 
               {isExpanded && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 px-4 py-2 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200">
-                  {juzPages.map((p) => {
-                    const isDone = completedPages.has(p);
-                    const startPageOfJuz = juzPages[0];
-                    const isFirstPageOfJuz = p === startPageOfJuz;
-                    
-                    // A page P is unlocked if:
-                    // 1. It is globally free (1, 604)
-                    // 2. OR it is Juz 1 (Tilawah mode usually lets you browse Juz 1)
-                    // 3. OR the user is a verified student AND (it's the first page of their chosen Juz OR the previous page is completed)
-                    const isUnlocked = p === 1 || p === 604 || (isStudent && (isFirstPageOfJuz || completedPages.has(p - 1)));
-                    
-                    const stats = pageStats.get(p) || { maxScore: 0, attempts: 0, bestTime: Infinity };
-                    return (
-                      <Link 
-                        key={p} 
-                        href={isUnlocked ? `/mufradat/page/${p}` : "#"}
-                        className={cn(
-                          "flex items-center justify-between p-3 rounded-xl transition-all border",
-                          isDone ? "bg-emerald-50 border-emerald-100 text-emerald-800 shadow-sm" : isUnlocked ? "bg-white border-slate-100 hover:border-[#800000]/30 hover:shadow-sm" : "bg-slate-50 opacity-60 border-transparent grayscale cursor-not-allowed"
-                        )}
-                        onClick={(e) => !isUnlocked && e.preventDefault()}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black", isDone ? "bg-emerald-500 text-white" : isUnlocked ? "bg-slate-100 text-slate-500" : "bg-slate-200 text-slate-400")}>{p}</div>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold tracking-tight">Halaman {p}</span>
-                            {stats.attempts > 0 && (
-                              <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">
-                                <span className={cn(stats.maxScore === 100 ? "text-emerald-600" : "text-amber-600")}>🎯 {stats.maxScore}%</span>
-                                <span>🔄 {stats.attempts}x</span>
-                                {stats.bestTime !== Infinity && <span>⏱️ {formatTime(stats.bestTime)}</span>}
-                              </div>
-                            )}
+                <div className={cn(
+                  "mt-1 px-4 py-4 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200",
+                  mode === 'exam' ? "flex flex-col gap-6" : "grid grid-cols-1 sm:grid-cols-2 gap-2"
+                )}>
+                  {/* COMPACT PAGE GRID */}
+                  <div className={cn(
+                    "grid gap-1.5",
+                    mode === 'exam' ? "grid-cols-10 sm:grid-cols-12 md:grid-cols-15" : "contents"
+                  )}>
+                    {juzPages.map((p) => {
+                      const isDone = pageQuizzesDone.has(p);
+                      const isAnyVerseDone = pagesWithUnlockedVerses.has(p);
+                      const startPageOfJuz = juzPages[0];
+                      const isFirstPageOfJuz = p === startPageOfJuz;
+                      
+                      const isUnlocked = p === 1 || p === 604 || (isStudent && (isFirstPageOfJuz || pagesWithUnlockedVerses.has(p - 1) || pageQuizzesDone.has(p - 1)));
+                      const stats = pageStats.get(p) || { maxScore: 0, attempts: 0, bestTime: Infinity };
+
+                      if (mode === 'exam') {
+                        return (
+                          <TooltipProvider key={p} delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link
+                                  href={isUnlocked ? `/mufradat/page/${p}` : "#"}
+                                  onClick={(e) => !isUnlocked && e.preventDefault()}
+                                  className={cn(
+                                    "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black transition-all border",
+                                    isDone ? "bg-emerald-500 text-white border-emerald-600 shadow-sm" : 
+                                    isAnyVerseDone ? "bg-amber-400 text-white border-amber-500" : 
+                                    isUnlocked ? "bg-white border-slate-200 text-slate-400 hover:border-[#800000]/40" : 
+                                    "bg-slate-50 border-transparent opacity-40 cursor-not-allowed"
+                                  )}
+                                >
+                                  {p}
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-[10px] font-bold p-3 space-y-1">
+                                <p className="text-[12px] border-b pb-1 mb-1">Halaman {p}</p>
+                                {stats.attempts > 0 ? (
+                                  <>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-400">Skor Terbaik:</span>
+                                      <span className={cn(stats.maxScore === 100 ? "text-emerald-500" : "text-amber-500")}>{stats.maxScore}%</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-400">Percobaan:</span>
+                                      <span>{stats.attempts}x</span>
+                                    </div>
+                                    {stats.bestTime !== Infinity && (
+                                       <div className="flex justify-between gap-4">
+                                          <span className="text-slate-400">Waktu Terbaik:</span>
+                                          <span>{formatTime(stats.bestTime)}</span>
+                                       </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <p className="text-slate-400 italic">Belum dikerjakan</p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      }
+
+                      return (
+                        <Link 
+                          key={p} 
+                          href={isUnlocked ? `/mufradat/page/${p}` : "#"}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-xl transition-all border",
+                            isDone ? "bg-emerald-50 border-emerald-100 text-emerald-800 shadow-sm" : isAnyVerseDone ? "bg-[#800000]/5 border-[#800000]/10 text-[#800000]" : isUnlocked ? "bg-white border-slate-100 hover:border-[#800000]/30 hover:shadow-sm" : "bg-slate-50 opacity-60 border-transparent grayscale cursor-not-allowed"
+                          )}
+                          onClick={(e) => !isUnlocked && e.preventDefault()}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn("w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black", isDone ? "bg-emerald-500 text-white" : isAnyVerseDone ? "bg-amber-400 text-white" : isUnlocked ? "bg-slate-100 text-slate-500" : "bg-slate-200 text-slate-400")}>{p}</div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold tracking-tight">Halaman {p}</span>
+                              {stats.attempts > 0 && (
+                                <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">
+                                  <span className={cn(stats.maxScore === 100 ? "text-emerald-600" : "text-amber-600")}>🎯 {stats.maxScore}%</span>
+                                  <span>🔄 {stats.attempts}x</span>
+                                  {stats.bestTime !== Infinity && <span>⏱️ {formatTime(stats.bestTime)}</span>}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        {isDone ? (
-                          <div className="flex items-center gap-1 bg-emerald-500 text-white p-1 rounded-lg">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          </div>
-                        ) : !isUnlocked && <Lock className="w-3.5 h-3.5 text-slate-400" />}
-                      </Link>
-                    )
-                  })}
-                  <div className="col-span-full mt-4 flex flex-col gap-2">
+                          {isDone ? (
+                            <div className="flex items-center gap-1 bg-emerald-500 text-white p-1 rounded-lg">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </div>
+                          ) : isAnyVerseDone ? (
+                            <div className="flex items-center gap-1 bg-amber-500 text-white p-1 rounded-lg">
+                              <Unlock className="w-3.5 h-3.5" />
+                            </div>
+                          ) : !isUnlocked && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+                        </Link>
+                      )
+                    })}
+                  </div>
+
+                  <div className={cn(
+                    "flex flex-col gap-2",
+                    mode === 'exam' ? "w-full" : "col-span-full mt-4"
+                  )}>
                     <Button 
                       asChild={isAllPagesDone} 
                       disabled={!isAllPagesDone}
@@ -488,7 +557,7 @@ export function JuzList({
                     </Button>
                     <Button asChild variant="ghost" className="w-full text-[10px] font-black text-muted-foreground hover:text-[#800000] uppercase tracking-[0.2em] gap-2">
                       <Link href={`/mufradat/${mapping.surah}/${mapping.verse}`}>
-                        <ArrowRight className="w-3.5 h-3.5" /> LIHAT DETAIL PER AYAT (MODE LAMA)
+                        <ArrowRight className="w-3.5 h-3.5" /> LIHAT DETAIL PER AYAT (TAB AYAT)
                       </Link>
                     </Button>
                   </div>

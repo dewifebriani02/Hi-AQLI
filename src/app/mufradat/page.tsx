@@ -23,6 +23,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
+  DialogDescription,
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { 
@@ -111,7 +112,7 @@ function MufradatPageContent() {
     badgesOptions
   );
 
-  const isRankTab = activeTab === 'rank';
+  const isRankTab = activeTab === 'ranking';
   const group_id = userData?.mufradat_group_id;
 
   // GROUP LEADERBOARD DATA (Lazy load only when on rank tab)
@@ -231,7 +232,7 @@ function MufradatPageContent() {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'juz' || tab === 'surah' || tab === 'murajaah' || tab === 'rank') {
+    if (tab === 'juz' || tab === 'surah' || tab === 'ranking') {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -296,7 +297,7 @@ function MufradatPageContent() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
             <BookOpen className="w-5 h-5" />
-            <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Mufradat • Per Ayat & Per Halaman</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Mufradat • Hafalan Per Surat & Juz</span>
           </div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">Al-Qur'an</h1>
           <p className="text-muted-foreground text-sm max-w-md">Pelajari setiap kata dan maknai setiap ayat dalam Mushaf HI AQLI.</p>
@@ -493,18 +494,15 @@ function MufradatPageContent() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
+        <TabsList className="grid w-full grid-cols-3 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="surah" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
             <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Surat
           </TabsTrigger>
           <TabsTrigger value="juz" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
-            <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Juz
+            <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Juz
           </TabsTrigger>
-          <TabsTrigger value="murajaah" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
-            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Halaman
-          </TabsTrigger>
-          <TabsTrigger value="rank" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-amber-600 data-[state=active]:text-white rounded-lg transition-all">
-            <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Juara
+          <TabsTrigger value="ranking" className="font-bold gap-1 sm:gap-2 text-[10px] sm:text-xs data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg transition-all">
+            <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Ranking
           </TabsTrigger>
         </TabsList>
         
@@ -514,7 +512,7 @@ function MufradatPageContent() {
               baseUrl="/mufradat" 
               userProgress={progress || []} 
               showAudio={false}
-              isStudent={isVerifiedStudent || access.status === 'trial'}
+              isStudent={access.status === 'active' || access.status === 'trial' || access.status === 'grace_period'}
               externalSearch={searchQuery}
             />
           </div>
@@ -523,26 +521,16 @@ function MufradatPageContent() {
         <TabsContent value="juz" className="focus-visible:outline-none">
           <JuzList 
             userProgress={progress || []} 
-            mode="ayat"
+            mode="exam"
             variant="mufradat"
             unlockedJuz={userData?.mufradat_accessible_juz || []}
-            isStudent={isVerifiedStudent || access.status === 'trial'}
+            isStudent={access.status === 'active' || access.status === 'trial' || access.status === 'grace_period'}
             externalSearch={searchQuery}
           />
         </TabsContent>
 
-        <TabsContent value="murajaah" className="focus-visible:outline-none">
-          <JuzList 
-            userProgress={progress || []} 
-            mode="halaman"
-            variant="mufradat"
-            unlockedJuz={userData?.mufradat_accessible_juz || []}
-            isStudent={isVerifiedStudent || access.status === 'trial'}
-            externalSearch={searchQuery}
-          />
-        </TabsContent>
 
-        <TabsContent value="rank" className="focus-visible:outline-none space-y-4">
+        <TabsContent value="ranking" className="focus-visible:outline-none space-y-4">
           <Card className="border-none shadow-xl overflow-hidden rounded-3xl bg-white">
             <CardHeader className="bg-gradient-to-br from-[#800000] to-rose-900 text-white p-8">
               <div className="flex items-center justify-between">
@@ -736,9 +724,13 @@ function MufradatPageContent() {
       {/* Season Recap Dialog (Weekly Reset) */}
       <Dialog open={showSeasonRecap} onOpenChange={setShowSeasonRecap}>
         <DialogContent className="sm:max-w-md bg-white rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl">
-           <div className="bg-gradient-to-br from-[#800000] via-[#A52A2A] to-amber-600 p-8 text-center text-white relative">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Musim Baru Dimulai!</DialogTitle>
+              <DialogDescription>Informasi mengenai reset poin mingguan dan dimulainya musim baru di Hi Mufradat.</DialogDescription>
+            </DialogHeader>
+            <div className="bg-gradient-to-br from-[#800000] via-[#A52A2A] to-amber-600 p-8 text-center text-white relative">
               <PartyPopper className="w-16 h-16 mx-auto mb-4 animate-bounce" />
-              <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">Musim Baru Dimulai!</h2>
+              <h2 className="text-2xl font-black font-headline uppercase tracking-tighter" aria-hidden="true">Musim Baru Dimulai!</h2>
               <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold backdrop-blur-sm">
                 SENIN BERKAH
               </div>

@@ -80,8 +80,17 @@ function VerseDetailContent() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
-  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
-  const isVerifiedStudent = useMemo(() => checkIsVerifiedStudent(registrations || []), [registrations]);
+  const isStudent = useMemo(() => {
+    const fromRegs = checkIsStudent(registrations || []);
+    const fromProfile = userData?.mufradat_status === 'active' || userData?.mufradat_status === 'trial';
+    return fromRegs || fromProfile;
+  }, [registrations, userData]);
+
+  const isVerifiedStudent = useMemo(() => {
+    const fromRegs = checkIsVerifiedStudent(registrations || []);
+    const fromProfile = userData?.mufradat_status === 'active';
+    return fromRegs || fromProfile;
+  }, [registrations, userData]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -331,7 +340,7 @@ function VerseDetailContent() {
       <Card ref={studyCardRef} className="border-none bg-muted/20 scroll-mt-24">
         <CardContent className="pt-8 pb-10 px-6 text-right" dir="rtl">
           <TooltipProvider delayDuration={0}>
-            <div className="flex flex-wrap justify-end gap-x-2 gap-y-4 w-full">
+            <div className="flex flex-wrap justify-start gap-x-2 gap-y-4 w-full">
               {verse?.words?.filter(w => w.text_uthmani).map((word, wordIdx) => (
                 <Tooltip key={wordIdx} open={activeWordIdx === wordIdx} onOpenChange={(o) => o && setActiveWordIdx(wordIdx)}>
                   <TooltipTrigger asChild>

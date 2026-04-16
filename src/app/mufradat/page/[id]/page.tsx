@@ -16,7 +16,7 @@ import {
   TooltipPortal,
 } from "@/components/ui/tooltip";
 import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useCollection, useDoc } from "@/supabase/db";
 import { getJuzForPage } from "@/lib/quran-mapping";
 
 interface WordData {
@@ -49,13 +49,18 @@ export default function MufradatPageDetailPage() {
     filters: [{ column: 'user_id', operator: '==', value: user.id }]
   } : undefined);
 
-  const isStudent = useMemo(() => checkIsStudent(registrations), [registrations]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+  const isStudent = useMemo(() => {
+    const fromRegs = checkIsStudent(registrations);
+    const fromProfile = userData?.mufradat_status === 'active' || userData?.mufradat_status === 'trial';
+    return fromRegs || fromProfile;
+  }, [registrations, userData]);
 
   useEffect(() => {
-    if (!isUserLoading && !isStudent && !isMushafPageFree(pageNum)) {
+    if (!isUserLoading && !isUserDataLoading && !isStudent && !isMushafPageFree(pageNum)) {
       router.push('/mufradat');
     }
-  }, [pageNum, isStudent, isUserLoading, router]);
+  }, [pageNum, isStudent, isUserLoading, isUserDataLoading, router]);
 
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -247,10 +252,10 @@ export default function MufradatPageDetailPage() {
       <Card className="border-none bg-muted/20">
         <CardContent className="pt-8 pb-10 px-6 text-right" dir="rtl">
           <TooltipProvider delayDuration={0}>
-            <div className="flex flex-col items-end gap-10 w-full">
+            <div className="flex flex-col items-start gap-10 w-full">
               {verses.map((verse) => (
-                <div key={verse.id} className="flex flex-col items-end w-full gap-2">
-                  <div className="flex flex-wrap justify-end gap-x-2 gap-y-4 w-full" dir="rtl">
+                <div key={verse.id} className="flex flex-col items-start w-full gap-2">
+                  <div className="flex flex-wrap justify-start gap-x-2 gap-y-4 w-full" dir="rtl">
                   {verse.words.filter(w => w.text_uthmani).map((word, wordIdx) => {
                     const wordKey = `${verse.id}-${wordIdx}`;
                     return (

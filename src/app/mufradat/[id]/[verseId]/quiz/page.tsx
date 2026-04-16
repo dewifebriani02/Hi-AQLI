@@ -13,9 +13,12 @@ import {
   Trophy,
   Star,
   Zap,
-  Timer
+  Timer,
+  Shuffle,
+  Layers
 } from "lucide-react";
 import Link from "next/link";
+import { QuizModeSelector, QuizMode } from "@/components/mufradat/quiz-mode-selector";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +36,8 @@ interface Question {
   arabic: string;
   correct: string;
   options: string[];
+  type: 'mcq' | 'tricky' | 'scrambled' | 'reverse';
+  scrambledOptions?: string[]; // For 'scrambled' type
 }
 
 function MufradatQuizContent() {
@@ -59,12 +64,16 @@ function MufradatQuizContent() {
   const [surahInfo, setSurahInfo] = useState<{ verses_count: number } | null>(null);
   const [pageId, setPageId] = useState<number | null>(null);
   const [nextVersePage, setNextVersePage] = useState<number | null>(null);
+  const [pageWords, setPageWords] = useState<{arabic: string, indonesian: string}[]>([]);
   
   // Sprint Mode states
   const [isSprintMode, setIsSprintMode] = useState(false);
   const [timeLeft, setTimeLeft] = useState(10);
   const [timerActive, setTimerActive] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [quizMode, setQuizMode] = useState<QuizMode>("runut");
+  const [scrambledIndices, setScrambledIndices] = useState<number[]>([]);
+  const [scrambledSelected, setScrambledSelected] = useState<string[]>([]);
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
@@ -149,14 +158,17 @@ function MufradatQuizContent() {
           // Simple "decoy" translations for multi-choice
           const decoys = ["Maha Pengasih", "Maha Penyayang", "Segala Puji", "Tuhan", "Manusia", "Raja", "Sembahan", "Petunjuk", "Jalan", "Lurus"];
           
-          const generated = words.map((w: any) => {
+          const generated = words.map((w: any, idx: number) => {
             const correct = w.translation?.text || "???";
             const filteredDecoys = decoys.filter(d => d !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
+            
+            // Default type is mcq
             return {
               id: w.id,
               arabic: w.text_uthmani,
               correct: correct,
-              options: [correct, ...filteredDecoys].sort(() => Math.random() - 0.5)
+              options: [correct, ...filteredDecoys].sort(() => Math.random() - 0.5),
+              type: 'mcq' as const
             };
           });
           
@@ -164,12 +176,28 @@ function MufradatQuizContent() {
 
           // Fetch next verse metadata to check for page break
           const nextV = parseInt(verseId) + 1;
-          if (surahData.chapter && nextV <= surahData.chapter.verses_count) {
-            const nextRes = await fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${nextV}?fields=page_number`);
-            const nextData = await nextRes.json();
-            if (nextData && nextData.verse) {
-              setNextVersePage(nextData.verse.page_number);
-            }
+          const nextPromise = surahData.chapter && nextV <= surahData.chapter.verses_count
+            ? fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${nextV}?fields=page_number`).then(r => r.json())
+            : Promise.resolve(null);
+
+          // Fetch all words in this page for contextual decoys
+          const pageWordsPromise = fetch(`https://api.quran.com/api/v4/verses/by_page/${data.verse.page_number}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id`)
+            .then(r => r.json());
+
+          const [nextData, pageData] = await Promise.all([nextPromise, pageWordsPromise]);
+
+          if (nextData && nextData.verse) {
+            setNextVersePage(nextData.verse.page_number);
+          }
+
+          if (pageData && pageData.verses) {
+            const allPageWords = pageData.verses.flatMap((v: any) => 
+               v.words.filter((w: any) => w.char_type_name === 'word').map((w: any) => ({
+                 arabic: w.text_uthmani,
+                 indonesian: w.translation?.text
+               }))
+            ).filter((t: any) => !!t.indonesian && t.indonesian !== "???");
+            setPageWords(allPageWords);
           }
         }
       } catch (err) {
@@ -190,35 +218,144 @@ function MufradatQuizContent() {
     return () => clearInterval(interval);
   }, [isFinished, loading, user, id]);
 
-  // Sprint Mode Countdown logic
+  // Timer Countdown logic (Now applies to all modes)
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (timerActive && isSprintMode && !isFinished && !loading && timeLeft > 0) {
+    if (timerActive && !isFinished && !loading && timeLeft > 0) {
       interval = setInterval(() => setTimeLeft(t => t - 1), 1000);
-    } else if (timeLeft === 0 && timerActive && isSprintMode) {
+    } else if (timeLeft === 0 && timerActive) {
       // Time's up! Handle as wrong answer
       handleAnswer("__timeout__");
     }
     return () => clearInterval(interval);
-  }, [timerActive, isSprintMode, timeLeft, isFinished, loading]);
+  }, [timerActive, timeLeft, isFinished, loading]);
 
-  const startQuiz = () => {
+  const startQuiz = (mode: QuizMode) => {
+    setQuizMode(mode);
     setHasStarted(true);
     setTimerActive(true);
-    setTimeLeft(10);
+    setTimeLeft(10); // Standard 10s for ALL questions
+
+    const standardDecoys = ["Maha Pengasih", "Maha Penyayang", "Segala Puji", "Tuhan", "Manusia", "Raja", "Sembahan", "Petunjuk", "Jalan", "Lurus", "Beriman", "Kafir", "Syurga", "Neraka", "Malaikat", "Kitab", "Rasul", "Hari Kiamat", "Takdir", "Sabar", "Syukur"];
+    
+    // Categorization Helpers
+    const categorizeIndo = (text: string) => {
+      text = text.toLowerCase();
+      if (text.startsWith("maha") || text.startsWith("paling") || text.startsWith("sangat")) return "attribute";
+      if (text.match(/^(me|ber|di|ter)/) || text.match(/(kan|i|lah)$/)) return "verb";
+      if (text.length < 5 && ["dan", "maka", "dari", "ke", "ya", "ia", "di", "itu", "ini"].includes(text)) return "particle";
+      return "noun";
+    };
+
+    const categorizeArabic = (text: string) => {
+      if (text.startsWith("ال")) return "noun_definite";
+      if (text.endsWith("ون") || text.endsWith("ين")) return "plural";
+      if (text.length <= 2) return "particle";
+      return "other";
+    };
+
+    const getSmartDecoys = (target: {arabic: string, indonesian: string}, count: number) => {
+      if (pageWords.length < 5) {
+        return standardDecoys.filter(d => d !== target.indonesian).sort(() => Math.random() - 0.5).slice(0, count);
+      }
+
+      const targetIndoCat = categorizeIndo(target.indonesian);
+      const targetArabCat = categorizeArabic(target.arabic);
+
+      return pageWords
+        .filter(w => w.indonesian !== target.indonesian && w.arabic !== target.arabic)
+        .map(w => {
+          let score = 0;
+          if (categorizeIndo(w.indonesian) === targetIndoCat) score += 10;
+          if (categorizeArabic(w.arabic) === targetArabCat) score += 10;
+          if (Math.abs(w.indonesian.length - target.indonesian.length) <= 3) score += 5;
+          // Add small randomness to avoid exact same sets
+          score += Math.random() * 5;
+          return { ...w, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, count)
+        .map(w => w.indonesian);
+    };
+
+    // Apply Mode effects to questions
+    setQuestions(prev => {
+      let updated = [...prev];
+      
+      if (mode === "runut") {
+        updated = updated.map(q => {
+          const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3);
+          return {
+            ...q,
+            options: [q.correct, ...smartDecoys].sort(() => Math.random() - 0.5)
+          };
+        });
+      } else if (mode === "acak") {
+        updated = updated.sort(() => Math.random() - 0.5).map(q => {
+          const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3);
+          return {
+            ...q,
+            options: [q.correct, ...smartDecoys].sort(() => Math.random() - 0.5)
+          };
+        });
+      } else if (mode === "variasi") {
+        updated = updated.sort(() => Math.random() - 0.5).map(q => {
+          const rand = Math.random();
+          const isScrambled = rand < 0.33 && q.correct.split(' ').length > 1;
+          const isReverse = rand >= 0.33 && rand < 0.66;
+          
+          if (isScrambled) {
+            const words = q.correct.split(' ');
+            const distractors = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, Math.max(4, 9 - words.length));
+
+            return {
+              ...q,
+              type: 'scrambled' as const,
+              scrambledOptions: [...words, ...distractors].sort(() => Math.random() - 0.5)
+            };
+          } else if (isReverse) {
+            // Reverse MCQ: Already uses contextual Arabic decoys (could be further improved but let's focus on Indo ones first)
+            const arabicDecoys = updated
+              .filter(o => o.arabic !== q.arabic)
+              .map(o => o.arabic)
+              .sort(() => Math.random() - 0.5)
+              .slice(0, 3);
+            
+            while (arabicDecoys.length < 3) {
+              arabicDecoys.push("لَا", "نَعَمْ", "فِي");
+            }
+
+            return {
+              ...q,
+              type: 'reverse' as const,
+              options: [q.arabic, ...arabicDecoys].sort(() => Math.random() - 0.5)
+            };
+          } else {
+            const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3);
+            return {
+              ...q,
+              type: 'tricky' as const,
+              options: [q.correct, ...smartDecoys].sort(() => Math.random() - 0.5)
+            };
+          }
+        });
+      }
+      return updated;
+    });
   };
 
   const handleAnswer = (answer: string) => {
     if (selectedAnswer || isFinished) return;
     
     const currentQ = questions[currentIdx];
-    const correct = answer === currentQ.correct;
+    const correctVal = currentQ.type === 'reverse' ? currentQ.arabic : currentQ.correct;
+    const isCorrectVal = answer === correctVal;
     
     setSelectedAnswer(answer);
-    setIsCorrect(correct);
+    setIsCorrect(isCorrectVal);
     setTimerActive(false); // Pause countdown
     
-    if (correct) {
+    if (isCorrectVal) {
       playSfx('correct');
       setScore(s => s + 1);
     } else {
@@ -238,15 +375,30 @@ function MufradatQuizContent() {
         if (isSprintMode) setTimerActive(true);
       } else {
         setIsFinished(true);
-        const finalScore = score + (correct ? 1 : 0);
-        const finalWrongWords = correct ? [...wrongWords] : [...wrongWords, currentQ];
+        const finalScore = score + (isCorrectVal ? 1 : 0);
+        const finalWrongWords = isCorrectVal ? [...wrongWords] : [...wrongWords, currentQ];
         
         if (finalScore === questions.length) playSfx('perfect');
         else playSfx('fail');
         
         saveAttempt(finalScore, finalWrongWords.map((w: any) => w.id));
       }
+      setScrambledIndices([]);
     }, 1000);
+  };
+
+  const handleScrambledClick = (index: number, isSelected: boolean) => {
+    if (isSelected) {
+      setScrambledIndices(prev => prev.filter(i => i !== index));
+    } else {
+      setScrambledIndices(prev => [...prev, index]);
+    }
+  };
+
+  const checkScrambled = () => {
+    const currentQ = questions[currentIdx];
+    const answer = scrambledIndices.map(idx => currentQ.scrambledOptions![idx]).join(' ');
+    handleAnswer(answer);
   };
 
   const saveAttempt = async (finalScore: number, finalWrongWordIds: number[]) => {
@@ -272,37 +424,6 @@ function MufradatQuizContent() {
         });
 
       if (insertError) throw insertError;
-
-      // --- MABAR SCORING LOGIC ---
-      if (isPassed && pageId) {
-        const currentJuz = getJuzForPage(pageId);
-        const { data: activeMabar } = await supabase
-          .from('mufradat_mabar_sessions')
-          .select('id')
-          .eq('status', 'active')
-          .eq('juz_id', currentJuz)
-          .maybeSingle();
-
-        if (activeMabar) {
-          const { data: participant } = await supabase
-            .from('mufradat_mabar_participants')
-            .select('points_earned')
-            .eq('session_id', activeMabar.id)
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (participant) {
-            await supabase
-              .from('mufradat_mabar_participants')
-              .update({ 
-                points_earned: (participant.points_earned || 0) + 10,
-                last_activity_at: new Date().toISOString()
-              })
-              .eq('session_id', activeMabar.id)
-              .eq('user_id', user.id);
-          }
-        }
-      }
 
       // --- MABAR SCORING LOGIC ---
       if (isPassed && pageId) {
@@ -642,56 +763,7 @@ function MufradatQuizContent() {
       <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1.5 bg-slate-100 [&>div]:bg-[#D4AF37]" />
 
       {!hasStarted && !isFinished ? (
-        <Card className="border-4 border-[#D4AF37]/20 shadow-2xl overflow-hidden rounded-3xl bg-white p-8 text-center space-y-6">
-          <div className="w-20 h-20 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto text-[#D4AF37]">
-             <Zap className="w-10 h-10 fill-current" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black font-headline text-[#800000]">SIAP MULAI?</h2>
-            <p className="text-sm font-medium text-muted-foreground">Pilih mode kuis Anda sebelum memulai.</p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-             <button 
-                onClick={() => setIsSprintMode(false)}
-                className={cn(
-                  "p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3",
-                  !isSprintMode ? "border-[#800000] bg-[#800000]/5 shadow-lg" : "border-slate-100 hover:border-[#800000]/20"
-                )}
-             >
-                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", !isSprintMode ? "bg-[#800000] text-white" : "bg-slate-100 text-slate-400")}>
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="text-xs font-black uppercase">Mode Santai</span>
-                  <span className="text-[10px] font-medium text-slate-400">Tanpa Batas Waktu</span>
-                </div>
-             </button>
-
-             <button 
-                onClick={() => setIsSprintMode(true)}
-                className={cn(
-                  "p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3",
-                  isSprintMode ? "border-orange-500 bg-orange-50 shadow-lg" : "border-slate-100 hover:border-orange-200"
-                )}
-             >
-                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", isSprintMode ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-400")}>
-                  <Timer className="w-6 h-6" />
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="text-xs font-black uppercase text-orange-600">Flashcard Sprint</span>
-                  <span className="text-[10px] font-black text-orange-400">10 DETIK / SOAL</span>
-                </div>
-             </button>
-          </div>
-
-          <Button 
-            onClick={startQuiz}
-            className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-16 rounded-2xl text-lg shadow-xl"
-          >
-            MULAI KUIS SEKARANG
-          </Button>
-        </Card>
+        <QuizModeSelector onSelect={startQuiz} />
       ) : (
         <Card className="border-none shadow-xl overflow-hidden rounded-3xl bg-white relative">
           {/* SPRINT TIMER OVERLAY */}
@@ -707,41 +779,139 @@ function MufradatQuizContent() {
             </div>
           )}
 
-          <CardContent className="p-10 text-center bg-slate-50 flex flex-col items-center gap-6 relative">
-            <div className="flex items-center justify-between w-full absolute top-4 px-6 left-0">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apa arti dari kata berikut?</p>
-               {isSprintMode && (
-                 <Badge variant="outline" className={cn(
-                   "font-black text-sm px-3 py-1 border-2 transition-all animate-in zoom-in",
-                   timeLeft > 5 ? "border-orange-500 text-orange-600 bg-orange-50" : "border-rose-600 text-rose-600 bg-rose-50 scale-110"
-                 )}>
-                   <Timer className="w-4 h-4 mr-1.5" /> 00:{timeLeft.toString().padStart(2, '0')}
-                 </Badge>
-               )}
+          <CardContent className="p-6 sm:p-10 text-center bg-slate-50 flex flex-col items-center gap-6 relative min-h-[400px]">
+            <div className="absolute top-4 right-6 animate-in zoom-in duration-300">
+               <Badge 
+                 variant="outline" 
+                 className={cn(
+                   "font-black text-sm px-4 py-1.5 border-2 transition-all flex items-center gap-2 shadow-sm rounded-full",
+                   timeLeft > 3 ? "border-emerald-500 text-emerald-600 bg-emerald-50" : "border-rose-600 text-rose-600 bg-rose-50 scale-110 animate-pulse"
+                 )}
+               >
+                 <Timer className="w-4 h-4" /> 00:{timeLeft.toString().padStart(2, '0')}
+               </Badge>
             </div>
-            <div className="text-5xl sm:text-6xl font-arabic text-[#800000] mt-8">{questions[currentIdx]?.arabic}</div>
-          </CardContent>
-          <CardContent className="p-6 sm:p-8 grid grid-cols-1 gap-3">
-            {questions[currentIdx]?.options.map((opt, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                disabled={!!selectedAnswer}
-                onClick={() => handleAnswer(opt)}
-                className={cn(
-                  "h-auto py-5 text-lg font-bold transition-all border-2 rounded-2xl justify-between px-6",
-                  selectedAnswer === opt && isCorrect === true && "bg-emerald-50 border-emerald-500 text-emerald-700",
-                  selectedAnswer === opt && isCorrect === false && "bg-rose-50 border-rose-500 text-rose-700",
-                  selectedAnswer && opt === questions[currentIdx].correct && isCorrect === false && "bg-emerald-50 border-emerald-500 text-emerald-700",
-                  !selectedAnswer && "hover:border-[#D4AF37] hover:bg-slate-50"
+
+            {!isFinished && questions.length > 0 && (
+              <div className="w-full flex-1 flex flex-col justify-center">
+                {questions[currentIdx]?.type === 'scrambled' ? (
+                  <div className="flex flex-col gap-6">
+                    <div className="text-center space-y-2 mb-4">
+                      <div className="text-6xl font-arabic text-[#800000] leading-relaxed">
+                        {questions[currentIdx].arabic}
+                      </div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Susun Terjemahan</p>
+                    </div>
+
+                    <div className="min-h-[60px] p-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 flex flex-wrap gap-2 items-center justify-center shadow-inner">
+                      {scrambledIndices.length === 0 ? (
+                        <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Susun terjemahan di sini...</span>
+                      ) : (
+                        scrambledIndices.map((idx) => (
+                          <Badge 
+                            key={idx} 
+                            onClick={() => handleScrambledClick(idx, true)}
+                            className="bg-[#800000] text-white hover:bg-[#800000]/90 cursor-pointer py-1.5 px-3 rounded-lg text-sm transition-all animate-in zoom-in"
+                          >
+                            {questions[currentIdx].scrambledOptions![idx]}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {questions[currentIdx]?.scrambledOptions?.map((word, i) => (
+                        <Button
+                          key={i}
+                          variant="outline"
+                          disabled={scrambledIndices.includes(i) || !!selectedAnswer}
+                          onClick={() => handleScrambledClick(i, false)}
+                          className={cn(
+                            "rounded-xl border-2 transition-all",
+                            scrambledIndices.includes(i) ? "opacity-30 scale-95" : "hover:border-[#800000]/30 hover:bg-[#800000]/5 bg-white"
+                          )}
+                        >
+                          {word}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <Button 
+                      disabled={scrambledIndices.length === 0 || !!selectedAnswer}
+                      onClick={checkScrambled}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-14 rounded-xl shadow-lg mt-4"
+                    >
+                      PERIKSA JAWABAN
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-8">
+                    <div className="flex flex-col items-center justify-center gap-2 py-4 animate-in fade-in duration-700">
+                      {questions[currentIdx]?.type === 'reverse' ? (
+                        <div className="space-y-4 w-full">
+                          <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Terjemahan:</p>
+                          <div className="text-3xl font-bold text-slate-800 bg-white px-8 py-6 rounded-[2rem] shadow-sm border border-slate-100 inline-block mx-auto min-w-[200px]">
+                            {questions[currentIdx]?.correct}
+                          </div>
+                          <p className="text-[10px] font-black uppercase text-[#D4AF37] tracking-widest mt-4">Pilih Bahasa Arabnya:</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                           <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Apa arti dari kata berikut?</p>
+                           <div className="text-6xl font-arabic text-[#800000] leading-relaxed drop-shadow-sm">
+                            {questions[currentIdx]?.arabic}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 w-full max-w-md mx-auto">
+                      {questions[currentIdx]?.options.map((option, i) => {
+                        const isCorrectOption = questions[currentIdx].type === 'reverse' 
+                          ? option === questions[currentIdx].arabic 
+                          : option === questions[currentIdx].correct;
+                        
+                        return (
+                          <Button
+                            key={i}
+                            variant="outline"
+                            size="lg"
+                            className={cn(
+                              "h-16 rounded-2xl border-2 transition-all active:scale-[0.98] relative overflow-hidden group px-6",
+                              questions[currentIdx]?.type === 'reverse' ? "font-arabic text-3xl h-20" : "text-lg font-bold",
+                              selectedAnswer === option 
+                                ? (isCorrectOption
+                                    ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md ring-2 ring-emerald-500/20" 
+                                    : "bg-rose-50 border-rose-500 text-rose-700 shadow-md ring-2 ring-rose-500/20")
+                                : (selectedAnswer && isCorrectOption 
+                                    ? "bg-emerald-50 border-emerald-500 text-emerald-700 opacity-90"
+                                    : "hover:border-[#800000]/40 hover:bg-[#800000]/5 bg-white")
+                            )}
+                            onClick={() => handleAnswer(option)}
+                            disabled={!!selectedAnswer}
+                          >
+                            {selectedAnswer === option && (
+                              <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                                {isCorrectOption 
+                                  ? <CheckCircle2 className="w-6 h-6 text-emerald-500 animate-in zoom-in" />
+                                  : <XCircle className="w-6 h-6 text-rose-500 animate-in zoom-in" />
+                                }
+                              </div>
+                            )}
+                            
+                            <span className="flex-1 text-center">{option}</span>
+                            
+                            {selectedAnswer === option && isCorrectOption && (
+                              <div className="absolute inset-0 bg-emerald-500/5 animate-pulse pointer-events-none" />
+                            )}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
-              >
-                <span>{opt}</span>
-                {selectedAnswer === opt && isCorrect === true && <CheckCircle2 className="w-5 h-5" />}
-                {selectedAnswer === opt && isCorrect === false && <XCircle className="w-5 h-5" />}
-                {selectedAnswer && opt === questions[currentIdx].correct && isCorrect === false && <CheckCircle2 className="w-5 h-5 opacity-50" />}
-              </Button>
-            ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

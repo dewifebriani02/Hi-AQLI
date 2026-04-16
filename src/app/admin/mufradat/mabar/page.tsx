@@ -36,7 +36,8 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle 
+  DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -253,10 +254,12 @@ export default function AdminMabarManagementPage() {
       {/* CREATE DIALOG */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-md p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-           <DialogHeader className="p-8 bg-[#800000] text-white text-center">
+            <DialogHeader className="p-8 bg-[#800000] text-white text-center">
               <DialogTitle className="text-2xl font-black font-headline uppercase leading-tight">Jadwalkan Mabar</DialogTitle>
-              <p className="text-white/60 text-xs font-medium">Bismillah, mari buat kompetisi yang seru!</p>
-           </DialogHeader>
+              <DialogDescription className="text-white/60 text-xs font-medium">
+                Bismillah, mari buat kompetisi yang seru!
+              </DialogDescription>
+            </DialogHeader>
            <div className="p-8 space-y-4">
               <div className="space-y-1.5">
                  <label className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Sesi Mabar</label>

@@ -76,8 +76,17 @@ export default function MufradatJuzDetailPage() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
-  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
-  const isVerifiedStudent = useMemo(() => checkIsVerifiedStudent(registrations || []), [registrations]);
+  const isStudent = useMemo(() => {
+    const fromRegs = checkIsStudent(registrations || []);
+    const fromProfile = userData?.mufradat_status === 'active' || userData?.mufradat_status === 'trial';
+    return fromRegs || fromProfile;
+  }, [registrations, userData]);
+
+  const isVerifiedStudent = useMemo(() => {
+    const fromRegs = checkIsVerifiedStudent(registrations || []);
+    const fromProfile = userData?.mufradat_status === 'active';
+    return fromRegs || fromProfile;
+  }, [registrations, userData]);
 
   const access = useMemo(() => {
     // For Juz access, we check if the user has access to the first page of this Juz

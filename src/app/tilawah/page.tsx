@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { checkIsStudent } from "@/lib/access-control";
@@ -84,7 +85,12 @@ export default function QuranPage() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-[2rem] border-none shadow-2xl">
-              <DialogHeader><DialogTitle className="text-center font-black uppercase tracking-tighter text-xl text-[#800000]">Library Qari Al-Qur'an</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle className="text-center font-black uppercase tracking-tighter text-xl text-[#800000]">Library Qari Al-Qur'an</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Pilih Qari favorit Ukhti untuk mendengarkan audio tilawah Al-Qur'an.
+                </DialogDescription>
+              </DialogHeader>
               <div className="px-1 py-4 flex flex-col gap-4 overflow-hidden">
                  <div className="relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-[#800000] transition-colors" />

@@ -42,6 +42,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -440,7 +441,12 @@ export function TikrarSystem() {
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
-                        <DialogHeader><DialogTitle>Pilih Qari</DialogTitle></DialogHeader>
+                        <DialogHeader>
+                          <DialogTitle>Pilih Qari Al-Qur'an</DialogTitle>
+                          <DialogDescription className="sr-only">
+                            Pilih qari favorit Ukhti untuk mendengarkan audio tilawah Al-Qur'an.
+                          </DialogDescription>
+                        </DialogHeader>
                         <div className="grid gap-2 py-4">
                           {RECITERS.map((r) => (
                             <Button key={r.id} variant={selectedReciterId === r.id ? "default" : "outline"} onClick={() => { setSelectedReciterId(r.id); localStorage.setItem('aqli_reciter_id', r.id.toString()); setShowReciterDialog(false); }} className={cn("justify-start gap-3 font-bold", selectedReciterId === r.id && "bg-[#800000] text-white")}>

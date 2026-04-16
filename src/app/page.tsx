@@ -57,6 +57,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 
@@ -213,7 +214,13 @@ export default function DashboardPage() {
     } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude),
-        () => fetchPrayerTimes(-6.2088, 106.8456)
+        (err) => {
+          // Handle specific macOS/Browser permission or location availability errors
+          // kCLErrorLocationUnknown is err.code 2 (POSITION_UNAVAILABLE)
+          console.warn("Geolocation fallback to Jakarta:", err.message);
+          fetchPrayerTimes(-6.2088, 106.8456);
+        },
+        { timeout: 5000, enableHighAccuracy: false }
       );
     } else {
       fetchPrayerTimes(-6.2088, 106.8456);
@@ -597,6 +604,9 @@ export default function DashboardPage() {
                     <DialogContent className="sm:max-w-md bg-white rounded-3xl">
                       <DialogHeader>
                         <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest">Pilih Lokasi Ukhti</DialogTitle>
+                        <DialogDescription className="sr-only">
+                          Pilih kota terdekat untuk menyesuaikan jadwal shalat Ukhti secara akurat.
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="grid grid-cols-2 gap-3 py-4">
                         {MAJOR_CITIES.map((city) => (

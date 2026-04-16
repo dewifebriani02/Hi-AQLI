@@ -119,7 +119,11 @@ export default function MufradatSurahDetailPage() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
 
-  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+  const isStudent = useMemo(() => {
+    const fromRegs = checkIsStudent(registrations || []);
+    const fromProfile = userData?.mufradat_status === 'active' || userData?.mufradat_status === 'trial';
+    return fromRegs || fromProfile;
+  }, [registrations, userData]);
 
   const access = useMemo(() => {
     return getMufradatStatus({

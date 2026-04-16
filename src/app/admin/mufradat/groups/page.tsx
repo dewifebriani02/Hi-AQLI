@@ -57,6 +57,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -698,7 +699,9 @@ export default function MufradatGroupsPage() {
         <DialogContent className="max-w-md p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
            <DialogHeader className="p-8 bg-[#800000] text-white">
               <DialogTitle className="text-2xl font-black font-headline uppercase">Tambah Grup Baru</DialogTitle>
-              <p className="text-white/60 text-xs font-medium">Lengkapi detail grup thalibah Hi Mufradat Anda.</p>
+              <DialogDescription className="text-white/60 text-xs font-medium">
+                Lengkapi detail grup thalibah Hi Mufradat Anda.
+              </DialogDescription>
            </DialogHeader>
            <CardContent className="p-8 space-y-4">
               <div className="space-y-1.5">
@@ -821,9 +824,9 @@ export default function MufradatGroupsPage() {
            </div>
            <DialogHeader>
               <DialogTitle className="text-xl font-black text-slate-900 leading-tight">HAPUS GRUP INI?</DialogTitle>
-              <p className="text-xs font-medium text-slate-500 mt-2 px-4">
+              <DialogDescription className="text-xs font-medium text-slate-500 mt-2 px-4">
                 Masyallah, apakah Ukhti yakin? Peserta di dalam grup ini akan menjadi 'Tanpa Grup' (Ungrouped).
-              </p>
+              </DialogDescription>
            </DialogHeader>
            <div className="flex flex-col gap-3 mt-8">
               <Button 
@@ -848,23 +851,28 @@ export default function MufradatGroupsPage() {
       {/* VIEW MEMBERS MODAL */}
       <Dialog open={isViewMembersOpen} onOpenChange={setIsViewMembersOpen}>
         <DialogContent className="max-w-xl max-h-[80vh] flex flex-col p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
-          <DialogHeader className="p-6 bg-[#800000]/5 border-b flex flex-row items-center justify-between space-y-0">
-            <DialogTitle className="flex items-center gap-2 text-[#800000] font-black uppercase tracking-tight">
-              <Users className="w-5 h-5 text-[#D4AF37]" /> 
-              {isAddingMember ? 'Tambah Peserta' : `Peserta ${groups?.find(g => g.id === viewingGroupId)?.name}`}
-            </DialogTitle>
-            <Button 
-               variant={isAddingMember ? "ghost" : "outline"} 
-               size="sm" 
-               onClick={() => setIsAddingMember(!isAddingMember)}
-               className={cn(
-                 "h-8 font-black uppercase text-[10px] gap-2 border-2 rounded-xl",
-                 isAddingMember ? "text-muted-foreground" : "border-[#800000]/20 text-[#800000]"
-               )}
-            >
-               {isAddingMember ? <ArrowLeft className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-               {isAddingMember ? 'Kembali' : 'Tambah Manual'}
-            </Button>
+          <DialogHeader className="p-6 bg-[#800000]/5 border-b">
+            <div className="flex flex-row items-center justify-between space-y-0">
+              <DialogTitle className="flex items-center gap-2 text-[#800000] font-black uppercase tracking-tight">
+                <Users className="w-5 h-5 text-[#D4AF37]" /> 
+                {isAddingMember ? 'Tambah Peserta' : `Peserta ${groups?.find(g => g.id === viewingGroupId)?.name}`}
+              </DialogTitle>
+              <Button 
+                 variant={isAddingMember ? "ghost" : "outline"} 
+                 size="sm" 
+                 onClick={() => setIsAddingMember(!isAddingMember)}
+                 className={cn(
+                   "h-8 font-black uppercase text-[10px] gap-2 border-2 rounded-xl",
+                   isAddingMember ? "text-muted-foreground" : "border-[#800000]/20 text-[#800000]"
+                 )}
+              >
+                 {isAddingMember ? <ArrowLeft className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+                 {isAddingMember ? 'Kembali' : 'Tambah Manual'}
+              </Button>
+            </div>
+            <DialogDescription className="text-[10px] font-medium text-muted-foreground mt-1">
+              Atur thalibah dalam grup ini untuk pemantauan hafalan yang lebih efektif.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
