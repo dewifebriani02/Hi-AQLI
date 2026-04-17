@@ -254,9 +254,13 @@ function MufradatQuizContent() {
       return "other";
     };
 
-    const getSmartDecoys = (target: {arabic: string, indonesian: string}, count: number) => {
+    const getSmartDecoys = (target: {arabic: string, indonesian: string}, count: number, targetType: 'arabic' | 'indonesian' = 'indonesian') => {
       if (pageWords.length < 5) {
-        return standardDecoys.filter(d => d !== target.indonesian).sort(() => Math.random() - 0.5).slice(0, count);
+        if (targetType === 'indonesian') {
+          return standardDecoys.filter(d => d !== target.indonesian).sort(() => Math.random() - 0.5).slice(0, count);
+        } else {
+          return ["لَا", "نَعَمْ", "فِي", "مِنْ", "إِلَى", "عَلَى"].filter(d => d !== target.arabic).sort(() => Math.random() - 0.5).slice(0, count);
+        }
       }
 
       const targetIndoCat = categorizeIndo(target.indonesian);
@@ -269,13 +273,12 @@ function MufradatQuizContent() {
           if (categorizeIndo(w.indonesian) === targetIndoCat) score += 10;
           if (categorizeArabic(w.arabic) === targetArabCat) score += 10;
           if (Math.abs(w.indonesian.length - target.indonesian.length) <= 3) score += 5;
-          // Add small randomness to avoid exact same sets
           score += Math.random() * 5;
           return { ...w, score };
         })
         .sort((a, b) => b.score - a.score)
         .slice(0, count)
-        .map(w => w.indonesian);
+        .map(w => targetType === 'indonesian' ? w.indonesian : w.arabic);
     };
 
     // Apply Mode effects to questions
@@ -284,29 +287,31 @@ function MufradatQuizContent() {
       
       if (mode === "runut") {
         updated = updated.map(q => {
-          const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3);
+          const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3, 'indonesian');
           return {
             ...q,
-            options: [q.correct, ...smartDecoys].sort(() => Math.random() - 0.5)
+            options: [q.correct, ...smartDecoys].sort(() => Math.random() - 0.5),
+            type: 'mcq' as const
           };
         });
       } else if (mode === "acak") {
         updated = updated.sort(() => Math.random() - 0.5).map(q => {
-          const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3);
+          const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3, 'indonesian');
           return {
             ...q,
-            options: [q.correct, ...smartDecoys].sort(() => Math.random() - 0.5)
+            options: [q.correct, ...smartDecoys].sort(() => Math.random() - 0.5),
+            type: 'mcq' as const
           };
         });
       } else if (mode === "variasi") {
-        updated = updated.sort(() => Math.random() - 0.5).map(q => {
+        updated = updated.map(q => {
           const rand = Math.random();
           const isScrambled = rand < 0.33 && q.correct.split(' ').length > 1;
           const isReverse = rand >= 0.33 && rand < 0.66;
           
           if (isScrambled) {
             const words = q.correct.split(' ');
-            const distractors = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, Math.max(4, 9 - words.length));
+            const distractors = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, Math.max(4, 9 - words.length), 'indonesian');
 
             return {
               ...q,
@@ -314,16 +319,7 @@ function MufradatQuizContent() {
               scrambledOptions: [...words, ...distractors].sort(() => Math.random() - 0.5)
             };
           } else if (isReverse) {
-            // Reverse MCQ: Already uses contextual Arabic decoys (could be further improved but let's focus on Indo ones first)
-            const arabicDecoys = updated
-              .filter(o => o.arabic !== q.arabic)
-              .map(o => o.arabic)
-              .sort(() => Math.random() - 0.5)
-              .slice(0, 3);
-            
-            while (arabicDecoys.length < 3) {
-              arabicDecoys.push("لَا", "نَعَمْ", "فِي");
-            }
+            const arabicDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3, 'arabic');
 
             return {
               ...q,
@@ -331,7 +327,7 @@ function MufradatQuizContent() {
               options: [q.arabic, ...arabicDecoys].sort(() => Math.random() - 0.5)
             };
           } else {
-            const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3);
+            const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3, 'indonesian');
             return {
               ...q,
               type: 'tricky' as const,

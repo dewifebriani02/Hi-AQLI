@@ -223,9 +223,13 @@ function PageQuizContent() {
       return "other";
     };
 
-    const getSmartDecoys = (target: {arabic: string, indonesian: string}, count: number) => {
+    const getSmartDecoys = (target: {arabic: string, indonesian: string}, count: number, targetType: 'arabic' | 'indonesian' = 'indonesian') => {
       if (pool.length < 5) {
-        return standardDecoys.filter(d => d !== target.indonesian).sort(() => Math.random() - 0.5).slice(0, count);
+        if (targetType === 'indonesian') {
+          return standardDecoys.filter(d => d !== target.indonesian).sort(() => Math.random() - 0.5).slice(0, count);
+        } else {
+          return ["لَا", "نَعَمْ", "فِي", "مِنْ", "إِلَى", "عَلَى"].filter(d => d !== target.arabic).sort(() => Math.random() - 0.5).slice(0, count);
+        }
       }
 
       const targetIndoCat = categorizeIndo(target.indonesian);
@@ -243,13 +247,12 @@ function PageQuizContent() {
         })
         .sort((a, b) => b.score - a.score)
         .slice(0, count)
-        .map(w => w.indonesian);
+        .map(w => targetType === 'indonesian' ? w.indonesian : w.arabic);
     };
 
     let updated = selectedWords.map((w: any) => {
       const correct = w.translation?.text || "???";
-      
-      const smartDecoys = getSmartDecoys({ arabic: w.text_uthmani, indonesian: correct }, 3);
+      const smartDecoys = getSmartDecoys({ arabic: w.text_uthmani, indonesian: correct }, 3, 'indonesian');
 
       return {
         id: w.id,
@@ -261,14 +264,14 @@ function PageQuizContent() {
     });
 
     if (mode === "variasi") {
-      updated = updated.sort(() => Math.random() - 0.5).map(q => {
+      updated = updated.map(q => {
         const rand = Math.random();
         const isScrambled = rand < 0.33 && q.correct.split(' ').length > 1;
         const isReverse = rand >= 0.33 && rand < 0.66;
         
         if (isScrambled) {
           const words = q.correct.split(' ');
-          const distractors = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, Math.max(4, 9 - words.length));
+          const distractors = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, Math.max(4, 9 - words.length), 'indonesian');
 
           return {
             ...q,
@@ -276,15 +279,7 @@ function PageQuizContent() {
             scrambledOptions: [...words, ...distractors].sort(() => Math.random() - 0.5)
           };
         } else if (isReverse) {
-          const arabicDecoys = updated
-            .filter(o => o.arabic !== q.arabic)
-            .map(o => o.arabic)
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 3);
-          
-          while (arabicDecoys.length < 3) {
-            arabicDecoys.push("لَا", "نَعَمْ", "فِي");
-          }
+          const arabicDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3, 'arabic');
 
           return {
             ...q,

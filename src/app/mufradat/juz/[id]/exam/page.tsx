@@ -184,9 +184,13 @@ export default function MufradatJuzExamPage() {
       return "other";
     };
 
-    const getSmartDecoys = (target: {arabic: string, indonesian: string}, count: number) => {
+    const getSmartDecoys = (target: {arabic: string, indonesian: string}, count: number, targetType: 'arabic' | 'indonesian' = 'indonesian') => {
       if (pool.length < 5) {
-        return standardDecoys.filter(d => d !== target.indonesian).sort(() => Math.random() - 0.5).slice(0, count);
+        if (targetType === 'indonesian') {
+          return standardDecoys.filter(d => d !== target.indonesian).sort(() => Math.random() - 0.5).slice(0, count);
+        } else {
+          return ["لَا", "نَعَمْ", "فِي", "مِنْ", "إِلَى", "عَلَى"].filter(d => d !== target.arabic).sort(() => Math.random() - 0.5).slice(0, count);
+        }
       }
 
       const targetIndoCat = categorizeIndo(target.indonesian);
@@ -204,13 +208,12 @@ export default function MufradatJuzExamPage() {
         })
         .sort((a, b) => b.score - a.score)
         .slice(0, count)
-        .map(w => w.indonesian);
+        .map(w => targetType === 'indonesian' ? w.indonesian : w.arabic);
     };
 
     const generated = selectedWords.map((w: any) => {
       const correct = w.translation?.text || "???";
-      
-      const smartDecoys = getSmartDecoys({ arabic: w.text_uthmani, indonesian: correct }, 3);
+      const smartDecoys = getSmartDecoys({ arabic: w.text_uthmani, indonesian: correct }, 3, 'indonesian');
 
       return {
         id: w.id,
@@ -231,7 +234,7 @@ export default function MufradatJuzExamPage() {
           
           if (isScrambled) {
             const words = q.correct.split(' ');
-            const distractors = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, Math.max(4, 9 - words.length));
+            const distractors = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, Math.max(4, 9 - words.length), 'indonesian');
 
             return {
               ...q,
@@ -239,15 +242,7 @@ export default function MufradatJuzExamPage() {
               scrambledOptions: [...words, ...distractors].sort(() => Math.random() - 0.5)
             };
           } else if (isReverse) {
-            const arabicDecoys = updated
-              .filter(o => o.arabic !== q.arabic)
-              .map(o => o.arabic)
-              .sort(() => Math.random() - 0.5)
-              .slice(0, 3);
-            
-            while (arabicDecoys.length < 3) {
-              arabicDecoys.push("لَا", "نَعَمْ", "فِي");
-            }
+            const arabicDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3, 'arabic');
 
             return {
               ...q,
