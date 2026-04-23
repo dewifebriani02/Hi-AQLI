@@ -50,7 +50,7 @@ const levels = [
   { id: "3", name: "Santai", price: 50000 },
 ];
 
-const INFAQ_LEVELS = [50000, 75000, 100000, 125000, 150000];
+const INFAQ_LEVELS = [50000, 75000, 100000, 250000, 500000, 1000000];
 
 function RegistrationForm() {
   const { user, isUserLoading } = useUser();
@@ -737,59 +737,90 @@ function RegistrationForm() {
                 </div>
               </div>
 
-              {/* Referral Code Field */}
+              {/* Referral Code Section */}
               <div className={cn(
-                "p-5 rounded-2xl border-2 border-dashed space-y-4 animate-in fade-in transition-all",
-                appliedReferral ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"
+                "p-6 rounded-3xl border-2 transition-all duration-500",
+                appliedReferral 
+                  ? "bg-emerald-50 border-emerald-200 shadow-lg shadow-emerald-500/10" 
+                  : "bg-amber-50/30 border-amber-200 border-dashed"
               )}>
-                <div className="flex items-center gap-2">
-                  <HeartHandshake className={cn("w-5 h-5", appliedReferral ? "text-amber-600" : "text-slate-400")} />
-                  <h4 className={cn("font-black text-[10px] uppercase tracking-widest", appliedReferral ? "text-amber-800" : "text-slate-500")}>
-                    Punya Kode Referral Teman?
-                  </h4>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "p-2 rounded-xl transition-colors",
+                      appliedReferral ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+                    )}>
+                      <HeartHandshake className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-[12px] uppercase tracking-widest text-slate-800">Hadiah Referral</h4>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Gunakan kode teman & dapatkan diskon Rp 5.000</p>
+                    </div>
+                  </div>
+                  {appliedReferral && (
+                    <Badge className="bg-emerald-500 text-white border-none animate-pulse">BERHASIL DIPASANG</Badge>
+                  )}
                 </div>
                 
                 {appliedReferral ? (
-                  <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100 shadow-sm animate-in zoom-in duration-300">
+                  <div className="bg-white p-4 rounded-2xl border-2 border-emerald-100 flex items-center justify-between shadow-sm animate-in zoom-in">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter flex items-center gap-1">
-                        <Zap className="w-2 h-2 fill-current" /> {appliedVoucher ? 'Referral Non-Aktif (Voucher Digunakan)' : 'Hadiah Referral Aktif (-Rp 5.000)'}
+                      <span className="text-[10px] font-black text-emerald-600 uppercase flex items-center gap-1">
+                        <Zap className="w-3 h-3 fill-current" /> Potongan Langsung Aktif
                       </span>
-                      <span className="text-sm font-black text-[#800000]">{appliedReferral.referral_code}</span>
+                      <span className="text-lg font-black text-[#800000] tracking-wider">{appliedReferral.referral_code}</span>
+                      <p className="text-[10px] font-bold text-slate-400 capitalize">Oleh: {appliedReferral.username || "Sahabat AQLI"}</p>
                     </div>
-                    {/* Only show Hapus button if NOT a persistent referral from profile */}
+                    {/* Only show Hapus button if NOT a persistent referral from profile or forced link */}
                     {!(userData?.referred_by_id) && (
-                      <Button variant="ghost" size="sm" className="h-8 text-rose-500 font-bold text-[10px]" onClick={() => {setAppliedReferral(null); setReferralCodeInput("");}}>HAPUS</Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-rose-500 hover:bg-rose-50 font-black text-[10px]" 
+                        onClick={() => {
+                          setAppliedReferral(null); 
+                          setReferralCodeInput("");
+                          toast({ description: "Kode referral dihapus." });
+                        }}
+                      >
+                        GANTI KODE
+                      </Button>
                     )}
                   </div>
                 ) : (
-                  userData?.referred_by_id ? (
-                    <div className="flex items-center gap-2 py-2">
-                       <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
-                       <span className="text-[10px] font-bold text-amber-700 uppercase animate-pulse">Menghubungkan Hadiah Ukhti...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex gap-2">
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
                         <Input 
-                          placeholder="CONTOH: AQLI-DEWI01" 
+                          placeholder="MASUKKAN KODE (CONTOH: AQLI-DEWI01)" 
                           value={referralCodeInput}
                           onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
-                          className="h-12 border-2 rounded-xl font-bold uppercase placeholder:text-slate-300"
+                          className="h-14 border-2 rounded-2xl font-black uppercase text-sm placeholder:text-slate-300 focus-visible:ring-amber-500 bg-white"
                         />
-                        <Button 
-                          onClick={handleValidateReferral}
-                          disabled={isValidatingReferral || !referralCodeInput.trim()}
-                          className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] h-12 px-6 rounded-xl shadow-lg shadow-amber-500/20"
-                        >
-                          {isValidatingReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : "Gunakan"}
-                        </Button>
+                        {isValidatingReferral && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+                          </div>
+                        )}
                       </div>
-                      <p className="text-[9px] text-slate-500 font-bold italic mt-1 font-sans">*Gunakan kode teman untuk mendapatkan diskon Rp 5.000.</p>
-                    </>
-                  )
+                      <Button 
+                        onClick={handleValidateReferral}
+                        disabled={isValidatingReferral || !referralCodeInput.trim()}
+                        className="bg-amber-500 hover:bg-amber-600 text-white font-black px-6 h-14 rounded-2xl shadow-lg shadow-amber-500/20 uppercase text-xs"
+                      >
+                        CEK KODE
+                      </Button>
+                    </div>
+                    <div className="flex items-start gap-2 px-1">
+                       <Info className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
+                       <p className="text-[10px] text-amber-800 font-bold leading-tight italic">
+                         "Kehilangan link referral? Jangan khawatir Ukhti, silakan ketik manual kode referral teman Ukhti di atas untuk tetap mendapatkan potongan infaq."
+                       </p>
+                    </div>
+                  </div>
                 )}
               </div>
+/div>
 
               {isTikrar && (
                 <div className="space-y-6">
@@ -1058,13 +1089,19 @@ function RegistrationForm() {
                       <ShieldCheck className="w-5 h-5" />
                       <h4 className="font-black text-sm uppercase tracking-widest text-[#800000]">Akad Commitment Hi Mufradat</h4>
                     </div>
-                    <div className="space-y-3 text-[11px] text-emerald-900 leading-relaxed font-medium">
+                    <div className="space-y-4 text-[11px] text-emerald-900 leading-relaxed font-medium">
+                      <div className="p-3 bg-white/50 rounded-xl border border-emerald-100">
+                        <p className="font-black text-[#800000] uppercase text-[9px] mb-1">Masa Belajar & Aktivasi:</p>
+                        <p>Halaqah dimulai kapan saja. Masa aktif akses & monitoring berlaku selama **30 hari** terhitung sejak tanggal pendaftaran Ukhti diverifikasi (aktif).</p>
+                      </div>
+                      
                       <p>Dengan mendaftar Hi Mufradat, saya berjanji untuk:</p>
-                      <ul className="list-disc pl-4 space-y-1">
-                        <li><strong>Disiplin</strong>: Mengikuti target hafalan sesuai pilihan (min. 1 halaman/pekan).</li>
-                        <li><strong>Aktif</strong>: Berpartisipasi dalam Monitoring Group WhatsApp yang telah ditentukan.</li>
-                        <li><strong>Konsekuensi</strong>: Jika dalam 2 pekan berturut-turut tidak ada progres tanpa udzur syar'i, saya bersedia menerima teguran atau dikeluarkan dari group sementara demi menjaga semangat belajar thalibah lain.</li>
-                        <li><strong>Ikhlas</strong>: Niat semata-mata karena Allah untuk memahami kalam-Nya.</li>
+                      <ul className="list-disc pl-4 space-y-2">
+                        <li><strong>Disiplin & Istiqomah</strong>: Mengikuti target hafalan sesuai pilihan (min. 1 halaman/pekan).</li>
+                        <li><strong>Laporan Harian</strong>: Berkomitmen mengirimkan laporan pencapaian harian (Daily Progress) di dalam group WhatsApp.</li>
+                        <li><strong>Terbuka (Japri Admin)</strong>: Bersedia dihubungi secara pribadi (japri) oleh Admin/Musyrifah untuk reminder pekanan jika target belum tercapai.</li>
+                        <li><strong>Interaksi Positif</strong>: Bersedia menerima motivasi serta interaksi dari thalibah lain di dalam group terkait pencapaian bersama.</li>
+                        <li><strong>Konsekuensi</strong>: Jika dalam 2 pekan berturut-turut tidak ada progres tanpa udzur syar'i, saya bersedia menerima teguran demi menjaga ritme belajar thalibah lain.</li>
                       </ul>
                     </div>
                     <div className="flex items-start gap-3 pt-2">
@@ -1078,7 +1115,7 @@ function RegistrationForm() {
                         {akadAccepted && <Check className="w-3.5 h-3.5 text-white" />}
                       </div>
                       <Label className="text-[10px] font-bold text-emerald-900 leading-tight cursor-pointer" onClick={() => setAkadAccepted(!akadAccepted)}>
-                        Saya setuju dengan Akad & Ketentuan di atas (Ittafaqna).
+                        Saya mengerti & setuju dengan **Akad Komitmen** di atas (Ittafaqna).
                       </Label>
                     </div>
                   </div>

@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowLeft, Plus, Loader2, Pencil, Trash2, X, Save,
-  HeartHandshake, Target, CheckCircle2, XCircle
+  HeartHandshake, Target, CheckCircle2, XCircle,
+  Image as ImageIcon, Copy
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -35,8 +36,13 @@ export default function AdminCampaignsPage() {
   const [category, setCategory] = useState("INFAQ");
   const [goal, setGoal] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [daysLeft, setDaysLeft] = useState("");
   const [beneficiariesCount, setBeneficiariesCount] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankAccountHolder, setBankAccountHolder] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
 
   const campaignOptions = useMemo(() => ({
     orderBy: { column: 'created_at', ascending: false }
@@ -65,8 +71,13 @@ export default function AdminCampaignsPage() {
     setCategory("INFAQ");
     setGoal("");
     setImageUrl("");
+    setImageFile(null);
     setDaysLeft("");
     setBeneficiariesCount("");
+    setBankName("");
+    setBankAccountNumber("");
+    setBankAccountHolder("");
+    setContactPerson("");
     setEditingId(null);
     setShowForm(false);
   };
@@ -79,7 +90,12 @@ export default function AdminCampaignsPage() {
     setImageUrl(camp.image_url || "");
     setDaysLeft(camp.days_left?.toString() || "0");
     setBeneficiariesCount(camp.beneficiaries_count?.toString() || "0");
+    setBankName(camp.bank_name || "");
+    setBankAccountNumber(camp.bank_account_number || "");
+    setBankAccountHolder(camp.bank_account_holder || "");
+    setContactPerson(camp.contact_person || "");
     setEditingId(camp.id);
+    setImageFile(null);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -92,14 +108,41 @@ export default function AdminCampaignsPage() {
 
     setLoading(true);
     try {
+      let finalImageUrl = imageUrl;
+
+      // Handle Image Upload
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('gambar')
+          .upload(fileName, imageFile);
+
+        if (uploadError) {
+          console.error("Storage Upload Error:", uploadError);
+          throw uploadError;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('gambar')
+          .getPublicUrl(fileName);
+        
+        finalImageUrl = publicUrl;
+      }
+
       const payload = {
         title: title.trim(),
         description: description.trim(),
         category,
         goal: parseFloat(goal) || 0,
-        image_url: imageUrl.trim() || null,
+        image_url: finalImageUrl || null,
         days_left: parseInt(daysLeft) || 0,
         beneficiaries_count: parseInt(beneficiariesCount) || 0,
+        bank_name: bankName.trim(),
+        bank_account_number: bankAccountNumber.trim(),
+        bank_account_holder: bankAccountHolder.trim(),
+        contact_person: contactPerson.trim(),
         is_active: true,
       };
 
@@ -144,6 +187,27 @@ export default function AdminCampaignsPage() {
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal mengubah status." });
     }
+  };
+
+  const copyPromoMessage = (camp: any) => {
+    const totalCollected = donationStats[camp.title]?.total || 0;
+    const progress = camp.goal > 0 ? (totalCollected / camp.goal) * 100 : 0;
+    const message = `*PROGRAM INFAQ HI BERBAGI* 🌿
+
+*${camp.title.toUpperCase()}*
+
+🕌🌴 ${camp.description}
+
+🎯 *Target:* Rp ${(camp.goal || 0).toLocaleString('id-ID')}
+*Terkumpul:* Rp ${totalCollected.toLocaleString('id-ID')} (${Math.round(progress)}%)
+
+Salurkan infaq terbaik Ukhti melalui:
+🔗 https://hiaqli.pro/berbagi
+
+_Semoga menjadi amal jariyah yang tak terputus. Jazakallahu Khairan_`;
+
+    navigator.clipboard.writeText(message);
+    toast({ title: "Pesan Promosi Disalin", description: "Siap dibagikan ke WhatsApp." });
   };
 
   if (isLoading) return (
@@ -221,9 +285,40 @@ export default function AdminCampaignsPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Penerima Manfaat</Label>
                 <Input type="number" value={beneficiariesCount} onChange={(e) => setBeneficiariesCount(e.target.value)} placeholder="0" className="h-12 font-bold border-2 rounded-xl" />
               </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nama Bank Pembayaran</Label>
+                <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Contoh: BSI" className="h-12 font-bold border-2 rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No. Rekening</Label>
+                <Input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} placeholder="720943..." className="h-12 font-bold border-2 rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nama Pemilik Rekening</Label>
+                <Input value={bankAccountHolder} onChange={(e) => setBankAccountHolder(e.target.value)} placeholder="Nama Sesuai Bank" className="h-12 font-bold border-2 rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Contact Person (CP)</Label>
+                <Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} placeholder="Contoh: Admin (0812...)" className="h-12 font-bold border-2 rounded-xl" />
+              </div>
               <div className="space-y-2 md:col-span-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">URL Gambar (Opsional)</Label>
-                <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.jpg" className="h-12 font-medium border-2 rounded-xl" />
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload Gambar Kampanye</Label>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-4">
+                    <Input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                      className="h-12 border-2 rounded-xl text-xs py-3 cursor-pointer file:bg-[#800000] file:text-white file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:font-bold file:-mt-1 hover:file:bg-[#800000]/90"
+                    />
+                    {imageUrl && !imageFile && (
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden border">
+                        <img src={imageUrl} alt="Current" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                  {imageUrl && <p className="text-[8px] text-muted-foreground truncate">URL Saat Ini: {imageUrl}</p>}
+                </div>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
@@ -274,9 +369,18 @@ export default function AdminCampaignsPage() {
                     return (
                       <TableRow key={camp.id} className="hover:bg-muted/5 transition-colors">
                         <TableCell className="py-4">
-                          <div className="flex flex-col max-w-[200px]">
-                            <span className="text-xs font-black text-[#800000] uppercase truncate">{camp.title}</span>
-                            <span className="text-[9px] text-muted-foreground truncate">{camp.description?.slice(0, 50)}...</span>
+                          <div className="flex items-center gap-3 max-w-[250px]">
+                            <div className="w-10 h-10 rounded-lg bg-muted flex-shrink-0 overflow-hidden border">
+                              {camp.image_url ? (
+                                <img src={camp.image_url} alt={camp.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="flex items-center justify-center h-full"><ImageIcon className="w-4 h-4 text-muted-foreground/30" /></div>
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-black text-[#800000] uppercase truncate">{camp.title}</span>
+                              <span className="text-[9px] text-muted-foreground truncate">{camp.description?.slice(0, 50)}...</span>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -307,6 +411,9 @@ export default function AdminCampaignsPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
+                            <Button variant="outline" size="sm" className="h-8 font-black text-[9px] gap-1.5 border-[#800000] text-[#800000] hover:bg-[#800000] hover:text-white" onClick={() => copyPromoMessage(camp)}>
+                              <Copy className="w-3 h-3" /> PROMOSI
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000] hover:bg-[#800000]/10" onClick={() => populateForm(camp)}>
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>

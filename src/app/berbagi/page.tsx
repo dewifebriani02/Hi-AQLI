@@ -24,7 +24,9 @@ import {
   Users,
   Clock,
   Zap,
-  TrendingUp
+  TrendingUp,
+  Share2,
+  Info
 } from "lucide-react";
 import { useUser } from "@/supabase";
 import { useDoc, useCollection, useCount } from "@/supabase/db";
@@ -103,6 +105,7 @@ export default function BerbagiPage() {
   }), []);
   const { data: allDonationsRaw, isLoading: isDonationsLoading } = useCollection("donations", donationOptions);
   const allDonations = (allDonationsRaw || []) as Donation[];
+  // Include both verified and pending for the feed, but only verified for stats
   const verifiedDonations = allDonations.filter(d => d.status === 'verified');
 
   // Aggregation Logic
@@ -169,7 +172,7 @@ export default function BerbagiPage() {
   const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
   const [proofFile, setProofFile] = useState<File | null>(null);
 
-  const donationAmounts = [25000, 50000, 100000, 250000];
+  const donationAmounts = [50000, 100000, 250000, 500000, 1000000];
 
   useEffect(() => {
     if (step === 3) {
@@ -215,7 +218,7 @@ export default function BerbagiPage() {
         const { supabase } = await import('@/supabase');
         
         const { error: uploadError, data } = await supabase.storage
-          .from('bukti_transfer')
+          .from('gambar')
           .upload(`donations/${fileName}`, proofFile);
 
         if (uploadError) {
@@ -312,7 +315,14 @@ export default function BerbagiPage() {
               <Card key={camp.id} className="overflow-hidden border-none shadow-lg bg-white flex flex-col group hover:scale-[1.02] transition-transform">
                 <div className="relative h-48 w-full bg-gradient-to-br from-[#800000] to-[#5a0000]">
                   {camp.image_url ? (
-                    <Image src={camp.image_url} alt={camp.title} fill className="object-cover" />
+                    <Image 
+                      src={camp.image_url} 
+                      alt={camp.title} 
+                      fill 
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority={enrichedCampaigns.indexOf(camp) < 3}
+                      className="object-cover transition-transform duration-500 group-hover:scale-110" 
+                    />
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <HeartHandshake className="w-16 h-16 text-white/20" />
@@ -326,13 +336,28 @@ export default function BerbagiPage() {
                   <div className="space-y-1">
                     <h3 className="font-black text-sm uppercase leading-tight text-[#800000] group-hover:underline">{camp.title}</h3>
                     <p className="text-[10px] text-muted-foreground line-clamp-2">{camp.description}</p>
+                    {camp.description && camp.description.length > 100 && (
+                      <button 
+                        onClick={() => handleCampaignSelect(camp)}
+                        className="text-[9px] font-black text-[#800000] uppercase hover:underline flex items-center gap-1"
+                      >
+                        <Info className="w-2.5 h-2.5" /> Baca Selengkapnya
+                      </button>
+                    )}
                   </div>
 
-                  <div className="space-y-2 mt-auto">
+                  <div className="space-y-3 mt-auto">
                     <div className="flex justify-between items-end">
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Terkumpul</span>
-                        <span className="text-sm font-black text-[#800000]">Rp {(camp.current || 0).toLocaleString('id-ID')}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase">Terkumpul</span>
+                          <span className="text-[9px] font-bold text-muted-foreground">/</span>
+                          <span className="text-[9px] font-bold text-[#800000] uppercase">Target</span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-sm font-black text-[#800000]">Rp {(camp.current || 0).toLocaleString('id-ID')}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground">/ Rp {(camp.goal || 0).toLocaleString('id-ID')}</span>
+                        </div>
                       </div>
                       <span className="text-[10px] font-black text-[#D4AF37]">{Math.round(progress)}%</span>
                     </div>
@@ -349,10 +374,25 @@ export default function BerbagiPage() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="p-0 border-t">
+                <CardFooter className="p-0 border-t flex flex-row">
+                  <Button
+                    variant="ghost"
+                    className="flex-1 rounded-none h-12 bg-white text-[#800000] hover:bg-muted font-black uppercase text-[10px] tracking-widest transition-colors gap-2 border-r border-[#800000]/10"
+                    asChild
+                  >
+                    <a 
+                      href={`https://wa.me/?text=${encodeURIComponent(
+                        `*PROGRAM INFAQ HI BERBAGI* 🌿\n\n*${camp.title.toUpperCase()}*\n\n${camp.description}\n\n🎯 *Target:* Rp ${camp.goal.toLocaleString('id-ID')}\n💰 *Terkumpul:* Rp ${camp.current.toLocaleString('id-ID')} (${Math.round(progress)}%)\n\nSalurkan infaq terbaik melalui:\n🔗 https://hiaqli.pro/berbagi`
+                      )}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      <Share2 className="w-4 h-4" /> Bagikan
+                    </a>
+                  </Button>
                   <Button
                     onClick={() => handleCampaignSelect(camp)}
-                    className="w-full rounded-none h-12 bg-white text-[#800000] hover:bg-[#800000] hover:text-white font-black uppercase text-[10px] tracking-widest transition-colors gap-2 border-t border-[#800000]/10"
+                    className="flex-[2] rounded-none h-12 bg-[#800000] text-white hover:bg-[#5a0000] font-black uppercase text-[10px] tracking-widest transition-colors gap-2"
                   >
                     Infaq Sekarang <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -374,6 +414,15 @@ export default function BerbagiPage() {
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-8">
+              <div className="bg-muted/30 p-4 rounded-2xl border border-dashed border-[#800000]/20">
+                <p className="text-xs font-bold text-[#800000] uppercase mb-2 flex items-center gap-2">
+                  <Info className="w-3.5 h-3.5" /> Tentang Program
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed whitespace-pre-line font-medium italic">
+                  {selectedCampaign.description}
+                </p>
+              </div>
+
               <div className="space-y-4">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pilih Nominal Infaq</Label>
                 <div className="grid grid-cols-2 gap-3">
@@ -463,13 +512,18 @@ export default function BerbagiPage() {
                 <Separator className="bg-white/10" />
 
                 {method === 'transfer' && (
-                  <div className="space-y-3 relative z-10">
-                    <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">Rekening Tujuan (BSI)</p>
+                  <div className="space-y-4 relative z-10">
+                    <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">Rekening Tujuan ({selectedCampaign.bank_name || "BSI"})</p>
                     <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
-                      <span className="font-mono font-black text-xl tracking-widest text-white">7209432468</span>
-                      <Button variant="ghost" size="sm" className="text-[#D4AF37] font-black hover:bg-white/10" onClick={() => copyToClipboard("7209432468")}>SALIN</Button>
+                      <span className="font-mono font-black text-xl tracking-widest text-white">{selectedCampaign.bank_account_number || "7209432468"}</span>
+                      <Button variant="ghost" size="sm" className="text-[#D4AF37] font-black hover:bg-white/10" onClick={() => copyToClipboard(selectedCampaign.bank_account_number || "7209432468")}>SALIN</Button>
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">a.n. Dewi Febriani</p>
+                    <div className="text-center">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">a.n. {selectedCampaign.bank_account_holder || "Dewi Febriani"}</p>
+                      {selectedCampaign.contact_person && (
+                        <p className="text-[9px] font-bold text-white/60 mt-1 uppercase">CP: {selectedCampaign.contact_person}</p>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -581,22 +635,30 @@ export default function BerbagiPage() {
               <Loader2 className="animate-spin h-6 w-6 text-muted-foreground opacity-30" />
               <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">Sinkronisasi Riwayat...</span>
             </div>
-          ) : verifiedDonations.length === 0 ? (
+          ) : allDonations.length === 0 ? (
             <div className="py-10 text-center border-2 border-dashed rounded-3xl bg-muted/5">
-              <p className="text-xs text-muted-foreground italic">Belum ada donasi terverifikasi untuk ditampilkan.</p>
+              <p className="text-xs text-muted-foreground italic">Belum ada donasi untuk ditampilkan.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {verifiedDonations.slice(0, 10).map((don) => (
+              {allDonations.slice(0, 10).map((don) => (
                 <div key={don.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-[#800000]/5 hover:border-[#800000]/20 transition-all shadow-sm animate-in fade-in slide-in-from-bottom-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#800000]/5 flex items-center justify-center text-[#800000]">
                       <User className="w-5 h-5" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-xs font-black text-[#800000] uppercase truncate max-w-[120px]">
-                        {don.is_anonymous ? "Hamba Allah" : maskName(don.sender_name)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-[#800000] uppercase truncate max-w-[100px]">
+                          {don.is_anonymous ? "Hamba Allah" : maskName(don.sender_name)}
+                        </span>
+                        <Badge className={cn(
+                          "text-[7px] font-black px-1.5 py-0 h-4 border-none",
+                          don.status === 'verified' ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
+                        )}>
+                          {don.status === 'verified' ? "VERIFIED" : "PENDING VERIFICATION"}
+                        </Badge>
+                      </div>
                       <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter truncate max-w-[120px]">{don.campaign_title || "Infaq Umum"}</span>
                     </div>
                   </div>

@@ -77,6 +77,7 @@ export default function DashboardPage() {
   const [nextPrayer, setNextPrayer] = useState<{ name: string, time: string, location?: string } | null>(null);
   const [manualCity, setManualCity] = useState<string | null>(null);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [selectedPromo, setSelectedPromo] = useState<'umum' | 'mufradat'>('umum');
   const { toast } = useToast();
 
   // Only fetch data if user is logged in
@@ -875,26 +876,51 @@ export default function DashboardPage() {
               {/* Common Promo Text Generator */}
               {(() => {
                 const origin = "https://hiaqli.pro";
-                // Simplified referral link - redirect to register with referral code only
-                // The register page will handle the program selection
                 const referralLink = `${origin}/register?ref=${userData.referral_code}`;
-                const commonPromoText = `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ✨\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group (Cuma 20rb!).\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n💬 WhatsApp: https://hiaqli.pro/whatsapp\n📢 Telegram: https://hiaqli.pro/telegram\n\nKunjungi Website Kami:\n🌐 www.hiaqli.pro\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏✨`;
+                const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
+                
+                const promoTexts = {
+                  umum: `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ⭐\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group.\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n🟢 WhatsApp: https://hiaqli.pro/whatsapp\n🟢 Telegram: https://hiaqli.pro/telegram\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏⭐`,
+                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Terukur*: 1 Halaman per Pekan (Ringan & Konsisten)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Papan Juara*: Adu semangat dengan thalibah lain! 🏆\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n🍲 *Investasi Seharga Semangkok Bakso!*\nHanya *Rp 20.000 / bulan*, Ukhti sudah mendapatkan akses monitoring eksklusif & fitur premium.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n📢 *Official Hi AQLI:*\n🟢 WA: https://hiaqli.pro/whatsapp\n🟢 Telegram: https://hiaqli.pro/telegram\n🌐 Web: www.hiaqli.pro\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*\n_Jazakumullahu Khairan_ 🙏⭐`
+                };
 
                 return (
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-2xl h-16 font-black uppercase text-[12px] tracking-[0.2em] gap-3 bg-[#800000] text-white border-2 border-[#800000] hover:bg-white hover:text-[#800000] transition-all shadow-xl shadow-[#800000]/20 group/btn"
-                    onClick={() => {
-                      navigator.clipboard.writeText(commonPromoText);
-                      toast({
-                        title: "Pesan Disalin!",
-                        description: "Silakan tempel (paste) ke WhatsApp atau media sosial lainnya.",
-                      });
-                    }}
-                  >
-                    <Download className="w-5 h-5 group-hover/btn:-translate-y-1 transition-transform" />
-                    SALIN PESAN PROMOSI
-                  </Button>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex gap-2 p-1 bg-muted/50 rounded-xl">
+                      <button 
+                        onClick={() => setSelectedPromo('umum')}
+                        className={cn(
+                          "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                          selectedPromo === 'umum' ? "bg-white text-[#800000] shadow-sm" : "text-slate-400 hover:text-slate-600"
+                        )}
+                      >
+                        Umum
+                      </button>
+                      <button 
+                        onClick={() => setSelectedPromo('mufradat')}
+                        className={cn(
+                          "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                          selectedPromo === 'mufradat' ? "bg-white text-amber-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                        )}
+                      >
+                        Hi Mufradat
+                      </button>
+                    </div>
+
+                    <Button
+                      className="w-full rounded-2xl h-16 font-black uppercase text-[12px] tracking-[0.2em] gap-3 bg-[#800000] text-white border-2 border-[#800000] hover:bg-white hover:text-[#800000] transition-all shadow-xl shadow-[#800000]/20 group/btn"
+                      asChild
+                    >
+                      <a 
+                        href={`https://wa.me/?text=${encodeURIComponent(promoTexts[selectedPromo])}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Share2 className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
+                        BAGIKAN {selectedPromo.toUpperCase()} KE WA
+                      </a>
+                    </Button>
+                  </div>
                 );
               })()}
             </CardContent>

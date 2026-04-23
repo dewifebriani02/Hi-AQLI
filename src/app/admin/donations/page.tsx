@@ -271,7 +271,7 @@ export default function AdminDonationsPage() {
                               className="h-8 font-bold text-[9px] gap-1.5"
                               asChild
                             >
-                              <a href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/bukti_transfer/${d.proof_file_name}`} target="_blank" rel="noopener noreferrer">
+                              <a href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gambar/${d.proof_file_name}`} target="_blank" rel="noopener noreferrer">
                                 <ArrowUpRight className="w-3 h-3" /> BUKTI
                               </a>
                             </Button>
