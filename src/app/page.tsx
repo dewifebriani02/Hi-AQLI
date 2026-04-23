@@ -880,8 +880,8 @@ export default function DashboardPage() {
                 const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
                 
                 const promoTexts = {
-                  umum: `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ⭐\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group.\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n🟢 WhatsApp: https://hiaqli.pro/whatsapp\n🟢 Telegram: https://hiaqli.pro/telegram\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏⭐`,
-                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Terukur*: 1 Halaman per Pekan (Ringan & Konsisten)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Papan Juara*: Adu semangat dengan thalibah lain! 🏆\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n🍲 *Investasi Seharga Semangkok Bakso!*\nHanya *Rp 20.000 / bulan*, Ukhti sudah mendapatkan akses monitoring eksklusif & fitur premium.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n📢 *Official Hi AQLI:*\n🟢 WA: https://hiaqli.pro/whatsapp\n🟢 Telegram: https://hiaqli.pro/telegram\n🌐 Web: www.hiaqli.pro\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*\n_Jazakumullahu Khairan_ 🙏⭐`
+                  umum: `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ⭐\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group.\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n🟢 WA Group: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n🟢 Telegram: https://t.me/rq_aqli\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏⭐`,
+                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Terukur*: 1 Halaman per Pekan (Ringan & Konsisten)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Papan Juara*: Adu semangat dengan thalibah lain! 🏆\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n🍲 *Investasi Seharga Semangkok Bakso!*\nHanya *Rp 20.000 / bulan*, Ukhti sudah mendapatkan akses monitoring eksklusif & fitur premium.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n📢 *Official Hi AQLI:*\n🟢 Grup WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n🟢 Telegram: https://t.me/rq_aqli\n🌐 Web: www.hiaqli.pro\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*\n_Jazakumullahu Khairan_ 🙏⭐`
                 };
 
                 return (
@@ -1019,7 +1019,6 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-2 w-full max-w-md px-1">
           <a
             href="https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq"
-            rel="noopener noreferrer"
             className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-500/10"
           >
             <MessageSquare className="w-4 h-4 fill-white" />
@@ -1028,7 +1027,6 @@ export default function DashboardPage() {
 
           <a
             href="https://whatsapp.com/channel/0029Vb5sNGZ9mrGkJGzEh421"
-            rel="noopener noreferrer"
             className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-700/10"
           >
             <Zap className="w-4 h-4 fill-white" />
@@ -1036,8 +1034,7 @@ export default function DashboardPage() {
           </a>
 
           <a
-            href="https://t.me/rq_aqli"
-            rel="noopener noreferrer"
+            href="tg://resolve?domain=rq_aqli"
             className="bg-sky-500 hover:bg-sky-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-sky-500/10"
           >
             <ExternalLink className="w-4 h-4" />
