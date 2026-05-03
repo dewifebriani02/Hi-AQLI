@@ -169,7 +169,7 @@ export default function ProfilePage() {
 
       toast({
         title: "Profil Diperbarui",
-        description: `Data ${callSign} berhasil disimpan.`,
+        description: `Data ${fullSalutation} berhasil disimpan.`,
       });
       setIsEditDialogOpen(false);
       
@@ -194,7 +194,7 @@ export default function ProfilePage() {
       navigator.clipboard.writeText(user.id);
       toast({
         title: "UID Berhasil Disalin",
-        description: `UID ${callSign} diperlukan untuk pengaturan peran manual.`,
+        description: `UID ${fullSalutation} diperlukan untuk pengaturan peran manual.`,
       });
     }
   };
@@ -203,7 +203,7 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#800000]"></div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Menyiapkan Berkas {callSign}...</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Menyiapkan Berkas {fullSalutation}...</p>
       </div>
     );
   }
@@ -212,7 +212,7 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto py-6 space-y-8 pb-32">
       <div className="flex flex-col gap-2 px-1">
         <h1 className="text-3xl font-bold font-headline tracking-tight">Profil & Aktivitas</h1>
-        <p className="text-muted-foreground text-sm">Pusat kendali pembelajaran dan kontribusi {callSign}.</p>
+        <p className="text-muted-foreground text-sm">Pusat kendali pembelajaran dan kontribusi {fullSalutation}.</p>
       </div>
 
       <Card className="border-none shadow-xl overflow-hidden bg-card/50 backdrop-blur-sm">
@@ -262,10 +262,10 @@ export default function ProfilePage() {
                 <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
                   <DialogHeader>
                     <DialogTitle className="text-xl font-bold font-headline text-[#800000] flex items-center gap-2">
-                       <UserIcon className="w-5 h-5" /> Edit Profil {callSign}
+                       <UserIcon className="w-5 h-5" /> Edit Profil {fullSalutation}
                     </DialogTitle>
                     <DialogDescription className="text-xs font-medium">
-                      Perbarui informasi identitas {callSign} untuk pengalaman belajar yang lebih personal.
+                      Perbarui informasi identitas {fullSalutation} untuk pengalaman belajar yang lebih personal.
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleUpdateProfile} className="space-y-6 py-4">
@@ -365,7 +365,7 @@ export default function ProfilePage() {
                     <p className={cn(
                       "text-[10px] font-medium",
                       superAdminRole ? "text-[#800000]/70" : "text-amber-700"
-                    )}>{callSign} memiliki akses penuh ke Dashboard AQLI.</p>
+                    )}>{fullSalutation} memiliki akses penuh ke Dashboard AQLI.</p>
                   </div>
                 </div>
                 <Button asChild size="sm" className={cn(
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                   <Fingerprint className="w-5 h-5 text-[#800000]" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID {callSign} (UID)</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID {fullSalutation} (UID)</p>
                   <p className="text-xs font-mono font-bold truncate max-w-[150px] sm:max-w-none">{user.id}</p>
                 </div>
               </div>

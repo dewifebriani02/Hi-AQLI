@@ -48,6 +48,7 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [salutation, setSalutation] = useState('Ukhti');
+  const [fullName, setFullName] = useState('');
 
   // Referral Validation State
   const [referralStatus, setReferralStatus] = useState<{
@@ -137,6 +138,7 @@ function RegisterContent() {
           // 3. Create missing profile with referred_by_id
           await supabase.from('users').upsert({
             id: user.id,
+            full_name: fullName || user.user_metadata?.full_name || '',
             username: username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
             email: user.email,
             role_id: 'learner',
@@ -156,7 +158,7 @@ function RegisterContent() {
 
       syncProfile();
     }
-  }, [user, router, username, isUserLoading, referralCode, redirectTo]);
+  }, [user, router, username, fullName, isUserLoading, referralCode, redirectTo]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,7 +199,10 @@ function RegisterContent() {
     }
 
     const { data: signUpData, error: signUpError } = await initiateEmailSignUp(cleanEmail, password, {
-      data: { full_name: cleanUsername }
+      data: { 
+        full_name: fullName,
+        username: cleanUsername 
+      }
     });
 
     if (signUpError) {
@@ -320,6 +325,21 @@ function RegisterContent() {
 
 
           <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Lengkap (Sesuai KTP)</Label>
+              <div className="relative">
+                <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="fullName"
+                  placeholder="misal: Dewi Febrinani"
+                  className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="salutation" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Panggilan Akrab</Label>
@@ -343,10 +363,10 @@ function RegisterContent() {
                   <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="username"
-                    placeholder="misal: ummu_fulan"
+                    placeholder="misal: Ummu Fulan"
                     className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_]/g, ''))}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>

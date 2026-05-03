@@ -2,6 +2,7 @@
 'use client';
 
 import { useUser } from "@/supabase";
+import { getCallSign } from "@/lib/utils";
 import { useCollection, useDoc } from "@/supabase/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,6 +68,9 @@ export default function LeaderboardPage() {
   const { data: backupUserDoc } = useDoc(user && !userInTop50 ? "users" : null, user?.id);
   
   const currentUserData = userInTop50 || backupUserDoc;
+  const fullSalutation = currentUserData?.salutation || "Ukhti";
+  const callSign = getCallSign(fullSalutation);
+
   const currentUserRank = useMemo(() => {
     if (userInTop50) return allUsers.findIndex(u => u.id === user?.id) + 1;
     return 0; // Will be handled by the count-based rank if we want to be 100% precise, but for the sticky footer, 0/None is fine for now or we can use the Profile logic.
@@ -266,9 +270,9 @@ export default function LeaderboardPage() {
                 {currentUserRank || '-'}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat {callSign}</span>
+                <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat {fullSalutation}</span>
                 <span className="text-[9px] text-white/60 font-bold uppercase">
-                  {currentUserRank === 1 ? `Pertahankan tahta ${callSign}!` : 'Teruslah ber-Itqan!'}
+                  {currentUserRank === 1 ? `Pertahankan tahta ${fullSalutation}!` : 'Teruslah ber-Itqan!'}
                 </span>
               </div>
             </div>
@@ -276,6 +280,26 @@ export default function LeaderboardPage() {
               <span className="text-sm font-black block text-white">{currentUserData?.points || 0}</span>
               <span className="text-[10px] text-[#D4AF37] uppercase font-black tracking-widest">Poin</span>
             </div>
+          </CardContent>
+        </Card>
+      {/* Guest Nudge Footer */}
+      {!user && (
+        <Card className="border-2 border-emerald-400 bg-emerald-600 text-white shadow-lg sticky bottom-24 z-20 mx-1 border-b-4 rounded-2xl animate-in slide-in-from-bottom-10 duration-700">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-white text-emerald-600 flex items-center justify-center">
+                <Trophy className="w-6 h-6 fill-emerald-600" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-black uppercase text-white tracking-tight">Ingin Ada di Sini?</span>
+                <span className="text-[9px] text-emerald-100 font-bold uppercase">
+                  Daftar sekarang & mulai kumpulkan poin Itqan!
+                </span>
+              </div>
+            </div>
+            <Button asChild size="sm" className="bg-white text-emerald-600 hover:bg-emerald-50 font-black rounded-xl px-6 uppercase text-[10px] tracking-widest shadow-lg">
+              <Link href="/register">IKUT LOMBA</Link>
+            </Button>
           </CardContent>
         </Card>
       )}

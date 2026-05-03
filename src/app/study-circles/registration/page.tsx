@@ -378,7 +378,7 @@ function RegistrationForm() {
         .maybeSingle();
 
       if (existing) {
-        throw new Error(`${callSign} sudah pernah menggunakan voucher ini sebelumnya.`);
+        throw new Error(`${fullSalutation} sudah pernah menggunakan voucher ini sebelumnya.`);
       }
 
       if (voucher.usage_limit) {
@@ -431,7 +431,7 @@ function RegistrationForm() {
       }
 
       setAppliedReferral(referrer);
-      toast({ title: "Referral Berhasil!", description: `${callSign} mendapatkan potongan Rp 5.000 dari ${referrer.referral_code}.` });
+      toast({ title: "Referral Berhasil!", description: `${fullSalutation} mendapatkan potongan Rp 5.000 dari ${referrer.referral_code}.` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Referral Gagal", description: err.message });
       setAppliedReferral(null);
@@ -613,7 +613,7 @@ function RegistrationForm() {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
         <Loader2 className="animate-spin text-[#800000] h-10 w-10" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memvalidasi Akses {callSign}...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memvalidasi Akses {fullSalutation}...</p>
       </div>
     );
   }
@@ -632,8 +632,8 @@ function RegistrationForm() {
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive
-                  ? `Pendaftaran ${callSign} untuk ${circle?.title} sudah tuntas. Jazakillah khair!`
-                  : `Pendaftaran ${callSign} untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
+                  ? `Pendaftaran ${fullSalutation} untuk ${circle?.title} sudah tuntas. Jazakillah khair!`
+                  : `Pendaftaran ${fullSalutation} untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
               </p>
               
               <div className="relative pt-4 pb-8 px-2">
@@ -684,7 +684,7 @@ function RegistrationForm() {
                   <div className="p-4 bg-[#800000]/5 rounded-xl border border-[#800000]/10 flex gap-3 text-left">
                      <Zap className="w-5 h-5 text-amber-500 shrink-0 animate-pulse" />
                      <p className="text-[10px] font-bold text-[#800000] leading-normal italic">
-                        🎁 BONUS AKSES INSTAN: Sambil menunggu verifikasi manual musyrifah, {callSign} sudah bisa mulai belajar sekarang selama 24 jam ke depan. Selamat menghafal!
+                        🎁 BONUS AKSES INSTAN: Sambil menunggu verifikasi manual musyrifah, {fullSalutation} sudah bisa mulai belajar sekarang selama 24 jam ke depan. Selamat menghafal!
                      </p>
                   </div>
                   {(!existingReg?.proof_file_name || Number(existingReg.amount) === 0) && (
@@ -724,8 +724,8 @@ function RegistrationForm() {
             <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
             <div className="space-y-4 px-4">
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Jazakallahu Khairan, pendaftaran {callSign} sedang kami proses. <br/>
-                <span className="text-[#800000] font-black italic">🎁 {callSign} sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
+                Jazakallahu Khairan, pendaftaran {fullSalutation} sedang kami proses. <br/>
+                <span className="text-[#800000] font-black italic">🎁 {fullSalutation} sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
               </p>
 
               {(isMufradat || selectedHalaqahId === 'mufradat-premium') && (
@@ -959,7 +959,7 @@ function RegistrationForm() {
                     <div className="flex items-start gap-2 px-1">
                        <Info className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
                        <p className="text-[10px] text-amber-800 font-bold leading-tight italic">
-                         "Kehilangan link referral? Jangan khawatir {callSign}, silakan ketik manual kode referral teman {callSign} di atas untuk tetap mendapatkan potongan infaq. (Khusus Pendaftar Baru)"
+                         "Kehilangan link referral? Jangan khawatir {callSign}, silakan ketik manual kode referral teman {fullSalutation} di atas untuk tetap mendapatkan potongan infaq. (Khusus Pendaftar Baru)"
                        </p>
                     </div>
                   </div>
@@ -1177,7 +1177,7 @@ function RegistrationForm() {
                       <span className="flex items-center gap-1">
                         <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')} {circle?.payment_type === 'selectable' && "(Pilihan Terbuka)"}
                       </span>
-                      <span className="text-[9px] text-[#800000] opacity-70">Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan {callSign} tepat waktu.</span>
+                      <span className="text-[9px] text-[#800000] opacity-70">Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan {fullSalutation} tepat waktu.</span>
                     </p>
                   </div>
 
@@ -1236,7 +1236,7 @@ function RegistrationForm() {
                     <div className="space-y-4 text-[11px] text-emerald-900 leading-relaxed font-medium">
                       <div className="p-3 bg-white/50 rounded-xl border border-emerald-100">
                         <p className="font-black text-[#800000] uppercase text-[9px] mb-1">Masa Belajar & Aktivasi:</p>
-                        <p>Halaqah dimulai kapan saja. Masa aktif akses & monitoring berlaku selama **30 hari** terhitung sejak tanggal pendaftaran {callSign} diverifikasi (aktif).</p>
+                        <p>Halaqah dimulai kapan saja. Masa aktif akses & monitoring berlaku selama **30 hari** terhitung sejak tanggal pendaftaran {fullSalutation} diverifikasi (aktif).</p>
                       </div>
                       
                       <p>Dengan mendaftar Hi Mufradat, saya berjanji untuk:</p>
@@ -1381,7 +1381,7 @@ function RegistrationForm() {
                 <div className="bg-amber-100/50 p-4 rounded-2xl border border-amber-200/50 mt-4 flex gap-3">
                   <Info className="w-4 h-4 text-amber-600 shrink-0" />
                   <p className="text-[10px] text-amber-800 font-bold leading-relaxed italic">
-                    Syukran {callSign}. Nominal kode unik & kelebihan transfer {callSign} akan dialokasikan sebagai infaq jariyah melalui <span className="underline font-black">Hi Berbagi</span>. Semoga menjadi asbab keberkahan hafalan {callSign}.
+                    Syukran {callSign}. Nominal kode unik & kelebihan transfer {fullSalutation} akan dialokasikan sebagai infaq jariyah melalui <span className="underline font-black">Hi Berbagi</span>. Semoga menjadi asbab keberkahan hafalan {fullSalutation}.
                   </p>
                 </div>
               </div>

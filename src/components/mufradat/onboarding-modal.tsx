@@ -97,9 +97,15 @@ export function MufradatOnboarding({ open, onComplete }: OnboardingModalProps) {
   const isLastStep = selectedIndex === slides.length - 1;
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && isLastStep && onComplete()}>
+    <Dialog open={open} onOpenChange={(val) => !val && onComplete()}>
       <DialogContent className="max-w-md p-0 overflow-hidden border-none rounded-[2.5rem] shadow-2xl">
         <div className={cn("transition-colors duration-500 p-8 pt-12 text-center relative", slides[selectedIndex].color)}>
+          <button 
+            onClick={onComplete}
+            className="absolute top-4 right-4 z-50 p-2 rounded-full hover:bg-black/5 transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
           {/* Progress Bar */}
           <div className="absolute top-4 left-0 w-full px-8">
             <Progress value={((selectedIndex + 1) / slides.length) * 100} className="h-1 bg-white/50" />
@@ -146,13 +152,23 @@ export function MufradatOnboarding({ open, onComplete }: OnboardingModalProps) {
             <Button 
               onClick={isLastStep ? onComplete : scrollNext} 
               className={cn(
-                "flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg text-white",
+                "flex-[2] h-14 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg text-white",
                 isLastStep ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-900 hover:bg-slate-800"
               )}
             >
               {isLastStep ? "SAYA PAHAM & MULAI" : "LANJUT"}
               {!isLastStep && <ChevronRight className="w-5 h-5 ml-2" />}
             </Button>
+
+            {!isLastStep && (
+              <Button 
+                variant="ghost" 
+                onClick={onComplete}
+                className="flex-1 h-14 rounded-2xl font-bold text-slate-400 hover:text-slate-600 uppercase text-[10px]"
+              >
+                LEWATI
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

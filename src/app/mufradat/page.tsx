@@ -293,6 +293,9 @@ function MufradatPageContent() {
 
   const handleCompleteOnboarding = async () => {
     if (!user) return;
+    // Optimistic close
+    setShowOnboarding(false);
+    
     try {
       const { error } = await supabase
         .from('users')
@@ -304,8 +307,10 @@ function MufradatPageContent() {
         })
         .eq('id', user.id);
       
-      if (error) throw error;
-      setShowOnboarding(false);
+      if (error) {
+        console.error("Error updating onboarding status:", error);
+        // We don't re-open it to avoid annoying the user if it's just a network glitch
+      }
     } catch (err) {
       console.error("Error updating onboarding status:", err);
     }
@@ -437,6 +442,40 @@ function MufradatPageContent() {
               {access.status === 'trial' ? 'LIHAT STATUS' : 'INFAQ SEKARANG'}
             </Link>
           </Button>
+        </div>
+      )}
+
+      {/* GUEST PROMO BANNER */}
+      {!user && (
+        <div className="mx-1 mt-4 mb-2">
+          <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#800000] to-[#500000] shadow-xl border border-[#800000]/10 p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
+            <div className="flex-1 space-y-4 text-center sm:text-left">
+              <Badge className="bg-amber-400 text-[#800000] font-black tracking-widest uppercase py-0.5 px-2 text-[9px] animate-bounce">
+                DAFTAR SEKARANG
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl font-black text-white font-headline leading-tight">
+                LEVEL UP <span className="text-amber-400">MUFRADAT KAKAK!</span>
+              </h2>
+              <p className="text-slate-100 text-[11px] font-medium leading-relaxed opacity-90 max-w-sm">
+                Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik.
+              </p>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span className="text-[10px] font-black text-white uppercase tracking-wider">Diskon Referral 5rb</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span className="text-[10px] font-black text-white uppercase tracking-wider">Hanya 20rb per bulan!</span>
+                </div>
+              </div>
+            </div>
+            <div className="shrink-0">
+               <Button asChild className="h-12 bg-white text-[#800000] hover:bg-slate-50 font-black rounded-xl px-8 shadow-lg transition-transform hover:scale-105 uppercase tracking-widest text-xs">
+                 <Link href="/register">IKUT PROGRAM <ArrowRight className="w-4 h-4 ml-2" /></Link>
+               </Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -773,7 +812,7 @@ function MufradatPageContent() {
            <div className="p-8 text-center space-y-6">
               <div className="space-y-2">
                  <p className="text-lg font-bold text-slate-800 leading-tight">
-                    Barakallah fiik! Musim lalu {callSign} berhasil masuk <span className="text-[#800000] font-black">Liga {previousLeague}</span>.
+                    Barakallah fiik! Musim lalu {fullSalutation} berhasil masuk <span className="text-[#800000] font-black">Liga {previousLeague}</span>.
                  </p>
                  <p className="text-sm text-muted-foreground font-medium italic">
                     Poin mingguan telah direset. Mari mulai dari awal dengan semangat Itqan!
