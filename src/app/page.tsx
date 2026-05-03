@@ -943,17 +943,17 @@ export default function DashboardPage() {
                 const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
                 
                 const promoTexts: Record<string, string> = {
-                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Fleksibel*: Min. 1 Halaman per Pekan (Lebih banyak lebih baik!)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Hanya Sekali Seumur Hidup)\n- *Infaq Bulanan*: Mulai dari Rp 20.000/bulan\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
+                  mufradat: `*DEKATKAN DIRI DENGAN AL-QUR'AN MELALUI MAKNA* ✨📖\n*HI MUFRADAT PREMIUM* - By Hi AQLI\n\nSeringkali kita membaca Al-Qur'an, namun hati rindu untuk memahami pesan-pesan indah di dalamnya. Apakah ${fullSalutation} ingin mulai menyelami maknanya dengan langkah yang nyata? 🌿\n\nMari bergabung dalam perjalanan spiritual yang terukur dan bermakna bersama Hi Mufradat.\n\n💎 *KEUNGGULAN PROGRAM:*\n✅ *Langkah Nyata*: Cukup 1 halaman per pekan untuk pemahaman yang mendalam.\n✅ *Bimbingan Intensif*: Dipantau & ditemani dalam grup khusus thalibah 🤝\n✅ *Evaluasi Interaktif*: Quiz seru untuk mengasah ingatan & pemahaman 🎮\n\n💸 *INFAQ PROGRAM:*\n• Pendaftaran: Rp 10.000 (Sekali Seumur Hidup)\n• Infaq Bulanan: Rp 20.000\n\n🎁 *HADIAH UNTUK ${fullSalutation.toUpperCase()}!*\nGunakan kode referral saya: *${userData.referral_code}*\nDapatkan *POTONGAN Rp 5.000* untuk pendaftaran pertama ${fullSalutation}! 💸\n\nMulai Perjalanan Makna ${fullSalutation} Sekarang:\n🔗 ${mufradatLink}\n\n---\n💬 *Tanya Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas*: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
                   tikrar: `*PROGRAM HI TIKRAR* 📖⭐\n*By Hi AQLI*\n\n*Hafal Al-Qur'an Lebih Itqan & Terjaga!* 🌟\n\nIngin hafalan Al-Qur'an ${fullSalutation} lebih kuat dan tidak mudah lupa? Yuk gabung di program Hi Tikrar dengan metode yang sudah teruji! 🕋\n\n🚀 *Keunggulan Program:*\n✅ *Metode 7 Tahapan*: Sistematis untuk kekuatan memori jangka panjang.\n✅ *Monitoring Harian*: Dipantau langsung perkembangannya.\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Program*: Sesuai level intensitas yang dipilih.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nInfo & Pendaftaran:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`,
                   ngaji: `*HI NGAJI - BELAJAR TAHSIN & TAJWID* 📚✨\n*By Hi AQLI*\n\n*Perbaiki Bacaan Al-Qur'an ${fullSalutation} dari Nol!* 🌟\n\nIngin bacaan Al-Qur'an lebih tartil dan sesuai kaidah tajwid? Yuk gabung di Hi Ngaji, belajar bareng muallimah yang kompeten! 🕋\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Kelas*: Menyesuaikan tingkat kelas.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`,
                   irab: `*PROGRAM HI IRAB* 🔍📖\n*By Hi AQLI*\n\n*Selami Makna Mendalam Bahasa Al-Qur'an!* 🌟\n\nHi IRAB akan membantu ${fullSalutation} memahami tata bahasa Arab dengan cara yang mudah! 🕋\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Program*: Sesuai paket yang diambil.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`
                 };
 
                 const promoItems = [
-                  { id: 'mufradat', name: 'Hi Mufradat', icon: Activity, color: 'bg-amber-400' },
-                  { id: 'tikrar', name: 'Hi Tikrar', icon: Award, color: 'bg-indigo-400' },
-                  { id: 'ngaji', name: 'Hi Ngaji', icon: BookOpen, color: 'bg-cyan-400' },
-                  { id: 'irab', name: 'Hi Irab', icon: Search, color: 'bg-emerald-400' },
+                  { id: 'mufradat', name: 'Hi Mufradat', icon: Activity, color: 'bg-amber-400', locked: false },
+                  { id: 'tikrar', name: 'Hi Tikrar', icon: Award, color: 'bg-indigo-400', locked: true },
+                  { id: 'ngaji', name: 'Hi Ngaji', icon: BookOpen, color: 'bg-cyan-400', locked: true },
+                  { id: 'irab', name: 'Hi Irab', icon: Search, color: 'bg-emerald-400', locked: true },
                 ];
                 
                 return (
@@ -971,33 +971,51 @@ export default function DashboardPage() {
                         <DialogHeader>
                           <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest text-xl">Pilih Program Promosi</DialogTitle>
                           <DialogDescription className="text-[10px] font-bold text-center uppercase tracking-tight text-slate-500">
-                            Pilih program yang ingin ${callSign} bagikan. Reward saldo berlaku ketika teman mendaftar melalui link promosi ini.
+                            Pilih program yang ingin {fullSalutation} bagikan. Reward saldo berlaku ketika teman mendaftar melalui link promosi ini.
                           </DialogDescription>
                         </DialogHeader>
 
                         <div className="grid gap-3 py-4">
-                          {promoItems.map((item) => (
-                            <a 
-                              key={item.id}
-                              href={`https://wa.me/?text=${encodeURIComponent(promoTexts[item.id])}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group flex items-center justify-between p-4 bg-slate-50 hover:bg-white border-2 border-transparent hover:border-[#800000]/10 rounded-2xl transition-all shadow-sm"
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md", item.color)}>
-                                  <item.icon className="w-6 h-6" />
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.name}</span>
-                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Potongan Rp 5.000 khusus pendaftar baru</span>
-                                </div>
-                              </div>
-                              <div className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                                <Share2 className="w-5 h-5" />
-                              </div>
-                            </a>
-                          ))}
+                           {promoItems.map((item) => {
+                             const isLocked = item.locked;
+                             return (
+                               <a 
+                                 key={item.id}
+                                 href={isLocked ? undefined : `https://wa.me/?text=${encodeURIComponent(promoTexts[item.id])}`}
+                                 target={isLocked ? undefined : "_blank"}
+                                 rel={isLocked ? undefined : "noopener noreferrer"}
+                                 className={cn(
+                                   "group flex items-center justify-between p-4 rounded-2xl transition-all shadow-sm border-2",
+                                   isLocked 
+                                     ? "bg-slate-50/50 border-slate-100 opacity-60 cursor-not-allowed" 
+                                     : "bg-slate-50 hover:bg-white border-transparent hover:border-[#800000]/10"
+                                 )}
+                                 onClick={(e) => isLocked && e.preventDefault()}
+                               >
+                                 <div className="flex items-center gap-4">
+                                   <div className={cn(
+                                     "w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md", 
+                                     isLocked ? "bg-slate-300" : item.color
+                                   )}>
+                                     <item.icon className="w-6 h-6" />
+                                   </div>
+                                   <div className="flex flex-col">
+                                     <div className="flex items-center gap-2">
+                                       <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.name}</span>
+                                       {isLocked && <Lock className="w-3 h-3 text-slate-400" />}
+                                     </div>
+                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Potongan Rp 5.000 khusus pendaftar baru</span>
+                                   </div>
+                                 </div>
+                                 <div className={cn(
+                                   "w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-transform",
+                                   isLocked ? "bg-slate-200" : "bg-[#25D366] group-hover:scale-110"
+                                 )}>
+                                   {isLocked ? <Lock className="w-4 h-4 text-slate-400" /> : <Share2 className="w-5 h-5" />}
+                                 </div>
+                               </a>
+                             );
+                           })}
                         </div>
                         <p className="text-[9px] text-center text-slate-400 font-medium italic">Klik salah satu program untuk membagikan pesan promosi via WhatsApp.</p>
                       </DialogContent>
