@@ -27,17 +27,17 @@ import {
   DialogDescription,
   DialogTrigger 
 } from "@/components/ui/dialog";
-import { 
-  Headphones, 
-  Check, 
-  Music, 
-  ShieldAlert, 
-  CreditCard, 
-  Coffee, 
-  ArrowRight, 
-  Heart, 
-  Trophy, 
-  Zap, 
+import {
+  Headphones,
+  Check,
+  Music,
+  ShieldAlert,
+  CreditCard,
+  Coffee,
+  ArrowRight,
+  Heart,
+  Trophy,
+  Zap,
   Star,
   Users,
   Search,
@@ -49,7 +49,9 @@ import {
   Award,
   GraduationCap,
   RotateCcw,
-  Gift
+  Gift,
+  Sparkles,
+  ShieldCheck
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
