@@ -230,7 +230,8 @@ function MufradatPageContent() {
     });
   }, [userData, registrations, redemptions, isStudent]);
 
-  const callSign = getCallSign(userData?.salutation);
+  const fullSalutation = userData?.salutation || "Ukhti";
+  const callSign = getCallSign(fullSalutation);
 
 
 
@@ -607,7 +608,7 @@ function MufradatPageContent() {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold">Belum Ada Grup</h3>
-                      <p className="text-sm text-muted-foreground px-12">{callSign} belum bergabung ke dalam grup manapun untuk melihat peringkat.</p>
+                      <p className="text-sm text-muted-foreground px-12">{fullSalutation} belum bergabung ke dalam grup manapun untuk melihat peringkat.</p>
                     </div>
                  </div>
                 ) : (

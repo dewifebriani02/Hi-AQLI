@@ -92,7 +92,8 @@ function RegistrationForm() {
   }, [programParam]);
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(user ? "users" : null, user?.id);
-  const callSign = getCallSign(userData?.salutation);
+  const fullSalutation = userData?.salutation || "Ukhti";
+  const callSign = getCallSign(fullSalutation);
 
   const [selectedHalaqahId, setSelectedHalaqahId] = useState<string | null>(halaqahId);
 
@@ -706,8 +707,8 @@ function RegistrationForm() {
             <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
             <div className="space-y-4 px-4">
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Jazakallahu Khairan, pendaftaran ${callSign} sedang kami proses. <br/>
-                <span className="text-[#800000] font-black italic">🎁 ${callSign} sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
+                Jazakallahu Khairan, pendaftaran {callSign} sedang kami proses. <br/>
+                <span className="text-[#800000] font-black italic">🎁 {callSign} sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
               </p>
 
               {(isMufradat || selectedHalaqahId === 'mufradat-premium') && (
@@ -1412,7 +1413,7 @@ function RegistrationForm() {
               ) : (
                 <div className="p-8 bg-emerald-50 rounded-3xl border-2 border-emerald-100 text-center space-y-4">
                   <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto" />
-                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk {callSign}. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
+                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk {fullSalutation}. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
                 </div>
               )}
               <Button onClick={handleConfirm} disabled={loading} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-2xl">

@@ -49,7 +49,8 @@ const tajweedRules = [
 export default function TikrarPage() {
   const { user } = useUser();
   const { data: userData } = useDoc(user?.id ? "users" : null, user?.id);
-  const callSign = getCallSign(userData?.salutation);
+  const fullSalutation = userData?.salutation || "Ukhti";
+  const callSign = getCallSign(fullSalutation);
 
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32">
@@ -60,7 +61,7 @@ export default function TikrarPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Metode Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Perkuat hafalan {callSign} dengan metode repetisi 40x terstruktur untuk hasil Itqan.
+          Perkuat hafalan {fullSalutation} dengan metode repetisi 40x terstruktur untuk hasil Itqan.
         </p>
       </div>
 
@@ -107,7 +108,7 @@ export default function TikrarPage() {
                   <CardTitle className="text-lg font-headline">Uji Teori Tajwid</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground leading-relaxed">Periksa pemahaman teori {callSign} sebelum praktek ujian lisan.</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Periksa pemahaman teori {fullSalutation} sebelum praktek ujian lisan.</p>
                 </CardContent>
                 <CardFooter>
                   <Button asChild className="w-full bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 font-bold h-12">
