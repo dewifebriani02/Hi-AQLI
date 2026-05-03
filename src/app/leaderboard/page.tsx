@@ -282,6 +282,7 @@ export default function LeaderboardPage() {
             </div>
           </CardContent>
         </Card>
+      )}
       {/* Guest Nudge Footer */}
       {!user && (
         <Card className="border-2 border-emerald-400 bg-emerald-600 text-white shadow-lg sticky bottom-24 z-20 mx-1 border-b-4 rounded-2xl animate-in slide-in-from-bottom-10 duration-700">
