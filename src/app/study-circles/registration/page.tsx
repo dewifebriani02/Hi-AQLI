@@ -95,6 +95,14 @@ function RegistrationForm() {
   const fullSalutation = userData?.salutation || "Ukhti";
   const callSign = getCallSign(fullSalutation);
 
+  const { data: userRegistrations } = useCollection("halaqah_registrations", {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
+  });
+
+  const hasUsedReferral = useMemo(() => {
+    return (userRegistrations || []).some(reg => reg.referral_code_used && reg.status !== 'rejected');
+  }, [userRegistrations]);
+
   const [selectedHalaqahId, setSelectedHalaqahId] = useState<string | null>(halaqahId);
 
   // Auto-find the circle if ID is in params
@@ -292,7 +300,7 @@ function RegistrationForm() {
   }, [user, registrationsHistory, circle, isMufradat, isTikrar]);
 
   const registrationFee = isFirstRegistration ? 10000 : 0;
-  const referralDiscount = (appliedReferral && !appliedVoucher) ? 5000 : 0;
+  const referralDiscount = (appliedReferral && !appliedVoucher && !hasUsedReferral) ? 5000 : 0;
 
   const totalCalculated = useMemo(() => {
     if (!isPremiumProgram || appliedVoucher) return 0;
@@ -397,6 +405,15 @@ function RegistrationForm() {
   const handleValidateReferral = async () => {
     if (!referralCodeInput.trim()) return;
     
+    if (hasUsedReferral) {
+      toast({ 
+        title: "Referral Tidak Berlaku", 
+        description: "Potongan referral hanya berlaku untuk pendaftaran pertama kali di Hi AQLI.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsValidatingReferral(true);
     try {
       const { data: referrer, error } = await supabase
@@ -942,7 +959,7 @@ function RegistrationForm() {
                     <div className="flex items-start gap-2 px-1">
                        <Info className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
                        <p className="text-[10px] text-amber-800 font-bold leading-tight italic">
-                         "Kehilangan link referral? Jangan khawatir {callSign}, silakan ketik manual kode referral teman {callSign} di atas untuk tetap mendapatkan potongan infaq."
+                         "Kehilangan link referral? Jangan khawatir {callSign}, silakan ketik manual kode referral teman {callSign} di atas untuk tetap mendapatkan potongan infaq. (Khusus Pendaftar Baru)"
                        </p>
                     </div>
                   </div>
