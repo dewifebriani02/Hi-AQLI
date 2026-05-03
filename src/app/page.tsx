@@ -46,7 +46,8 @@ import {
   ChevronRight,
   User as UserIcon,
   Heart,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser, supabase } from "@/supabase";
