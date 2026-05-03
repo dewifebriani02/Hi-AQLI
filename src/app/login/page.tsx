@@ -172,7 +172,9 @@ function LoginContent() {
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="nama@email.com"
                   className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                   value={email}
@@ -195,7 +197,9 @@ function LoginContent() {
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   className="pl-10 pr-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

@@ -331,6 +331,8 @@ function RegisterContent() {
                 <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="fullName"
+                  name="fullName"
+                  autoComplete="name"
                   placeholder="misal: Dewi Febrinani"
                   className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                   value={fullName}
@@ -380,7 +382,9 @@ function RegisterContent() {
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="nama@email.com"
                   className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                   value={email}
@@ -407,7 +411,9 @@ function RegisterContent() {
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   placeholder="Minimal 6 karakter"
                   className="pl-10 pr-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                   value={password}
@@ -444,7 +450,9 @@ function RegisterContent() {
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
+                  name="confirmPassword"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   placeholder="Ketik ulang kata sandi"
                   className={cn(
                     "pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]",
