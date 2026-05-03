@@ -1,4 +1,5 @@
 'use client';
+import { getCallSign } from "@/lib/utils";
 
 import {
   Accordion,
@@ -48,7 +49,7 @@ const tajweedRules = [
 export default function TikrarPage() {
   const { user } = useUser();
   const { data: userData } = useDoc(user?.id ? "users" : null, user?.id);
-  const callSign = userData?.salutation || "Ukhti";
+  const callSign = getCallSign(userData?.salutation);
 
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32">

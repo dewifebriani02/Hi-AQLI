@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Suspense, useMemo } from "react";
+import { getCallSign } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,7 +92,7 @@ function RegistrationForm() {
   }, [programParam]);
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(user ? "users" : null, user?.id);
-  const callSign = userData?.salutation || "Ukhti";
+  const callSign = getCallSign(userData?.salutation);
 
   const [selectedHalaqahId, setSelectedHalaqahId] = useState<string | null>(halaqahId);
 
@@ -665,7 +666,7 @@ function RegistrationForm() {
                   <div className="p-4 bg-[#800000]/5 rounded-xl border border-[#800000]/10 flex gap-3 text-left">
                      <Zap className="w-5 h-5 text-amber-500 shrink-0 animate-pulse" />
                      <p className="text-[10px] font-bold text-[#800000] leading-normal italic">
-                        🎁 BONUS AKSES INSTAN: Sambil menunggu verifikasi manual musyrifah, Ukhti sudah bisa mulai belajar sekarang selama 24 jam ke depan. Selamat menghafal!
+                        🎁 BONUS AKSES INSTAN: Sambil menunggu verifikasi manual musyrifah, {callSign} sudah bisa mulai belajar sekarang selama 24 jam ke depan. Selamat menghafal!
                      </p>
                   </div>
                   {(!existingReg?.proof_file_name || Number(existingReg.amount) === 0) && (
@@ -940,7 +941,7 @@ function RegistrationForm() {
                     <div className="flex items-start gap-2 px-1">
                        <Info className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
                        <p className="text-[10px] text-amber-800 font-bold leading-tight italic">
-                         "Kehilangan link referral? Jangan khawatir Ukhti, silakan ketik manual kode referral teman Ukhti di atas untuk tetap mendapatkan potongan infaq."
+                         "Kehilangan link referral? Jangan khawatir {callSign}, silakan ketik manual kode referral teman {callSign} di atas untuk tetap mendapatkan potongan infaq."
                        </p>
                     </div>
                   </div>
@@ -1158,7 +1159,7 @@ function RegistrationForm() {
                       <span className="flex items-center gap-1">
                         <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')} {circle?.payment_type === 'selectable' && "(Pilihan Terbuka)"}
                       </span>
-                      <span className="text-[9px] text-[#800000] opacity-70">Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu.</span>
+                      <span className="text-[9px] text-[#800000] opacity-70">Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan {callSign} tepat waktu.</span>
                     </p>
                   </div>
 
@@ -1217,7 +1218,7 @@ function RegistrationForm() {
                     <div className="space-y-4 text-[11px] text-emerald-900 leading-relaxed font-medium">
                       <div className="p-3 bg-white/50 rounded-xl border border-emerald-100">
                         <p className="font-black text-[#800000] uppercase text-[9px] mb-1">Masa Belajar & Aktivasi:</p>
-                        <p>Halaqah dimulai kapan saja. Masa aktif akses & monitoring berlaku selama **30 hari** terhitung sejak tanggal pendaftaran Ukhti diverifikasi (aktif).</p>
+                        <p>Halaqah dimulai kapan saja. Masa aktif akses & monitoring berlaku selama **30 hari** terhitung sejak tanggal pendaftaran {callSign} diverifikasi (aktif).</p>
                       </div>
                       
                       <p>Dengan mendaftar Hi Mufradat, saya berjanji untuk:</p>
@@ -1362,7 +1363,7 @@ function RegistrationForm() {
                 <div className="bg-amber-100/50 p-4 rounded-2xl border border-amber-200/50 mt-4 flex gap-3">
                   <Info className="w-4 h-4 text-amber-600 shrink-0" />
                   <p className="text-[10px] text-amber-800 font-bold leading-relaxed italic">
-                    Syukran Ukhti. Nominal kode unik & kelebihan transfer Ukhti akan dialokasikan sebagai infaq jariyah melalui <span className="underline font-black">Hi Berbagi</span>. Semoga menjadi asbab keberkahan hafalan Ukhti.
+                    Syukran {callSign}. Nominal kode unik & kelebihan transfer {callSign} akan dialokasikan sebagai infaq jariyah melalui <span className="underline font-black">Hi Berbagi</span>. Semoga menjadi asbab keberkahan hafalan {callSign}.
                   </p>
                 </div>
               </div>
@@ -1411,7 +1412,7 @@ function RegistrationForm() {
               ) : (
                 <div className="p-8 bg-emerald-50 rounded-3xl border-2 border-emerald-100 text-center space-y-4">
                   <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto" />
-                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk ${callSign}. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
+                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk {callSign}. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
                 </div>
               )}
               <Button onClick={handleConfirm} disabled={loading} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-2xl">

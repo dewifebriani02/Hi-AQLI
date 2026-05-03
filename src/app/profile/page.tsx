@@ -58,7 +58,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { cn } from '@/lib/utils';
+import { cn, getCallSign } from '@/lib/utils';
 import { normalizeWhatsapp, whatsappErrorMessage } from '@/lib/whatsapp';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -93,7 +93,7 @@ export default function ProfilePage() {
 
   // Fetch user data for payment status and points
   const { data: userData } = useDoc("users", user?.id);
-  const callSign = userData?.salutation || "Ukhti";
+  const callSign = getCallSign(userData?.salutation);
   const isPaid = userData?.is_tikrar_paid;
   const paidJuz = userData?.paid_juz;
   const points = userData?.points || 0;

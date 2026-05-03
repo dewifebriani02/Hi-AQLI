@@ -1,4 +1,5 @@
 'use client';
+import { getCallSign } from "@/lib/utils";
 
 import { SurahList } from "@/components/tilawah/surah-list";
 import { Button } from "@/components/ui/button";
@@ -229,7 +230,7 @@ function MufradatPageContent() {
     });
   }, [userData, registrations, redemptions, isStudent]);
 
-  const callSign = userData?.salutation || "Ukhti";
+  const callSign = getCallSign(userData?.salutation);
 
 
 
