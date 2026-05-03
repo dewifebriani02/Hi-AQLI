@@ -159,72 +159,79 @@ export default function DashboardPage() {
   const mutabaahPercent = Math.round((mutabaahDoneCount / mutabaahActivitiesCount) * 100);
   const muhasabahPercent = Math.round((muhasabahDoneCount / muhasabahActivitiesCount) * 100);
 
-  useEffect(() => {
-    const fetchPrayerTimes = async (lat: number, lon: number) => {
+
+  const fetchPrayerTimes = async (lat: number, lon: number, isAuto = false) => {
+    try {
+      const todayStrLocal = new Date().toISOString().split('T')[0];
+      const cacheKey = `prayer_times_${todayStrLocal}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+      
+      let locationName = isAuto ? "Mendeteksi..." : (manualCity || "Lokasi Ukhti");
+      
       try {
-        const cacheKey = `prayer_times_${todayStr}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
-        const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
-        if (cached) {
-          setNextPrayer(JSON.parse(cached));
-          return;
-        }
-
-        let locationName = "Jakarta";
-        try {
-          const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
-          const geoData = await geoRes.json();
-          locationName = geoData.city || geoData.locality || geoData.principalSubdivision || "Lokasi Ukhti";
-        } catch (e) {
-          console.error("Geocoding failed", e);
-        }
-
-        const date = new Date();
-        const res = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${lat}&longitude=${lon}&method=11`);
-        const result = await res.json();
-        if (result.data) {
-          const timings = result.data.timings;
-          const prayerNames = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
-          const prayerLabels: Record<string, string> = {
-            "Fajr": "Subuh", "Dhuhr": "Dzuhur", "Asr": "Ashar", "Maghrib": "Maghrib", "Isha": "Isya"
-          };
-
-          const now = new Date();
-          const currentMinutes = now.getHours() * 60 + now.getMinutes();
-          let next = null;
-
-          for (const name of prayerNames) {
-            const [hours, minutes] = timings[name].split(':').map(Number);
-            const prayerMinutes = hours * 60 + minutes;
-            if (prayerMinutes > currentMinutes) {
-              next = { name: prayerLabels[name], time: timings[name], location: locationName };
-              break;
-            }
-          }
-          if (!next) next = { name: "Subuh", time: timings["Fajr"], location: locationName };
-          setNextPrayer(next);
-          if (typeof window !== 'undefined') localStorage.setItem(cacheKey, JSON.stringify(next));
-        }
-      } catch (err) {
-        console.error("Failed to fetch prayer times", err);
+        const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
+        const geoData = await geoRes.json();
+        locationName = geoData.city || geoData.locality || geoData.principalSubdivision || "Lokasi Ukhti";
+      } catch (e) {
+        console.error("Geocoding failed", e);
       }
-    };
 
+      const date = new Date();
+      const res = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${lat}&longitude=${lon}&method=11`);
+      const result = await res.json();
+      if (result.data) {
+        const timings = result.data.timings;
+        const prayerNames = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+        const prayerLabels: Record<string, string> = {
+          "Fajr": "Subuh", "Dhuhr": "Dzuhur", "Asr": "Ashar", "Maghrib": "Maghrib", "Isha": "Isya"
+        };
+
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        let next = null;
+
+        for (const name of prayerNames) {
+          const [hours, minutes] = timings[name].split(':').map(Number);
+          const prayerMinutes = hours * 60 + minutes;
+          if (prayerMinutes > currentMinutes) {
+            next = { name: prayerLabels[name], time: timings[name], location: locationName };
+            break;
+          }
+        }
+        if (!next) next = { name: "Subuh", time: timings["Fajr"], location: locationName };
+        setNextPrayer(next);
+        if (typeof window !== 'undefined') localStorage.setItem(cacheKey, JSON.stringify(next));
+      }
+    } catch (err) {
+      console.error("Failed to fetch prayer times", err);
+    }
+  };
+
+  const handleAutoDetect = () => {
+    if (navigator.geolocation) {
+      toast({ description: "Mendeteksi lokasi Ukhti secara otomatis..." });
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setManualCity(null);
+          fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude, true);
+          toast({ title: "Lokasi Ditemukan", description: "Jadwal shalat telah diperbarui otomatis." });
+        },
+        (err) => {
+          console.warn("Geolocation fallback to Jakarta:", err.message);
+          toast({ variant: "destructive", title: "Gagal Mendeteksi", description: "Izin lokasi ditolak atau GPS tidak aktif. Silakan pilih manual." });
+          fetchPrayerTimes(-6.2088, 106.8456);
+        },
+        { timeout: 5000, enableHighAccuracy: true }
+      );
+    }
+  };
+
+  useEffect(() => {
     if (manualCity) {
       const city = MAJOR_CITIES.find(c => c.name === manualCity);
       if (city) fetchPrayerTimes(city.lat, city.lon);
-    } else if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude),
-        (err) => {
-          // Handle specific macOS/Browser permission or location availability errors
-          // kCLErrorLocationUnknown is err.code 2 (POSITION_UNAVAILABLE)
-          console.warn("Geolocation fallback to Jakarta:", err.message);
-          fetchPrayerTimes(-6.2088, 106.8456);
-        },
-        { timeout: 5000, enableHighAccuracy: false }
-      );
     } else {
-      fetchPrayerTimes(-6.2088, 106.8456);
+      // Hanya jalankan auto-detect sekali atau jika manualCity kosong
+      handleAutoDetect();
     }
   }, [manualCity]);
 
@@ -605,11 +612,27 @@ export default function DashboardPage() {
                     <DialogContent className="sm:max-w-md bg-white rounded-3xl">
                       <DialogHeader>
                         <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest">Pilih Lokasi Ukhti</DialogTitle>
-                        <DialogDescription className="sr-only">
-                          Pilih kota terdekat untuk menyesuaikan jadwal shalat Ukhti secara akurat.
+                        <DialogDescription className="text-[10px] font-bold text-center uppercase tracking-tight">
+                          Gunakan deteksi otomatis atau pilih kota terdekat untuk menyesuaikan jadwal shalat.
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="grid grid-cols-2 gap-3 py-4">
+
+                      <div className="pt-4 px-1">
+                        <Button
+                          onClick={handleAutoDetect}
+                          className="w-full h-14 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black rounded-2xl shadow-lg gap-3 uppercase tracking-widest text-xs"
+                        >
+                          <Bot className="w-5 h-5 animate-bounce" />
+                          Deteksi Lokasi Otomatis
+                        </Button>
+                      </div>
+
+                      <div className="relative py-4">
+                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                        <div className="relative flex justify-center text-[8px] font-black uppercase tracking-widest"><span className="bg-white px-2 text-muted-foreground">Atau Pilih Manual</span></div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pb-4">
                         {MAJOR_CITIES.map((city) => (
                           <Button
                             key={city.name}
@@ -746,7 +769,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Mulai dari 20rb</span>
+                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Hanya 20rb per bulan!</span>
                     </div>
                   </div>
                 </div>
@@ -879,47 +902,66 @@ export default function DashboardPage() {
                 const referralLink = `${origin}/register?ref=${userData.referral_code}`;
                 const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
                 
-                const promoTexts = {
-                  umum: `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ⭐\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group.\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n🟢 WA Group: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n🟢 Telegram: https://t.me/rq_aqli\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏⭐`,
-                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Terukur*: 1 Halaman per Pekan (Ringan & Konsisten)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Papan Juara*: Adu semangat dengan thalibah lain! 🏆\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n🍲 *Investasi Seharga Semangkok Bakso!*\nHanya *Rp 20.000 / bulan*, Ukhti sudah mendapatkan akses monitoring eksklusif & fitur premium.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n📢 *Official Hi AQLI:*\n🟢 Grup WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n🟢 Telegram: https://t.me/rq_aqli\n🌐 Web: www.hiaqli.pro\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*\n_Jazakumullahu Khairan_ 🙏⭐`
+                const promoTexts: Record<string, string> = {
+                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Terukur*: 1 Halaman per Pekan (Ringan & Konsisten)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Papan Juara*: Adu semangat dengan thalibah lain! 🏆\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*\n_Jazakumullahu Khairan_ 🙏⭐`,
+                  tikrar: `*PROGRAM TIKRAR MTI* 📖⭐\n*By Hi AQLI*\n\n*Hafal Al-Qur'an Lebih Itqan & Terjaga!* 🌟\n\nIngin hafalan Al-Qur'an Ukhti lebih kuat dan tidak mudah lupa? Yuk gabung di program Tikrar MTI dengan metode yang sudah teruji! 🕋\n\n🚀 *Keunggulan Program:*\n✅ *Metode 7 Tahapan*: Sistematis untuk kekuatan memori jangka panjang.\n✅ *Monitoring Harian*: Dipantau langsung perkembangannya.\n✅ *Target Jelas*: Membantu Ukhti mencapai target hafalan dengan disiplin.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nInfo & Pendaftaran:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n*Hafal Itu Mudah, Menjaga Itu Ibadah.*\n_Jazakumullahu Khairan_ 🙏⭐`,
+                  ngaji: `*HI NGAJI - BELAJAR TAHSIN & TAJWID* 📚✨\n*By Hi AQLI*\n\n*Perbaiki Bacaan Al-Qur'an Ukhti dari Nol!* 🌟\n\nIngin bacaan Al-Qur'an lebih tartil dan sesuai kaidah tajwid? Yuk gabung di Hi Ngaji, belajar bareng asatidz yang kompeten! 🕋\n\n🚀 *Kenapa Hi Ngaji?*\n✅ *Kurikulum Terstruktur*: Dari dasar sampai mahir.\n✅ *Interaktif*: Tanya jawab langsung di kelas.\n✅ *Fleksibel*: Waktu belajar yang bisa disesuaikan.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n*Sebaik-baik kalian adalah yang mempelajari Al-Qur'an.*\n_Jazakumullahu Khairan_ 🙏⭐`,
+                  irab: `*PROGRAM HI IRAB* 🔍📖\n*By Hi AQLI*\n\n*Selami Makna Mendalam Bahasa Al-Qur'an!* 🌟\n\nIngin paham struktur bahasa dan kedudukan kata dalam Al-Qur'an? Hi IRAB akan membantu Ukhti memahami tata bahasa Arab dengan cara yang mudah! 🕋\n\n🚀 *Apa yang Ukhti Dapatkan?*\n✅ *Bedah Ayat*: Memahami i'rab ayat per ayat.\n✅ *Kamus Digital*: Memudahkan mencari arti & kedudukan kata.\n✅ *Latihan Intensif*: Quiz untuk menguji pemahaman tata bahasa.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n*Paham Bahasa, Lebih Khusyu' Menghamba.*\n_Jazakumullahu Khairan_ 🙏⭐`
                 };
 
+                const promoItems = [
+                  { id: 'mufradat', name: 'Hi Mufradat', icon: Activity, color: 'bg-amber-400' },
+                  { id: 'tikrar', name: 'Hi Tikrar', icon: Award, color: 'bg-indigo-400' },
+                  { id: 'ngaji', name: 'Hi Ngaji', icon: BookOpen, color: 'bg-cyan-400' },
+                  { id: 'irab', name: 'Hi Irab', icon: Search, color: 'bg-emerald-400' },
+                ];
+                
                 return (
                   <div className="flex flex-col gap-4">
-                    <div className="flex gap-2 p-1 bg-muted/50 rounded-xl">
-                      <button 
-                        onClick={() => setSelectedPromo('umum')}
-                        className={cn(
-                          "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
-                          selectedPromo === 'umum' ? "bg-white text-[#800000] shadow-sm" : "text-slate-400 hover:text-slate-600"
-                        )}
-                      >
-                        Umum
-                      </button>
-                      <button 
-                        onClick={() => setSelectedPromo('mufradat')}
-                        className={cn(
-                          "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
-                          selectedPromo === 'mufradat' ? "bg-white text-amber-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
-                        )}
-                      >
-                        Hi Mufradat
-                      </button>
-                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          className="w-full rounded-2xl h-16 font-black uppercase text-[12px] tracking-[0.2em] gap-3 bg-[#800000] text-white border-2 border-[#800000] hover:bg-white hover:text-[#800000] transition-all shadow-xl shadow-[#800000]/20 group/btn"
+                        >
+                          <Share2 className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
+                          BAGIKAN PESAN PROMOSI
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-lg bg-white rounded-[2rem]">
+                        <DialogHeader>
+                          <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest text-xl">Pilih Program Promosi</DialogTitle>
+                          <DialogDescription className="text-[10px] font-bold text-center uppercase tracking-tight text-slate-500">
+                            Pilih program yang ingin Ukhti bagikan. Reward saldo berlaku ketika teman mendaftar melalui link promosi ini.
+                          </DialogDescription>
+                        </DialogHeader>
 
-                    <Button
-                      className="w-full rounded-2xl h-16 font-black uppercase text-[12px] tracking-[0.2em] gap-3 bg-[#800000] text-white border-2 border-[#800000] hover:bg-white hover:text-[#800000] transition-all shadow-xl shadow-[#800000]/20 group/btn"
-                      asChild
-                    >
-                      <a 
-                        href={`https://wa.me/?text=${encodeURIComponent(promoTexts[selectedPromo])}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Share2 className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-                        BAGIKAN {selectedPromo.toUpperCase()} KE WA
-                      </a>
-                    </Button>
+                        <div className="grid gap-3 py-4">
+                          {promoItems.map((item) => (
+                            <a 
+                              key={item.id}
+                              href={`https://wa.me/?text=${encodeURIComponent(promoTexts[item.id])}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group flex items-center justify-between p-4 bg-slate-50 hover:bg-white border-2 border-transparent hover:border-[#800000]/10 rounded-2xl transition-all shadow-sm"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md", item.color)}>
+                                  <item.icon className="w-6 h-6" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.name}</span>
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Potongan Rp 5.000 untuk pendaftar</span>
+                                </div>
+                              </div>
+                              <div className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                                <Share2 className="w-5 h-5" />
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-center text-slate-400 font-medium italic">Klik salah satu program untuk membagikan pesan promosi via WhatsApp.</p>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 );
               })()}

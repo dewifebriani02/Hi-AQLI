@@ -208,31 +208,55 @@ export default function AdminRegistrationsPage() {
       // --- END HI MUFRADAT ---
 
       // --- REFERRAL BONUS LOGIC ---
-      // No bonus if pendaftar used a voucher
-      if (reg.referral_code_used && reg.payment_method !== 'voucher') {
-        const { data: referrer } = await supabase
-          .from("users")
-          .select("id, referral_balance")
-          .eq("referral_code", reg.referral_code_used)
-          .maybeSingle();
+      // Bonus given if pendaftar used a referral code/link AND it's their FIRST verified registration
+      const referralCode = reg.referral_code_used || userData?.referred_by_id; // Try reg record first, then user profile
+      
+      if (referralCode && reg.payment_method !== 'voucher') {
+        let referrer = null;
+        
+        // Find referrer by code or ID
+        if (reg.referral_code_used) {
+          const { data } = await supabase
+            .from("users")
+            .select("id, referral_balance, username")
+            .eq("referral_code", reg.referral_code_used)
+            .maybeSingle();
+          referrer = data;
+        } else if (userData?.referred_by_id) {
+          const { data } = await supabase
+            .from("users")
+            .select("id, referral_balance, username")
+            .eq("id", userData.referred_by_id)
+            .maybeSingle();
+          referrer = data;
+        }
         
         if (referrer) {
-          // Check if this is the user's FIRST EVER verified registration
-          // We check the count of verified registrations for this user_id
+          // Check if any OTHER verified registrations exist for this user
           const { count } = await supabase
             .from("halaqah_registrations")
             .select("*", { count: 'exact', head: true })
             .eq("user_id", reg.user_id)
-            .eq("status", "verified");
+            .eq("status", "verified")
+            .neq("id", reg.id); // Exclude current one
           
-          // If count is 1 (this one), award bonus to referrer
-          if (count === 1) {
+          // If no other verified registrations, award bonus
+          if (count === 0) {
             const newBal = (referrer.referral_balance || 0) + 5000;
-            await supabase
+            const { error: balError } = await supabase
               .from("users")
               .update({ referral_balance: newBal })
               .eq("id", referrer.id);
-            console.log("Referral bonus awarded to:", referrer.id);
+            
+            if (balError) {
+              console.error("Failed to award referral bonus:", balError);
+            } else {
+              console.log(`Referral bonus of 5000 awarded to ${referrer.username} for user ${reg.user_name}`);
+              toast({
+                title: "Reward Referral Berhasil",
+                description: `Saldo Rp 5.000 telah masuk ke akun ${referrer.username}.`,
+              });
+            }
           }
         }
       }

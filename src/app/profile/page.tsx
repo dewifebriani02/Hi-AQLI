@@ -52,6 +52,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
+import { normalizeWhatsapp, whatsappErrorMessage } from '@/lib/whatsapp';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -124,15 +125,29 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!user) return;
 
+    const waError = whatsappErrorMessage(whatsapp);
+    if (waError) {
+      toast({ variant: "destructive", title: "Nomor WhatsApp tidak valid", description: waError });
+      return;
+    }
+    const normalizedWa = normalizeWhatsapp(whatsapp);
+
     setIsUpdating(true);
     try {
+      const updatePayload: any = {
+        full_name: fullName,
+        username: username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
+        whatsapp: normalizedWa,
+      };
+      // Reset auto-block ketika user mengubah nomor (kasih kesempatan ulang)
+      if (normalizedWa !== userData?.whatsapp) {
+        updatePayload.wa_failed_count = 0;
+        updatePayload.wa_blocked_at = null;
+      }
+
       const { error } = await supabase
         .from('users')
-        .update({
-          full_name: fullName,
-          username: username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
-          whatsapp: whatsapp
-        })
+        .update(updatePayload)
         .eq('id', user.id);
 
       if (error) throw error;
@@ -264,18 +279,24 @@ export default function ProfilePage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="whatsapp" className="text-xs font-black uppercase tracking-widest text-slate-500">Nomor WhatsApp</Label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-sm font-bold text-slate-400">+62</span>
-                          <Input 
-                            id="whatsapp" 
-                            value={whatsapp}
-                            onChange={(e) => setWhatsapp(e.target.value)}
-                            placeholder="8123456xxxx"
-                            className="h-12 border-2 rounded-xl font-bold pl-12"
-                            required
-                          />
-                        </div>
-                        <p className="text-[10px] text-amber-600 font-bold italic">*Wajib untuk koordinasi halaqah/program.</p>
+                        <Input
+                          id="whatsapp"
+                          type="tel"
+                          inputMode="tel"
+                          value={whatsapp}
+                          onChange={(e) => setWhatsapp(e.target.value)}
+                          placeholder="08123456xxxx atau 628123456xxxx"
+                          className="h-12 border-2 rounded-xl font-bold"
+                          required
+                        />
+                        {whatsapp && (
+                          whatsappErrorMessage(whatsapp) ? (
+                            <p className="text-[11px] text-red-600 font-bold">⚠ {whatsappErrorMessage(whatsapp)}</p>
+                          ) : (
+                            <p className="text-[11px] text-emerald-600 font-bold">✓ Format Fonnte: {normalizeWhatsapp(whatsapp)}</p>
+                          )
+                        )}
+                        <p className="text-[10px] text-amber-600 font-bold italic">*Wajib untuk koordinasi halaqah/program. Diterima: 0812..., +62812..., 62812...</p>
                       </div>
                     </div>
                     <DialogFooter>

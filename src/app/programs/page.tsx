@@ -5,7 +5,7 @@ import { useUser } from "@/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "next/link";
+import Link from "next/link";
 import { ArrowRight, BookOpen, GraduationCap, HeartHandshake, Library, CheckCircle2, ScrollText, Search, Users } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 

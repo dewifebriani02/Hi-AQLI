@@ -115,7 +115,7 @@ USING (
     SELECT 1 FROM public.roles_musyrifah rm
     JOIN public.halaqahs h ON h.program_type = ANY(rm.assigned_programs)
     WHERE rm.id = auth.uid()
-    AND h.id::text = halaqah_registrations.halaqah_id
+    AND h.id::text = halaqah_registrations.halaqah_id::text
   )
   OR EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid())
   OR EXISTS (SELECT 1 FROM public.roles_superadmin WHERE id = auth.uid())
@@ -130,7 +130,7 @@ WITH CHECK (
     SELECT 1 FROM public.roles_musyrifah rm
     JOIN public.halaqahs h ON h.program_type = ANY(rm.assigned_programs)
     WHERE rm.id = auth.uid()
-    AND h.id::text = halaqah_registrations.halaqah_id
+    AND h.id::text = halaqah_registrations.halaqah_id::text
   )
   OR EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid())
   OR EXISTS (SELECT 1 FROM public.roles_superadmin WHERE id = auth.uid())
@@ -145,7 +145,7 @@ USING (
     SELECT 1 FROM public.roles_musyrifah rm
     JOIN public.halaqahs h ON h.program_type = ANY(rm.assigned_programs)
     WHERE rm.id = auth.uid()
-    AND h.id::text = halaqah_registrations.halaqah_id
+    AND h.id::text = halaqah_registrations.halaqah_id::text
   )
   OR EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid())
   OR EXISTS (SELECT 1 FROM public.roles_superadmin WHERE id = auth.uid())
@@ -155,7 +155,7 @@ WITH CHECK (
     SELECT 1 FROM public.roles_musyrifah rm
     JOIN public.halaqahs h ON h.program_type = ANY(rm.assigned_programs)
     WHERE rm.id = auth.uid()
-    AND h.id::text = halaqah_registrations.halaqah_id
+    AND h.id::text = halaqah_registrations.halaqah_id::text
   )
   OR EXISTS (SELECT 1 FROM public.roles_admin WHERE id = auth.uid())
   OR EXISTS (SELECT 1 FROM public.roles_superadmin WHERE id = auth.uid())

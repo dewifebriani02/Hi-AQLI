@@ -1,41 +1,31 @@
 'use client';
 
 import { useCollection } from "@/supabase/db";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Loader2, 
-  Search, 
-  TrendingUp, 
-  Users, 
-  Award, 
-  MessageCircle, 
-  AlertCircle,
-  CheckCircle,
-  CheckCircle2,
-  Phone,
+import {
+  Loader2,
   ChevronRight,
-  UserCog,
-  ShieldCheck,
-  GraduationCap,
   CalendarDays,
-  Zap
+  Zap,
+  Settings,
+  RefreshCw,
+  AlertCircle
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -48,14 +38,13 @@ import Link from "next/link";
 import { supabase } from "@/supabase";
 import { useToast } from "@/hooks/use-toast";
 
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
@@ -68,25 +57,59 @@ import {
 } from "@/components/ui/select";
 
 const TOTAL_QURAN_VERSES = 6236;
-const WEEKLY_TARGET_VERSES = 15;
-
-const TIKRAR_LEVELS = [
-  { id: "1", name: "Intensif" },
-  { id: "2", name: "Reguler" },
-  { id: "3", name: "Santai" },
-  { id: "4", name: "Pemula" },
-];
 
 function MufradatMonitoringContent() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
   const { toast } = useToast();
-  const [editingUser, setEditingUser] = useState<any>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isTriggering, setIsTriggering] = useState(false);
-  const [newSchedule, setNewSchedule] = useState("0 21 * * 0");
+  const [newSchedule, setNewSchedule] = useState("0 14 * * 0");
+
+  // Friendly schedule inputs
+  const [scheduleDay, setScheduleDay] = useState("0");
+  const [scheduleHour, setScheduleHour] = useState("14");
+  const [scheduleMinute, setScheduleMinute] = useState("0");
+  const [isInitialRender, setIsInitialRender] = useState(true);
+
+  const [selectedTestUser, setSelectedTestUser] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+
+  const generateCron = (day: string, hour: string, minute: string) => {
+    return `${minute} ${hour} * * ${day}`;
+  };
+
+  const parseCron = (cron: string) => {
+    const parts = cron.split(' ');
+    if (parts.length >= 5) {
+      return {
+        minute: parts[0],
+        hour: parts[1],
+        day: parts[4]
+      };
+    }
+    return { minute: '0', hour: '14', day: '0' };
+  };
+
+  // Reset inputs when dialog opens
+  useEffect(() => {
+    if (isScheduleDialogOpen && isInitialRender) {
+      const parsed = parseCron(newSchedule);
+      setScheduleDay(parsed.day);
+      setScheduleHour(parsed.hour);
+      setScheduleMinute(parsed.minute);
+      setIsInitialRender(false);
+    }
+  }, [isScheduleDialogOpen, newSchedule]);
+
+  // Update cron when inputs change (only after initial render)
+  useEffect(() => {
+    if (!isInitialRender) {
+      setNewSchedule(generateCron(scheduleDay, scheduleHour, scheduleMinute));
+    }
+  }, [scheduleDay, scheduleHour, scheduleMinute, isInitialRender]);
 
   useEffect(() => {
     const gid = searchParams.get('groupId');
@@ -97,13 +120,10 @@ function MufradatMonitoringContent() {
     orderBy: { column: 'name', ascending: true }
   });
   
-  const userOptions = useMemo(() => {
-    if (selectedGroupId === "all") return {};
-    return { filters: [{ column: 'mufradat_group_id', operator: '==', value: selectedGroupId }] };
-  }, [selectedGroupId]);
+  const { data: users, isLoading: isUsersLoading } = useCollection("users", {
+    orderBy: { column: 'created_at', ascending: false }
+  });
 
-  const { data: users, isLoading: isUsersLoading } = useCollection("users", userOptions);
-  
   const attemptOptions = useMemo(() => {
     const baseFilters = [{ column: 'is_passed', operator: '==', value: true }];
     if (selectedGroupId === "all") return { filters: baseFilters };
@@ -116,7 +136,6 @@ function MufradatMonitoringContent() {
   });
 
   const { data: waLogs } = useCollection("whatsapp_logs", {
-    filters: [{ column: 'type', operator: '==', value: 'weekly_reminder' }],
     orderBy: { column: 'created_at', ascending: false },
     limit: 100
   });
@@ -173,10 +192,18 @@ function MufradatMonitoringContent() {
 
   const filteredStats = useMemo(() => {
     const s = search.toLowerCase();
-    return userStats.filter(u => 
-      (u.username || u.full_name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s)
-    );
-  }, [userStats, search]);
+    const now = new Date();
+    return userStats.filter(u => {
+      // Hanya peseta yang TERVERIFIKASI di halaqah_registrations
+      const hasVerifiedReg = registrations?.some(r => r.user_id === u.id && r.status === 'verified');
+      if (!hasVerifiedReg) return false;
+      // Hanya peserta resmi yang masih dalam masa berlaku
+      if (!u.mufradat_due_date) return false;
+      if (new Date(u.mufradat_due_date) < now) return false;
+      // Search filter
+      return (u.username || u.full_name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s);
+    });
+  }, [userStats, search, registrations]);
 
   const sendWhatsAppReminder = (u: any) => {
     const waNumber = u.whatsapp || u.phone;
@@ -184,26 +211,10 @@ function MufradatMonitoringContent() {
       alert(`Nomor WA ${u.username || u.full_name} tidak ada.`);
       return;
     }
-    const message = `Assalamualaikum Ukhti ${u.username || u.full_name}, progres Mufradat pekan ini (${u.weeklyCount} ayat) belum mencapai target (${u.targetStr}). Semangat ya!`;
+    const displayName = u.full_name || u.username;
+    const salutation = displayName?.toLowerCase().includes('ummu') ? '' : 'Ukhti ';
+    const message = `Assalamualaikum ${salutation}${displayName}, sekadar mengingatkan target Mufradat pekan ini (${u.targetStr}). Progres saat ini baru ${u.weeklyCount} ayat. Semoga Allah mudahkan dalam menjaga hafalan. Semangat, bismillah! ✨`;
     window.open(`https://wa.me/${waNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
-  const handleUpdateParticipant = async () => {
-    if (!editingUser?.id) return;
-    try {
-      const { error } = await supabase.from('users').update({
-        paid_juz: editingUser.paid_juz ? parseInt(editingUser.paid_juz) : null,
-        tikrar_level: editingUser.tikrar_level ? parseInt(editingUser.tikrar_level) : null,
-        is_tikrar_paid: editingUser.is_tikrar_paid || false,
-        mufradat_group_id: editingUser.mufradat_group_id === "none" ? null : editingUser.mufradat_group_id,
-        updated_at: new Date().toISOString(),
-      }).eq('id', editingUser.id);
-      if (error) throw error;
-      toast({ title: "Berhasil Update" });
-      setIsEditDialogOpen(false);
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "Gagal Update", description: err.message });
-    }
   };
 
   const handleTriggerAutomated = async () => {
@@ -254,6 +265,28 @@ function MufradatMonitoringContent() {
     }
   };
 
+  const handleUnblock = async (userId: string) => {
+    if (!confirm("Buka blokir WhatsApp untuk peserta ini?")) return;
+    setIsTriggering(true);
+    try {
+      const res = await fetch('/api/admin/reminders', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'unblock', userId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Blokir Dibuka", description: "Sistem akan mencoba mengirim WA lagi ke peserta ini." });
+        // Refresh data manually if needed, but the collection hook should pick it up if real-time
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal", description: err.message });
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
   if (isUsersLoading || isAttemptsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -276,9 +309,12 @@ function MufradatMonitoringContent() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
             <h1 className="text-4xl font-black font-headline tracking-tighter text-[#800000]">PROGRESS & REMINDER</h1>
-            <p className="text-muted-foreground font-medium text-sm">Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
+            <p className="text-muted-foreground font-medium text-sm">Hanya peserta resmi Hi Mufradat (status aktif). Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setIsSettingsDialogOpen(true)} className="h-10 text-[10px] font-black uppercase tracking-widest border-2 border-blue-500 text-blue-600 rounded-xl">
+             <Settings className="w-3.5 h-3.5 mr-2" /> Pengaturan WA
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setIsScheduleDialogOpen(true)} className="h-10 text-[10px] font-black uppercase tracking-widest border-2 border-amber-500 text-amber-600 rounded-xl">
              <CalendarDays className="w-3.5 h-3.5 mr-2" /> Atur Jadwal
           </Button>
@@ -306,6 +342,7 @@ function MufradatMonitoringContent() {
                 <TableHead>Target</TableHead>
                 <TableHead>Status Pekanan</TableHead>
                 <TableHead>Progres (%)</TableHead>
+                <TableHead>Status WA</TableHead>
                 <TableHead className="text-right pr-6">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -314,9 +351,9 @@ function MufradatMonitoringContent() {
                 <TableRow key={u.id}>
                   <TableCell className="pl-6">
                     <div className="flex items-center gap-3">
-                      <Avatar><AvatarImage src={u.photo_url || u.photoURL} /><AvatarFallback className="bg-[#800000] text-white font-bold">{u.username?.[0]}</AvatarFallback></Avatar>
+                      <Avatar><AvatarImage src={u.photo_url || u.photoURL} /><AvatarFallback className="bg-[#800000] text-white font-bold">{(u.full_name || u.username)?.[0]?.toUpperCase()}</AvatarFallback></Avatar>
                       <div className="flex flex-col">
-                        <span className="font-bold text-[#800000]">{u.username || u.full_name}</span>
+                        <span className="font-bold text-[#800000]">{u.full_name || u.username}</span>
                         <span className="text-[10px] text-muted-foreground">{u.email}</span>
                       </div>
                     </div>
@@ -330,19 +367,41 @@ function MufradatMonitoringContent() {
                     <div className="flex flex-col gap-1">
                       <Progress value={u.progressPercent} className="h-2 w-32" />
                       {u.lastWaReminder && (
-                        <span className="text-[9px] font-bold text-emerald-600">WA Sent: {formatDistanceToNow(new Date(u.lastWaReminder.created_at), { addSuffix: true, locale: idLocale })}</span>
+                        <span className="text-[9px] font-bold text-emerald-600">Terakhir: {formatDistanceToNow(new Date(u.lastWaReminder.created_at), { addSuffix: true, locale: idLocale })}</span>
                       )}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    {u.wa_blocked_at ? (
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="destructive" className="text-[9px] px-1 h-5 animate-pulse">AUTO BLOCKED</Badge>
+                        <span className="text-[8px] text-muted-foreground">{u.wa_failed_count}x gagal</span>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-[9px] px-1 h-5 text-emerald-600 border-emerald-200">NORMAL</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex items-center justify-end gap-2">
+                      {u.wa_blocked_at && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8 w-8 p-0 text-amber-600 border-amber-200 hover:bg-amber-50 rounded-full"
+                          onClick={() => handleUnblock(u.id)}
+                          disabled={isTriggering}
+                          title="Buka Blokir Otomatis"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button 
                         size="sm" 
                         variant="ghost" 
                         className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50 rounded-full"
                         onClick={() => handleTriggerSingle(u.id)}
-                        disabled={isTriggering}
-                        title="Tes Kirim Otomatis Server"
+                        disabled={isTriggering || !!u.wa_blocked_at}
+                        title={u.wa_blocked_at ? "User terblokir" : "Tes Kirim Otomatis Server"}
                       >
                         <Zap className="h-4 w-4" />
                       </Button>
@@ -356,14 +415,248 @@ function MufradatMonitoringContent() {
         </CardContent>
       </Card>
 
+      <Card className="border-none shadow-2xl overflow-hidden bg-white/90 backdrop-blur-md">
+        <CardHeader className="border-b bg-muted/30">
+          <CardTitle className="text-xl font-black text-[#800000]">LOG WHATSAPP TERAKHIR</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Waktu</TableHead>
+                <TableHead>Penerima</TableHead>
+                <TableHead>Provider</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Tipe</TableHead>
+                <TableHead>Detail</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(waLogs || []).slice(0, 10).map((log: any) => (
+                <TableRow key={log.id}>
+                  <TableCell className="text-xs">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: idLocale })}</TableCell>
+                  <TableCell className="text-xs">{log.recipient}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[9px] uppercase">
+                      {log.metadata?.provider || 'fonnte'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={log.status === 'sent' ? 'default' : 'destructive'}>
+                      {log.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs">{log.type}</TableCell>
+                  <TableCell className="text-xs max-w-xs truncate">
+                    {log.metadata?.fonnte_response?.reason || JSON.stringify(log.metadata).substring(0, 100)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
-        <DialogContent>
-          <DialogTitle>Atur Jadwal Japri Otomatis</DialogTitle>
-          <div className="py-4 space-y-4">
-             <Label>Format Cron (0 21 * * 0 = Minggu 21:00 UTC)</Label>
-             <Input value={newSchedule} onChange={(e) => setNewSchedule(e.target.value)} />
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Atur Jadwal Japri Otomatis</DialogTitle>
+            <DialogDescription>Atur jadwal pengiriman pesan WhatsApp otomatis ke peserta Hi Mufradat.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+            <div className="space-y-3">
+              <Label>Hari Kirim</Label>
+              <Select value={scheduleDay} onValueChange={setScheduleDay}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Setiap Minggu</SelectItem>
+                  <SelectItem value="1">Setiap Senin</SelectItem>
+                  <SelectItem value="2">Setiap Selasa</SelectItem>
+                  <SelectItem value="3">Setiap Rabu</SelectItem>
+                  <SelectItem value="4">Setiap Kamis</SelectItem>
+                  <SelectItem value="5">Setiap Jumat</SelectItem>
+                  <SelectItem value="6">Setiap Sabtu</SelectItem>
+                  <SelectItem value="*">Setiap Hari</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <Label>Jam (WIB)</Label>
+                <Select value={scheduleHour} onValueChange={setScheduleHour}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <SelectItem key={i} value={i.toString()}>
+                        {i.toString().padStart(2, '0')}:00
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-3">
+                <Label>Menit</Label>
+                <Select value={scheduleMinute} onValueChange={setScheduleMinute}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 60 }, (_, i) => (
+                      <SelectItem key={i} value={i.toString()}>
+                        {i.toString().padStart(2, '0')} menit
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Jadwal yang diatur:</span>
+                <span className="font-bold">{newSchedule}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Waktu (UTC):</span>
+                <span className="font-bold">
+                  {scheduleMinute.toString().padStart(2, '0')}:{scheduleHour.toString().padStart(2, '0')} UTC
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Waktu (WIB):</span>
+                <span className="font-bold">
+                  {(parseInt(scheduleHour) + 7 >= 24 ? parseInt(scheduleHour) - 17 : parseInt(scheduleHour) + 7).toString().padStart(2, '0')}:{scheduleMinute.toString().padStart(2, '0')} WIB
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                * Server menggunakan UTC (UTC+0). Tampilan WIB sudah dikonversi otomatis.
+              </p>
+            </div>
           </div>
-          <DialogFooter><Button onClick={handleUpdateSchedule}>Simpan Jadwal</Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleUpdateSchedule}>Simpan Jadwal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pengaturan Pengiriman WhatsApp</DialogTitle>
+            <DialogDescription>Kelola pengiriman pesan WhatsApp, test koneksi, dan lihat log error.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+            {/* Test Kirim ke User Spesifik */}
+            <div className="space-y-3 border-b pb-4">
+              <h3 className="font-bold text-sm uppercase tracking-wider text-[#800000]">Test Kirim ke Peserta</h3>
+              <div className="grid gap-3">
+                <div>
+                  <Label>Pilih Peserta</Label>
+                  <Select value={selectedTestUser} onValueChange={setSelectedTestUser}>
+                    <SelectTrigger><SelectValue placeholder="Pilih peserta..." /></SelectTrigger>
+                    <SelectContent>
+                      {filteredStats.map((u: any) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.username || u.full_name} ({u.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Pesan Test (kosongkan untuk template otomatis)</Label>
+                  <Input
+                    placeholder="Kosongkan untuk pakai template reminder otomatis..."
+                    value={testMessage}
+                    onChange={(e) => setTestMessage(e.target.value)}
+                  />
+                </div>
+                <Button
+                  onClick={async () => {
+                    if (!selectedTestUser) return;
+                    setIsTriggering(true);
+                    try {
+                      const res = await fetch('/api/admin/reminders', {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'trigger_now', userId: selectedTestUser, customMessage: testMessage })
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        toast({ title: "Pesan Terkirim!", description: data.summary?.sent ? "Berhasil kirim pesan test" : "Cek log untuk detail" });
+                      } else {
+                        toast({ variant: "destructive", title: "Gagal", description: data.error });
+                      }
+                    } catch (err: any) {
+                      toast({ variant: "destructive", title: "Gagal Kirim", description: err.message });
+                    } finally {
+                      setIsTriggering(false);
+                    }
+                  }}
+                  disabled={!selectedTestUser || isTriggering}
+                  className="w-full"
+                >
+                  {isTriggering ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                  Kirim Pesan Test
+                </Button>
+              </div>
+            </div>
+
+            {/* Status Info */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-sm uppercase tracking-wider text-[#800000]">Status Device Fonnte</h3>
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Periksa koneksi device di:</span>
+                  <a href="https://fonnte.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                    Fonnte Dashboard →
+                  </a>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Error "disconnected device" berarti perlu reconnect device WhatsApp di dashboard Fonnte.
+                </p>
+              </div>
+            </div>
+
+            {/* Konfigurasi Pengiriman (Read-only - ini di Edge Function) */}
+            <div className="space-y-3 border-t pt-4">
+              <h3 className="font-bold text-sm uppercase tracking-wider text-[#800000]">Konfigurasi Pengiriman</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Daily Cap</div>
+                  <div className="font-bold text-lg">200</div>
+                  <div className="text-xs text-muted-foreground">pesan/hari</div>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Quiet Hours</div>
+                  <div className="font-bold text-lg">06:00 - 21:00</div>
+                  <div className="text-xs text-muted-foreground">WIB</div>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Delay antar pesan</div>
+                  <div className="font-bold text-lg">8 detik</div>
+                  <div className="text-xs text-muted-foreground">mencegah rate-limit</div>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Auto-block</div>
+                  <div className="font-bold text-lg">3 gagal</div>
+                  <div className="text-xs text-muted-foreground">user terblokir</div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                * Sistem mendukung 2 provider: **Fonnte** & **Gowa**. 
+                Konfigurasi ini diatur di Edge Function `send-weekly-reminder` via Supabase Secrets.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsSettingsDialogOpen(false)}>Tutup</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

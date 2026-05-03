@@ -432,17 +432,29 @@ export default function MufradatFinancePage() {
       if (userError) throw userError;
 
       // 3. Referral Bonus Logic
-      if (selectedUser.referred_by_id) {
+      const referralCodeUsed = regData.referral_code_used || selectedUser.referred_by_id;
+      if (referralCodeUsed) {
+        // Check if any OTHER verified registrations exist
         const { count } = await supabase
           .from("halaqah_registrations")
           .select("*", { count: 'exact', head: true })
           .eq("user_id", selectedUser.id)
-          .eq("status", "verified");
+          .eq("status", "verified")
+          .neq("id", newReg.id);
 
-        if (count === 1) {
-          const { data: referrer } = await supabase.from("users").select("id, referral_balance").eq("id", selectedUser.referred_by_id).maybeSingle();
+        if (count === 0) {
+          let referrer = null;
+          if (regData.referral_code_used) {
+            const { data } = await supabase.from("users").select("id, referral_balance, username").eq("referral_code", regData.referral_code_used).maybeSingle();
+            referrer = data;
+          } else if (selectedUser.referred_by_id) {
+            const { data } = await supabase.from("users").select("id, referral_balance, username").eq("id", selectedUser.referred_by_id).maybeSingle();
+            referrer = data;
+          }
+
           if (referrer) {
             await supabase.from("users").update({ referral_balance: (referrer.referral_balance || 0) + 5000 }).eq("id", referrer.id);
+            console.log(`Manual Reward: 5000 to ${referrer.username}`);
           }
         }
       }

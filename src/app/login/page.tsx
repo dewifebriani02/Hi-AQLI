@@ -47,17 +47,25 @@ function LoginContent() {
     setLoading(true);
     setError(null);
 
-    if (!validateEmail(email)) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!validateEmail(cleanEmail)) {
       setLoading(false);
       setError('Format email tidak valid. Silakan periksa kembali.');
       return;
     }
 
-    const { error } = await initiateEmailSignIn(email, password);
+    const { error: signInError } = await initiateEmailSignIn(cleanEmail, password);
 
-    if (error) {
+    if (signInError) {
       setLoading(false);
-      setError('Gagal masuk. Mohon periksa kembali email dan kata sandi Ukhti.');
+      if (signInError.message.toLowerCase().includes('email not confirmed')) {
+        setError('Email Ukhti belum diverifikasi. Mohon cek inbox (atau spam) email Ukhti untuk klik link aktivasi.');
+      } else if (signInError.message.toLowerCase().includes('invalid login credentials')) {
+        setError('Email atau kata sandi salah. Mohon periksa kembali.');
+      } else {
+        setError(signInError.message || 'Gagal masuk. Mohon coba lagi.');
+      }
     } else {
       // Login successful - auth state change will trigger redirect
       toast({

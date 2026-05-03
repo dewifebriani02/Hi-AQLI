@@ -42,6 +42,7 @@ import { useUser, supabase } from "@/supabase";
 import { useDoc, useCollection } from "@/supabase/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { normalizeWhatsapp, whatsappErrorMessage } from "@/lib/whatsapp";
 import Link from "next/link";
 
 const levels = [
@@ -101,6 +102,12 @@ function RegistrationForm() {
   }, [selectedHalaqahId, allHalaqahs, filteredHalaqahs, programParam]);
 
   // 2. Resolve Virtual IDs to real UUIDs for database operations
+  const { data: mufradatGroups } = useCollection("mufradat_groups", {
+    limit: 1,
+    orderBy: { column: 'created_at', ascending: true }
+  });
+  const defaultGroup = mufradatGroups?.[0];
+
   const resolvedHalaqahId = useMemo(() => {
     const searchPool = programParam ? filteredHalaqahs : allHalaqahs;
     if (!selectedHalaqahId || !searchPool) return selectedHalaqahId;
@@ -408,8 +415,9 @@ function RegistrationForm() {
       toast({ variant: "destructive", title: "Mohon pilih program terlebih dahulu" });
       return;
     }
-    if (!whatsapp || whatsapp.length < 10) {
-      toast({ variant: "destructive", title: "Nomor WhatsApp tidak valid" });
+    const waError = whatsappErrorMessage(whatsapp);
+    if (waError) {
+      toast({ variant: "destructive", title: "Nomor WhatsApp tidak valid", description: waError });
       return;
     }
     if (isMufradat && !akadAccepted) {
@@ -481,7 +489,7 @@ function RegistrationForm() {
         user_id: user?.id,
         user_name: name,
         user_email: user?.email,
-        whatsapp: whatsapp,
+        whatsapp: normalizeWhatsapp(whatsapp),
         halaqah_id: verifiedUuid,
         halaqah_title: circle?.title || (isMufradat ? 'Hi Mufradat' : (isTikrar ? 'Hi Tikrar' : (isNgaji ? 'Hi Ngaji' : (programDisplayName || 'Halaqah')))),
         is_paid: isPremiumProgram || !!appliedVoucher,
@@ -535,12 +543,42 @@ function RegistrationForm() {
         if (error) throw error;
       }
 
+      // Sync nomor WhatsApp ternormalize ke profil user (sumber data Fonnte)
+      if (user?.id) {
+        await supabase.from("users").update({ whatsapp: regData.whatsapp }).eq('id', user.id);
+      }
+
       // RECORD VOUCHER REDEMPTION
       if (appliedVoucher) {
         await supabase.from("voucher_redemptions").insert({
           voucher_id: appliedVoucher.id,
           user_id: user?.id
         });
+      }
+
+      // GRACE PERIOD UNTUK HI MUFRADAT
+      if (isMufradat) {
+        const { data: currentUser } = await supabase
+          .from('users')
+          .select('mufradat_accessible_juz')
+          .eq('id', user?.id)
+          .single();
+
+        let currentJuz = Array.isArray(currentUser?.mufradat_accessible_juz) 
+          ? currentUser?.mufradat_accessible_juz 
+          : [];
+          
+        if (!currentJuz.includes(1)) {
+           currentJuz.push(1);
+           currentJuz.sort((a: number, b: number) => a - b);
+        }
+
+        await supabase.from('users').update({
+          mufradat_status: 'active',
+          mufradat_accessible_juz: currentJuz,
+          mufradat_schedule: durationMonths,
+          updated_at: new Date().toISOString()
+        }).eq('id', user?.id);
       }
 
       setSubmitted(true);
@@ -667,11 +705,52 @@ function RegistrationForm() {
               <CheckCircle2 className="h-12 w-12" />
             </div>
             <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed px-4">
-              Jazakallahu Khairan, pendaftaran Ukhti sedang kami proses. <br/>
-              <span className="text-[#800000] font-black italic">🎁 Ukhti sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
-            </p>
-            <Button onClick={() => router.push(isMufradat ? '/mufradat' : '/')} className="w-full bg-[#800000] font-black h-14 rounded-xl shadow-lg">Mulai Sekarang</Button>
+            <div className="space-y-4 px-4">
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Jazakallahu Khairan, pendaftaran Ukhti sedang kami proses. <br/>
+                <span className="text-[#800000] font-black italic">🎁 Ukhti sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
+              </p>
+
+              {(isMufradat || selectedHalaqahId === 'mufradat-premium') && defaultGroup && (
+                <div className="p-6 bg-emerald-50 rounded-[2rem] border-2 border-emerald-100 space-y-4 animate-in zoom-in duration-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <Badge className="bg-emerald-600 text-white font-black text-[9px] px-3 py-1 uppercase tracking-widest">Gabung Grup Monitoring</Badge>
+                    <h3 className="text-lg font-black text-emerald-900 leading-tight">{defaultGroup.name}</h3>
+                  </div>
+
+                  {defaultGroup.musyrifah_name && (
+                    <div className="flex items-center justify-center gap-4 py-2 border-y border-emerald-200/50">
+                      <div className="text-left">
+                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Musyrifah</p>
+                        <p className="text-xs font-bold text-emerald-900">{defaultGroup.musyrifah_name}</p>
+                      </div>
+                      {defaultGroup.musyrifah_phone && (
+                        <div className="h-4 w-px bg-emerald-200" />
+                      )}
+                      {defaultGroup.musyrifah_phone && (
+                        <div className="text-left">
+                          <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">WhatsApp</p>
+                          <p className="text-xs font-bold text-emerald-900">{defaultGroup.musyrifah_phone}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black h-12 rounded-xl shadow-lg shadow-emerald-500/20 gap-2">
+                    <a href={defaultGroup.whatsapp_link || "#"} target="_blank" rel="noopener noreferrer">
+                      <Phone className="w-4 h-4" /> GABUNG GRUP WHATSAPP
+                    </a>
+                  </Button>
+                  <p className="text-[10px] text-emerald-700/60 font-medium italic leading-tight">
+                    *Silakan bergabung ke grup untuk mendapatkan bimbingan harian dari Musyrifah.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="px-4 pt-4">
+              <Button onClick={() => router.push(isMufradat ? '/mufradat' : '/')} className="w-full bg-[#800000] font-black h-14 rounded-xl shadow-lg uppercase tracking-widest text-xs">Mulai Belajar Sekarang</Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -732,8 +811,22 @@ function RegistrationForm() {
                   <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Nomor WhatsApp</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-3 h-4 w-4 text-[#800000]" />
-                    <Input placeholder="0812345..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold" />
+                    <Input
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="08123456xxxx atau 628123456xxxx"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      className="pl-10 h-12 border-2 focus-visible:ring-[#800000] font-bold"
+                    />
                   </div>
+                  {whatsapp && (
+                    whatsappErrorMessage(whatsapp) ? (
+                      <p className="text-[11px] text-red-600 font-bold">⚠ {whatsappErrorMessage(whatsapp)}</p>
+                    ) : (
+                      <p className="text-[11px] text-emerald-600 font-bold">✓ Akan disimpan sebagai: {normalizeWhatsapp(whatsapp)}</p>
+                    )
+                  )}
                 </div>
               </div>
 
@@ -820,7 +913,6 @@ function RegistrationForm() {
                   </div>
                 )}
               </div>
-/div>
 
               {isTikrar && (
                 <div className="space-y-6">

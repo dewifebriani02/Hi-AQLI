@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import { getJuzForPage } from '@/lib/quran-mapping';
+import { getJuzForPage, JUZ_PAGE_MAPPING } from '@/lib/quran-mapping';
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,9 +114,6 @@ export async function POST(request: NextRequest) {
             console.log(`MABAR_SYNC: Active session found for Juz ${juzId} [${activeSession.id}]`);
             
             // Increment participant points
-            // Note: We use a RPC or a select-then-update if no increment available
-            // In Supabase we can use .update({ points_earned: points_earned + 10 }) 
-            // but we need current points first.
             const { data: participant } = await supabase
               .from('mufradat_mabar_participants')
               .select('points_earned')
@@ -133,6 +130,40 @@ export async function POST(request: NextRequest) {
                 })
                 .eq('session_id', activeSession.id)
                 .eq('user_id', user_id);
+            }
+          }
+        }
+
+        // 3. AUTO-UNLOCK NEXT JUZ FOR HI-MUFRADAT
+        if (juzId && page_id) {
+          const mapping = JUZ_PAGE_MAPPING[juzId];
+          if (mapping && Number(page_id) === mapping.endPage) {
+            console.log(`AUTO_UNLOCK: User ${user_id} finished Juz ${juzId}. Unlocking Juz ${juzId + 1}`);
+            
+            const { data: userProfile } = await supabase
+              .from('users')
+              .select('mufradat_accessible_juz')
+              .eq('id', user_id)
+              .single();
+
+            let accessibleJuz = Array.isArray(userProfile?.mufradat_accessible_juz) 
+              ? [...userProfile.mufradat_accessible_juz] 
+              : [];
+            
+            const nextJuz = juzId + 1;
+            if (nextJuz <= 30 && !accessibleJuz.includes(nextJuz)) {
+              accessibleJuz.push(nextJuz);
+              accessibleJuz.sort((a, b) => a - b);
+              
+              await supabase
+                .from('users')
+                .update({ 
+                  mufradat_accessible_juz: accessibleJuz,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', user_id);
+              
+              console.log(`AUTO_UNLOCK: Success for User ${user_id}. New access: ${accessibleJuz}`);
             }
           }
         }

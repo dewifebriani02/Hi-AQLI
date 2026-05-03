@@ -56,7 +56,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import { checkIsStudent, checkIsVerifiedStudent } from "@/lib/access-control";
-
+import { MufradatOnboarding } from "@/components/mufradat/onboarding-modal";
 
 
 function MufradatPageContent() {
@@ -68,6 +68,7 @@ function MufradatPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSeasonRecap, setShowSeasonRecap] = useState(false);
   const [previousLeague, setPreviousLeague] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Fetch all passed attempts for the current user
   const progressOptions = useMemo(() => ({
@@ -280,6 +281,32 @@ function MufradatPageContent() {
     checkWeeklyReset();
   }, [user, userData]);
 
+  useEffect(() => {
+    if (!isUserDataLoading && userData && !userData.metadata?.has_seen_mufradat_onboarding) {
+      setShowOnboarding(true);
+    }
+  }, [userData, isUserDataLoading]);
+
+  const handleCompleteOnboarding = async () => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          metadata: {
+            ...(userData?.metadata || {}),
+            has_seen_mufradat_onboarding: true
+          }
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      setShowOnboarding(false);
+    } catch (err) {
+      console.error("Error updating onboarding status:", err);
+    }
+  };
+
   const isInitialLoading = isUserLoading || (isRegLoading && registrations.length === 0) || (isUserDataLoading && !userData) || (isProgressLoading && (progress || []).length === 0);
 
   if (isInitialLoading) {
@@ -292,7 +319,11 @@ function MufradatPageContent() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-24 max-w-4xl mx-auto px-4 sm:px-0">
+    <div className={cn(
+      "flex flex-col gap-6 pb-24 max-w-4xl mx-auto px-4 sm:px-0 transition-all duration-700",
+      showOnboarding && "blur-xl grayscale pointer-events-none opacity-50"
+    )}>
+      <MufradatOnboarding open={showOnboarding} onComplete={handleCompleteOnboarding} />
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-4 px-1">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-[#800000] mb-1">

@@ -39,7 +39,7 @@ Hanya dengan *Rp 20.000 / bulan*, Ukhti sudah bisa:
 ---
 
 ### *🗓️ Jadwal & Kontak:*
-- *Kelas Dimulai*: 1 April 2026
+- *Kelas Dimulai*: Setiap Hari
 - *Hubungi Admin (CP)*: [Masukkan Nomor WA di Sini] 📞
 
 ---

@@ -1,0 +1,216 @@
+3:import { useState, useMemo, useEffect } from "react";
+5:import {
+9:import { Badge } from "@/components/ui/badge";
+10:import { Button } from "@/components/ui/button";
+11:import { Progress } from "@/components/ui/progress";
+12:import {
+50:import { useUser, supabase } from "@/supabase";
+51:import { useDoc, useCollection } from "@/supabase/db";
+52:import { useToast } from "@/hooks/use-toast";
+53:import { QURAN_CHAPTERS, SURAH_MAP_STR } from "@/lib/quran-data";
+54:import { cn } from "@/lib/utils";
+55:import {
+65:  { name: "Jakarta", lat: -6.2088, lon: 106.8456 },
+66:  { name: "Surabaya", lat: -7.2575, lon: 112.7521 },
+67:  { name: "Bandung", lat: -6.9175, lon: 107.6191 },
+68:  { name: "Medan", lat: 3.5952, lon: 98.6722 },
+69:  { name: "Makassar", lat: -5.1476, lon: 119.4327 },
+70:  { name: "Yogyakarta", lat: -7.7956, lon: 110.3695 }
+73:export default function DashboardPage() {
+74:  const { user, isUserLoading } = useUser();
+77:  const [nextPrayer, setNextPrayer] = useState<{ name: string, time: string, location?: string } | null>(null);
+81:  const { toast } = useToast();
+84:  const { data: userData } = useDoc("users", user?.id);
+91:  const mutabaahOptions = useMemo(() => (user?.id ? {
+93:      { column: 'user_id', operator: '==', value: user.id },
+94:      { column: 'date', operator: '==', value: todayStr }
+98:  const { data: mutabaahLogs } = useCollection("mutabaah_logs", mutabaahOptions);
+100:  const quizOptions = useMemo(() => (user?.id ? {
+102:      { column: 'user_id', operator: '==', value: user.id },
+103:      { column: 'created_at', operator: '>=', value: thirtyDaysAgoStr }
+105:    orderBy: { column: 'created_at', ascending: false }
+108:  const { data: quizAttempts } = useCollection("quiz_attempts", quizOptions);
+110:  const donationOptions = useMemo(() => (user?.id ? {
+112:      { column: 'user_id', operator: '==', value: user.id }
+114:    orderBy: { column: 'created_at', ascending: false },
+118:  const { data: userDonations } = useCollection("donations", donationOptions);
+120:  const mutabaahHistoryOptions = useMemo(() => (user?.id ? {
+122:      { column: 'user_id', operator: '==', value: user.id },
+123:      { column: 'completed', operator: '==', value: true }
+125:    orderBy: { column: 'updated_at', ascending: false },
+129:  const { data: mutabaahHistory } = useCollection("mutabaah_logs", mutabaahHistoryOptions);
+131:  const ngajiRegOptions = useMemo(() => (user?.id ? {
+133:      { column: 'user_id', operator: '==', value: user.id }
+135:    orderBy: { column: 'created_at', ascending: false },
+139:  const { data: ngajiRegs } = useCollection("halaqah_registrations", ngajiRegOptions);
+163:  const fetchPrayerTimes = async (lat: number, lon: number, isAuto = false) => {
+164:    try {
+165:      const cacheKey = `prayer_times_${todayStr}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+170:      try {
+171:        const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
+174:      } catch (e) {
+179:      const res = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${lat}&longitude=${lon}&method=11`);
+181:      if (result.data) {
+184:        const prayerLabels: Record<string, string> = {
+192:        for (const name of prayerNames) {
+195:          if (prayerMinutes > currentMinutes) {
+196:            next = { name: prayerLabels[name], time: timings[name], location: locationName };
+200:        if (!next) next = { name: "Subuh", time: timings["Fajr"], location: locationName };
+204:    } catch (err) {
+209:  const handleAutoDetect = () => {
+210:    if (navigator.geolocation) {
+211:      toast({ description: "Mendeteksi lokasi Ukhti secara otomatis..." });
+213:        (pos) => {
+216:          toast({ title: "Lokasi Ditemukan", description: "Jadwal shalat telah diperbarui otomatis." });
+218:        (err) => {
+220:          toast({ variant: "destructive", title: "Gagal Mendeteksi", description: "Izin lokasi ditolak atau GPS tidak aktif. Silakan pilih manual." });
+223:        { timeout: 5000, enableHighAccuracy: true }
+228:  useEffect(() => {
+229:    if (manualCity) {
+232:    } else {
+238:  useEffect(() => {
+239:    if (!quizAttempts || quizAttempts.length === 0) {
+246:    quizAttempts.forEach((attempt: any) => {
+247:      if (attempt.created_at) {
+258:    while (true) {
+260:      if (streakMap.has(dateStr)) {
+263:      } else {
+265:        if (streak === 0) {
+278:  const todayQuizCount = quizAttempts?.filter((a: any) => {
+287:  const gregorianDate = new Intl.DateTimeFormat('id-ID', {
+296:  useEffect(() => {
+297:    const fetchHijri = async () => {
+298:      try {
+299:        const cacheKey = `hijri_date_${todayStr}`;
+301:        if (cached) {
+307:        const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+308:        const res = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}`);
+310:        if (result.data && result.data.hijri) {
+312:          const formatted = `${h.day} ${h.month.en} ${h.year} H`;
+316:      } catch (e) {
+324:  useEffect(() => {
+325:    const generateReferralCode = async () => {
+329:      try {
+335:        while (!isUnique) {
+337:          code = `AQLI-${firstName}${seqStr}`;
+340:          const { data: existing } = await supabase
+346:          if (!existing) {
+348:          } else {
+356:          .update({ referral_code: code })
+359:      } catch (e) {
+361:      } finally {
+366:    if (userData && !userData.referral_code) {
+372:  const recentActivities = useMemo(() => {
+376:    quizAttempts?.forEach((q: any) => {
+386:      if (q.quiz_id?.startsWith('mufradat_page_')) {
+388:        title = `Halaman ${pageId}`;
+389:      } else if (q.surah_id && q.surah_id !== '0') {
+390:        const surahName = SURAH_MAP_STR.get(String(q.surah_id)) || `Surat ${q.surah_id}`;
+392:        if (q.verse_id && q.verse_id !== '0') {
+393:          title = `${surahName} Ayat ${q.verse_id}`;
+395:      } else {
+399:      subtitle = `Skor ${q.score}/${q.total_questions}`;
+401:      activities.push({
+416:    userDonations?.forEach((d: any) => {
+417:      activities.push({
+423:        subtitle: `Rp ${d.amount.toLocaleString('id-ID')}`,
+431:    mutabaahHistory?.forEach((m: any) => {
+432:      const activityLabels: Record<string, string> = {
+438:      activities.push({
+444:        subtitle: new Date(m.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+452:    ngajiRegs?.forEach((n: any) => {
+453:      activities.push({
+467:    if (!user) {
+469:        {
+481:        {
+492:        {
+510:  const isRegistered = useMemo(() => {
+517:  const onboardingSteps = useMemo(() => {
+521:      {
+529:      {
+537:      {
+554:      {/* Header: Greeting & Points */}
+563:            {user?.user_metadata?.full_name?.split(' ')[0] || 'Sahabat'}!
+566:            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{gregorianDate}</p>
+567:            {hijriDate && (
+568:              <p className="text-[10px] font-black text-[#800000] uppercase tracking-wider">{hijriDate}</p>
+572:        {user && (
+576:              {points.toLocaleString()} POIN
+587:      {/* Waktu Shalat - Background Menonjol */}
+588:      {nextPrayer && (
+599:                    <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">{nextPrayer.name}</h3>
+603:                  <div className="text-2xl sm:text-3xl font-black text-[#D4AF37] tracking-tighter">{nextPrayer.time}</div>
+608:                        <Star className="w-2 h-2 fill-[#D4AF37] text-[#D4AF37]" /> {nextPrayer.location?.toUpperCase()}
+621:                          onClick={handleAutoDetect}
+635:                        {MAJOR_CITIES.map((city) => (
+637:                            key={city.name}
+638:                            variant={manualCity === city.name ? "default" : "outline"}
+639:                            className={cn(
+643:                            onClick={() => {
+645:                              if (typeof window !== 'undefined') {
+646:                                localStorage.removeItem(`prayer_times_${todayStr}_`); // Partial clear to force refetch
+650:                            {city.name}
+664:      {/* 0. ONBOARDING CHECKLIST */}
+665:      {showOnboarding && (
+675:                  <span className="text-xl font-black text-[#800000] leading-none">{onboardingPercent}%</span>
+680:              <Progress value={onboardingPercent} className="h-2 bg-slate-100" indicatorClassName="bg-amber-400 transition-all duration-1000" />
+683:                {onboardingSteps.map((step) => (
+684:                  <Link key={step.id} href={step.isDone ? "#" : step.href}>
+685:                    <div className={cn(
+690:                        <div className={cn(
+694:                          {step.isDone ? <CheckCircle2 className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
+697:                          <span className={cn("text-xs font-black uppercase tracking-tight", step.isDone ? "text-emerald-700 line-through" : "text-slate-800")}>
+698:                            {step.title}
+700:                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{step.subtitle}</span>
+703:                      {!step.isDone && (
+717:      {/* Stats Grid */}
+726:              <p className="text-xl sm:text-2xl font-black text-black">{streakDays} Hari</p>
+739:              <p className="text-xl sm:text-2xl font-black text-black">{repetisiPercent}%</p>
+746:      {/* 1. GUEST PROMO (Moved right above Layanan Utama) */}
+747:      {!isRegistered && (
+749:          <Link href={user ? "/programs" : "/register"}>
+786:      {/* Layanan Utama - 4-Column Icon Grid */}
+792:          {/* Hi Tilawah */}
+800:          {/* Hi Mufradat */}
+808:          {/* Hi Tikrar */}
+816:          {/* Hi Ngaji */}
+824:          {/* Hi Berbagi */}
+832:          {/* Hi Mutaba'ah */}
+840:          {/* Hi Muhasabah */}
+848:          {/* AI (Locked for everyone but AI is always cool) */}
+859:      {user && userData?.referral_code && (
+862:            {/* Promo Image (Premium Preview) */}
+886:                    <p className="text-sm font-black text-emerald-600">Rp {(userData.referral_balance || 0).toLocaleString('id-ID')}</p>
+893:                    {userData.referral_code}
+898:              {/* Common Promo Text Generator */}
+899:              {(() => {
+901:                const referralLink = `${origin}/register?ref=${userData.referral_code}`;
+902:                const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
+904:                const promoTexts = {
+905:                  umum: `Assalamu'alaikum Warahmatullahi Wabarakatuh Sahabat Fillah! ⭐\n\nIngin lebih dekat dengan Al-Qur'an tapi bingung mulai dari mana? Yuk, gabung di ekosistem digital *Hi AQLI*! 🕋📱\n\nNikmati berbagai fitur unggulan kami:\n✅ *Hi Mufradat*: 1 Hal. per Pekan, Quiz Seru & Monitoring Group.\n✅ *Hi Tikrar*: Metode muroja'ah 40x repetisi untuk Itqan maksimal.\n✅ *Hi Tilawah*: Tracking progress bacaan harian Ukhti.\n✅ *Hi Berbagi*: Salurkan infaq & sedekah dengan transparan.\n✅ *Hi Mutaba'ah & Muhasabah*: Evaluasi amalan harian untuk terus istiqomah.\n\n🎁 *BONUS KHUSUS UNTUKMU!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${referralLink}\n\nGabung juga di komunitas kami:\n🟢 WA Group: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n🟢 Telegram: https://t.me/rq_aqli\n\nAyo bareng-bareng jadi Ahlul Qur'an! Jazakumullahu khairan. 🙏⭐`,
+906:                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Terukur*: 1 Halaman per Pekan (Ringan & Konsisten)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Papan Juara*: Adu semangat dengan thalibah lain! 🏆\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n🍲 *Investasi Seharga Semangkok Bakso!*\nHanya *Rp 20.000 / bulan*, Ukhti sudah mendapatkan akses monitoring eksklusif & fitur premium.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n📢 *Official Hi AQLI:*\n🟢 Grup WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n🟢 Telegram: https://t.me/rq_aqli\n🌐 Web: www.hiaqli.pro\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*\n_Jazakumullahu Khairan_ 🙏⭐`
+913:                        onClick={() => setSelectedPromo('umum')}
+914:                        className={cn(
+922:                        onClick={() => setSelectedPromo('mufradat')}
+923:                        className={cn(
+937:                        href={`https://wa.me/?text=${encodeURIComponent(promoTexts[selectedPromo])}`}
+942:                        BAGIKAN {selectedPromo.toUpperCase()} KE WA
+953:      {/* Riwayat Terkini Section - Visible for everyone (including guest demo) */}
+954:      {(user || !user) && (
+958:              <Clock className="w-5 h-5 text-[#800000]" /> {user ? "Riwayat Terkini" : "Simulasi Aktivitas"}
+960:            {!user && (
+965:            {recentActivities.slice(historyPage * 5, (historyPage + 1) * 5).map((activity) => (
+966:              <div key={`${activity.type}-${activity.id}`} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-[#800000]/10 hover:bg-[#800000]/[0.02] transition-all group shadow-sm">
+968:                  <div className={cn(
+979:                      <span className={cn(
+986:                        {activity.status} • {activity.program}
+990:                      {activity.title}
+993:                      {activity.subtitle}
+999:                    {new Date(activity.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+1006:          {recentActivities.length > 5 && (
+1011:                onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
+1012:                disabled={historyPage === 0}
+1018:                Halaman {historyPage + 1} dari {Math.ceil(recentActivities.length / 5)}
+1023:                onClick={() => setHistoryPage(p => Math.min(Math.ceil(recentActivities.length / 5) - 1, p + 1))}
+1024:                disabled={(historyPage + 1) * 5 >= recentActivities.length}
+1034:      {/* Footer: Community Links */}
