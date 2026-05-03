@@ -358,12 +358,14 @@ function RegisterContent() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Kunyah</Label>
+                <Label htmlFor="kunyah_name" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Kunyah</Label>
                 <div className="relative">
                   <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="username"
-                    placeholder="misal: Ummu Fulan"
+                    id="kunyah_name"
+                    name="kunyah_name"
+                    autoComplete="off"
+                    placeholder="misal: Ummu Ahmad"
                     className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}

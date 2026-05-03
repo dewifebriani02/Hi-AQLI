@@ -93,7 +93,8 @@ export default function ProfilePage() {
 
   // Fetch user data for payment status and points
   const { data: userData } = useDoc("users", user?.id);
-  const callSign = getCallSign(userData?.salutation);
+  const fullSalutation = userData?.salutation || "Ukhti";
+  const callSign = getCallSign(fullSalutation);
   const isPaid = userData?.is_tikrar_paid;
   const paidJuz = userData?.paid_juz;
   const points = userData?.points || 0;
@@ -299,12 +300,14 @@ export default function ProfilePage() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="username" className="text-xs font-black uppercase tracking-widest text-slate-500">Nama Kunyah</Label>
+                        <Label htmlFor="kunyah_name" className="text-xs font-black uppercase tracking-widest text-slate-500">Nama Kunyah</Label>
                         <Input 
-                          id="username" 
+                          id="kunyah_name" 
+                          name="kunyah_name"
+                          autoComplete="off"
                           value={username}
-                          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_]/g, ''))}
-                          placeholder="misal: ummu_fulan"
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="misal: Ummu Ahmad"
                           className="h-12 border-2 rounded-xl font-bold"
                           required
                         />

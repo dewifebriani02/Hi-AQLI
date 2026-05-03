@@ -446,7 +446,7 @@ function MufradatPageContent() {
       )}
 
       {/* GUEST PROMO BANNER */}
-      {!user && (
+      {!isStudent && (
         <div className="mx-1 mt-4 mb-2">
           <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#800000] to-[#500000] shadow-xl border border-[#800000]/10 p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
             <div className="flex-1 space-y-4 text-center sm:text-left">

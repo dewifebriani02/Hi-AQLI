@@ -625,60 +625,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* GUEST HERO ADVERTISEMENT */}
-      {!user && (
-        <div className="mx-1 mt-4 mb-2">
-          <div className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-2xl border border-slate-100">
-            {/* Background Image with Overlay */}
-            <div className="absolute inset-0 z-0">
-              <img 
-                src="/mufradat-hero.png" 
-                className="w-full h-full object-cover opacity-20 scale-110 blur-[2px]" 
-                alt="Mufradat Hero" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-br from-white via-white/80 to-transparent" />
-            </div>
-
-            <div className="relative z-10 p-8 sm:p-12 flex flex-col md:flex-row items-center gap-8">
-              <div className="flex-1 text-center md:text-left space-y-6">
-                <Badge className="bg-[#800000] text-white font-black tracking-[0.2em] px-4 py-1 rounded-full animate-pulse uppercase text-[10px]">
-                  NEW VERSION • HI MUFRADAT 2.0
-                </Badge>
-                <h1 className="text-4xl sm:text-5xl font-black text-[#800000] font-headline leading-[1.1] tracking-tight">
-                  LEVEL UP <br/>
-                  <span className="text-[#D4AF37]">MUFRADAT KAKAK!</span>
-                </h1>
-                <p className="text-slate-600 text-sm sm:text-base font-medium leading-relaxed max-w-md">
-                  Ingin paham Al-Qur'an lebih dalam? Bergabunglah dengan <span className="font-black text-[#800000]">3.000+ Thalibah</span> lainnya dan kuasai kosakata Al-Qur'an dengan metode yang seru & terukur.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-                  <Button asChild className="w-full sm:w-auto h-14 bg-[#800000] hover:bg-[#800000]/90 text-white font-black rounded-2xl shadow-xl shadow-[#800000]/20 px-10 gap-3 uppercase tracking-widest text-xs">
-                    <Link href="/register">
-                      Daftar Sekarang <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="w-full sm:w-auto h-14 border-2 border-[#800000]/10 hover:bg-[#800000]/5 text-[#800000] font-black rounded-2xl px-8 uppercase tracking-widest text-xs">
-                    <Link href="/mufradat?tab=preview">
-                      Coba Gratis
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="flex-shrink-0 w-full md:w-1/2 max-w-[400px] animate-in zoom-in duration-1000 delay-300">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-[#D4AF37]/20 blur-3xl rounded-full scale-125" />
-                  <img 
-                    src="/mufradat-hero.png" 
-                    className="relative z-10 w-full h-auto drop-shadow-2xl rounded-3xl" 
-                    alt="App Preview" 
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Waktu Shalat - Background Menonjol */}
       {nextPrayer && (
@@ -840,7 +786,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 1. GUEST PROMO (Moved right above Layanan Utama) */}
-      {user && !isRegistered && (
+      {(!user || !isRegistered) && (
         <div className="mx-1 mt-2 mb-2">
           <Link href={user ? "/programs" : "/register"}>
             <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] to-[#500000] shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:shadow-[#800000]/20">
@@ -855,7 +801,7 @@ export default function DashboardPage() {
                     <span className="text-amber-400">Hi Mufradat</span>
                   </h2>
                   <p className="text-slate-100 text-sm font-medium leading-relaxed mb-6 opacity-90 max-w-md">
-                    Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik.
+                    Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik bersama para pengajar AQLI.
                   </p>
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
                     <div className="flex items-center gap-2">
