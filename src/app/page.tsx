@@ -44,7 +44,9 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  User as UserIcon
+  User as UserIcon,
+  Heart,
+  Check
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser, supabase } from "@/supabase";
@@ -1128,7 +1130,7 @@ export default function DashboardPage() {
               <div className="mx-auto w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border-2 border-white/10">
                 <Heart className="w-10 h-10 fill-amber-300 text-amber-300 animate-pulse" />
               </div>
-              <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">Personalisasi Sapaan</h2>
+              <DialogTitle className="text-2xl font-black font-headline uppercase tracking-tighter">Personalisasi Sapaan</DialogTitle>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70 mt-1">Satu langkah lagi untuk kenyamanan Ukhti</p>
            </div>
            
