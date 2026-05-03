@@ -229,6 +229,8 @@ function MufradatPageContent() {
     });
   }, [userData, registrations, redemptions, isStudent]);
 
+  const callSign = userData?.salutation || "Ukhti";
+
 
 
   useEffect(() => {
@@ -604,7 +606,7 @@ function MufradatPageContent() {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold">Belum Ada Grup</h3>
-                      <p className="text-sm text-muted-foreground px-12">Ukhti belum bergabung ke dalam grup manapun untuk melihat peringkat.</p>
+                      <p className="text-sm text-muted-foreground px-12">{callSign} belum bergabung ke dalam grup manapun untuk melihat peringkat.</p>
                     </div>
                  </div>
                 ) : (
@@ -634,7 +636,7 @@ function MufradatPageContent() {
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-slate-800 leading-tight group-hover:text-[#800000] transition-colors">
-                                {u.full_name || u.username || 'Ukhti'}
+                                {u.username || 'Ukhti'}
                               </span>
                               {user?.id === u.id && (
                                 <span className="text-[9px] bg-[#800000]/10 text-[#800000] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Saya</span>
@@ -769,7 +771,7 @@ function MufradatPageContent() {
            <div className="p-8 text-center space-y-6">
               <div className="space-y-2">
                  <p className="text-lg font-bold text-slate-800 leading-tight">
-                    Barakallah fiik! Musim lalu Ukhti berhasil masuk <span className="text-[#800000] font-black">Liga {previousLeague}</span>.
+                    Barakallah fiik! Musim lalu {callSign} berhasil masuk <span className="text-[#800000] font-black">Liga {previousLeague}</span>.
                  </p>
                  <p className="text-sm text-muted-foreground font-medium italic">
                     Poin mingguan telah direset. Mari mulai dari awal dengan semangat Itqan!

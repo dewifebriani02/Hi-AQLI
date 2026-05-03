@@ -117,7 +117,7 @@ export default function LeaderboardPage() {
                     </Avatar>
                     <div className="absolute -bottom-2 -right-2 bg-[#800000] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">2</div>
                   </div>
-                  <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topThree[1].username?.split(' ')[0]}</span>
+                  <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topThree[1].username || 'Ukhti'}</span>
                   <div className="bg-[#800000]/5 w-full h-16 rounded-t-lg flex flex-col items-center justify-center">
                     <Medal className="w-6 h-6 text-[#800000]/20" />
                     <span className="text-[10px] font-black text-[#800000]">{topThree[1].points || 0}</span>
@@ -138,7 +138,7 @@ export default function LeaderboardPage() {
                 </Avatar>
                 <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">1</div>
               </div>
-              <span className="text-xs font-black text-center truncate w-full uppercase text-[#800000]">{topThree[0].username?.split(' ')[0]}</span>
+              <span className="text-xs font-black text-center truncate w-full uppercase text-[#800000]">{topThree[0].username || 'Ukhti'}</span>
               <div className="bg-[#D4AF37]/20 w-full h-24 rounded-t-lg flex flex-col items-center justify-center text-black">
                 <Trophy className="w-8 h-8 text-[#800000] mb-1" />
                 <span className="text-sm font-black">{topThree[0].points || 0}</span>
@@ -156,7 +156,7 @@ export default function LeaderboardPage() {
                     </Avatar>
                     <div className="absolute -bottom-2 -right-2 bg-[#800000]/60 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white">3</div>
                   </div>
-                  <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topThree[2].username?.split(' ')[0]}</span>
+                  <span className="text-[10px] font-black text-center truncate w-full uppercase text-black">{topThree[2].username || 'Ukhti'}</span>
                   <div className="bg-[#800000]/5 w-full h-12 rounded-t-lg flex flex-col items-center justify-center">
                     <Medal className="w-6 h-6 text-[#800000]/20" />
                     <span className="text-[10px] font-black text-[#800000]">{topThree[2].points || 0}</span>
@@ -266,9 +266,9 @@ export default function LeaderboardPage() {
                 {currentUserRank || '-'}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat Ukhti</span>
+                <span className="text-sm font-black uppercase text-[#D4AF37]">Peringkat {callSign}</span>
                 <span className="text-[9px] text-white/60 font-bold uppercase">
-                  {currentUserRank === 1 ? 'Pertahankan tahta Ukhti!' : 'Teruslah ber-Itqan!'}
+                  {currentUserRank === 1 ? `Pertahankan tahta ${callSign}!` : 'Teruslah ber-Itqan!'}
                 </span>
               </div>
             </div>

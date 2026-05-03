@@ -13,36 +13,36 @@ const PROGRAMS = [
   {
     id: "mufradat-premium",
     name: "Hi Mufradat",
-    description: "Program hafalan 1 halaman/pekan dengan quiz interaktif, monitoring grup, dan musyrifah pendamping.",
-    longDescription: "Target hafalan terukur dengan sistem juz dan evaluasi berkala. Cocok untuk pemula maupun yang sudah hafal.",
+    description: "Program hafalan minimal 1 halaman/pekan (lebih banyak lebih baik!) dengan quiz interaktif.",
+    longDescription: "Target hafalan terukur (Min. 1 hal/pekan) dengan sistem juz dan evaluasi berkala. Infaq Rp 20.000/bulan + Biaya Registrasi Rp 10.000 (sekali seumur hidup).",
     icon: GraduationCap,
     color: "from-emerald-500 to-teal-600",
-    price: "Rp 20.000/bulan",
-    features: ["1 Halaman/Pekan", "Quiz Interaktif", "Monitoring Group", "Musyrifah Pendamping", "Sertifikat"],
+    price: "Infaq Rp 20.000/bulan",
+    features: ["Min. 1 Halaman/Pekan", "Quiz Interaktif", "Monitoring Group", "Musyrifah Pendamping", "Registrasi Rp 10.000 (1x)"],
     href: "/study-circles/registration?id=mufradat-premium",
     popular: true
   },
   {
     id: "tikrar-premium",
     name: "Hi Tikrar",
-    description: "Metode muroja'ah 40x repetisi untuk itqan (menguatkan) hafalan Al-Qur'an.",
-    longDescription: "Sistem repetisi terjadwal dengan target harian yang jelas. Dilengkapi tracking progress dan laporan kinerja.",
+    description: "Metode muroja'ah 40x repetisi untuk itqan hafalan Al-Qur'an. Biaya sesuai level yang dipilih.",
+    longDescription: "Sistem repetisi terjadwal dengan target harian jelas. Infaq sesuai level + Biaya Registrasi Rp 10.000 (sekali seumur hidup).",
     icon: BookOpen,
     color: "from-blue-500 to-indigo-600",
-    price: "Gratis",
-    features: ["40x Repetisi/Hari", "Tracking Progress", "Laporan Kinerja", "Target Juz", "Komunitas Tikrar"],
+    price: "Sesuai Level",
+    features: ["40x Repetisi/Hari", "Tracking Progress", "Laporan Kinerja", "Target Juz", "Registrasi Rp 10.000 (1x)"],
     href: "/study-circles/registration?id=tikrar-premium",
     popular: false
   },
   {
     id: "hi-ngaji",
     name: "Hi Ngaji",
-    description: "Kelas belajar membaca Al-Qur'an dengan metode tartil yang terstruktur.",
-    longDescription: "Belajar dari dasar hingga mahir bersama muallimah berpengalaman. Tersedia kelas reguler dan intensif.",
+    description: "Kelas belajar membaca Al-Qur'an (Tahsin/Tajwid) dari dasar hingga mahir.",
+    longDescription: "Belajar tartil bersama muallimah berpengalaman. Infaq sesuai kelas + Biaya Registrasi Rp 10.000 (sekali seumur hidup).",
     icon: Library,
     color: "from-purple-500 to-violet-600",
     price: "Sesuai Kelas",
-    features: ["Metode Tartil", "Muallimah Berpengalaman", "Kelas Reguler & Intensif", "Sertifikat", "Evaluasi Berkala"],
+    features: ["Metode Tartil", "Muallimah Berpengalaman", "Kelas Reguler & Intensif", "Sertifikat", "Registrasi Rp 10.000 (1x)"],
     href: "/study-circles/registration?program=hi_ngaji",
     popular: false
   }
@@ -214,7 +214,7 @@ export default function ProgramsPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild variant="outline" className="border-slate-300 hover:bg-slate-50">
-              <Link href="https://wa.me/6281234567890" target="_blank">
+              <Link href="https://wa.me/6283132582803" target="_blank">
                 <Users className="w-4 h-4 mr-2" />
                 Konsultasi via WhatsApp
               </Link>

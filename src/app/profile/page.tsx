@@ -21,6 +21,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   LogOut,
   Mail,
   Calendar,
@@ -69,6 +76,7 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [salutation, setSalutation] = useState("Ukhti");
 
   // Check Admin Roles
   const { data: adminRole, isLoading: isAdminLoading } = useDoc("roles_admin", user?.id);
@@ -85,6 +93,7 @@ export default function ProfilePage() {
 
   // Fetch user data for payment status and points
   const { data: userData } = useDoc("users", user?.id);
+  const callSign = userData?.salutation || "Ukhti";
   const isPaid = userData?.is_tikrar_paid;
   const paidJuz = userData?.paid_juz;
   const points = userData?.points || 0;
@@ -106,6 +115,7 @@ export default function ProfilePage() {
       setFullName(userData.full_name || user?.user_metadata?.full_name || "");
       setUsername(userData.username || "");
       setWhatsapp(userData.whatsapp || "");
+      setSalutation(userData.salutation || "Ukhti");
     }
   }, [userData, user]);
 
@@ -138,6 +148,11 @@ export default function ProfilePage() {
         full_name: fullName,
         username: username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
         whatsapp: normalizedWa,
+        salutation: salutation,
+        metadata: {
+          ...(userData?.metadata || {}),
+          has_chosen_salutation: true
+        }
       };
       // Reset auto-block ketika user mengubah nomor (kasih kesempatan ulang)
       if (normalizedWa !== userData?.whatsapp) {
@@ -154,7 +169,7 @@ export default function ProfilePage() {
 
       toast({
         title: "Profil Diperbarui",
-        description: "Data Ukhti berhasil disimpan.",
+        description: `Data ${callSign} berhasil disimpan.`,
       });
       setIsEditDialogOpen(false);
       
@@ -179,7 +194,7 @@ export default function ProfilePage() {
       navigator.clipboard.writeText(user.id);
       toast({
         title: "UID Berhasil Disalin",
-        description: "UID Ukhti diperlukan untuk pengaturan peran manual.",
+        description: `UID ${callSign} diperlukan untuk pengaturan peran manual.`,
       });
     }
   };
@@ -188,7 +203,7 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#800000]"></div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Menyiapkan Berkas Ukhti...</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Menyiapkan Berkas {callSign}...</p>
       </div>
     );
   }
@@ -197,7 +212,7 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto py-6 space-y-8 pb-32">
       <div className="flex flex-col gap-2 px-1">
         <h1 className="text-3xl font-bold font-headline tracking-tight">Profil & Aktivitas</h1>
-        <p className="text-muted-foreground text-sm">Pusat kendali pembelajaran dan kontribusi Ukhti.</p>
+        <p className="text-muted-foreground text-sm">Pusat kendali pembelajaran dan kontribusi {callSign}.</p>
       </div>
 
       <Card className="border-none shadow-xl overflow-hidden bg-card/50 backdrop-blur-sm">
@@ -247,32 +262,49 @@ export default function ProfilePage() {
                 <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
                   <DialogHeader>
                     <DialogTitle className="text-xl font-bold font-headline text-[#800000] flex items-center gap-2">
-                       <UserIcon className="w-5 h-5" /> Edit Profil Ukhti
+                       <UserIcon className="w-5 h-5" /> Edit Profil {callSign}
                     </DialogTitle>
                     <DialogDescription className="text-xs font-medium">
-                      Perbarui informasi identitas Ukhti untuk pengalaman belajar yang lebih personal.
+                      Perbarui informasi identitas {callSign} untuk pengalaman belajar yang lebih personal.
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleUpdateProfile} className="space-y-6 py-4">
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="full_name" className="text-xs font-black uppercase tracking-widest text-slate-500">Nama Lengkap</Label>
-                        <Input 
-                          id="full_name" 
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Nama Sesuai KTP/Rekening"
-                          className="h-12 border-2 rounded-xl font-bold"
-                          required
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="salutation" className="text-xs font-black uppercase tracking-widest text-slate-500">Panggilan Akrab</Label>
+                          <Select value={salutation} onValueChange={setSalutation}>
+                            <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                              <SelectValue placeholder="Pilih Panggilan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Ukhti" className="font-bold">Ukhti</SelectItem>
+                              <SelectItem value="Kakak" className="font-bold">Kakak</SelectItem>
+                              <SelectItem value="Ummu" className="font-bold">Ummu</SelectItem>
+                              <SelectItem value="Ibu" className="font-bold">Ibu</SelectItem>
+                              <SelectItem value="Sahabat" className="font-bold">Sahabat</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="full_name" className="text-xs font-black uppercase tracking-widest text-slate-500">Nama Lengkap</Label>
+                          <Input 
+                            id="full_name" 
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Nama Sesuai KTP/Rekening"
+                            className="h-12 border-2 rounded-xl font-bold"
+                            required
+                          />
+                        </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="username" className="text-xs font-black uppercase tracking-widest text-slate-500">Username Cantik</Label>
+                        <Label htmlFor="username" className="text-xs font-black uppercase tracking-widest text-slate-500">Nama Kunyah</Label>
                         <Input 
                           id="username" 
                           value={username}
                           onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_]/g, ''))}
-                          placeholder="misal: thalibah_hijrah"
+                          placeholder="misal: ummu_fulan"
                           className="h-12 border-2 rounded-xl font-bold"
                           required
                         />
@@ -328,12 +360,12 @@ export default function ProfilePage() {
                   <div>
                     <h4 className={cn(
                       "text-sm font-black uppercase",
-                      superAdminRole ? "text-[#800000]" : "text-amber-900"
+                      superAdminRole ? "text-[#800000]/70" : "text-amber-700"
                     )}>{superAdminRole ? "Super Admin" : "Admin"} Aktif</h4>
                     <p className={cn(
                       "text-[10px] font-medium",
                       superAdminRole ? "text-[#800000]/70" : "text-amber-700"
-                    )}>Ukhti memiliki akses penuh ke Dashboard AQLI.</p>
+                    )}>{callSign} memiliki akses penuh ke Dashboard AQLI.</p>
                   </div>
                 </div>
                 <Button asChild size="sm" className={cn(
@@ -353,7 +385,7 @@ export default function ProfilePage() {
                   <Fingerprint className="w-5 h-5 text-[#800000]" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID Ukhti (UID)</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID {callSign} (UID)</p>
                   <p className="text-xs font-mono font-bold truncate max-w-[150px] sm:max-w-none">{user.id}</p>
                 </div>
               </div>

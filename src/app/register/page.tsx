@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +35,7 @@ function RegisterContent() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/';
   const referralCode = searchParams.get('ref');
+  const programParam = searchParams.get('program');
 
   const { toast } = useToast();
   const [username, setUsername] = useState('');
@@ -45,6 +47,7 @@ function RegisterContent() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [salutation, setSalutation] = useState('Ukhti');
 
   // Referral Validation State
   const [referralStatus, setReferralStatus] = useState<{
@@ -139,7 +142,11 @@ function RegisterContent() {
             role_id: 'learner',
             points: 0,
             followed_halaqahs: [],
+            salutation: salutation || 'Ukhti',
             referred_by_id: referrerId,
+            metadata: {
+              has_chosen_salutation: true
+            },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }, { onConflict: 'id' });
@@ -220,7 +227,9 @@ function RegisterContent() {
           setTimeout(() => {
             const destination = redirectTo !== '/' 
               ? redirectTo 
-              : (referralCode ? `/study-circles/registration?ref=${referralCode}` : '/programs');
+              : (referralCode 
+                  ? `/study-circles/registration?ref=${referralCode}${programParam ? `&program=${programParam}` : ''}` 
+                  : (programParam ? `/study-circles/registration?program=${programParam}` : '/programs'));
               
             router.push(destination);
           }, 100);
@@ -247,7 +256,9 @@ function RegisterContent() {
     // IMPROVEMENT: If joining via referral, automatically show the registration form
     const googleRedirect = redirectTo !== '/' 
       ? redirectTo 
-      : (referralCode ? `/study-circles/registration?ref=${referralCode}` : '/programs');
+      : (referralCode 
+          ? `/study-circles/registration?ref=${referralCode}${programParam ? `&program=${programParam}` : ''}` 
+          : (programParam ? `/study-circles/registration?program=${programParam}` : '/programs'));
 
     const { error: googleError } = await initiateGoogleSignIn(googleRedirect);
     if (googleError) {
@@ -309,18 +320,36 @@ function RegisterContent() {
 
 
           <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Pengguna</Label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="username"
-                  placeholder="Contoh: Hamba Allah"
-                  className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="salutation" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Panggilan Akrab</Label>
+                <Select value={salutation} onValueChange={setSalutation}>
+                  <SelectTrigger className="h-12 border-2 rounded-xl focus:ring-[#800000]">
+                    <SelectValue placeholder="Pilih Panggilan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ukhti" className="font-bold">Ukhti</SelectItem>
+                    <SelectItem value="Kakak" className="font-bold">Kakak</SelectItem>
+                    <SelectItem value="Ummu" className="font-bold">Ummu</SelectItem>
+                    <SelectItem value="Ibu" className="font-bold">Ibu</SelectItem>
+                    <SelectItem value="Sahabat" className="font-bold">Sahabat</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Kunyah</Label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    placeholder="misal: ummu_fulan"
+                    className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_]/g, ''))}
+                    required
+                  />
+                </div>
               </div>
             </div>
             <div className="space-y-2">

@@ -91,6 +91,7 @@ function RegistrationForm() {
   }, [programParam]);
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(user ? "users" : null, user?.id);
+  const callSign = userData?.salutation || "Ukhti";
 
   const [selectedHalaqahId, setSelectedHalaqahId] = useState<string | null>(halaqahId);
 
@@ -125,18 +126,38 @@ function RegistrationForm() {
     return selectedHalaqahId;
   }, [selectedHalaqahId, allHalaqahs, filteredHalaqahs, programParam]);
 
+  // Robust Auto-selection based on URL program parameter
+  useEffect(() => {
+    if (programParam && allHalaqahs && !selectedHalaqahId) {
+      let searchId = programParam;
+      // Handle keyword mapping to official IDs
+      if (programParam.toLowerCase() === 'mufradat') searchId = 'mufradat-premium';
+      if (programParam.toLowerCase() === 'tikrar') searchId = 'tikrar-premium';
+      if (programParam.toLowerCase() === 'ngaji') searchId = 'hi-ngaji';
+      if (programParam.toLowerCase() === 'irab') searchId = 'hi-irab';
+
+      const found = allHalaqahs.find(h => 
+        h.id === searchId || 
+        h.id === programParam || 
+        h.title?.toLowerCase().includes(programParam.toLowerCase())
+      );
+      
+      if (found) {
+        setSelectedHalaqahId(found.id);
+      }
+    }
+  }, [programParam, allHalaqahs, selectedHalaqahId]);
+
   // Check for ANY existing registration for this halaqah to prevent duplicates
   const regOptions = useMemo(() => {
-    // Only apply halaqah_id filter if it's a valid UUID (not a virtual ID)
-    // Virtual IDs should be resolved first
-    const isVirtual = resolvedHalaqahId?.includes('-'); // Simple UUID check
+    const isVirtual = resolvedHalaqahId?.includes('-'); 
     
     return {
       filters: [
         { column: 'user_id', operator: '==', value: user?.id },
         { column: 'halaqah_id', operator: '==', value: resolvedHalaqahId },
         { column: 'status', operator: 'in', value: ["active", "pending_verification"] }
-      ].filter(f => f.column !== 'halaqah_id' || (f.value && f.value.length > 20)) // Basic UUID length check to avoid 400
+      ].filter(f => f.column !== 'halaqah_id' || (f.value && f.value.length > 20)) 
     };
   }, [user?.id, resolvedHalaqahId]);
 
@@ -235,7 +256,7 @@ function RegistrationForm() {
   }, [userData?.referred_by_id, searchParams, appliedReferral]);
 
   // Program Detection
-  const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium') && (selectedHalaqahId !== 'tikrar-premium' && selectedHalaqahId !== 'tikrar-j30-b1');
+  const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium');
   const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
   const isNgaji = (circle?.program_type || circle?.programType) === 'hi_ngaji' || programParam === 'hi_ngaji';
 
@@ -257,7 +278,7 @@ function RegistrationForm() {
       return adminBase || 50000;
     }
     return adminBase || 0;
-  }, [isMufradat, isTikrar, level, circle, isMufradat, isTikrar]);
+  }, [isMufradat, isTikrar, level, circle]);
 
   const isFirstRegistration = useMemo(() => {
     if (!user || !registrationsHistory || !circle) return true;
@@ -277,7 +298,6 @@ function RegistrationForm() {
   }, [isPremiumProgram, infaqAmount, registrationFee, referralDiscount, uniqueCode, appliedVoucher]);
 
   useEffect(() => {
-    // Ensure infaqAmount is at least the minimum
     if (infaqAmount < minInfaq) {
       setInfaqAmount(minInfaq);
     }
@@ -293,7 +313,6 @@ function RegistrationForm() {
 
   useEffect(() => {
     if (step === 2 && isPremiumProgram && !appliedVoucher) {
-      // Reuse existing unique code if resuming, otherwise generate new
       if (forceShowForm && existingReg?.unique_code) {
         setUniqueCode(existingReg.unique_code);
       } else {
@@ -302,13 +321,11 @@ function RegistrationForm() {
     }
   }, [step, isPremiumProgram, appliedVoucher, forceShowForm, existingReg]);
 
-  // Handle Resume Pre-fill
   useEffect(() => {
     if (forceShowForm && existingReg) {
       if (existingReg.user_name) setName(existingReg.user_name);
       if (existingReg.whatsapp) setWhatsapp(existingReg.whatsapp);
       if (existingReg.amount) {
-        // Base infaq = amount - registration_fee - unique_code + referral_discount
         const base = (existingReg.amount || 0) - (existingReg.registration_fee || 0) - (existingReg.unique_code || 0) + (existingReg.referral_discount_amount || 0);
         setInfaqAmount(Math.max(minInfaq, base));
       }
@@ -321,7 +338,6 @@ function RegistrationForm() {
     
     setIsValidatingVoucher(true);
     try {
-      // 1. Find Voucher
       const { data: voucher, error: vError } = await supabase
         .from("vouchers")
         .select("*")
@@ -333,21 +349,17 @@ function RegistrationForm() {
         throw new Error("Voucher tidak ditemukan atau sudah tidak aktif.");
       }
 
-      // 2. Check Expiry
       if (voucher.expiry_date && new Date(voucher.expiry_date) < new Date()) {
         throw new Error("Voucher sudah kadaluarsa.");
       }
 
-      // 3. Check Program ID
       const programType = circle?.program_type || (isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : ''));
       if (voucher.program_id !== 'all' && !programType.includes(voucher.program_id) && voucher.program_id !== 'mufradat') {
-         // Fallback check for mufradat-premium id
          if (!(selectedHalaqahId === 'mufradat-premium' && voucher.program_id === 'mufradat')) {
             throw new Error(`Voucher ini hanya berlaku untuk program ${voucher.program_id.toUpperCase()}.`);
          }
       }
 
-      // 4. Check If Already Redeemed by this user
       const { data: existing } = await supabase
         .from("voucher_redemptions")
         .select("id")
@@ -356,10 +368,9 @@ function RegistrationForm() {
         .maybeSingle();
 
       if (existing) {
-        throw new Error("Ukhti sudah pernah menggunakan voucher ini sebelumnya.");
+        throw new Error(`${callSign} sudah pernah menggunakan voucher ini sebelumnya.`);
       }
 
-      // 5. Check Usage Limit
       if (voucher.usage_limit) {
         const { count } = await supabase
           .from("voucher_redemptions")
@@ -401,7 +412,7 @@ function RegistrationForm() {
       }
 
       setAppliedReferral(referrer);
-      toast({ title: "Referral Berhasil!", description: `Ukhti mendapatkan potongan Rp 5.000 dari ${referrer.referral_code}.` });
+      toast({ title: "Referral Berhasil!", description: `${callSign} mendapatkan potongan Rp 5.000 dari ${referrer.referral_code}.` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Referral Gagal", description: err.message });
       setAppliedReferral(null);
@@ -438,7 +449,6 @@ function RegistrationForm() {
     }
     
     if (appliedVoucher) {
-      // If voucher applied, skip payment info and go straight to final confirmation/submit
       setStep(3);
     } else if (isPremiumProgram) {
       setStep(2);
@@ -462,18 +472,11 @@ function RegistrationForm() {
 
     setLoading(true);
     try {
-      // Use the pre-resolved UUID for the database
       const finalHalaqahId = resolvedHalaqahId;
-
-      // SAFETY: Robust UUID validation
-      // Standard UUID regex (v1-v5)
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      
       let verifiedUuid = finalHalaqahId;
       
-      // If NOT a valid UUID, try lookup
       if (finalHalaqahId && !uuidRegex.test(finalHalaqahId)) {
-        console.log("Resolving virtual ID:", finalHalaqahId);
         const pType = finalHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
         const { data: hData } = await supabase.from("halaqahs").select("id").eq("program_type", pType).maybeSingle();
         if (hData?.id) {
@@ -507,7 +510,6 @@ function RegistrationForm() {
         referral_discount_amount: referralDiscount,
         is_first_registration: isFirstRegistration,
         unique_code: uniqueCode,
-        // Extra metadata for Hi Mufradat
         metadata: isMufradat ? {
           schedule: durationMonths,
           target: mufradatTarget,
@@ -543,12 +545,10 @@ function RegistrationForm() {
         if (error) throw error;
       }
 
-      // Sync nomor WhatsApp ternormalize ke profil user (sumber data Fonnte)
       if (user?.id) {
         await supabase.from("users").update({ whatsapp: regData.whatsapp }).eq('id', user.id);
       }
 
-      // RECORD VOUCHER REDEMPTION
       if (appliedVoucher) {
         await supabase.from("voucher_redemptions").insert({
           voucher_id: appliedVoucher.id,
@@ -556,7 +556,6 @@ function RegistrationForm() {
         });
       }
 
-      // GRACE PERIOD UNTUK HI MUFRADAT
       if (isMufradat) {
         const { data: currentUser } = await supabase
           .from('users')
@@ -595,7 +594,7 @@ function RegistrationForm() {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
         <Loader2 className="animate-spin text-[#800000] h-10 w-10" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memvalidasi Akses Ukhti...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memvalidasi Akses {callSign}...</p>
       </div>
     );
   }
@@ -614,11 +613,10 @@ function RegistrationForm() {
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive
-                  ? `Pendaftaran Ukhti untuk ${circle?.title} sudah tuntas. Jazakillah khair!`
-                  : `Pendaftaran Ukhti untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
+                  ? `Pendaftaran ${callSign} untuk ${circle?.title} sudah tuntas. Jazakillah khair!`
+                  : `Pendaftaran ${callSign} untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
               </p>
               
-              {/* Visual Progress Tracker */}
               <div className="relative pt-4 pb-8 px-2">
                 <div className="absolute top-7 left-0 w-full h-0.5 bg-slate-100 -z-10" />
                 <div 
@@ -707,50 +705,85 @@ function RegistrationForm() {
             <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
             <div className="space-y-4 px-4">
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Jazakallahu Khairan, pendaftaran Ukhti sedang kami proses. <br/>
-                <span className="text-[#800000] font-black italic">🎁 Ukhti sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
+                Jazakallahu Khairan, pendaftaran ${callSign} sedang kami proses. <br/>
+                <span className="text-[#800000] font-black italic">🎁 ${callSign} sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
               </p>
 
-              {(isMufradat || selectedHalaqahId === 'mufradat-premium') && defaultGroup && (
+              {(isMufradat || selectedHalaqahId === 'mufradat-premium') && (
                 <div className="p-6 bg-emerald-50 rounded-[2rem] border-2 border-emerald-100 space-y-4 animate-in zoom-in duration-500">
                   <div className="flex flex-col items-center gap-2">
                     <Badge className="bg-emerald-600 text-white font-black text-[9px] px-3 py-1 uppercase tracking-widest">Gabung Grup Monitoring</Badge>
-                    <h3 className="text-lg font-black text-emerald-900 leading-tight">{defaultGroup.name}</h3>
+                    <h3 className="text-lg font-black text-emerald-900 leading-tight">{defaultGroup?.name || "Grup Hi Mufradat"}</h3>
                   </div>
 
-                  {defaultGroup.musyrifah_name && (
-                    <div className="flex items-center justify-center gap-4 py-2 border-y border-emerald-200/50">
-                      <div className="text-left">
-                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Musyrifah</p>
-                        <p className="text-xs font-bold text-emerald-900">{defaultGroup.musyrifah_name}</p>
-                      </div>
-                      {defaultGroup.musyrifah_phone && (
-                        <div className="h-4 w-px bg-emerald-200" />
-                      )}
-                      {defaultGroup.musyrifah_phone && (
-                        <div className="text-left">
-                          <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">WhatsApp</p>
-                          <p className="text-xs font-bold text-emerald-900">{defaultGroup.musyrifah_phone}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black h-12 rounded-xl shadow-lg shadow-emerald-500/20 gap-2">
-                    <a href={defaultGroup.whatsapp_link || "#"} target="_blank" rel="noopener noreferrer">
-                      <Phone className="w-4 h-4" /> GABUNG GRUP WHATSAPP
-                    </a>
-                  </Button>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black h-12 rounded-xl shadow-lg shadow-emerald-500/20 gap-2">
+                      <a href={defaultGroup?.whatsapp_link || "https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq"} target="_blank" rel="noopener noreferrer">
+                        <Phone className="w-4 h-4" /> GABUNG GRUP WHATSAPP
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full border-emerald-600 text-emerald-700 font-black h-12 rounded-xl gap-2">
+                      <a href="https://hi-aqli.com/panduan/mufradat" target="_blank" rel="noopener noreferrer">
+                        <BookOpen className="w-4 h-4" /> PANDUAN PENGGUNAAN
+                      </a>
+                    </Button>
+                  </div>
                   <p className="text-[10px] text-emerald-700/60 font-medium italic leading-tight">
-                    *Silakan bergabung ke grup untuk mendapatkan bimbingan harian dari Musyrifah.
+                    *Silakan bergabung ke grup & baca panduan untuk mulai belajar.
                   </p>
                 </div>
               )}
+
+              {(isTikrar || selectedHalaqahId === 'tikrar-premium') && (
+                <div className="p-6 bg-blue-50 rounded-[2rem] border-2 border-blue-100 space-y-4 animate-in zoom-in duration-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <Badge className="bg-blue-600 text-white font-black text-[9px] px-3 py-1 uppercase tracking-widest">Komunitas Tikrar</Badge>
+                    <h3 className="text-lg font-black text-blue-900 leading-tight">Hi Tikrar</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black h-12 rounded-xl shadow-lg shadow-blue-500/20 gap-2">
+                      <a href="https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq" target="_blank" rel="noopener noreferrer">
+                        <Phone className="w-4 h-4" /> GABUNG GRUP WHATSAPP
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full border-blue-600 text-blue-700 font-black h-12 rounded-xl gap-2">
+                      <a href="https://hi-aqli.com/panduan/tikrar" target="_blank" rel="noopener noreferrer">
+                        <BookOpen className="w-4 h-4" /> PANDUAN METODE TIKRAR
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {(isNgaji || selectedHalaqahId === 'hi-ngaji') && (
+                <div className="p-6 bg-purple-50 rounded-[2rem] border-2 border-purple-100 space-y-4 animate-in zoom-in duration-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <Badge className="bg-purple-600 text-white font-black text-[9px] px-3 py-1 uppercase tracking-widest">Kelas Hi Ngaji</Badge>
+                    <h3 className="text-lg font-black text-purple-900 leading-tight">Tahsin & Tajwid</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black h-12 rounded-xl shadow-lg shadow-purple-500/20 gap-2">
+                      <a href="https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq" target="_blank" rel="noopener noreferrer">
+                        <Phone className="w-4 h-4" /> GABUNG GRUP WHATSAPP
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full border-purple-600 text-purple-700 font-black h-12 rounded-xl gap-2">
+                      <a href="https://hi-aqli.com/panduan/ngaji" target="_blank" rel="noopener noreferrer">
+                        <BookOpen className="w-4 h-4" /> PANDUAN BELAJAR
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-            
-            <div className="px-4 pt-4">
-              <Button onClick={() => router.push(isMufradat ? '/mufradat' : '/')} className="w-full bg-[#800000] font-black h-14 rounded-xl shadow-lg uppercase tracking-widest text-xs">Mulai Belajar Sekarang</Button>
-            </div>
+
+            <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-14 rounded-xl shadow-lg">
+              <Link href={isMufradat || selectedHalaqahId === 'mufradat-premium' ? "/mufradat" : (isTikrar || selectedHalaqahId === 'tikrar-premium' ? "/tikrar" : "/")}>
+                MULAI SEKARANG
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -1059,9 +1092,9 @@ function RegistrationForm() {
                       <Select value={mufradatTarget} onValueChange={setMufradatTarget}>
                         <SelectTrigger className="h-12 border-2 font-bold bg-white"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1-halaman">1 Halaman</SelectItem>
-                          <SelectItem value="2-halaman">2 Halaman</SelectItem>
-                          <SelectItem value="3-halaman">3 Halaman</SelectItem>
+                          <SelectItem value="1-halaman">1 Halaman (Min. Target)</SelectItem>
+                          <SelectItem value="2-halaman">2 Halaman (Sangat Baik)</SelectItem>
+                          <SelectItem value="3-halaman">3 Halaman (Mumtaz)</SelectItem>
                           <SelectItem value="5-halaman">5 Halaman (1/4 Juz)</SelectItem>
                           <SelectItem value="10-halaman">10 Halaman (1/2 Juz)</SelectItem>
                           <SelectItem value="20-halaman">20 Halaman (1 Juz)</SelectItem>
@@ -1304,7 +1337,7 @@ function RegistrationForm() {
                     <div className="flex justify-between items-center text-sm">
                       <div className="flex flex-col">
                         <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Biaya Registrasi</span>
-                        <span className="text-[9px] text-amber-600 font-bold italic">*Hanya pendaftaran ke-1</span>
+                        <span className="text-[9px] text-amber-600 font-black italic">*(Sekali Seumur Hidup - Pendaftaran ke-1)</span>
                       </div>
                       <span className="font-black text-slate-700">Rp {registrationFee.toLocaleString('id-ID')}</span>
                     </div>
@@ -1378,7 +1411,7 @@ function RegistrationForm() {
               ) : (
                 <div className="p-8 bg-emerald-50 rounded-3xl border-2 border-emerald-100 text-center space-y-4">
                   <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto" />
-                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk Ukhti. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
+                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk ${callSign}. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
                 </div>
               )}
               <Button onClick={handleConfirm} disabled={loading} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-2xl">
@@ -1388,6 +1421,25 @@ function RegistrationForm() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Official Admin Contact Info */}
+      <div className="max-w-xl mx-auto mt-8 p-6 bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-[#800000]/20 text-center space-y-3">
+        <p className="text-[10px] font-black text-[#800000] uppercase tracking-[0.2em]">Informasi Resmi Hi AQLI</p>
+        <div className="flex flex-col items-center gap-2">
+          <Link 
+            href="https://wa.me/6283132582803" 
+            target="_blank"
+            className="flex items-center gap-2 bg-[#800000]/5 px-4 py-2 rounded-full hover:bg-[#800000]/10 transition-colors"
+          >
+            <Phone className="w-4 h-4 text-[#800000]" />
+            <span className="text-sm font-black text-[#800000]">0831 3258 2803</span>
+            <Badge className="bg-[#800000] text-white border-none text-[8px] h-4">ADMIN UTAMA</Badge>
+          </Link>
+          <p className="text-[10px] text-muted-foreground font-bold italic">
+            "Silakan hubungi nomor di atas untuk konfirmasi manual atau pertanyaan seputar program."
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

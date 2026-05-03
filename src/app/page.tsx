@@ -72,6 +72,42 @@ const MAJOR_CITIES = [
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
+  const { data: userData, isLoading: isUserDocLoading } = useDoc(user?.id ? "users" : null, user?.id);
+  const callSign = userData?.salutation || "Ukhti";
+  const [showSalutationForcer, setShowSalutationForcer] = useState(false);
+  const [forcedSalutation, setForcedSalutation] = useState("Ukhti");
+  const [isForcerSaving, setIsForcerSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isUserLoading && !isUserDocLoading && user && userData && !userData.metadata?.has_chosen_salutation) {
+      setShowSalutationForcer(true);
+    }
+  }, [user, userData, isUserLoading, isUserDocLoading]);
+
+  const handleForceSalutation = async () => {
+    if (!user) return;
+    setIsForcerSaving(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          salutation: forcedSalutation,
+          metadata: {
+            ...(userData?.metadata || {}),
+            has_chosen_salutation: true
+          }
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      setShowSalutationForcer(false);
+      toast({ title: "Masyallah!", description: `Panggilan Akrab berhasil diatur sebagai ${forcedSalutation}.` });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal menyimpan", description: err.message });
+    } finally {
+      setIsForcerSaving(false);
+    }
+  };
   const [streakDays, setStreakDays] = useState(0);
   const [historyPage, setHistoryPage] = useState(0);
   const [nextPrayer, setNextPrayer] = useState<{ name: string, time: string, location?: string } | null>(null);
@@ -81,7 +117,6 @@ export default function DashboardPage() {
   const { toast } = useToast();
 
   // Only fetch data if user is logged in
-  const { data: userData } = useDoc("users", user?.id);
   const points = userData?.points || 0;
 
   // Mutaba'ah Progress Calculation - only fetch if user is logged in
@@ -165,12 +200,12 @@ export default function DashboardPage() {
       const todayStrLocal = new Date().toISOString().split('T')[0];
       const cacheKey = `prayer_times_${todayStrLocal}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
       
-      let locationName = isAuto ? "Mendeteksi..." : (manualCity || "Lokasi Ukhti");
+      let locationName = isAuto ? "Mendeteksi..." : (manualCity || `Lokasi ${callSign}`);
       
       try {
         const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
         const geoData = await geoRes.json();
-        locationName = geoData.city || geoData.locality || geoData.principalSubdivision || "Lokasi Ukhti";
+        locationName = geoData.city || geoData.locality || geoData.principalSubdivision || `Lokasi ${callSign}`;
       } catch (e) {
         console.error("Geocoding failed", e);
       }
@@ -208,7 +243,7 @@ export default function DashboardPage() {
 
   const handleAutoDetect = () => {
     if (navigator.geolocation) {
-      toast({ description: "Mendeteksi lokasi Ukhti secara otomatis..." });
+      toast({ description: `Mendeteksi lokasi ${callSign} secara otomatis...` });
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setManualCity(null);
@@ -522,7 +557,7 @@ export default function DashboardPage() {
       {
         id: "profile",
         title: "Lengkapi Profil",
-        subtitle: "Pasang nomor WhatsApp Ukhti",
+        subtitle: `Pasang nomor WhatsApp ${callSign}`,
         isDone: !!userData?.whatsapp,
         href: "/profile?edit=true",
         icon: UserIcon
@@ -611,7 +646,7 @@ export default function DashboardPage() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md bg-white rounded-3xl">
                       <DialogHeader>
-                        <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest">Pilih Lokasi Ukhti</DialogTitle>
+                        <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest">Pilih Lokasi {callSign}</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold text-center uppercase tracking-tight">
                           Gunakan deteksi otomatis atau pilih kota terdekat untuk menyesuaikan jadwal shalat.
                         </DialogDescription>
@@ -670,7 +705,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <h3 className="text-lg font-black text-[#800000] uppercase tracking-tight">Ahlan Wa Sahlan!</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Selesaikan langkah awal Ukhti</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Selesaikan langkah awal {callSign}</p>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="text-xl font-black text-[#800000] leading-none">{onboardingPercent}%</span>
@@ -889,7 +924,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex flex-col gap-1 mb-6">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kode Referral Ukhti</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kode Referral {callSign}</p>
                   <div className="text-2xl font-black text-[#800000] tracking-[0.3em] font-mono">
                     {userData.referral_code}
                   </div>
@@ -903,10 +938,10 @@ export default function DashboardPage() {
                 const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
                 
                 const promoTexts: Record<string, string> = {
-                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Terukur*: 1 Halaman per Pekan (Ringan & Konsisten)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Papan Juara*: Adu semangat dengan thalibah lain! 🏆\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*\n_Jazakumullahu Khairan_ 🙏⭐`,
-                  tikrar: `*PROGRAM TIKRAR MTI* 📖⭐\n*By Hi AQLI*\n\n*Hafal Al-Qur'an Lebih Itqan & Terjaga!* 🌟\n\nIngin hafalan Al-Qur'an Ukhti lebih kuat dan tidak mudah lupa? Yuk gabung di program Tikrar MTI dengan metode yang sudah teruji! 🕋\n\n🚀 *Keunggulan Program:*\n✅ *Metode 7 Tahapan*: Sistematis untuk kekuatan memori jangka panjang.\n✅ *Monitoring Harian*: Dipantau langsung perkembangannya.\n✅ *Target Jelas*: Membantu Ukhti mencapai target hafalan dengan disiplin.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nInfo & Pendaftaran:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n*Hafal Itu Mudah, Menjaga Itu Ibadah.*\n_Jazakumullahu Khairan_ 🙏⭐`,
-                  ngaji: `*HI NGAJI - BELAJAR TAHSIN & TAJWID* 📚✨\n*By Hi AQLI*\n\n*Perbaiki Bacaan Al-Qur'an Ukhti dari Nol!* 🌟\n\nIngin bacaan Al-Qur'an lebih tartil dan sesuai kaidah tajwid? Yuk gabung di Hi Ngaji, belajar bareng asatidz yang kompeten! 🕋\n\n🚀 *Kenapa Hi Ngaji?*\n✅ *Kurikulum Terstruktur*: Dari dasar sampai mahir.\n✅ *Interaktif*: Tanya jawab langsung di kelas.\n✅ *Fleksibel*: Waktu belajar yang bisa disesuaikan.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n*Sebaik-baik kalian adalah yang mempelajari Al-Qur'an.*\n_Jazakumullahu Khairan_ 🙏⭐`,
-                  irab: `*PROGRAM HI IRAB* 🔍📖\n*By Hi AQLI*\n\n*Selami Makna Mendalam Bahasa Al-Qur'an!* 🌟\n\nIngin paham struktur bahasa dan kedudukan kata dalam Al-Qur'an? Hi IRAB akan membantu Ukhti memahami tata bahasa Arab dengan cara yang mudah! 🕋\n\n🚀 *Apa yang Ukhti Dapatkan?*\n✅ *Bedah Ayat*: Memahami i'rab ayat per ayat.\n✅ *Kamus Digital*: Memudahkan mencari arti & kedudukan kata.\n✅ *Latihan Intensif*: Quiz untuk menguji pemahaman tata bahasa.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* saat pendaftaran untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n*Paham Bahasa, Lebih Khusyu' Menghamba.*\n_Jazakumullahu Khairan_ 🙏⭐`
+                  mufradat: `*HI MUFRADAT PREMIUM* ⭐\n*By Hi AQLI*\n\n*Paham Al-Qur'an Jadi Lebih Seru & Terarah!* 🌿\n\nPernah merasa ingin paham arti Qur'an tapi belajar sendiri sering malas? Tenang, Hi MUFRADAT solusinya! 🌟\n\n🚀 *Kenapa Harus Join?*\n✅ *Target Fleksibel*: Min. 1 Halaman per Pekan (Lebih banyak lebih baik!)\n✅ *Monitoring Group*: Dibimbing & dipantau dalam grup khusus 🤝\n✅ *Quiz Interaktif*: Uji pemahaman dengan cara yang fun! 🎮\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Hanya Sekali Seumur Hidup)\n- *Infaq Bulanan*: Mulai dari Rp 20.000/bulan\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${mufradatLink}\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
+                  tikrar: `*PROGRAM HI TIKRAR* 📖⭐\n*By Hi AQLI*\n\n*Hafal Al-Qur'an Lebih Itqan & Terjaga!* 🌟\n\nIngin hafalan Al-Qur'an Ukhti lebih kuat dan tidak mudah lupa? Yuk gabung di program Hi Tikrar dengan metode yang sudah teruji! 🕋\n\n🚀 *Keunggulan Program:*\n✅ *Metode 7 Tahapan*: Sistematis untuk kekuatan memori jangka panjang.\n✅ *Monitoring Harian*: Dipantau langsung perkembangannya.\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Program*: Sesuai level intensitas yang dipilih.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nInfo & Pendaftaran:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`,
+                  ngaji: `*HI NGAJI - BELAJAR TAHSIN & TAJWID* 📚✨\n*By Hi AQLI*\n\n*Perbaiki Bacaan Al-Qur'an Ukhti dari Nol!* 🌟\n\nIngin bacaan Al-Qur'an lebih tartil dan sesuai kaidah tajwid? Yuk gabung di Hi Ngaji, belajar bareng muallimah yang kompeten! 🕋\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Kelas*: Menyesuaikan tingkat kelas.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`,
+                  irab: `*PROGRAM HI IRAB* 🔍📖\n*By Hi AQLI*\n\n*Selami Makna Mendalam Bahasa Al-Qur'an!* 🌟\n\nHi IRAB akan membantu Ukhti memahami tata bahasa Arab dengan cara yang mudah! 🕋\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Program*: Sesuai paket yang diambil.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`
                 };
 
                 const promoItems = [
@@ -931,7 +966,7 @@ export default function DashboardPage() {
                         <DialogHeader>
                           <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest text-xl">Pilih Program Promosi</DialogTitle>
                           <DialogDescription className="text-[10px] font-bold text-center uppercase tracking-tight text-slate-500">
-                            Pilih program yang ingin Ukhti bagikan. Reward saldo berlaku ketika teman mendaftar melalui link promosi ini.
+                            Pilih program yang ingin ${callSign} bagikan. Reward saldo berlaku ketika teman mendaftar melalui link promosi ini.
                           </DialogDescription>
                         </DialogHeader>
 
@@ -1086,6 +1121,54 @@ export default function DashboardPage() {
 
         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">www.hiaqli.pro • Teruslah Istiqomah ✨</p>
       </div>
+      {/* Forced Salutation Selection Modal */}
+      <Dialog open={showSalutationForcer} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md bg-white rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl [&>button]:hidden">
+           <div className="bg-gradient-to-br from-[#800000] via-[#A52A2A] to-[#800000] p-10 text-center text-white relative">
+              <div className="mx-auto w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border-2 border-white/10">
+                <Heart className="w-10 h-10 fill-amber-300 text-amber-300 animate-pulse" />
+              </div>
+              <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">Personalisasi Sapaan</h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70 mt-1">Satu langkah lagi untuk kenyamanan Ukhti</p>
+           </div>
+           
+           <div className="p-8 space-y-6">
+              <div className="space-y-3 text-center">
+                <p className="text-sm font-bold text-slate-800 leading-tight">
+                  Assalamu'alaikum! Agar pengalaman belajar di Hi AQLI terasa lebih dekat dan nyaman, silakan pilih panggilan akrab yang Ukhti sukai:
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {['Ukhti', 'Kakak', 'Ummu', 'Ibu', 'Sahabat'].map((choice) => (
+                    <button
+                      key={choice}
+                      onClick={() => setForcedSalutation(choice)}
+                      className={cn(
+                        "h-14 rounded-2xl border-2 font-black uppercase text-[10px] transition-all flex items-center justify-center gap-2",
+                        forcedSalutation === choice 
+                          ? "bg-[#800000] border-[#800000] text-white shadow-lg scale-[1.02]" 
+                          : "bg-slate-50 border-slate-100 text-slate-500 hover:border-[#800000]/20"
+                      )}
+                    >
+                      {choice}
+                      {forcedSalutation === choice && <Check className="w-3 h-3" />}
+                    </button>
+                  ))}
+                </div>
+
+                <Button 
+                  onClick={handleForceSalutation}
+                  disabled={isForcerSaving}
+                  className="w-full h-14 bg-[#800000] hover:bg-[#800000]/90 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-xs mt-4"
+                >
+                  {isForcerSaving ? <Loader2 className="animate-spin w-5 h-5" /> : "SIMPAN & MULAI BELAJAR"}
+                </Button>
+              </div>
+           </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
