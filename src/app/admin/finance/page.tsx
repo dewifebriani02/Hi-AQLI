@@ -1334,7 +1334,7 @@ export default function MufradatFinancePage() {
                                 <p className="text-lg font-black text-amber-700 leading-none">{FORMATTER.format(splits.totalRegDiscounts + (Object.values(splits.referralCommissions).reduce((a,c:any)=>a+c.amount,0)))}</p>
                                 <Badge className="bg-amber-100 text-amber-700 text-[8px] font-black border-none h-4">5rb/Ref</Badge>
                              </div>
-                             <p className="text-[8px] font-bold text-slate-400 italic leading-none">Total Diskon User + Komisi Referrer</p>
+                             <p className="text-[8px] font-bold text-slate-400 italic leading-none">Total Keringanan User + Komisi Referrer</p>
                           </div>
                           <div className="p-4 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-200">
                              <p className="text-[9px] font-black uppercase text-blue-100 mb-1 leading-none">Net Pendaftaran</p>

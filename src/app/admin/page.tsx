@@ -143,7 +143,7 @@ export default function AdminDashboard() {
             <CardDescription>Generate dan pantau penggunaan voucher promo.</CardDescription>
           </CardHeader>
           <CardContent className="p-6 flex-1 flex flex-col justify-between">
-            <p className="text-sm text-muted-foreground mb-4">Buat kode akses gratis atau diskon per program (Mufradat/Tikrar) dengan masa berlaku.</p>
+            <p className="text-sm text-muted-foreground mb-4">Buat kode akses bebas infaq atau keringanan per program (Mufradat/Tikrar) dengan masa berlaku.</p>
             <Link href="/admin/vouchers" className="w-full">
               <Button variant="outline" className="w-full font-black gap-2 border-slate-300 text-slate-700 hover:bg-slate-100">
                 Data Voucher <ArrowUpRight className="w-4 h-4" />

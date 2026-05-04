@@ -231,6 +231,7 @@ function RegistrationForm() {
   const [durationMonths, setDurationMonths] = useState("harian");
   const [mufradatTarget, setMufradatTarget] = useState("1-halaman"); // 'page' or 'juz'
   const [infaqAmount, setInfaqAmount] = useState<number>(0);
+  const [paymentDuration, setPaymentDuration] = useState(1); // Months
   const [akadAccepted, setAkadAccepted] = useState(false);
 
   // Voucher States
@@ -322,8 +323,8 @@ function RegistrationForm() {
 
   const totalCalculated = useMemo(() => {
     if (!isPremiumProgram || appliedVoucher) return 0;
-    return Math.max(0, infaqAmount + registrationFee - referralDiscount + uniqueCode);
-  }, [isPremiumProgram, infaqAmount, registrationFee, referralDiscount, uniqueCode, appliedVoucher]);
+    return Math.max(0, (infaqAmount * paymentDuration) + registrationFee - referralDiscount + uniqueCode);
+  }, [isPremiumProgram, infaqAmount, paymentDuration, registrationFee, referralDiscount, uniqueCode, appliedVoucher]);
 
   useEffect(() => {
     if (infaqAmount < minInfaq) {
@@ -561,12 +562,14 @@ function RegistrationForm() {
           akadAccepted: true,
           unitPrice: 0,
           infaqBase: infaqAmount,
+          paymentDuration: paymentDuration,
           voucher_code: appliedVoucher?.code || null,
           referral_code: appliedReferral?.referral_code || null,
           is_resume: forceShowForm
         } : isNgaji ? {
           akadAccepted: true,
           infaqBase: infaqAmount,
+          paymentDuration: paymentDuration,
           voucher_code: appliedVoucher?.code || null,
           referral_code: appliedReferral?.referral_code || null,
         } : isTikrar ? {
@@ -574,6 +577,7 @@ function RegistrationForm() {
           target: targetJuz,
           level: level,
           infaqBase: infaqAmount,
+          paymentDuration: paymentDuration,
           voucher_code: appliedVoucher?.code || null,
           referral_code: appliedReferral?.referral_code || null,
         } : (appliedVoucher ? { voucher_code: appliedVoucher.code } : null)
@@ -657,9 +661,9 @@ function RegistrationForm() {
           <CardContent className="pt-8 pb-10 space-y-8">
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Assalamu'alaikum, <strong>{name}</strong>. {isActuallyActive
+                Assalamu'alaikum, <strong>{fullSalutation} {name}</strong>. {isActuallyActive
                   ? `Pendaftaran ${fullSalutation} untuk ${circle?.title} sudah tuntas. Jazakillah khair!`
-                  : `Pendaftaran ${fullSalutation} untuk ${circle?.title} sedang dalam antrean verifikasi manual.`}
+                  : `Pendaftaran ${fullSalutation} untuk ${circle?.title} sedang dalam antrean verifikasi manual. Mohon sabar menunggu ya, Musyrifah kami akan segera melakukan validasi.`}
               </p>
               
               <div className="relative pt-4 pb-8 px-2">
@@ -934,7 +938,7 @@ function RegistrationForm() {
                     </div>
                     <div>
                       <h4 className="font-black text-[12px] uppercase tracking-widest text-slate-800">Hadiah Referral</h4>
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Gunakan kode teman & dapatkan diskon Rp 5.000</p>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Gunakan kode teman & dapatkan keringanan Rp 5.000</p>
                     </div>
                   </div>
                   {appliedReferral && (
@@ -1161,7 +1165,7 @@ function RegistrationForm() {
                         <SelectTrigger className="h-12 border-2 font-bold bg-white"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="harian">Harian (Senin - Jumat)</SelectItem>
-                          <SelectItem value="pekanan">Pekanan (Sabtu - Ahad)</SelectItem>
+                          <SelectItem value="pekanan">Akhir Pekan (Sabtu - Ahad)</SelectItem>
                           <SelectItem value="fleksibel">Fleksibel (Senin - Ahad)</SelectItem>
                         </SelectContent>
                       </Select>
@@ -1213,6 +1217,57 @@ function RegistrationForm() {
                         <Info className="w-3 h-3" /> Minimal infaq: Rp {minInfaq.toLocaleString('id-ID')} {circle?.payment_type === 'selectable' && "(Pilihan Terbuka)"}
                       </span>
                       <span className="text-[9px] text-[#800000] opacity-70">Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan {fullSalutation} tepat waktu.</span>
+                    </p>
+                  </div>
+
+                  {/* Payment Duration Selector */}
+                  <div className="space-y-3 mt-6 p-5 bg-slate-50 rounded-2xl border-2 border-slate-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-4 h-4 text-[#800000]" />
+                      <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Durasi Infaq (Masa Aktif)</Label>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                      {[1, 2, 3, 6, 12].map((dur) => (
+                        <div key={dur} className="relative">
+                          {dur === 6 && (
+                            <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#800000] text-[7px] font-black px-2 py-0.5 rounded-full text-white shadow-md z-10 animate-pulse whitespace-nowrap">
+                              PILIHAN SAHABAT
+                            </span>
+                          )}
+                          {dur === 12 && (
+                            <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#D4AF37] text-[7px] font-black px-2 py-0.5 rounded-full text-white shadow-md z-10 whitespace-nowrap">
+                              KOMITMEN 1 TAHUN
+                            </span>
+                          )}
+                          <Button
+                            key={dur}
+                            type="button"
+                            variant={paymentDuration === dur ? "default" : "outline"}
+                            className={cn(
+                              "w-full h-12 font-black text-[11px] transition-all rounded-xl border-2",
+                              paymentDuration === dur 
+                                ? "bg-[#800000] text-white border-[#800000] scale-105 shadow-md" 
+                                : "bg-white border-slate-200 text-slate-400 hover:border-[#800000]/20 hover:text-[#800000]"
+                            )}
+                            onClick={() => setPaymentDuration(dur)}
+                          >
+                            {dur} Bln
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-bold italic">
+                      {paymentDuration > 1 ? (
+                        <span className="text-[#800000] leading-relaxed block">
+                          {paymentDuration === 12 ? (
+                            <>Masyallah! Sebagai apresiasi komitmen belajar 1 tahun, {fullSalutation} cukup memberikan dukungan infaq untuk 10 bulan.<br />Total Infaq: Rp {(infaqAmount * 10).toLocaleString('id-ID')}</>
+                          ) : (
+                            <>Dukungan infaq untuk {paymentDuration} bulan sekaligus.<br />Total Infaq: Rp {(infaqAmount * paymentDuration).toLocaleString('id-ID')}</>
+                          )}
+                        </span>
+                      ) : (
+                        "Akses aktif untuk 1 bulan ke depan."
+                      )}
                     </p>
                   </div>
 
@@ -1277,8 +1332,8 @@ function RegistrationForm() {
                       <p>Dengan mendaftar Hi Mufradat, saya berjanji untuk:</p>
                       <ul className="list-disc pl-4 space-y-2">
                         <li><strong>Disiplin & Istiqomah</strong>: Mengikuti target hafalan sesuai pilihan (min. 1 halaman/pekan).</li>
-                        <li><strong>Laporan Harian</strong>: Berkomitmen mengirimkan laporan pencapaian harian (Daily Progress) di dalam group WhatsApp.</li>
-                        <li><strong>Terbuka (Japri Admin)</strong>: Bersedia dihubungi secara pribadi (japri) oleh Admin/Musyrifah untuk reminder pekanan jika target belum tercapai.</li>
+                        <li><strong>Laporan Progres</strong>: Berkomitmen mengirimkan laporan pencapaian {durationMonths === 'harian' ? 'harian' : durationMonths === 'fleksibel' ? 'secara berkala' : 'akhir pekan'} (Progress Report) di dalam group WhatsApp.</li>
+                        <li><strong>Terbuka (Japri Admin)</strong>: Bersedia dihubungi secara pribadi (japri) oleh Admin/Musyrifah untuk reminder harian/akhir pekan jika target belum tercapai.</li>
                         <li><strong>Interaksi Positif</strong>: Bersedia menerima motivasi serta interaksi dari thalibah lain di dalam group terkait pencapaian bersama.</li>
                         <li><strong>Konsekuensi</strong>: Jika dalam 2 pekan berturut-turut tidak ada progres tanpa udzur syar'i, saya bersedia menerima teguran demi menjaga ritme belajar thalibah lain.</li>
                       </ul>
@@ -1399,7 +1454,7 @@ function RegistrationForm() {
 
                   {referralDiscount > 0 && (
                     <div className="flex justify-between items-center text-sm pt-1">
-                      <span className="text-emerald-600 font-bold uppercase text-[10px] tracking-wider">Diskon Referral ({appliedReferral?.referral_code})</span>
+                      <span className="text-emerald-600 font-bold uppercase text-[10px] tracking-wider">Keringanan Ta'awun ({appliedReferral?.referral_code})</span>
                       <span className="font-black text-emerald-600">-Rp {referralDiscount.toLocaleString('id-ID')}</span>
                     </div>
                   )}

@@ -189,7 +189,8 @@ export default function AdminRegistrationsPage() {
         const baseDate = (currentDue && currentDue > now) ? currentDue : now;
 
         if (type === 'monthly' || type === 'initial' || type === 're_registration') {
-          const nextDueDate = addMonths(baseDate, 1);
+          const duration = reg.metadata?.paymentDuration || 1;
+          const nextDueDate = addMonths(baseDate, duration);
           subUpdate.mufradat_due_date = nextDueDate.toISOString();
           subUpdate.mufradat_status = 'active';
         } 
@@ -405,6 +406,12 @@ export default function AdminRegistrationsPage() {
                           <div className="flex items-center justify-between border-t pt-2 border-dashed border-slate-200">
                             <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Periode Awal</span>
                             <Badge className="bg-slate-800 text-[10px] font-black px-2 py-0 border-none">{reg.billing_month}</Badge>
+                          </div>
+                        )}
+                        {reg.metadata?.paymentDuration && reg.metadata.paymentDuration > 1 && (
+                          <div className="flex items-center justify-between border-t pt-2 border-dashed border-slate-200">
+                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Akses Tambahan</span>
+                            <Badge className="bg-emerald-600 text-[10px] font-black px-2 py-0 border-none">+{reg.metadata.paymentDuration - 1} BULAN</Badge>
                           </div>
                         )}
                       </div>

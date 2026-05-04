@@ -72,11 +72,13 @@ function getDisplayName(fullName: string | null, username: string | null): strin
   return "Ukhti";
 }
 
-function pickTemplate(category: string, name: string, progress: number): string {
+function pickTemplate(category: string, name: string, progress: number, userSalutation?: string | null): string {
   const arr = TEMPLATES[category] || TEMPLATES.fleksibel;
   const tpl = arr[Math.floor(Math.random() * arr.length)];
   
-  const salutation = name.toLowerCase().includes('ummu') ? '' : 'Ukhti ';
+  // Use chosen salutation, fallback to logic if not set
+  const salutation = userSalutation ? userSalutation + ' ' : (name.toLowerCase().includes('ummu') ? '' : 'Ukhti ');
+  
   const finalMessage = tpl
     .replace(/Ukhti /g, salutation)
     .replace(/\{name\}/g, name)
@@ -135,7 +137,7 @@ serve(async (req) => {
     // 1. Get user(s) — hanya peserta resmi Hi Mufradat yang masih dalam masa berlaku
     let query = supabase
       .from('users')
-      .select('id, full_name, username, whatsapp, phone, mufradat_target_verses, mufradat_status, mufradat_due_date, wa_failed_count, wa_blocked_at, updated_at');
+      .select('id, full_name, username, salutation, whatsapp, phone, mufradat_target_verses, mufradat_status, mufradat_due_date, wa_failed_count, wa_blocked_at, updated_at');
 
     if (userId) {
       query = query.eq('id', userId);
@@ -234,7 +236,7 @@ serve(async (req) => {
       if (mode === 'monday_spirit') {
         if (today !== 1 && !userId) continue; // Run only on Monday
         const dn = getDisplayName(user.full_name, user.username);
-        message = pickTemplate('monday_spirit', dn, 0);
+        message = pickTemplate('monday_spirit', dn, 0, user.salutation);
       }
       // --- REGULAR REMINDERS ---
       else {
@@ -272,7 +274,7 @@ serve(async (req) => {
         if (actualProgress < target || userId) {
           const dn = getDisplayName(user.full_name, user.username);
           const tplKey = schedule === 'harian' ? 'harian' : (schedule === 'weekend' || schedule === 'pekanan') ? 'weekend' : 'fleksibel';
-          message = pickTemplate(tplKey, dn, actualProgress);
+          message = pickTemplate(tplKey, dn, actualProgress, user.salutation);
         }
       }
 

@@ -589,22 +589,30 @@ export default function MufradatBillingPage() {
                   "font-black text-sm uppercase tracking-tight",
                   access.status === 'inactive' ? "text-emerald-800" : "text-amber-800"
                 )}>
-                  {access.status === 'inactive' ? "Pendaftaran Diperlukan" : "Dukungan & Konfirmasi"}
+                  {registrations?.some(r => r.status === 'pending_verification') 
+                    ? "Menunggu Verifikasi Manual" 
+                    : access.status === 'inactive' ? "Pendaftaran Diperlukan" : "Dukungan & Konfirmasi"}
                 </h4>
               </div>
               <p className={cn(
                 "text-xs leading-relaxed font-medium italic",
                 access.status === 'inactive' ? "text-emerald-900" : "text-amber-900"
               )}>
-                {access.status === 'inactive' ? 
-                  "Ukhti belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu untuk pembukaan akses dan penempatan kelompok (halaqah)." :
+                {registrations?.some(r => r.status === 'pending_verification')
+                  ? `Sabar menunggu ya ${fullSalutation}. Pendaftaran/pembayaran ${fullSalutation} sedang dalam antrean verifikasi manual oleh Musyrifah. Mohon tunggu maksimal 1x24 jam kerja.`
+                  : access.status === 'inactive' ? 
+                  `${fullSalutation} belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu untuk pembukaan akses dan penempatan kelompok (halaqah).` :
                   access.status === 'blocked' ? 
-                  "Selesaikan infaq Ukhti untuk terus mendukung operasional Hi AQLI dan membuka kembali akses ayat." :
-                  "Status Infaq Ukhti belum terverifikasi untuk periode ini. Silakan lakukan konfirmasi di bawah guna mendukung operasional Hi AQLI."
+                  `Selesaikan infaq ${fullSalutation} untuk terus mendukung operasional Hi AQLI dan membuka kembali akses ayat.` :
+                  `Status Infaq ${fullSalutation} belum terverifikasi untuk periode ini. Silakan lakukan konfirmasi di bawah guna mendukung operasional Hi AQLI.`
                 }
               </p>
               <div className="flex gap-2 pt-2">
-                {access.status === 'inactive' ? (
+                {registrations?.some(r => r.status === 'pending_verification') ? (
+                  <Button variant="outline" className="flex-1 border-amber-300 text-amber-700 font-black text-[10px] h-10 rounded-xl" disabled>
+                    SEDANG DIPROSES...
+                  </Button>
+                ) : access.status === 'inactive' ? (
                   <Button asChild className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-10 rounded-xl">
                     <Link href="/programs">DAFTAR PROGRAM SEKARANG</Link>
                   </Button>

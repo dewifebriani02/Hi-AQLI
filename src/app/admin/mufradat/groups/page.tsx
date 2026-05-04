@@ -75,7 +75,8 @@ export default function MufradatGroupsPage() {
     musyrifah_name: string,
     musyrifah_phone: string,
     muallimah_name: string,
-    muallimah_phone: string
+    muallimah_phone: string,
+    fonnte_group_id: string
   }>({ 
     name: "", 
     whatsapp_link: "", 
@@ -83,7 +84,8 @@ export default function MufradatGroupsPage() {
     musyrifah_name: "",
     musyrifah_phone: "",
     muallimah_name: "",
-    muallimah_phone: ""
+    muallimah_phone: "",
+    fonnte_group_id: ""
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewingGroupId, setViewingGroupId] = useState<string | null>(null);
@@ -100,7 +102,8 @@ export default function MufradatGroupsPage() {
     musyrifah_phone: "",
     muallimah_name: "",
     muallimah_phone: "",
-    whatsapp_link: ""
+    whatsapp_link: "",
+    fonnte_group_id: ""
   });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -166,7 +169,8 @@ export default function MufradatGroupsPage() {
       musyrifah_name: group.musyrifah_name || "",
       musyrifah_phone: group.musyrifah_phone || "",
       muallimah_name: group.muallimah_name || "",
-      muallimah_phone: group.muallimah_phone || ""
+      muallimah_phone: group.muallimah_phone || "",
+      fonnte_group_id: group.fonnte_group_id || ""
     });
   };
 
@@ -182,7 +186,8 @@ export default function MufradatGroupsPage() {
           musyrifah_name: editValues.musyrifah_name,
           musyrifah_phone: editValues.musyrifah_phone,
           muallimah_name: editValues.muallimah_name,
-          muallimah_phone: editValues.muallimah_phone
+          muallimah_phone: editValues.muallimah_phone,
+          fonnte_group_id: editValues.fonnte_group_id
         })
         .eq('id', id);
 
@@ -339,7 +344,8 @@ export default function MufradatGroupsPage() {
           musyrifah_name: newGroup.musyrifah_name,
           musyrifah_phone: newGroup.musyrifah_phone,
           muallimah_name: newGroup.muallimah_name,
-          muallimah_phone: newGroup.muallimah_phone
+          muallimah_phone: newGroup.muallimah_phone,
+          fonnte_group_id: newGroup.fonnte_group_id
         });
 
       if (error) throw error;
@@ -617,6 +623,12 @@ export default function MufradatGroupsPage() {
                               onChange={e => setEditValues(v => ({ ...v, whatsapp_link: e.target.value }))}
                               className="h-9 text-xs"
                             />
+                            <Input 
+                              placeholder="Fonnte Group ID (e.g. 120363...@g.us)"
+                              value={editValues.fonnte_group_id} 
+                              onChange={e => setEditValues(v => ({ ...v, fonnte_group_id: e.target.value }))}
+                              className="h-9 text-[10px] font-mono mt-1"
+                            />
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -713,6 +725,17 @@ export default function MufradatGroupsPage() {
                    className="h-12 rounded-xl focus:border-[#800000]/30"
                  />
               </div>
+
+              <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Fonnte Group ID</label>
+                  <Input 
+                    placeholder="Contoh: 1203630239485@g.us" 
+                    value={newGroup.fonnte_group_id}
+                    onChange={e => setNewGroup(v => ({ ...v, fonnte_group_id: e.target.value }))}
+                    className="h-10 rounded-xl focus:border-[#800000]/30 font-mono text-[10px]"
+                  />
+                  <p className="text-[8px] text-muted-foreground italic">Dapatkan ID ini dari dashboard Fonnte -> Groups.</p>
+               </div>
 
               {/* Musyrifah Selection */}
               <div className="space-y-1.5">

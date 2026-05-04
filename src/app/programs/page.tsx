@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@/supabase";
+import { useDoc } from "@/supabase/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,8 @@ const PROGRAMS = [
 
 export default function ProgramsPage() {
   const { user } = useUser();
+  const { data: userData } = useDoc(user?.id ? "users" : null, user?.id);
+  const fullSalutation = userData?.salutation || "Ukhti";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-100 pb-24">
@@ -98,7 +101,7 @@ export default function ProgramsPage() {
         </h1>
         <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-8">
           Bergabunglah dengan ribuan thalibah lainnya dalam perjalanan menghafal dan memahami Al-Qur'an.
-          Pilih program yang sesuai dengan kebutuhan dan tujuan Ukhti.
+          Pilih program yang sesuai dengan kebutuhan dan tujuan {fullSalutation}.
         </p>
       </div>
 
@@ -176,7 +179,7 @@ export default function ProgramsPage() {
               Program Lainnya Tersedia
             </h2>
             <p className="text-slate-300 mb-8">
-              Hi AQLI juga menyediakan program pendukung untuk memaksimalkan perjalanan menghafal Al-Qur'an Ukhti.
+              Hi AQLI juga menyediakan program pendukung untuk memaksimalkan perjalanan menghafal Al-Qur'an {fullSalutation}.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
               <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
@@ -197,7 +200,7 @@ export default function ProgramsPage() {
               </div>
             </div>
             <p className="text-sm text-slate-400">
-              Program-program ini tersedia gratis di dashboard setelah Ukhti terdaftar.
+              Program-program ini tersedia gratis di dashboard setelah {fullSalutation} terdaftar.
             </p>
           </div>
         </div>
@@ -210,7 +213,7 @@ export default function ProgramsPage() {
             Bingung Memilih Program?
           </h3>
           <p className="text-slate-600 mb-6 max-w-xl mx-auto">
-            Konsultasikan dengan tim Hi AQLI untuk menentukan program yang paling sesuai dengan target dan kemampuan Ukhti.
+            Konsultasikan dengan tim Hi AQLI untuk menentukan program yang paling sesuai dengan target dan kemampuan {fullSalutation}.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild variant="outline" className="border-slate-300 hover:bg-slate-50">

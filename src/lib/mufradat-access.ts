@@ -54,6 +54,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
     redemptions = [] 
   } = options;
 
+  const fullSalutation = user?.salutation || "Ukhti";
   const sNum = surahId ? parseInt(surahId.toString()) : null;
   const vNum = verseId ? parseInt(verseId.toString()) : null;
   const pNum = pageId ? parseInt(pageId.toString()) : null;
@@ -68,7 +69,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isFree: true,
       isVerified: true, // Free contents are effectively verified
       showSoftReminder: false,
-      message: "Selamat Datang! Ukhti sedang menikmati akses gratis halaman pertama/terakhir Al-Quran."
+      message: `Selamat Datang! ${fullSalutation} sedang menikmati akses gratis halaman pertama/terakhir Al-Quran.`
     };
   }
 
@@ -118,8 +119,8 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
           isBlocked: false,
           isVerified: false,
           showSoftReminder: true,
-          message: "Mode Trial Aktif! Pendaftaran Ukhti sedang diproses. Ukhti bisa mencoba akses seluruh ayat selama 24 jam pertama.",
-          buttonText: 'LIHAT STATUS PENDAFTARAN',
+          message: `Mode Trial Aktif! Pendaftaran ${fullSalutation} sedang diproses. ${fullSalutation} bisa mencoba akses seluruh ayat selama 24 jam pertama.`,
+          buttonText: 'CEK STATUS PENDAFTARAN',
           redirectTo: '/mufradat/billing'
         };
       }
@@ -130,9 +131,9 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
         isBlocked: true,
         isVerified: false,
         showSoftReminder: false,
-        message: "Sedang Menunggu Verifikasi. Pendaftaran Ukhti sedang ditinjau oleh Musyrifah. Mohon tunggu maksimal 1x24 jam.",
+        message: `Sabar Menunggu Verifikasi. Pendaftaran ${fullSalutation} sedang ditinjau secara manual oleh Musyrifah. Mohon tunggu maksimal 1x24 jam kerja.`,
         redirectTo: '/mufradat/billing',
-        buttonText: 'CEK RIWAYAT PENDAFTARAN'
+        buttonText: 'CEK STATUS PENDAFTARAN'
       };
     }
 
@@ -141,7 +142,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isBlocked: true,
       isVerified: false,
       showSoftReminder: false,
-      message: "Ukhti belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu.",
+      message: `${fullSalutation} belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu.`,
       redirectTo: '/programs',
       buttonText: 'DAFTAR PROGRAM SEKARANG'
     };
@@ -160,7 +161,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
         status: 'on_leave',
         isBlocked: true,
         showSoftReminder: false,
-        message: "Status Ukhti sedang Cuti. Akses ayat akan kembali terbuka setelah masa cuti berakhir."
+        message: `Status ${fullSalutation} sedang Cuti. Akses ayat akan kembali terbuka setelah masa cuti berakhir.`
       };
     }
   }
@@ -204,7 +205,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isBlocked: true,
       isVerified,
       showSoftReminder: false,
-      message: "Masa aktif akses Ukhti belum tersedia. Silakan lakukan aktivasi pembayaran.",
+      message: `Masa aktif akses ${fullSalutation} belum tersedia. Silakan lakukan aktivasi pembayaran.`,
       redirectTo: '/mufradat/billing'
     };
   }
@@ -231,7 +232,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
          isBlocked: false,
          isVerified,
          showSoftReminder: true,
-         message: "Bukti Infaq Ukhti sedang menunggu verifikasi Musyrifah. Akses tetap terbuka sementara (Mode Trial)."
+         message: `Bukti Infaq ${fullSalutation} sedang menunggu verifikasi Musyrifah. Akses tetap terbuka sementara (Mode Trial).`
        };
     }
 
@@ -241,8 +242,9 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isVerified,
       showSoftReminder: false,
       dueDate: dueDate,
-      message: "Akses Terhenti. Masa aktif Hi Mufradat Ukhti sudah habis. Mohon lakukan konfirmasi infaq.",
-      redirectTo: '/mufradat/billing'
+      message: `Akses Terhenti. Masa aktif Hi Mufradat ${fullSalutation} sudah habis. Mohon lakukan konfirmasi infaq.`,
+      redirectTo: '/mufradat/billing',
+      buttonText: 'KONFIRMASI PEMBAYARAN'
     };
   }
 
@@ -253,7 +255,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isVerified,
       showSoftReminder: true,
       dueDate: dueDate,
-      message: `Masa aktif akses Ukhti telah berakhir pada ${format(dueDate, 'd MMM')}. Mohon segera konfirmasi pendaftaran.`
+      message: `Masa aktif akses ${fullSalutation} telah berakhir pada ${format(dueDate, 'd MMM')}. Mohon segera konfirmasi pendaftaran.`
     };
   }
 
@@ -269,7 +271,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
     daysRemaining,
     dueDate,
     message: daysRemaining <= 3 
-      ? `Akses aktif. Sisa masa aktif Ukhti tinggal ${daysRemaining} hari lagi.` 
-      : "Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!"
+      ? `Akses aktif. Sisa masa aktif ${fullSalutation} tinggal ${daysRemaining} hari lagi.` 
+      : `Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!`
   };
 }

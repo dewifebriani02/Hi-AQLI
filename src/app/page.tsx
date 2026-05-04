@@ -611,7 +611,7 @@ export default function DashboardPage() {
           </div>
           <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight text-black">
             Assalamu'alaikum,<br />
-            {user?.user_metadata?.full_name?.split(' ')[0] || 'Sahabat'}!
+            {fullSalutation} {user?.user_metadata?.full_name?.split(' ')[0] || ''}!
           </h1>
           <div className="flex flex-col gap-0.5 mt-1">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{gregorianDate}</p>
@@ -716,37 +716,37 @@ export default function DashboardPage() {
       {/* 0. ONBOARDING CHECKLIST */}
       {showOnboarding && (
         <div className="mx-1 animate-in slide-in-from-top-4 duration-500">
-          <Card className="border-none shadow-2xl overflow-hidden rounded-3xl bg-white border-b-4 border-amber-400">
+          <Card className="border-none shadow-2xl overflow-hidden rounded-3xl bg-white border-b-4 border-slate-900">
             <CardContent className="p-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <h3 className="text-lg font-black text-[#800000] uppercase tracking-tight">Ahlan Wa Sahlan!</h3>
+                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Ahlan Wa Sahlan!</h3>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Selesaikan langkah awal {fullSalutation}</p>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-xl font-black text-[#800000] leading-none">{onboardingPercent}%</span>
+                  <span className="text-xl font-black text-slate-900 leading-none">{onboardingPercent}%</span>
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Selesai</span>
                 </div>
               </div>
 
-              <Progress value={onboardingPercent} className="h-2 bg-slate-100" indicatorClassName="bg-amber-400 transition-all duration-1000" />
+              <Progress value={onboardingPercent} className="h-2 bg-slate-100" indicatorClassName="bg-slate-900 transition-all duration-1000" />
 
               <div className="grid gap-3">
                 {onboardingSteps.map((step) => (
                   <Link key={step.id} href={step.isDone ? "#" : step.href}>
                     <div className={cn(
                       "group flex items-center justify-between p-4 rounded-2xl border-2 transition-all active:scale-[0.98]",
-                      step.isDone ? "bg-emerald-50 border-emerald-100 opacity-80" : "bg-white border-slate-100 hover:border-[#800000]/20 hover:shadow-md"
+                      step.isDone ? "bg-slate-50 border-slate-200 opacity-80" : "bg-white border-slate-100 hover:border-slate-900/20 hover:shadow-md"
                     )}>
                       <div className="flex items-center gap-4">
                         <div className={cn(
                           "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                          step.isDone ? "bg-emerald-100 text-emerald-600" : "bg-slate-50 text-slate-400 group-hover:bg-[#800000]/5 group-hover:text-[#800000]"
+                          step.isDone ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-400 group-hover:bg-slate-900/5 group-hover:text-slate-900"
                         )}>
                           {step.isDone ? <CheckCircle2 className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
                         </div>
                         <div className="flex flex-col">
-                          <span className={cn("text-xs font-black uppercase tracking-tight", step.isDone ? "text-emerald-700 line-through" : "text-slate-800")}>
+                          <span className={cn("text-xs font-black uppercase tracking-tight", step.isDone ? "text-slate-400 line-through" : "text-slate-800")}>
                             {step.title}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{step.subtitle}</span>
@@ -816,7 +816,7 @@ export default function DashboardPage() {
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
                     <div className="flex items-center gap-2">
                       <SparklesIcon className="w-4 h-4 text-amber-400" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Diskon Referral 5rb</span>
+                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Keringanan Referral 5rb</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -954,10 +954,10 @@ export default function DashboardPage() {
                 const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
                 
                 const promoTexts: Record<string, string> = {
-                  mufradat: `*DEKATKAN DIRI DENGAN AL-QUR'AN MELALUI MAKNA* ✨📖\n*HI MUFRADAT PREMIUM* - By Hi AQLI\n\nSeringkali kita membaca Al-Qur'an, namun hati rindu untuk memahami pesan-pesan indah di dalamnya. Apakah ${fullSalutation} ingin mulai menyelami maknanya dengan langkah yang nyata? 🌿\n\nMari bergabung dalam perjalanan spiritual yang terukur dan bermakna bersama Hi Mufradat.\n\n💎 *KEUNGGULAN PROGRAM:*\n✅ *Langkah Nyata*: Cukup 1 halaman per pekan untuk pemahaman yang mendalam.\n✅ *Bimbingan Intensif*: Dipantau & ditemani dalam grup khusus thalibah 🤝\n✅ *Evaluasi Interaktif*: Quiz seru untuk mengasah ingatan & pemahaman 🎮\n\n💸 *INFAQ PROGRAM:*\n• Pendaftaran: Rp 10.000 (Sekali Seumur Hidup)\n• Infaq Bulanan: Rp 20.000\n\n🎁 *HADIAH UNTUK ${fullSalutation.toUpperCase()}!*\nGunakan kode referral saya: *${userData.referral_code}*\nDapatkan *POTONGAN Rp 5.000* untuk pendaftaran pertama ${fullSalutation}! 💸\n\nMulai Perjalanan Makna ${fullSalutation} Sekarang:\n🔗 ${mufradatLink}\n\n---\n💬 *Tanya Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas*: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
-                  tikrar: `*PROGRAM HI TIKRAR* 📖⭐\n*By Hi AQLI*\n\n*Hafal Al-Qur'an Lebih Itqan & Terjaga!* 🌟\n\nIngin hafalan Al-Qur'an ${fullSalutation} lebih kuat dan tidak mudah lupa? Yuk gabung di program Hi Tikrar dengan metode yang sudah teruji! 🕋\n\n🚀 *Keunggulan Program:*\n✅ *Metode 7 Tahapan*: Sistematis untuk kekuatan memori jangka panjang.\n✅ *Monitoring Harian*: Dipantau langsung perkembangannya.\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Program*: Sesuai level intensitas yang dipilih.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nInfo & Pendaftaran:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`,
-                  ngaji: `*HI NGAJI - BELAJAR TAHSIN & TAJWID* 📚✨\n*By Hi AQLI*\n\n*Perbaiki Bacaan Al-Qur'an ${fullSalutation} dari Nol!* 🌟\n\nIngin bacaan Al-Qur'an lebih tartil dan sesuai kaidah tajwid? Yuk gabung di Hi Ngaji, belajar bareng muallimah yang kompeten! 🕋\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Kelas*: Menyesuaikan tingkat kelas.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`,
-                  irab: `*PROGRAM HI IRAB* 🔍📖\n*By Hi AQLI*\n\n*Selami Makna Mendalam Bahasa Al-Qur'an!* 🌟\n\nHi IRAB akan membantu ${fullSalutation} memahami tata bahasa Arab dengan cara yang mudah! 🕋\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Program*: Sesuai paket yang diambil.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *POTONGAN LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`
+                  mufradat: `*DEKATKAN DIRI DENGAN AL-QUR'AN MELALUI MAKNA* ✨📖\n*HI MUFRADAT PREMIUM* - By Hi AQLI\n\nSeringkali kita membaca Al-Qur'an, namun hati rindu untuk memahami pesan-pesan indah di dalamnya. Apakah ${fullSalutation} ingin mulai menyelami maknanya dengan langkah yang nyata? 🌿\n\nMari bergabung dalam perjalanan spiritual yang terukur dan bermakna bersama Hi Mufradat.\n\n💎 *KEUNGGULAN PROGRAM:*\n✅ *Langkah Nyata*: Cukup 1 halaman per pekan untuk pemahaman yang mendalam.\n✅ *Bimbingan Intensif*: Dipantau & ditemani dalam grup khusus thalibah 🤝\n✅ *Evaluasi Interaktif*: Quiz seru untuk mengasah ingatan & pemahaman 🎮\n\n💸 *INFAQ PROGRAM:*\n• Pendaftaran: Rp 10.000 (Sekali Seumur Hidup)\n• Infaq Bulanan: Rp 20.000\n\n🎁 *HADIAH UNTUK ${fullSalutation.toUpperCase()}!*\nGunakan kode referral saya: *${userData.referral_code}*\nDapatkan *Keringanan Rp 5.000* untuk pendaftaran pertama ${fullSalutation}! 💸\n\nMulai Perjalanan Makna ${fullSalutation} Sekarang:\n🔗 ${mufradatLink}\n\n---\n💬 *Tanya Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas*: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
+                  tikrar: `*PROGRAM HI TIKRAR* 📖⭐\n*By Hi AQLI*\n\n*Hafal Al-Qur'an Lebih Itqan & Terjaga!* 🌟\n\nIngin hafalan Al-Qur'an ${fullSalutation} lebih kuat dan tidak mudah lupa? Yuk gabung di program Hi Tikrar dengan metode yang sudah teruji! 🕋\n\n🚀 *Keunggulan Program:*\n✅ *Metode 7 Tahapan*: Sistematis untuk kekuatan memori jangka panjang.\n✅ *Monitoring Harian*: Dipantau langsung perkembangannya.\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Program*: Sesuai level intensitas yang dipilih.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *Keringanan LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nInfo & Pendaftaran:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`,
+                  ngaji: `*HI NGAJI - BELAJAR TAHSIN & TAJWID* 📚✨\n*By Hi AQLI*\n\n*Perbaiki Bacaan Al-Qur'an ${fullSalutation} dari Nol!* 🌟\n\nIngin bacaan Al-Qur'an lebih tartil dan sesuai kaidah tajwid? Yuk gabung di Hi Ngaji, belajar bareng muallimah yang kompeten! 🕋\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Kelas*: Menyesuaikan tingkat kelas.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *Keringanan LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`,
+                  irab: `*PROGRAM HI IRAB* 🔍📖\n*By Hi AQLI*\n\n*Selami Makna Mendalam Bahasa Al-Qur'an!* 🌟\n\nHi IRAB akan membantu ${fullSalutation} memahami tata bahasa Arab dengan cara yang mudah! 🕋\n\n💰 *Transparansi Biaya:*\n- *Biaya Pendaftaran*: Rp 10.000 (Sekali Seumur Hidup)\n- *Infaq Program*: Sesuai paket yang diambil.\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* untuk mendapatkan *Keringanan LANGSUNG Rp 5.000!* 💸 (Khusus Pendaftar Baru)\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n💬 *Hubungi Admin*: wa.me/6283132582803\n🌐 *Gabung Komunitas Hi AQLI:*\n- WA: https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq\n- Telegram: https://t.me/rq_aqli`
                 };
 
                 const promoItems = [
@@ -1015,7 +1015,7 @@ export default function DashboardPage() {
                                        <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.name}</span>
                                        {isLocked && <Lock className="w-3 h-3 text-slate-400" />}
                                      </div>
-                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Potongan Rp 5.000 khusus pendaftar baru</span>
+                                     <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Gunakan kode teman & dapatkan keringanan Rp 5.000</p>
                                    </div>
                                  </div>
                                  <div className={cn(

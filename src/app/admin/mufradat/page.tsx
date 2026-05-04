@@ -212,7 +212,7 @@ function MufradatMonitoringContent() {
       return;
     }
     const displayName = u.full_name || u.username;
-    const salutation = displayName?.toLowerCase().includes('ummu') ? '' : 'Ukhti ';
+    const salutation = u.salutation ? u.salutation + ' ' : (displayName?.toLowerCase().includes('ummu') ? '' : 'Ukhti ');
     const message = `Assalamualaikum ${salutation}${displayName}, sekadar mengingatkan target Mufradat pekan ini (${u.targetStr}). Progres saat ini baru ${u.weeklyCount} ayat. Semoga Allah mudahkan dalam menjaga hafalan. Semangat, bismillah! ✨`;
     window.open(`https://wa.me/${waNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
   };
