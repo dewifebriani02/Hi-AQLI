@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
-  Sparkles,
+  Sparkles as SparklesIcon,
   Flame,
   Target,
   ArrowRight,
@@ -84,8 +84,18 @@ export default function DashboardPage() {
   const [isForcerSaving, setIsForcerSaving] = useState(false);
 
   useEffect(() => {
-    if (!isUserLoading && !isUserDocLoading && user && userData && !userData.metadata?.has_chosen_salutation) {
-      setShowSalutationForcer(true);
+    // Show forcer only if user is logged in, but hasn't chosen a salutation yet.
+    // Check both the metadata flag AND if the salutation field is empty/default.
+    if (!isUserLoading && !isUserDocLoading && user && userData) {
+      const hasChosen = !!userData.metadata?.has_chosen_salutation;
+      const hasSalutationSet = !!userData.salutation && userData.salutation !== "";
+      
+      if (!hasChosen && !hasSalutationSet) {
+        setShowSalutationForcer(true);
+      } else {
+        // Explicitly close if we found data (e.g. after sync or update)
+        setShowSalutationForcer(false);
+      }
     }
   }, [user, userData, isUserLoading, isUserDocLoading]);
 
@@ -573,7 +583,7 @@ export default function DashboardPage() {
         subtitle: "Coba kuis Mufradat gratis",
         isDone: (quizAttempts?.length || 0) > 0,
         href: "/mufradat",
-        icon: Sparkles
+        icon: SparklesIcon
       },
       {
         id: "program",
@@ -596,7 +606,7 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between mt-4 px-1">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
-            <Sparkles className="w-4 h-4 fill-current animate-pulse text-[#D4AF37]" />
+            <SparklesIcon className="w-4 h-4 fill-current animate-pulse text-[#D4AF37]" />
             <span className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Hi Sahabat AQLI</span>
           </div>
           <h1 className="text-2xl font-bold font-headline tracking-tight leading-tight text-black">
@@ -805,7 +815,7 @@ export default function DashboardPage() {
                   </p>
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <SparklesIcon className="w-4 h-4 text-amber-400" />
                       <span className="text-[10px] font-black text-white uppercase tracking-wider">Diskon Referral 5rb</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -911,7 +921,7 @@ export default function DashboardPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-[#800000] via-transparent to-transparent sm:bg-gradient-to-r" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="p-3 bg-white/10 backdrop-blur rounded-2xl border border-white/20">
-                  <Sparkles className="w-6 h-6 text-amber-400 animate-pulse" />
+                  <SparklesIcon className="w-6 h-6 text-amber-400 animate-pulse" />
                 </div>
               </div>
             </div>
@@ -1152,8 +1162,12 @@ export default function DashboardPage() {
               <div className="mx-auto w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border-2 border-white/10">
                 <Heart className="w-10 h-10 fill-amber-300 text-amber-300 animate-pulse" />
               </div>
-              <DialogTitle className="text-2xl font-black font-headline uppercase tracking-tighter">Personalisasi Sapaan</DialogTitle>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70 mt-1">Satu langkah lagi untuk kenyamanan Ukhti</p>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-black font-headline uppercase tracking-tighter text-white">Personalisasi Sapaan</DialogTitle>
+                <DialogDescription className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 mt-1">
+                  Satu langkah lagi untuk kenyamanan Ukhti
+                </DialogDescription>
+              </DialogHeader>
            </div>
            
            <div className="p-8 space-y-6">
@@ -1164,8 +1178,8 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  {['Ukhti', 'Kakak', 'Ummu', 'Ibu', 'Sahabat'].map((choice) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {['Ukhti', 'Kakak', 'Ummu', 'Ibu', 'Neng', 'Mbak', 'Uni', 'Teteh', 'Bunda', 'Sahabat'].map((choice) => (
                     <button
                       key={choice}
                       onClick={() => setForcedSalutation(choice)}

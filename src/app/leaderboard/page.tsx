@@ -17,7 +17,7 @@ import {
   Gift,
   Award,
   Clock,
-  Sparkles,
+  Sparkles as SparklesIcon,
   Zap,
   Loader2,
   TrendingUp,
@@ -246,7 +246,7 @@ export default function LeaderboardPage() {
 
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center gap-2">
-                        <Sparkles className="w-3 h-3 text-[#D4AF37]" />
+                        <SparklesIcon className="w-3 h-3 text-[#D4AF37]" />
                         <span className="text-[10px] font-bold text-[#800000] uppercase">{challenge.prize}</span>
                       </div>
                       <Button size="sm" variant="ghost" className="h-7 text-[9px] font-bold text-[#800000] uppercase gap-1">

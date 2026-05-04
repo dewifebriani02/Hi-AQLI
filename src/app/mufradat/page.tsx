@@ -50,7 +50,7 @@ import {
   GraduationCap,
   RotateCcw,
   Gift,
-  Sparkles,
+  Sparkles as SparklesIcon,
   ShieldCheck
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -463,7 +463,7 @@ function MufradatPageContent() {
               </p>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <SparklesIcon className="w-4 h-4 text-amber-400" />
                   <span className="text-[10px] font-black text-white uppercase tracking-wider">Diskon Referral 5rb</span>
                 </div>
                 <div className="flex items-center gap-2">

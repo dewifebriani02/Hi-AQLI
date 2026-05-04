@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -99,6 +100,10 @@ export function MufradatOnboarding({ open, onComplete }: OnboardingModalProps) {
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onComplete()}>
       <DialogContent className="max-w-md p-0 overflow-hidden border-none rounded-[2.5rem] shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Panduan Hi Mufradat</DialogTitle>
+          <DialogDescription>Tutorial singkat untuk memahami alur belajar di platform Hi Mufradat agar hafalan Ukhti lebih maksimal.</DialogDescription>
+        </DialogHeader>
         <div className={cn("transition-colors duration-500 p-8 pt-12 text-center relative", slides[selectedIndex].color)}>
           <button 
             onClick={onComplete}

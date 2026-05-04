@@ -283,6 +283,11 @@ export default function ProfilePage() {
                               <SelectItem value="Kakak" className="font-bold">Kakak</SelectItem>
                               <SelectItem value="Ummu" className="font-bold">Ummu</SelectItem>
                               <SelectItem value="Ibu" className="font-bold">Ibu</SelectItem>
+                              <SelectItem value="Neng" className="font-bold">Neng</SelectItem>
+                              <SelectItem value="Mbak" className="font-bold">Mbak</SelectItem>
+                              <SelectItem value="Uni" className="font-bold">Uni</SelectItem>
+                              <SelectItem value="Teteh" className="font-bold">Teteh</SelectItem>
+                              <SelectItem value="Bunda" className="font-bold">Bunda</SelectItem>
                               <SelectItem value="Sahabat" className="font-bold">Sahabat</SelectItem>
                             </SelectContent>
                           </Select>

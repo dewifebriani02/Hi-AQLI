@@ -73,7 +73,19 @@ function RegistrationForm() {
   const filteredHalaqahs = useMemo(() => {
     if (!allHalaqahs) return [];
     if (!programParam) return allHalaqahs;
-    return allHalaqahs.filter(h => h.program_type === programParam);
+    
+    const pLower = programParam.toLowerCase();
+    let pType = programParam;
+    if (pLower.includes('mufradat')) pType = 'hi_mufradat';
+    if (pLower.includes('tikrar')) pType = 'tikrar_daily';
+    if (pLower.includes('ngaji')) pType = 'hi_ngaji';
+    if (pLower.includes('irab')) pType = 'hi_irab';
+    
+    return allHalaqahs.filter(h => 
+      h.program_type === pType || 
+      h.program_type === programParam ||
+      h.title?.toLowerCase().includes(pLower)
+    );
   }, [allHalaqahs, programParam]);
 
   // Get display name for the program type
@@ -140,15 +152,21 @@ function RegistrationForm() {
   useEffect(() => {
     if (programParam && allHalaqahs && !selectedHalaqahId) {
       let searchId = programParam;
-      // Handle keyword mapping to official IDs
-      if (programParam.toLowerCase() === 'mufradat') searchId = 'mufradat-premium';
-      if (programParam.toLowerCase() === 'tikrar') searchId = 'tikrar-premium';
-      if (programParam.toLowerCase() === 'ngaji') searchId = 'hi-ngaji';
-      if (programParam.toLowerCase() === 'irab') searchId = 'hi-irab';
+      // Handle keyword mapping to official IDs (robust matching)
+      const pLower = programParam.toLowerCase();
+      let pType = programParam;
+      
+      if (pLower.includes('mufradat')) { searchId = 'mufradat-premium'; pType = 'hi_mufradat'; }
+      if (pLower.includes('tikrar')) { searchId = 'tikrar-premium'; pType = 'tikrar_daily'; }
+      if (pLower.includes('ngaji')) { searchId = 'hi-ngaji'; pType = 'hi_ngaji'; }
+      if (pLower.includes('irab')) { searchId = 'hi-irab'; pType = 'hi_irab'; }
+      if (pLower.includes('berbagi')) { searchId = 'hi-berbagi'; pType = 'hi_berbagi'; }
 
       const found = allHalaqahs.find(h => 
         h.id === searchId || 
         h.id === programParam || 
+        h.program_type === pType ||
+        h.program_type === programParam ||
         h.title?.toLowerCase().includes(programParam.toLowerCase())
       );
       
@@ -315,7 +333,15 @@ function RegistrationForm() {
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.push(`/login?redirectTo=/study-circles/registration?id=${halaqahId || ''}`);
+      const ref = searchParams.get('ref');
+      const program = searchParams.get('program');
+      const params = new URLSearchParams();
+      if (halaqahId) params.set('id', halaqahId);
+      if (ref) params.set('ref', ref);
+      if (program) params.set('program', program);
+      
+      const queryString = params.toString();
+      router.push(`/login?redirectTo=/study-circles/registration${queryString ? `?${queryString}` : ''}`);
       return;
     }
     if (user && !name) setName(user.user_metadata?.full_name || "");
@@ -742,7 +768,7 @@ function RegistrationForm() {
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full border-emerald-600 text-emerald-700 font-black h-12 rounded-xl gap-2">
-                      <a href="https://hi-aqli.com/panduan/mufradat" target="_blank" rel="noopener noreferrer">
+                      <a href="https://hiaqli.pro/panduan/mufradat" target="_blank" rel="noopener noreferrer">
                         <BookOpen className="w-4 h-4" /> PANDUAN PENGGUNAAN
                       </a>
                     </Button>
@@ -767,7 +793,7 @@ function RegistrationForm() {
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full border-blue-600 text-blue-700 font-black h-12 rounded-xl gap-2">
-                      <a href="https://hi-aqli.com/panduan/tikrar" target="_blank" rel="noopener noreferrer">
+                      <a href="https://hiaqli.pro/panduan/tikrar" target="_blank" rel="noopener noreferrer">
                         <BookOpen className="w-4 h-4" /> PANDUAN METODE TIKRAR
                       </a>
                     </Button>
@@ -789,7 +815,7 @@ function RegistrationForm() {
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full border-purple-600 text-purple-700 font-black h-12 rounded-xl gap-2">
-                      <a href="https://hi-aqli.com/panduan/ngaji" target="_blank" rel="noopener noreferrer">
+                      <a href="https://hiaqli.pro/panduan/ngaji" target="_blank" rel="noopener noreferrer">
                         <BookOpen className="w-4 h-4" /> PANDUAN BELAJAR
                       </a>
                     </Button>
@@ -810,8 +836,8 @@ function RegistrationForm() {
   }
 
   return (
-    <div className="flex justify-center items-start pt-6 px-4 pb-20 max-w-2xl mx-auto">
-      <Card className="w-full border-none shadow-2xl overflow-hidden">
+    <div className="flex flex-col items-center justify-start pt-6 px-4 pb-32 max-w-2xl mx-auto w-full">
+      <Card className="w-full border-none shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
         <CardHeader className="text-center bg-[#800000] text-white py-10 relative">
           {step > 1 && <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white hover:bg-white/10" onClick={() => setStep(step - 1)}><ArrowLeft className="h-5 w-5" /></Button>}
           <div className="mx-auto bg-white/20 rounded-full p-4 w-fit mb-4 border-2 border-white/10"><BookOpen className="h-8 w-8 text-amber-300" /></div>
@@ -831,21 +857,30 @@ function RegistrationForm() {
                     <SelectValue placeholder={programDisplayName ? `-- Pilih Kelas ${programDisplayName} --` : "-- Pilih Program Halaqah --"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {(programParam ? filteredHalaqahs : (allHalaqahs || [])).map(h => (
-                      <SelectItem key={h.id} value={h.id} className="font-bold py-3 text-xs">
-                        {h.title} {h.is_premium ? '(Premium)' : '(Gratis)'}
-                      </SelectItem>
-                    ))}
-                    {(!programParam && !allHalaqahs?.length) && (
-                      <>
-                        <SelectItem value="mufradat-premium" className="font-bold">Hi Mufradat</SelectItem>
-                        <SelectItem value="tikrar-premium" className="font-bold">Hi Tikrar</SelectItem>
-                      </>
-                    )}
-                    {(programParam && filteredHalaqahs?.length === 0) && (
-                      <div className="p-4 text-center text-xs text-muted-foreground italic">
-                        Belum ada kelas {programParam === 'hi_ngaji' ? 'Hi Ngaji' : programParam.replace('_', ' ')} yang tersedia saat ini.
+                    {isHalaqahsLoading ? (
+                      <div className="p-4 flex flex-col items-center gap-2 text-muted-foreground">
+                        <Loader2 className="w-5 h-5 animate-spin text-[#800000]" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Memuat Program...</span>
                       </div>
+                    ) : (
+                      <>
+                        {(programParam ? filteredHalaqahs : (allHalaqahs || [])).map(h => (
+                          <SelectItem key={h.id} value={h.id} className="font-bold py-3 text-xs">
+                            {h.title} {h.is_premium ? '(Premium)' : '(Gratis)'}
+                          </SelectItem>
+                        ))}
+                        {(!programParam && !allHalaqahs?.length) && (
+                          <>
+                            <SelectItem value="mufradat-premium" className="font-bold">Hi Mufradat</SelectItem>
+                            <SelectItem value="tikrar-premium" className="font-bold">Hi Tikrar</SelectItem>
+                          </>
+                        )}
+                        {(programParam && filteredHalaqahs?.length === 0) && (
+                          <div className="p-4 text-center text-xs text-muted-foreground italic">
+                            Belum ada kelas {programParam === 'hi_ngaji' ? 'Hi Ngaji' : programParam.replace('_', ' ')} yang tersedia saat ini.
+                          </div>
+                        )}
+                      </>
                     )}
                   </SelectContent>
                 </Select>
@@ -1442,7 +1477,7 @@ function RegistrationForm() {
       </Card>
       
       {/* Official Admin Contact Info */}
-      <div className="max-w-xl mx-auto mt-8 p-6 bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-[#800000]/20 text-center space-y-3">
+      <div className="w-full mt-8 p-6 bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-[#800000]/20 text-center space-y-3">
         <p className="text-[10px] font-black text-[#800000] uppercase tracking-[0.2em]">Informasi Resmi Hi AQLI</p>
         <div className="flex flex-col items-center gap-2">
           <Link 
@@ -1454,7 +1489,7 @@ function RegistrationForm() {
             <span className="text-sm font-black text-[#800000]">0831 3258 2803</span>
             <Badge className="bg-[#800000] text-white border-none text-[8px] h-4">ADMIN UTAMA</Badge>
           </Link>
-          <p className="text-[10px] text-muted-foreground font-bold italic">
+          <p className="text-[10px] text-muted-foreground font-bold italic px-4">
             "Silakan hubungi nomor di atas untuk konfirmasi manual atau pertanyaan seputar program."
           </p>
         </div>
