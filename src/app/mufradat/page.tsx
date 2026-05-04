@@ -3,7 +3,35 @@ import { getCallSign } from "@/lib/utils";
 
 import { SurahList } from "@/components/tilawah/surah-list";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Layers, Loader2 } from "lucide-react";
+import {
+  BookOpen,
+  Layers,
+  Loader2,
+  Headphones,
+  Check,
+  Music,
+  ShieldAlert,
+  CreditCard,
+  Coffee,
+  ArrowRight,
+  Heart,
+  Trophy,
+  Zap as ZapIcon,
+  Star,
+  Users,
+  Search,
+  CheckCircle2,
+  ArrowLeft,
+  PartyPopper,
+  ThumbsUp,
+  Flame,
+  Award,
+  GraduationCap,
+  RotateCcw,
+  Gift,
+  Sparkles as SparklesIcon,
+  ShieldCheck
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/tilawah/juz-list";
 import { useDoc, useCollection } from "@/supabase/db";
@@ -27,32 +55,6 @@ import {
   DialogDescription,
   DialogTrigger 
 } from "@/components/ui/dialog";
-import {
-  Headphones,
-  Check,
-  Music,
-  ShieldAlert,
-  CreditCard,
-  Coffee,
-  ArrowRight,
-  Heart,
-  Trophy,
-  Zap,
-  Star,
-  Users,
-  Search,
-  CheckCircle2,
-  ArrowLeft,
-  PartyPopper,
-  ThumbsUp,
-  Flame,
-  Award,
-  GraduationCap,
-  RotateCcw,
-  Gift,
-  Sparkles as SparklesIcon,
-  ShieldCheck
-} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -387,7 +389,7 @@ function MufradatPageContent() {
                   {userData?.mufradat_league === 'Intan' ? <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
                    userData?.mufradat_league === 'Emas' ? <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
                    userData?.mufradat_league === 'Perak' ? <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
-                   <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                   <ZapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 </div>
                 <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
                   <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-tight opacity-70 line-clamp-1">Liga</span>
@@ -615,7 +617,7 @@ function MufradatPageContent() {
                {!userData?.mufradat_group_id ? (
                  <div className="py-20 text-center flex flex-col items-center gap-4 bg-slate-50/50">
                     <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                      <Zap className="w-8 h-8" />
+                      <ZapIcon className="w-8 h-8" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold">Belum Ada Grup</h3>
@@ -657,7 +659,7 @@ function MufradatPageContent() {
                             </div>
                             <div className="flex items-center gap-3 mt-1.5">
                               <div className="flex items-center gap-1 group/stat" title="Points">
-                                <Zap className="w-3 h-3 text-amber-500 fill-amber-500 animate-pulse" />
+                                <ZapIcon className="w-3 h-3 text-amber-500 fill-amber-500 animate-pulse" />
                                 <span className="text-xs font-black text-amber-600">{u.points} <span className="text-[9px] font-medium text-slate-400">POIN</span></span>
                               </div>
                               <div className="flex items-center gap-1 group/stat" title="Hafalan">

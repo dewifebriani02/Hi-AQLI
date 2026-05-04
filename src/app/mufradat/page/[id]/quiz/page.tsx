@@ -11,7 +11,7 @@ import {
   RefreshCw,
   Trophy,
   Star,
-  Zap,
+  Zap as ZapIcon,
   Timer,
   Target,
   Shuffle,
@@ -668,7 +668,7 @@ function PageQuizContent() {
                         </span>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
-                            <Zap className="w-3 h-3 text-[#D4AF37] fill-current" /> {item.score}/{item.total_questions}
+                            <ZapIcon className="w-3 h-3 text-[#D4AF37] fill-current" /> {item.score}/{item.total_questions}
                           </span>
                           <span className="text-[9px] text-slate-400 font-medium italic">
                              {formatTime(item.duration_seconds || 0)}

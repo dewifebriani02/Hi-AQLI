@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff, Zap as ZapIcon, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import Link from 'next/link';
@@ -309,9 +309,9 @@ function RegisterContent() {
                   referralStatus.isLoading ? "bg-slate-400" :
                     referralStatus.isValid ? "bg-emerald-500" : "bg-rose-500"
                 )}>
-                  {referralStatus.isLoading ? (Loader2 ? <Loader2 className="w-4 h-4 animate-spin" /> : '...') :
-                    referralStatus.isValid ? (Zap ? <Zap className="w-4 h-4 fill-current" /> : '✓') : 
-                    (AlertTriangle ? <AlertTriangle className="w-4 h-4" /> : '⚠')}
+                  {referralStatus.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                    referralStatus.isValid ? <ZapIcon className="w-4 h-4 fill-current" /> : 
+                    <AlertTriangle className="w-4 h-4" />}
                 </div>
                 <AlertDescription className="text-[10px] font-black uppercase tracking-wider leading-tight">
                   {referralStatus.isLoading ? "Memvalidasi Kode Referral..." :

@@ -12,7 +12,7 @@ import {
   RefreshCw,
   Trophy,
   Star,
-  Zap,
+  Zap as ZapIcon,
   Timer,
   Shuffle,
   Layers,
@@ -730,7 +730,7 @@ function MufradatQuizContent() {
                   <div className="flex flex-col gap-3 w-full">
                     <Button asChild className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-white font-black py-7 rounded-2xl shadow-xl uppercase tracking-[0.1em] text-[10px] gap-2 border-b-4 border-black/10 transition-all active:translate-y-1 active:border-b-0">
                       <Link href={`/mufradat/${id}/${parseInt(verseId) + 1}/quiz${from ? `?from=${from}&` : '?'}success=true`}>
-                        <Zap className="w-4 h-4 fill-current" /> LANGSUNG KUIS AYAT {parseInt(verseId) + 1}
+                        <ZapIcon className="w-4 h-4 fill-current" /> LANGSUNG KUIS AYAT {parseInt(verseId) + 1}
                       </Link>
                     </Button>
                     <Button asChild variant="outline" className="w-full border-2 border-[#800000]/20 text-[#800000] font-black py-7 rounded-2xl uppercase tracking-widest text-[10px] gap-2 hover:bg-[#800000]/5 transition-all">
@@ -843,7 +843,7 @@ function MufradatQuizContent() {
                         </span>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
-                            <Zap className="w-3 h-3 text-[#D4AF37] fill-current" /> {item.score}/{item.total_questions}
+                            <ZapIcon className="w-3 h-3 text-[#D4AF37] fill-current" /> {item.score}/{item.total_questions}
                           </span>
                           <span className="text-[9px] text-slate-400 font-medium italic">
                              {formatTime(item.duration_seconds || 0)}s

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, LogIn, Mail, Lock, Eye, EyeOff, Zap } from 'lucide-react';
+import { Loader2, LogIn, Mail, Lock, Eye, EyeOff, Zap as ZapIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/common/logo';
 import { Suspense } from 'react';
@@ -114,7 +114,7 @@ function LoginContent() {
             <Alert className="bg-emerald-50 border-emerald-200 text-emerald-800 animate-in slide-in-from-top-2 duration-500">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-500 rounded-lg text-white">
-                  <Zap className="w-4 h-4 fill-current" />
+                  <ZapIcon className="w-4 h-4 fill-current" />
                 </div>
                 <AlertDescription className="text-[10px] font-black uppercase tracking-wider leading-tight">
                   Kode Referal <span className="text-emerald-600 underline">{referralCode}</span> Aktif. <br/>
