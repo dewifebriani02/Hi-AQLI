@@ -118,6 +118,72 @@ function PageQuizContent() {
       .slice(0, 5);
   }, [allAttempts, leaderboardUsers]);
 
+  // FETCH WEEKLY PROGRESS
+  const startOfWeek = useMemo(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const monday = new Date(d.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+    return monday.toISOString();
+  }, []);
+
+  const weeklyProgressOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'is_passed', operator: '==', value: true },
+      { column: 'created_at', operator: '>=', value: startOfWeek }
+    ]
+  }), [user?.id, startOfWeek]);
+
+  const { data: weeklyAttempts } = useCollection(user ? "quiz_attempts" : null, weeklyProgressOptions);
+
+  const weeklyVerseCount = useMemo(() => {
+    if (!weeklyAttempts) return 0;
+    const uniqueVerses = new Set(weeklyAttempts.map(a => `${a.surah_id}:${a.verse_id}`));
+    return uniqueVerses.size;
+  }, [weeklyAttempts]);
+
+  const handleShareReport = () => {
+    const duration = formatTime(totalTime);
+    const salutation = userData?.salutation || "Ukhti";
+    const name = userData?.full_name || userData?.username || "Hamba Allah";
+
+    const text = `*LAPORAN PROGRES HI-AQLI* 🌟\n\n` +
+      `*Thalibah:* ${salutation} ${name}\n` +
+      `*Hafalan:* Kuis Halaman ${pageNum} (SELESAI)\n` +
+      `*Skor:* ${score}/${questions.length} (100% Sempurna!)\n` +
+      `*Waktu:* ${duration}\n\n` +
+      `*Pencapaian Pekan Ini:* ${weeklyVerseCount} Ayat\n` +
+      `${weeklyVerseCount >= 15 ? '✅ Target 1 Halaman Pekan Ini Tercapai!' : '⏳ Sedikit lagi menuju target 1 halaman.'}\n\n` +
+      `Alhamdulillah, satu langkah lebih dekat memahami Al-Qur'an! 📖✨`;
+
+    const encodedText = encodeURIComponent(text);
+    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+  };
+
+  const handleCopyReport = () => {
+    const duration = formatTime(totalTime);
+    const salutation = userData?.salutation || "Ukhti";
+    const name = userData?.full_name || userData?.username || "Hamba Allah";
+
+    const text = `*LAPORAN PROGRES HI-AQLI* 🌟\n\n` +
+      `*Thalibah:* ${salutation} ${name}\n` +
+      `*Hafalan:* Kuis Halaman ${pageNum} (SELESAI)\n` +
+      `*Skor:* ${score}/${questions.length} (100% Sempurna!)\n` +
+      `*Waktu:* ${duration}\n\n` +
+      `*Pencapaian Pekan Ini:* ${weeklyVerseCount} Ayat\n` +
+      `${weeklyVerseCount >= 15 ? '✅ Target 1 Halaman Pekan Ini Tercapai!' : '⏳ Sedikit lagi menuju target 1 halaman.'}\n\n` +
+      `Alhamdulillah, satu langkah lebih dekat memahami Al-Qur'an! 📖✨`;
+
+    navigator.clipboard.writeText(text);
+    toast({ 
+      title: "Laporan Disalin!", 
+      description: "Silakan tempel (paste) laporan ke grup atau catatan Anda.",
+      duration: 3000
+    });
+  };
+
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
     const soundUrls = {
       correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
@@ -459,6 +525,28 @@ function PageQuizContent() {
                  <p className="text-xl font-bold">{Math.round((score/questions.length)*100)}%</p>
                </div>
              </div>
+             
+             {/* WEEKLY PROGRESS SUMMARY */}
+             <div className={cn(
+               "p-4 rounded-2xl border-2 text-left space-y-2",
+               weeklyVerseCount >= 15 ? "bg-emerald-50 border-emerald-100" : "bg-blue-50 border-blue-100"
+             )}>
+                <div className="flex items-center justify-between">
+                   <p className={cn("text-[10px] font-black uppercase tracking-widest", weeklyVerseCount >= 15 ? "text-emerald-600" : "text-blue-600")}>
+                      Progres Pekanan
+                   </p>
+                   {weeklyVerseCount >= 15 && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                </div>
+                <div className="flex items-baseline gap-1">
+                   <span className="text-2xl font-black">{weeklyVerseCount}</span>
+                   <span className="text-xs font-bold text-muted-foreground">/ 15 Ayat</span>
+                </div>
+                <p className="text-[10px] font-medium leading-relaxed opacity-70">
+                   {weeklyVerseCount >= 15 
+                     ? "Masyallah! Target minimal 1 halaman (15 ayat) pekan ini sudah tercapai. Ukhti hebat!" 
+                     : `Tinggal ${15 - weeklyVerseCount} ayat lagi untuk mencapai target minimal 1 halaman pekan ini. Semangat!`}
+                </p>
+             </div>
           </CardContent>
           {wrongWords.length > 0 && (
             <div className="px-8 pb-8 text-left">
@@ -501,9 +589,36 @@ function PageQuizContent() {
                     </Button>
                   )
                 )}
-                <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600">
+                <Button asChild variant="outline" className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600 mb-2">
                   <Link href={from === 'surah' && surahId ? `/mufradat/${surahId}` : "/mufradat?tab=juz"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR HALAMAN'}</Link>
                 </Button>
+
+                {/* Automated WhatsApp Sharing Button - MOVED HERE & ONLY IF PERFECT */}
+                <div className="w-full space-y-4 pt-4 border-t border-slate-200">
+                  <div className="text-center space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sudah cukup lelah hari ini?</p>
+                    <p className="text-[9px] text-slate-400 font-medium">Istirahatlah sejenak dan bagikan pencapaian Ukhti.</p>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleShareReport}
+                    className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black py-7 rounded-2xl shadow-lg uppercase tracking-widest text-[10px] gap-3"
+                  >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    BAGIKAN VIA WHATSAPP
+                  </Button>
+
+                  <Button 
+                    variant="ghost"
+                    onClick={handleCopyReport}
+                    className="w-full text-slate-400 font-bold py-2 rounded-2xl uppercase tracking-widest text-[9px] gap-2 hover:bg-slate-50 transition-all"
+                  >
+                    <Copy className="w-4 h-4" />
+                    SALIN LAPORAN
+                  </Button>
+                </div>
               </>
             ) : (
               <>

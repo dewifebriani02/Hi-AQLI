@@ -20,14 +20,6 @@ import { Suspense } from 'react';
 import { validateEmail, cn } from '@/lib/utils';
 
 // Debug check for components to avoid Error #130
-if (typeof window !== 'undefined') {
-  console.log('RegisterPage Component Check:', {
-    Alert: !!Alert,
-    AlertDescription: !!AlertDescription,
-    Loader2: !!Loader2,
-    Logo: !!Logo
-  });
-}
 
 function RegisterContent() {
   const { user, isUserLoading } = useUser();
@@ -267,11 +259,16 @@ function RegisterContent() {
     
     // Determine the final destination after Google callback
     // IMPROVEMENT: If joining via referral, automatically show the registration form
-    const googleRedirect = redirectTo !== '/' 
+    const googleRedirectBase = redirectTo !== '/' 
       ? redirectTo 
       : (referralCode 
           ? `/study-circles/registration?ref=${referralCode}${programParam ? `&program=${programParam}` : ''}` 
           : (programParam ? `/study-circles/registration?program=${programParam}` : '/programs'));
+    
+    // Add registration flag to authorize profile creation in callback
+    const googleRedirect = googleRedirectBase.includes('?') 
+      ? `${googleRedirectBase}&type=register` 
+      : `${googleRedirectBase}?type=register`;
 
     const { error: googleError } = await initiateGoogleSignIn(googleRedirect);
     if (googleError) {

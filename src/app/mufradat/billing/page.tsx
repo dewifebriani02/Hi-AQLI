@@ -44,6 +44,7 @@ export default function MufradatBillingPage() {
   const { toast } = useToast();
   
   const { data: userData, refresh: refreshUser } = useDoc("users", user?.id);
+  const fullSalutation = userData?.salutation || "Ukhti";
   const registrationsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   }), [user?.id]);

@@ -121,7 +121,8 @@ function MufradatPageContent() {
 
   // GROUP LEADERBOARD DATA (Lazy load only when on rank tab)
   const groupUsersOptions = useMemo(() => ({
-    filters: [{ column: 'mufradat_group_id', operator: '==', value: group_id }]
+    filters: [{ column: 'mufradat_group_id', operator: '==', value: group_id }],
+    limit: 50 // Limit to top 50 users in group to avoid over-fetching
   }), [group_id]);
 
   const { data: allGroupUsers, isLoading: isGroupUsersLoading } = useCollection(
@@ -133,7 +134,9 @@ function MufradatPageContent() {
     filters: [
       { column: 'group_id', operator: '==', value: group_id },
       { column: 'is_passed', operator: '==', value: true }
-    ]
+    ],
+    orderBy: { column: 'created_at', ascending: false },
+    limit: 2000 // Reasonable limit for group activity processing
   }), [group_id]);
 
   const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(
@@ -151,51 +154,50 @@ function MufradatPageContent() {
   );
 
   const groupRankings = useMemo(() => {
-    if (!allGroupUsers || !isRankTab) return [];
+    if (!allGroupUsers || !isRankTab || !allGroupAttempts) return [];
     
-    // O(M) Pre-processing attempts into Map
-    const attemptsByUserId = new Map<string, any[]>();
-    (allGroupAttempts || []).forEach(a => {
-      if (!attemptsByUserId.has(a.user_id)) attemptsByUserId.set(a.user_id, []);
-      attemptsByUserId.get(a.user_id)!.push(a);
+    // O(M) Pre-processing attempts into Map for O(1) lookups
+    const attemptsByUserId = new Map<string, { verses: Set<string>, pages: Set<number>, count: number }>();
+    
+    allGroupAttempts.forEach(a => {
+      if (!attemptsByUserId.has(a.user_id)) {
+        attemptsByUserId.set(a.user_id, { verses: new Set(), pages: new Set(), count: 0 });
+      }
+      const stats = attemptsByUserId.get(a.user_id)!;
+      stats.count++;
+      
+      if (a.quiz_id.startsWith('mufradat_page_')) {
+        if (a.page_id) stats.pages.add(Number(a.page_id));
+      } else {
+        stats.verses.add(`${a.surah_id}:${a.verse_id}`);
+      }
     });
 
     // O(K) Pre-processing reactions into Map
-    const reactionsByUserId = new Map<string, any[]>();
+    const reactionsByUserId = new Map<string, { mabruk: number, semangat: number, hebat: number, total: number }>();
     (allReactions || []).forEach(r => {
-      if (!reactionsByUserId.has(r.to_user_id)) reactionsByUserId.set(r.to_user_id, []);
-      reactionsByUserId.get(r.to_user_id)!.push(r);
+      if (!reactionsByUserId.has(r.to_user_id)) {
+        reactionsByUserId.set(r.to_user_id, { mabruk: 0, semangat: 0, hebat: 0, total: 0 });
+      }
+      const counts = reactionsByUserId.get(r.to_user_id)!;
+      counts.total++;
+      if (r.reaction_type === 'mabruk') counts.mabruk++;
+      else if (r.reaction_type === 'semangat') counts.semangat++;
+      else if (r.reaction_type === 'hebat') counts.hebat++;
     });
 
     // O(N) processing users
     return allGroupUsers.map(u => {
-      const userAttempts = attemptsByUserId.get(u.id) || [];
-      
-      // UNIQUE VERSES (Hafalan)
-      const uniqueVerses = new Set(userAttempts.map(a => `${a.surah_id}:${a.verse_id}`)).size;
-      
-      // UNIQUE PAGES (Halaman)
-      const uniquePages = new Set(userAttempts.filter(a => a.quiz_id.startsWith('mufradat_page_')).map(a => a.page_id)).size;
-      
-      // TOTAL PASSED (Aktivitas/Repetisi)
-      const totalPassed = userAttempts.length;
-      
-      // REACTION SUMMARY
-      const userReactions = reactionsByUserId.get(u.id) || [];
-      const reactionSummary = {
-        mabruk: userReactions.filter(r => r.reaction_type === 'mabruk').length,
-        semangat: userReactions.filter(r => r.reaction_type === 'semangat').length,
-        hebat: userReactions.filter(r => r.reaction_type === 'hebat').length,
-        total: userReactions.length
-      };
+      const stats = attemptsByUserId.get(u.id);
+      const rx = reactionsByUserId.get(u.id) || { mabruk: 0, semangat: 0, hebat: 0, total: 0 };
       
       return {
         ...u,
         points: u.points || 0,
-        verseCount: uniqueVerses,
-        pageCount: uniquePages,
-        activityCount: totalPassed,
-        reactionSummary
+        verseCount: stats?.verses.size || 0,
+        pageCount: stats?.pages.size || 0,
+        activityCount: stats?.count || 0,
+        reactionSummary: rx
       };
     }).sort((a: any, b: any) => {
       if (rankMode === 'halaman') {

@@ -162,7 +162,7 @@ export default function DashboardPage() {
       { column: 'user_id', operator: '==', value: user.id }
     ],
     orderBy: { column: 'created_at', ascending: false },
-    limit: 10
+    limit: 5
   } : undefined), [user?.id]);
 
   const { data: userDonations } = useCollection("donations", donationOptions);
@@ -173,7 +173,7 @@ export default function DashboardPage() {
       { column: 'completed', operator: '==', value: true }
     ],
     orderBy: { column: 'updated_at', ascending: false },
-    limit: 20
+    limit: 10
   } : undefined), [user?.id]);
 
   const { data: mutabaahHistory } = useCollection("mutabaah_logs", mutabaahHistoryOptions);
@@ -183,7 +183,7 @@ export default function DashboardPage() {
       { column: 'user_id', operator: '==', value: user.id }
     ],
     orderBy: { column: 'created_at', ascending: false },
-    limit: 10
+    limit: 5
   } : undefined), [user?.id]);
 
   const { data: ngajiRegs } = useCollection("halaqah_registrations", ngajiRegOptions);
@@ -192,19 +192,23 @@ export default function DashboardPage() {
   const mutabaahActivitiesCount = 28;
   const muhasabahActivitiesCount = 14;
 
-  const mutabaahDoneCount = mutabaahLogs?.filter(l => [
-    'bangun', 'siwak', 'tahajjud', 'qabliyah_subuh', 'subuh', 'dzikir_pagi', 'dhuha',
-    'kajian', 'qabliyah_zhuhur', 'zhuhur', 'badiyah_zhuhur', 'qabliyah_ashar', 'ashar',
-    'dzikir_petang', 'maghrib', 'badiyah_maghrib', 'isya', 'badiyah_isya', 'witir',
-    'wudhu_tidur', 'al_mulk', 'ayat_kursi', 'doa_tidur', 'evaluasi', 'quran', 'doa_harian',
-    'tasbih_100', 'istighfar'
-  ].includes(l.activity_id) && l.completed).length || 0;
+  const mutabaahDoneCount = useMemo(() => {
+    return mutabaahLogs?.filter(l => [
+      'bangun', 'siwak', 'tahajjud', 'qabliyah_subuh', 'subuh', 'dzikir_pagi', 'dhuha',
+      'kajian', 'qabliyah_zhuhur', 'zhuhur', 'badiyah_zhuhur', 'qabliyah_ashar', 'ashar',
+      'dzikir_petang', 'maghrib', 'badiyah_maghrib', 'isya', 'badiyah_isya', 'witir',
+      'wudhu_tidur', 'al_mulk', 'ayat_kursi', 'doa_tidur', 'evaluasi', 'quran', 'doa_harian',
+      'tasbih_100', 'istighfar'
+    ].includes(l.activity_id) && l.completed).length || 0;
+  }, [mutabaahLogs]);
 
-  const muhasabahDoneCount = mutabaahLogs?.filter(l => [
-    'm_wanita_shalat', 'm_wanita_puasa', 'm_wanita_kehormatan', 'm_wanita_taat',
-    'm_dosa_syirik', 'm_dosa_sihir', 'm_dosa_riba', 'm_lisan_ghibah', 'm_lisan_suami',
-    'm_akhlak_tabarruj', 'm_akhlak_niyahah', 'm_akhlak_sabar', 'm_akhlak_birrul', 'm_akhlak_infaq'
-  ].includes(l.activity_id) && l.completed).length || 0;
+  const muhasabahDoneCount = useMemo(() => {
+    return mutabaahLogs?.filter(l => [
+      'm_wanita_shalat', 'm_wanita_puasa', 'm_wanita_kehormatan', 'm_wanita_taat',
+      'm_dosa_syirik', 'm_dosa_sihir', 'm_dosa_riba', 'm_lisan_ghibah', 'm_lisan_suami',
+      'm_akhlak_tabarruj', 'm_akhlak_niyahah', 'm_akhlak_sabar', 'm_akhlak_birrul', 'm_akhlak_infaq'
+    ].includes(l.activity_id) && l.completed).length || 0;
+  }, [mutabaahLogs]);
 
   const mutabaahPercent = Math.round((mutabaahDoneCount / mutabaahActivitiesCount) * 100);
   const muhasabahPercent = Math.round((muhasabahDoneCount / muhasabahActivitiesCount) * 100);

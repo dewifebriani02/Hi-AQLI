@@ -149,11 +149,20 @@ function AuthCallbackHandler() {
           console.log('AUTH_DEBUG: Auth successful. Syncing user profile...');
           const user = session.user;
           
+          const isRegisterMode = next.includes('type=register');
+          
           // User profile check & sync
           const { data: profile, error: pErr } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
 
           if (!profile && !pErr) {
-            console.log('AUTH_DEBUG: Profile missing, creating new one...');
+            if (!isRegisterMode) {
+              console.log('AUTH_DEBUG: Profile missing and NOT in register mode. Access denied.');
+              await supabase.auth.signOut();
+              router.replace(`/login?error=${encodeURIComponent('Email belum terdaftar. Silakan mendaftar terlebih dahulu di Hi AQLI.')}`);
+              return;
+            }
+
+            console.log('AUTH_DEBUG: Profile missing, but in register mode. Creating new one...');
             await supabase.from('users').upsert({
               id: user.id,
               username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
