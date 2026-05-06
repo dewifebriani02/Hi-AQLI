@@ -322,7 +322,7 @@ export default function DashboardPage() {
     }
   }, [manualCity]);
 
-  // Hitung Streak Belajar dan Repetisi dari quiz_attempts
+  // Hitung Streak Belajar dari quiz_attempts
   useEffect(() => {
     if (!quizAttempts || quizAttempts.length === 0) {
       setStreakDays(0);
@@ -362,14 +362,40 @@ export default function DashboardPage() {
     setStreakDays(streak);
   }, [quizAttempts]);
 
-  // Hitung repetisi hari ini
-  const todayQuizCount = quizAttempts?.filter((a: any) => {
-    if (!a.created_at) return false;
-    const attemptDate = new Date(a.created_at).toISOString().split('T')[0];
-    return attemptDate === todayStr && a.is_passed;
-  }).length || 0;
+  // Activity dots for 7 days
+  const activity7Days = useMemo(() => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(new Date().getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
 
-  const repetisiPercent = Math.min(Math.round((todayQuizCount / 5) * 100), 100);
+    const activeDates = new Set<string>();
+    quizAttempts?.forEach((a: any) => {
+      if (a.created_at) {
+        activeDates.add(new Date(a.created_at).toISOString().split('T')[0]);
+      }
+    });
+
+    return last7Days.map(date => activeDates.has(date));
+  }, [quizAttempts]);
+
+  // Weekly pages count
+  const weeklyPagesCount = useMemo(() => {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const startOfWeek = new Date(now.setDate(diff)).toISOString().split('T')[0] + 'T00:00:00Z';
+
+    const weeklyPages = new Set();
+    quizAttempts?.forEach((a: any) => {
+      if (a.created_at >= startOfWeek && a.quiz_id?.startsWith('mufradat_page_') && a.is_passed) {
+        const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
+        if (pageId) weeklyPages.add(Number(pageId));
+      }
+    });
+    return weeklyPages.size;
+  }, [quizAttempts]);
 
   // Date Formatting
   const gregorianDate = new Intl.DateTimeFormat('id-ID', {
@@ -725,9 +751,22 @@ export default function DashboardPage() {
               <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-orange-50 text-orange-600"><Flame className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /></div>
               <Badge variant="outline" className="text-[7px] sm:text-[8px] font-black border-orange-200 text-orange-700 bg-orange-50 px-1 h-3 sm:h-4">ISTIQOMAH</Badge>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-black">{streakDays} Hari</p>
-              <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Streak Belajar</p>
+            <div className="flex items-center justify-between mt-auto">
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-black">{streakDays} Hari</p>
+                <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Streak Belajar</p>
+              </div>
+              <div className="flex gap-0.5">
+                {activity7Days.map((active, i) => (
+                  <div 
+                    key={i} 
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      active ? "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" : "bg-slate-200"
+                    )} 
+                  />
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -738,9 +777,19 @@ export default function DashboardPage() {
               <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50 text-[#D4AF37]"><Target className="w-4 h-4 sm:w-5 sm:h-5" /></div>
               <Badge variant="outline" className="text-[7px] sm:text-[8px] font-black border-amber-200 text-amber-700 bg-amber-50 px-1 h-3 sm:h-4">TARGET</Badge>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-black">{repetisiPercent}%</p>
-              <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Target Hari Ini</p>
+            <div className="flex items-center justify-between mt-auto">
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-black">{weeklyPagesCount} Halaman</p>
+                <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Target Pekanan</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[8px] font-black text-amber-600 uppercase">Min. 1 Hlm</p>
+                {weeklyPagesCount >= 1 ? (
+                  <Badge className="bg-emerald-500 text-white text-[7px] h-3.5 px-1 font-black">TERCAPAI</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-slate-400 border-slate-200 text-[7px] h-3.5 px-1 font-black">PROSES</Badge>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

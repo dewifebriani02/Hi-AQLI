@@ -128,6 +128,48 @@ export default function MutabaahPage() {
 
   const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection("mutabaah_logs", logsOptions);
 
+  const quizOptions = useMemo(() => (user?.id ? {
+    filters: [
+      { column: 'user_id', operator: '==', value: user.id },
+      { column: 'created_at', operator: '>=', value: thirtyDaysAgoStr }
+    ]
+  } : null), [user?.id, thirtyDaysAgoStr]);
+
+  const { data: quizAttempts } = useCollection("quiz_attempts", quizOptions);
+
+  const userWeeklyStats = useMemo(() => {
+    if (!quizAttempts) return { weeklyPages: 0, activity7Days: [] };
+    
+    const now = new Date();
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(now.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    const activeDates = new Set();
+    const weeklyPages = new Set();
+    
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const startOfWeek = new Date(now.setDate(diff)).toISOString().split('T')[0] + 'T00:00:00Z';
+
+    quizAttempts.forEach(a => {
+      const dateStr = a.created_at.split('T')[0];
+      activeDates.add(dateStr);
+
+      if (a.created_at >= startOfWeek && a.quiz_id?.startsWith('mufradat_page_') && a.is_passed) {
+        const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
+        if (pageId) weeklyPages.add(Number(pageId));
+      }
+    });
+
+    return {
+      weeklyPages: weeklyPages.size,
+      activity7Days: last7Days.map(date => activeDates.has(date))
+    };
+  }, [quizAttempts]);
+
   const todayLogs = useMemo(() => {
     // Combine real logs with optimistic changes
     const fetched = mutabaahLogs?.filter((l: any) => l.date === todayStr) || [];
@@ -506,15 +548,29 @@ export default function MutabaahPage() {
                     <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Target Hari Ini</p>
                     <div className="flex items-end gap-2">
                       <h2 className="text-4xl font-black text-black leading-none">{progressCount}</h2>
-                      <p className="text-sm font-bold text-muted-foreground uppercase pb-1">/ {activeActivities.length} Amalan</p>
+                      <div className="flex flex-col">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none">/ {activeActivities.length} Amalan</p>
+                        <div className="mt-1 flex items-center gap-1.5">
+                           <Badge variant="outline" className="text-[8px] font-black border-emerald-200 text-emerald-700 bg-emerald-50 px-1 h-4 uppercase">
+                              {userWeeklyStats.weeklyPages} / 1 Halaman Pekanan
+                           </Badge>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">
-                    <div className="bg-amber-100 text-[#800000] px-2 py-1 rounded-lg flex items-center gap-1">
-                      <Flame className="w-3 h-3 fill-current" />
-                      <span className="text-[10px] font-black">STREAK: {monitoringStats?.currentStreak || 0} HARI</span>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <div className="bg-amber-100 text-[#800000] px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
+                        <Flame className="w-3.5 h-3.5 fill-current" />
+                        <span className="text-[10px] font-black uppercase">STREAK: {monitoringStats?.currentStreak || 0} HARI</span>
+                        <div className="flex gap-0.5 ml-1 border-l border-amber-200 pl-2">
+                           {userWeeklyStats.activity7Days.map((active, i) => (
+                             <div key={i} className={cn("w-1 h-1 rounded-full", active ? "bg-orange-500" : "bg-amber-200/50")} />
+                           ))}
+                        </div>
+                      </div>
+                      <p className="text-2xl font-black text-[#800000]">{progressPercent}%</p>
                     </div>
-                    <p className="text-2xl font-black text-[#800000]">{progressPercent}%</p>
                   </div>
                 </div>
                 <Progress value={progressPercent} className="h-4 bg-amber-50 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-[#800000] [&>div]:to-[#D4AF37]" />

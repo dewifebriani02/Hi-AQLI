@@ -139,6 +139,41 @@ function MufradatPageContent() {
     return new Date(now.setDate(diff)).toISOString().split('T')[0] + 'T00:00:00Z';
   }, []);
 
+  const userWeeklyStats = useMemo(() => {
+    if (!progress) return { weeklyVerses: 0, weeklyPages: 0, activity7Days: [] };
+    
+    const now = new Date();
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(now.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    const weeklyVerses = new Set();
+    const weeklyPages = new Set();
+    const activeDates = new Set();
+
+    progress.forEach(a => {
+      const dateStr = a.created_at.split('T')[0];
+      activeDates.add(dateStr);
+
+      if (a.created_at >= startOfWeek) {
+        if (a.quiz_id?.startsWith('mufradat_page_')) {
+          const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
+          if (pageId) weeklyPages.add(Number(pageId));
+        } else {
+          weeklyVerses.add(`${a.surah_id}:${a.verse_id}`);
+        }
+      }
+    });
+
+    return {
+      weeklyVerses: weeklyVerses.size,
+      weeklyPages: weeklyPages.size,
+      activity7Days: last7Days.map(date => activeDates.has(date))
+    };
+  }, [progress, startOfWeek]);
+
   const groupAttemptsOptions = useMemo(() => ({
     filters: [
       { column: 'group_id', operator: '==', value: group_id },
@@ -391,38 +426,36 @@ function MufradatPageContent() {
                 </Link>
               </Button>
 
-              {/* LEAGUE BADGE */}
+              {/* TARGET PEKANAN */}
               <div className={cn(
                 "h-12 px-2 sm:px-5 rounded-2xl border-2 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 transition-all",
-                userData?.mufradat_league === 'Intan' ? "bg-cyan-50 border-cyan-500/20 text-cyan-700" :
-                userData?.mufradat_league === 'Emas' ? "bg-amber-50 border-amber-500/20 text-amber-700" :
-                userData?.mufradat_league === 'Perak' ? "bg-slate-50 border-slate-500/20 text-slate-700" :
-                "bg-slate-50 border-slate-200 text-slate-500"
+                userWeeklyStats.weeklyPages >= 1 ? "bg-emerald-50 border-emerald-500/20 text-emerald-700" : "bg-amber-50 border-amber-500/20 text-amber-700"
               )}>
                 <div className={cn(
                   "w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
-                  userData?.mufradat_league === 'Intan' ? "bg-cyan-100" :
-                  userData?.mufradat_league === 'Emas' ? "bg-amber-100 text-amber-600" :
-                  userData?.mufradat_league === 'Perak' ? "bg-slate-200 text-slate-700" :
-                  "bg-slate-100 text-slate-400"
+                  userWeeklyStats.weeklyPages >= 1 ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
                 )}>
-                  {userData?.mufradat_league === 'Intan' ? <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
-                   userData?.mufradat_league === 'Emas' ? <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
-                   userData?.mufradat_league === 'Perak' ? <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> :
-                   <ZapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
-                  <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-tight opacity-70 line-clamp-1">Liga</span>
-                  <span className="text-[9px] sm:text-xs font-black uppercase line-clamp-1">{userData?.mufradat_league || 'Perunggu'}</span>
+                  <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-tight opacity-70 line-clamp-1">Target Pekanan</span>
+                  <span className="text-[9px] sm:text-xs font-black uppercase line-clamp-1">{userWeeklyStats.weeklyPages} / 1 HLN</span>
                 </div>
               </div>
 
               <div className="h-12 px-2 sm:px-5 rounded-2xl border-2 border-orange-500/10 bg-orange-50/30 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 animate-in zoom-in duration-500">
-                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0">
                   <Flame className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current", (userData?.mufradat_streak_count || 0) > 0 ? "animate-pulse" : "opacity-30")} />
                 </div>
-                <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
-                  <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-orange-600/70 line-clamp-1">Streak</span>
+                <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1 flex-1">
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-orange-600/70 line-clamp-1">Streak</span>
+                    <div className="flex gap-0.5">
+                      {userWeeklyStats.activity7Days.map((active, i) => (
+                        <div key={i} className={cn("w-1 h-1 rounded-full", active ? "bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]" : "bg-slate-200")} />
+                      ))}
+                    </div>
+                  </div>
                   <span className="text-[9px] sm:text-xs font-black text-orange-700 line-clamp-1 text-center sm:text-left">{userData?.mufradat_streak_count || 0} HARI</span>
                 </div>
               </div>
