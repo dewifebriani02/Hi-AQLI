@@ -71,7 +71,7 @@ function PageQuizContent() {
   const [timerActive, setTimerActive] = useState(false);
   const [allPageWords, setAllPageWords] = useState<any[]>([]);
 
-  const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+  const { data: userData, isLoading: isUserDataLoading, refresh: userDataRefresh } = useDoc(user?.id ? "users" : null, user?.id);
 
   // Auth Guard
   useEffect(() => {
@@ -136,7 +136,7 @@ function PageQuizContent() {
     ]
   }), [user?.id, startOfWeek]);
 
-  const { data: weeklyAttempts } = useCollection(user ? "quiz_attempts" : null, weeklyProgressOptions);
+  const { data: weeklyAttempts, refresh: refreshWeekly } = useCollection(user ? "quiz_attempts" : null, weeklyProgressOptions);
 
   const weeklyVerseCount = useMemo(() => {
     if (!weeklyAttempts) return 0;
@@ -440,7 +440,50 @@ function PageQuizContent() {
       if (insertError) throw insertError;
 
       if (isPassed) {
-        toast({ title: "Masyallah! Halaman Selesai", description: "Progres hafalan berhasil disimpan." });
+        // 1. Calculate Streak & Points
+        await userDataRefresh();
+        const now = new Date();
+        const lastQuizAt = userData?.last_mufradat_quiz_at ? new Date(userData.last_mufradat_quiz_at) : null;
+        let newStreak = userData?.mufradat_streak_count || 0;
+
+        if (!lastQuizAt) {
+          newStreak = 1;
+        } else {
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+          const lastDate = new Date(lastQuizAt.getFullYear(), lastQuizAt.getMonth(), lastQuizAt.getDate()).getTime();
+          const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+          if (diffDays === 1) newStreak += 1;
+          else if (diffDays > 1) newStreak = 1;
+        }
+
+        const pointsPerVerse = 10;
+        const totalVerses = questions.length; // usually 15
+        const pointsEarned = totalVerses * pointsPerVerse;
+
+        const newWeeklyPoints = (userData?.mufradat_weekly_points || 0) + pointsEarned;
+        let newLeague = userData?.mufradat_league || 'Perunggu';
+        
+        if (newWeeklyPoints > 1000) newLeague = 'Intan';
+        else if (newWeeklyPoints > 300) newLeague = 'Emas';
+        else if (newWeeklyPoints > 100) newLeague = 'Perak';
+
+        await supabase
+          .from('users')
+          .update({ 
+            points: (userData?.points || 0) + pointsEarned,
+            mufradat_streak_count: newStreak,
+            last_mufradat_quiz_at: now.toISOString(),
+            mufradat_weekly_points: newWeeklyPoints,
+            mufradat_league: newLeague,
+            last_league_reset_at: userData?.last_league_reset_at || now.toISOString()
+          })
+          .eq('id', user.id);
+
+        toast({ title: `Masyallah! +${pointsEarned} Poin`, description: "Halaman selesai & progres berhasil disimpan." });
+        
+        // Force refresh all data
+        await userDataRefresh();
+        await refreshWeekly();
       }
 
       refreshLeaderboard();

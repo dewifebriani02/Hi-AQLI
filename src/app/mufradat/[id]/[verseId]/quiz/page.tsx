@@ -77,7 +77,7 @@ function MufradatQuizContent() {
   const [scrambledIndices, setScrambledIndices] = useState<number[]>([]);
   const [scrambledSelected, setScrambledSelected] = useState<string[]>([]);
 
-  const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+  const { data: userData, isLoading: isUserDataLoading, refresh: userDataRefresh } = useDoc(user?.id ? "users" : null, user?.id);
 
   const verseKey = `${id}:${verseId}`;
 
@@ -123,7 +123,7 @@ function MufradatQuizContent() {
     ]
   }), [user?.id, startOfWeek]);
 
-  const { data: weeklyAttempts } = useCollection(user ? "quiz_attempts" : null, weeklyProgressOptions);
+  const { data: weeklyAttempts, refresh: refreshWeekly } = useCollection(user ? "quiz_attempts" : null, weeklyProgressOptions);
 
   const weeklyVerseCount = useMemo(() => {
     if (!weeklyAttempts) return 0;
@@ -435,6 +435,10 @@ function MufradatQuizContent() {
 
   const saveAttempt = async (finalScore: number, finalWrongWordIds: number[]) => {
     if (!user) return;
+    
+    // Refresh user data right before calculation to minimize stale data
+    await userDataRefresh();
+    
     try {
       const isPassed = finalScore === questions.length;
       
@@ -533,6 +537,11 @@ function MufradatQuizContent() {
             last_league_reset_at: userData?.last_league_reset_at || now.toISOString()
           })
           .eq('id', user.id);
+
+        // Force refresh all data dependencies
+        await userDataRefresh();
+        await refreshWeekly();
+        refreshLeaderboard();
 
         // 3. --- BADGE AWARD LOGIC ---
         const awardBadge = async (type: string, title: string, icon: string) => {
