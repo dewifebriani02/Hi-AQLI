@@ -132,14 +132,22 @@ function MufradatPageContent() {
     groupUsersOptions
   );
 
+  const startOfWeek = useMemo(() => {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    return new Date(now.setDate(diff)).toISOString().split('T')[0] + 'T00:00:00Z';
+  }, []);
+
   const groupAttemptsOptions = useMemo(() => ({
     filters: [
       { column: 'group_id', operator: '==', value: group_id },
-      { column: 'is_passed', operator: '==', value: true }
+      { column: 'is_passed', operator: '==', value: true },
+      { column: 'created_at', operator: '>=', value: startOfWeek }
     ],
     orderBy: { column: 'created_at', ascending: false },
-    limit: 2000 // Reasonable limit for group activity processing
-  }), [group_id]);
+    limit: 2000 
+  }), [group_id, startOfWeek]);
 
   const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(
     isRankTab && group_id ? "quiz_attempts" : null, 
@@ -195,7 +203,7 @@ function MufradatPageContent() {
       
       return {
         ...u,
-        points: u.points || 0,
+        points: u.mufradat_weekly_points || 0,
         verseCount: stats?.verses.size || 0,
         pageCount: stats?.pages.size || 0,
         activityCount: stats?.count || 0,
@@ -660,7 +668,7 @@ function MufradatPageContent() {
                             <div className="flex items-center gap-3 mt-1.5">
                               <div className="flex items-center gap-1 group/stat" title="Points">
                                 <ZapIcon className="w-3 h-3 text-amber-500 fill-amber-500 animate-pulse" />
-                                <span className="text-xs font-black text-amber-600">{u.points} <span className="text-[9px] font-medium text-slate-400">POIN</span></span>
+                                <span className="text-xs font-black text-amber-600">{u.points} <span className="text-[9px] font-medium text-slate-400">POIN PEKANAN</span></span>
                               </div>
                               <div className="flex items-center gap-1 group/stat" title="Hafalan">
                                 <CheckCircle2 className={cn("w-3 h-3", rankMode === 'halaman' ? "text-amber-500" : "text-emerald-500")} />

@@ -417,6 +417,8 @@ function PageQuizContent() {
 
   const saveAttempt = async (finalScore: number, finalWrongWordIds: number[]) => {
     if (!user) return;
+    await userDataRefresh();
+    
     try {
       const isPassed = finalScore === questions.length;
       
