@@ -356,7 +356,11 @@ function MufradatPageContent() {
       "flex flex-col gap-6 pb-24 max-w-4xl mx-auto px-4 sm:px-0 transition-all duration-700",
       showOnboarding && "blur-xl grayscale pointer-events-none opacity-50"
     )}>
-      <MufradatOnboarding open={showOnboarding} onComplete={handleCompleteOnboarding} />
+      <MufradatOnboarding 
+        open={showOnboarding} 
+        onComplete={handleCompleteOnboarding} 
+        salutation={fullSalutation} 
+      />
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-4 px-1">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-[#800000] mb-1">

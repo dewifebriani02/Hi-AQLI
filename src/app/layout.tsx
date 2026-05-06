@@ -113,6 +113,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const hasAdminAccess = !!isAdminDoc?.id || !!isSuperAdminDoc?.id;
   const points = userData?.points || 0;
   const isBlacklisted = !!userData?.is_blacklisted;
+  const salutation = userData?.salutation || "Ukhti";
 
   // The server and initial client render must match. 
   // We return null until mounted to avoid hydration white flicker.
@@ -129,7 +130,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         <h1 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tighter">AKSES DIBATASI</h1>
         <p className="text-slate-500 max-w-sm mb-8 font-medium">
-          Maaf, akun Anda telah dibatalkan aksesnya oleh sistem atau administrator Hi AQLI. Silakan hubungi admin via WhatsApp untuk informasi lebih lanjut.
+          Maaf, akun {salutation} telah dibatalkan aksesnya oleh sistem atau administrator Hi AQLI. Silakan hubungi admin via WhatsApp untuk informasi lebih lanjut.
         </p>
         <Button 
           onClick={() => signOut()} 

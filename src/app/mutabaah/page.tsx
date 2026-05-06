@@ -110,6 +110,7 @@ export default function MutabaahPage() {
   ], []);
 
   const { data: userData } = useDoc("users", user?.id);
+  const salutation = userData?.salutation || "Ukhti";
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const thirtyDaysAgoStr = useMemo(() => {
@@ -424,7 +425,7 @@ export default function MutabaahPage() {
           <div className="bg-gradient-to-r from-amber-500 to-[#800000] p-4 text-white text-center animate-in slide-in-from-top-2 duration-500 sticky top-[72px] z-40 shadow-lg">
             <p className="text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
               <Sparkles className="w-4 h-4 animate-pulse" /> 
-              Masuk untuk mencatat amalan harian Ukhti
+              Masuk untuk mencatat amalan harian {salutation}
               <Sparkles className="w-4 h-4 animate-pulse" />
             </p>
             <Button asChild variant="link" className="text-white font-bold p-0 h-auto text-[10px] uppercase underline mt-0.5">

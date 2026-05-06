@@ -179,7 +179,7 @@ function PageQuizContent() {
     navigator.clipboard.writeText(text);
     toast({ 
       title: "Laporan Disalin!", 
-      description: "Silakan tempel (paste) laporan ke grup atau catatan Anda.",
+      description: `Silakan tempel (paste) laporan ke grup atau catatan ${salutation}.`,
       duration: 3000
     });
   };

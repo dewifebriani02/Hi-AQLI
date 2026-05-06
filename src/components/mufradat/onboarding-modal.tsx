@@ -26,26 +26,27 @@ import { cn } from "@/lib/utils";
 interface OnboardingModalProps {
   open: boolean;
   onComplete: () => void;
+  salutation?: string;
 }
 
-const slides = [
+const getSlides = (salutation: string) => [
   {
     title: "Ahlan wa Sahlan!",
-    description: "Selamat Ukhti! Sekarang Ukhti resmi menjadi bagian dari komunitas Hi Mufradat. Yuk, pahami alur belajarnya agar hafalan Ukhti Itqan!",
+    description: `Selamat ${salutation}! Sekarang ${salutation} resmi menjadi bagian dari komunitas Hi Mufradat. Yuk, pahami alur belajarnya agar hafalan ${salutation} Itqan!`,
     icon: <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-white"><CheckCircle2 className="w-10 h-10" /></div>,
     color: "bg-slate-50",
     accent: "bg-slate-900"
   },
   {
     title: "Belajar 'Tap-Tap'",
-    description: "Sebelum kuis, gunakan fitur 'Belajar Dulu'. Ketuk kata Arab di Mushaf untuk lihat arti, dan ketuk daftar di bawah untuk mencatat repetisi (berapa kali Ukhti sudah melafalkannya).",
+    description: `Sebelum kuis, gunakan fitur 'Belajar Dulu'. Ketuk kata Arab di Mushaf untuk lihat arti, dan ketuk daftar di bawah untuk mencatat repetisi (berapa kali ${salutation} sudah melafalkannya).`,
     icon: <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-white"><MousePointer2 className="w-10 h-10" /></div>,
     color: "bg-white",
     accent: "bg-slate-800"
   },
   {
     title: "4 Jenis Kuis",
-    description: "Ukhti akan ditantang dengan: Pilihan Ganda, Susun Kata (menyusun arti), Tebak Arab (pilih kata Arab dari artinya), dan Mode Tricky (menjebak).",
+    description: `${salutation} akan ditantang dengan: Pilihan Ganda, Susun Kata (menyusun arti), Tebak Arab (pilih kata Arab dari artinya), dan Mode Tricky (menjebak).`,
     icon: <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-white"><HelpCircle className="w-10 h-10" /></div>,
     color: "bg-slate-50",
     accent: "bg-slate-900"
@@ -59,7 +60,7 @@ const slides = [
   },
   {
     title: "Papan Juara & Mabar",
-    description: "Pantau posisi Ukhti di Grup (Papan Juara). Jangan lewatkan Mabar (Main Bareng) kompetisi live real-time dengan poin ganda!",
+    description: `Pantau posisi ${salutation} di Grup (Papan Juara). Jangan lewatkan Mabar (Main Bareng) kompetisi live real-time dengan poin ganda!`,
     icon: <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-white"><Trophy className="w-10 h-10" /></div>,
     color: "bg-slate-50",
     accent: "bg-slate-900"
@@ -73,8 +74,9 @@ const slides = [
   }
 ];
 
-export function MufradatOnboarding({ open, onComplete }: OnboardingModalProps) {
+export function MufradatOnboarding({ open, onComplete, salutation = "Ukhti" }: OnboardingModalProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const slides = getSlides(salutation);
 
   const scrollPrev = () => setSelectedIndex(prev => Math.max(prev - 1, 0));
   const scrollNext = () => setSelectedIndex(prev => Math.min(prev + 1, slides.length - 1));

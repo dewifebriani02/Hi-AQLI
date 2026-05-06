@@ -21,6 +21,7 @@ export default function NgajiPage() {
   const { user } = useUser();
 
   const { data: userData } = useDoc("users", user?.id);
+  const salutation = userData?.salutation || "Ukhti";
 
   // Fetch all classes from Supabase
   const { data: dbHalaqahs, isLoading: isHalaqahsLoading } = useCollection("halaqahs");
@@ -175,7 +176,7 @@ export default function NgajiPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
-          Pilih program sesuai level Ukhti. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
+          Pilih program sesuai level {salutation}. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
         </p>
       </div>
 

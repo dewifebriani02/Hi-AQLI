@@ -13,6 +13,7 @@ function AuthCallbackHandler() {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [salutation, setSalutation] = useState<string>('Ukhti');
  
   const clearSessionAndRetry = async () => {
     setIsClearing(true);
@@ -159,6 +160,10 @@ function AuthCallbackHandler() {
             .eq('email', user.email)
             .maybeSingle();
 
+          if (profileByEmail) {
+            setSalutation(profileByEmail.salutation || 'Ukhti');
+          }
+
           if (!profileByEmail) {
             console.log('AUTH_DEBUG: Email not found in users table. Access denied.');
             await supabase.auth.signOut();
@@ -249,7 +254,7 @@ KEY: ${envKey.substring(0, 10)}...${envKey.substring(envKey.length - 10)} (${env
             <Loader2 className="w-16 h-16 text-[#800000] animate-spin mx-auto" strokeWidth={3} />
             <div className="space-y-3">
                 <h1 className="text-3xl font-black uppercase tracking-tighter text-[#800000] leading-none">Menautkan Ruh Hafalan...</h1>
-                <p className="text-xs text-muted-foreground font-bold uppercase tracking-[0.3em] italic opacity-60">Mohon bersabar ya Ukhti, kami sedang menyiapkan sesi aman Anda.</p>
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-[0.3em] italic opacity-60">Mohon bersabar ya {salutation}, kami sedang menyiapkan sesi aman {salutation}.</p>
             </div>
             <div className="h-1.5 w-48 bg-slate-200 rounded-full mx-auto overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-[#800000] to-[#D4AF37] animate-progress-loading" />
