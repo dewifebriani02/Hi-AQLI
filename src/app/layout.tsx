@@ -7,6 +7,7 @@ import { AppSidebar } from '@/components/common/app-sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/common/bottom-nav';
+import { PWAInstallPrompt } from '@/components/common/pwa-install-prompt';
 import { SupabaseProvider, useUser, supabase } from '@/supabase';
 import { signOut } from '@/supabase/auth';
 import { useDoc, useCollection } from '@/supabase/db';
@@ -211,6 +212,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       </div>
       <BottomNav />
       <Toaster />
+      <PWAInstallPrompt deferredPrompt={deferredPrompt} onInstall={handleInstallClick} />
     </SidebarProvider>
     </>
   );
