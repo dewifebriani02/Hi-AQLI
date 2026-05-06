@@ -151,57 +151,26 @@ function AuthCallbackHandler() {
           
           const isRegisterMode = next.includes('type=register');
           
-          // User profile check & sync
-          const { data: profile, error: pErr } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+          // 3. STRICT EMAIL CHECK
+          // We search by email to ensure only pre-registered thalibah can enter
+          const { data: profileByEmail, error: pErr } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', user.email)
+            .maybeSingle();
 
-          if (!profile && !pErr) {
-            if (!isRegisterMode) {
-              console.log('AUTH_DEBUG: Profile missing and NOT in register mode. Access denied.');
-              await supabase.auth.signOut();
-              router.replace(`/login?error=${encodeURIComponent('Email belum terdaftar. Silakan mendaftar terlebih dahulu di Hi AQLI.')}`);
-              return;
-            }
+          if (!profileByEmail) {
+            console.log('AUTH_DEBUG: Email not found in users table. Access denied.');
+            await supabase.auth.signOut();
+            router.replace(`/login?error=${encodeURIComponent('Afwan Ukhti, email ini belum terdaftar di sistem Hi AQLI. Silakan hubungi Admin untuk pendaftaran.')}`);
+            return;
+          }
 
-            console.log('AUTH_DEBUG: Profile missing, but in register mode. Creating new one...');
-            
-            // Generate unique referral code
-            const firstNameRaw = (user.user_metadata?.full_name || user.email?.split('@')[0] || 'AQLI');
-            const firstName = firstNameRaw.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
-            let sequence = 1;
-            let generatedCode = "";
-            let isUnique = false;
-
-            while (!isUnique) {
-              const seqStr = sequence.toString().padStart(2, '0');
-              generatedCode = `AQLI-${firstName}${seqStr}`;
-
-              const { data: existing } = await supabase
-                .from("users")
-                .select("id")
-                .eq("referral_code", generatedCode)
-                .maybeSingle();
-
-              if (!existing) {
-                isUnique = true;
-              } else {
-                sequence++;
-                if (sequence > 99) {
-                  generatedCode = `AQLI-${firstName}${Math.floor(Math.random() * 1000)}`;
-                  isUnique = true;
-                }
-              }
-            }
-
-            await supabase.from('users').upsert({
-              id: user.id,
-              username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
-              full_name: user.user_metadata?.full_name || '',
-              email: user.email,
-              role_id: 'learner',
-              points: 0,
-              referral_code: generatedCode,
-              created_at: new Date().toISOString(),
-            }, { onConflict: 'id' });
+          // 4. SYNC ID IF NECESSARY
+          // If the profile exists but has a different ID (e.g. manual entry by admin), sync it
+          if (profileByEmail.id !== user.id) {
+            console.log('AUTH_DEBUG: Syncing Auth ID with existing profile...');
+            await supabase.from('users').update({ id: user.id }).eq('email', user.email);
           }
           
           // Final Redirect

@@ -219,8 +219,25 @@ export default function DashboardPage() {
       const todayStrLocal = new Date().toISOString().split('T')[0];
       const cacheKey = `prayer_times_${todayStrLocal}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
       
+      // 1. Try to load from cache first for instant display
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          setNextPrayer(JSON.parse(cached));
+          // If it's not auto-detecting (manual city), we can stop here
+          if (!isAuto) return;
+        }
+      }
+
       let locationName = isAuto ? "Mendeteksi..." : (manualCity || `Lokasi ${fullSalutation}`);
       
+      // Save last location for faster subsequent loads
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('last_lat', lat.toString());
+        localStorage.setItem('last_lon', lon.toString());
+        if (manualCity) localStorage.setItem('last_manual_city', manualCity);
+      }
+
       try {
         const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
         const geoData = await geoRes.json();
@@ -284,7 +301,23 @@ export default function DashboardPage() {
       const city = MAJOR_CITIES.find(c => c.name === manualCity);
       if (city) fetchPrayerTimes(city.lat, city.lon);
     } else {
-      // Hanya jalankan auto-detect sekali atau jika manualCity kosong
+      // 1. Try to load last known location from cache for instant display
+      if (typeof window !== 'undefined') {
+        const lastLat = localStorage.getItem('last_lat');
+        const lastLon = localStorage.getItem('last_lon');
+        const lastManualCity = localStorage.getItem('last_manual_city');
+        
+        if (lastManualCity && !manualCity) {
+           setManualCity(lastManualCity);
+           return;
+        }
+
+        if (lastLat && lastLon) {
+          fetchPrayerTimes(parseFloat(lastLat), parseFloat(lastLon), true);
+        }
+      }
+      
+      // 2. Then trigger auto-detect in the background
       handleAutoDetect();
     }
   }, [manualCity]);
@@ -815,7 +848,7 @@ export default function DashboardPage() {
                     <span className="text-amber-400">Hi Mufradat</span>
                   </h2>
                   <p className="text-slate-100 text-sm font-medium leading-relaxed mb-6 opacity-90 max-w-md">
-                    Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik bersama para pengajar AQLI.
+                    Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik bersama Admin AQLI.
                   </p>
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
                     <div className="flex items-center gap-2">

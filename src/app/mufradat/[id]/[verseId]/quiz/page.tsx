@@ -396,7 +396,7 @@ function MufradatQuizContent() {
         setSelectedAnswer(null);
         setIsCorrect(null);
         setTimeLeft(10); // Reset countdown for next question
-        if (isSprintMode) setTimerActive(true);
+        setTimerActive(true); // Restart timer for next question
       } else {
         setIsFinished(true);
         const finalScore = score + (isCorrectVal ? 1 : 0);
