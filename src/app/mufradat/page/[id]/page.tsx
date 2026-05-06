@@ -77,7 +77,7 @@ export default function MufradatPageDetailPage() {
     const keys = new Set<string>();
     if (!allProgress) return keys;
     allProgress.forEach(p => {
-      if (p.is_passed && p.quiz_id.startsWith('mufradat_')) {
+      if (p.is_passed && p.quiz_id?.startsWith('mufradat_')) {
         // Handle mufradat_2:142 style quiz_ids
         const key = p.quiz_id.replace('mufradat_', '');
         if (key.includes(':')) keys.add(key);

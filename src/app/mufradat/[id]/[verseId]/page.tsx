@@ -109,10 +109,10 @@ function VerseDetailContent() {
     
     // Filter by THIS surah ID in memory for accuracy
     progress.forEach(p => {
-      if (p.quiz_id.startsWith('mufradat_page_')) return;
+      if (p.quiz_id?.startsWith('mufradat_page_')) return;
       
       // Check if attempt belongs to this surah
-      const idMatch = p.quiz_id.match(/mufradat_(\d+)[:|-](\d+)/);
+      const idMatch = p.quiz_id?.match(/mufradat_(\d+)[:|-](\d+)/);
       const sNum = idMatch ? parseInt(idMatch[1]) : Number(p.surah_id);
       if (sNum !== parseInt(id)) return;
 

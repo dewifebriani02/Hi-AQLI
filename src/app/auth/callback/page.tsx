@@ -163,12 +163,42 @@ function AuthCallbackHandler() {
             }
 
             console.log('AUTH_DEBUG: Profile missing, but in register mode. Creating new one...');
+            
+            // Generate unique referral code
+            const firstNameRaw = (user.user_metadata?.full_name || user.email?.split('@')[0] || 'AQLI');
+            const firstName = firstNameRaw.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
+            let sequence = 1;
+            let generatedCode = "";
+            let isUnique = false;
+
+            while (!isUnique) {
+              const seqStr = sequence.toString().padStart(2, '0');
+              generatedCode = `AQLI-${firstName}${seqStr}`;
+
+              const { data: existing } = await supabase
+                .from("users")
+                .select("id")
+                .eq("referral_code", generatedCode)
+                .maybeSingle();
+
+              if (!existing) {
+                isUnique = true;
+              } else {
+                sequence++;
+                if (sequence > 99) {
+                  generatedCode = `AQLI-${firstName}${Math.floor(Math.random() * 1000)}`;
+                  isUnique = true;
+                }
+              }
+            }
+
             await supabase.from('users').upsert({
               id: user.id,
               username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
               email: user.email,
               role_id: 'learner',
               points: 0,
+              referral_code: generatedCode,
               created_at: new Date().toISOString(),
             }, { onConflict: 'id' });
           }

@@ -975,7 +975,7 @@ function MufradatQuizContent() {
                       {questions[currentIdx]?.type === 'reverse' ? (
                         <div className="space-y-4 w-full">
                           <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Terjemahan:</p>
-                          <div className="text-3xl font-bold text-slate-800 bg-white px-8 py-6 rounded-[2rem] shadow-sm border border-slate-100 inline-block mx-auto min-w-[200px]">
+                          <div className="text-2xl sm:text-3xl font-bold text-slate-800 bg-white px-6 sm:px-8 py-6 rounded-[2rem] shadow-sm border border-slate-100 block w-full max-w-sm mx-auto break-words">
                             {questions[currentIdx]?.correct}
                           </div>
                           <p className="text-[10px] font-black uppercase text-[#D4AF37] tracking-widest mt-4">Pilih Bahasa Arabnya:</p>
@@ -1002,8 +1002,8 @@ function MufradatQuizContent() {
                             variant="outline"
                             size="lg"
                             className={cn(
-                              "h-16 rounded-2xl border-2 transition-all active:scale-[0.98] relative overflow-hidden group px-6",
-                              questions[currentIdx]?.type === 'reverse' ? "font-arabic text-3xl h-20" : "text-lg font-bold",
+                              "min-h-[4rem] h-auto py-4 rounded-2xl border-2 transition-all active:scale-[0.98] relative overflow-hidden group px-6",
+                              questions[currentIdx]?.type === 'reverse' ? "font-arabic text-2xl sm:text-3xl min-h-[5rem]" : "text-base sm:text-lg font-bold",
                               selectedAnswer === option 
                                 ? (isCorrectOption
                                     ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md ring-2 ring-emerald-500/20" 
@@ -1024,7 +1024,7 @@ function MufradatQuizContent() {
                               </div>
                             )}
                             
-                            <span className="flex-1 text-center">{option}</span>
+                            <span className="flex-1 text-center whitespace-normal break-words leading-tight">{option}</span>
                             
                             {selectedAnswer === option && isCorrectOption && (
                               <div className="absolute inset-0 bg-emerald-500/5 animate-pulse pointer-events-none" />

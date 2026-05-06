@@ -160,7 +160,7 @@ export default function MufradatSurahDetailPage() {
         }
 
         // 2. Process Verse Attempts (Filter by THIS surah)
-        const idMatch = p.quiz_id.match(/mufradat_(\d+)[:|-](\d+)/);
+        const idMatch = p.quiz_id?.match(/mufradat_(\d+)[:|-](\d+)/);
         const sNum = idMatch ? parseInt(idMatch[1]) : Number(p.surah_id);
         
         // If it belongs to this surah

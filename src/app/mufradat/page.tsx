@@ -168,7 +168,7 @@ function MufradatPageContent() {
       const stats = attemptsByUserId.get(a.user_id)!;
       stats.count++;
       
-      if (a.quiz_id.startsWith('mufradat_page_')) {
+      if (a.quiz_id?.startsWith('mufradat_page_')) {
         if (a.page_id) stats.pages.add(Number(a.page_id));
       } else {
         stats.verses.add(`${a.surah_id}:${a.verse_id}`);

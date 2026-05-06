@@ -127,7 +127,36 @@ function RegisterContent() {
             }
           }
 
-          // 3. Create missing profile with referred_by_id
+          // 2. Generate unique referral code
+          const firstNameRaw = (fullName || user.user_metadata?.full_name || username || user.email?.split('@')[0] || 'AQLI');
+          const firstName = firstNameRaw.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
+          let sequence = 1;
+          let generatedCode = "";
+          let isUnique = false;
+
+          while (!isUnique) {
+            const seqStr = sequence.toString().padStart(2, '0');
+            generatedCode = `AQLI-${firstName}${seqStr}`;
+
+            const { data: existing } = await supabase
+              .from("users")
+              .select("id")
+              .eq("referral_code", generatedCode)
+              .maybeSingle();
+
+            if (!existing) {
+              isUnique = true;
+            } else {
+              sequence++;
+              if (sequence > 99) {
+                // Fallback if many users have same name
+                generatedCode = `AQLI-${firstName}${Math.floor(Math.random() * 1000)}`;
+                isUnique = true;
+              }
+            }
+          }
+
+          // 3. Create missing profile with referred_by_id and referral_code
           await supabase.from('users').upsert({
             id: user.id,
             full_name: fullName || user.user_metadata?.full_name || '',
@@ -138,6 +167,7 @@ function RegisterContent() {
             followed_halaqahs: [],
             salutation: salutation || 'Ukhti',
             referred_by_id: referrerId,
+            referral_code: generatedCode,
             metadata: {
               has_chosen_salutation: true
             },

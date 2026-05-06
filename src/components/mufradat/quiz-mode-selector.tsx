@@ -38,7 +38,7 @@ export function QuizModeSelector({
             </div>
             <div className="flex flex-col items-center">
               <span className="text-[10px] sm:text-xs font-black uppercase">Mode Runut</span>
-              <span className="text-[9px] sm:text-[10px] font-medium text-slate-400">Sesuai Urutan</span>
+              <span className="text-[9px] sm:text-[10px] font-medium text-slate-400">Level Pemula</span>
             </div>
          </button>
 
@@ -51,7 +51,7 @@ export function QuizModeSelector({
             </div>
             <div className="flex flex-col items-center">
               <span className="text-[10px] sm:text-xs font-black uppercase group-hover:text-orange-600">Mode Acak</span>
-              <span className="text-[9px] sm:text-[10px] font-medium text-slate-400">Kocok Soal</span>
+              <span className="text-[9px] sm:text-[10px] font-medium text-slate-400">Level Menengah</span>
             </div>
          </button>
 
@@ -64,7 +64,7 @@ export function QuizModeSelector({
             </div>
             <div className="flex flex-col items-center">
               <span className="text-[10px] sm:text-xs font-black uppercase group-hover:text-emerald-700">Mode Variasi</span>
-              <span className="text-[9px] sm:text-[10px] font-medium text-slate-400">Tricky & Susun</span>
+              <span className="text-[9px] sm:text-[10px] font-medium text-slate-400">Level Mahir</span>
             </div>
          </button>
       </div>
