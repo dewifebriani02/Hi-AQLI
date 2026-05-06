@@ -157,7 +157,7 @@ export function PWAInstallPrompt({ deferredPrompt, onInstall }: PWAInstallPrompt
         
         <div className="bg-emerald-600 p-3 flex items-center justify-center gap-2">
            <CheckCircle2 className="w-3.5 h-3.5 text-white/80" />
-           <span className="text-[9px] font-black text-white uppercase tracking-widest">Aman & Gratis untuk Seluruh Thalibah</span>
+           <span className="text-[9px] font-black text-white uppercase tracking-widest">Aman & Mudah untuk Seluruh Thalibah</span>
         </div>
       </div>
     </div>
