@@ -602,40 +602,6 @@ export default function DashboardPage() {
   }, [userData, ngajiRegs]);
 
   // ONBOARDING CHECKLIST LOGIC
-  const onboardingSteps = useMemo(() => {
-    if (!user) return [];
-
-    return [
-      {
-        id: "profile",
-        title: "Lengkapi Profil",
-        subtitle: `Pasang nomor WhatsApp ${fullSalutation}`,
-        isDone: !!userData?.whatsapp,
-        href: "/profile?edit=true",
-        icon: UserIcon
-      },
-      {
-        id: "quiz",
-        title: "Kuis Perdana",
-        subtitle: "Coba kuis Mufradat gratis",
-        isDone: (quizAttempts?.length || 0) > 0,
-        href: "/mufradat",
-        icon: SparklesIcon
-      },
-      {
-        id: "program",
-        title: "Daftar Program",
-        subtitle: "Gabung di Hi Mufradat/Tikrar",
-        isDone: isRegistered,
-        href: "/programs",
-        icon: BookOpen
-      }
-    ];
-  }, [user, userData, quizAttempts, ngajiRegs]);
-
-  const onboardingDoneCount = onboardingSteps.filter(s => s.isDone).length;
-  const onboardingPercent = Math.round((onboardingDoneCount / onboardingSteps.length) * 100);
-  const showOnboarding = user && onboardingPercent < 100;
 
   return (
     <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
@@ -750,58 +716,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 0. ONBOARDING CHECKLIST */}
-      {showOnboarding && (
-        <div className="mx-1 animate-in slide-in-from-top-4 duration-500">
-          <Card className="border-none shadow-2xl overflow-hidden rounded-3xl bg-white border-b-4 border-slate-900">
-            <CardContent className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Ahlan Wa Sahlan!</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Selesaikan langkah awal {fullSalutation}</p>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-xl font-black text-slate-900 leading-none">{onboardingPercent}%</span>
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Selesai</span>
-                </div>
-              </div>
-
-              <Progress value={onboardingPercent} className="h-2 bg-slate-100" indicatorClassName="bg-slate-900 transition-all duration-1000" />
-
-              <div className="grid gap-3">
-                {onboardingSteps.map((step) => (
-                  <Link key={step.id} href={step.isDone ? "#" : step.href}>
-                    <div className={cn(
-                      "group flex items-center justify-between p-4 rounded-2xl border-2 transition-all active:scale-[0.98]",
-                      step.isDone ? "bg-slate-50 border-slate-200 opacity-80" : "bg-white border-slate-100 hover:border-slate-900/20 hover:shadow-md"
-                    )}>
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                          step.isDone ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-400 group-hover:bg-slate-900/5 group-hover:text-slate-900"
-                        )}>
-                          {step.isDone ? <CheckCircle2 className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className={cn("text-xs font-black uppercase tracking-tight", step.isDone ? "text-slate-400 line-through" : "text-slate-800")}>
-                            {step.title}
-                          </span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{step.subtitle}</span>
-                        </div>
-                      </div>
-                      {!step.isDone && (
-                        <div className="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center group-hover:bg-[#800000] group-hover:border-[#800000] transition-colors">
-                          <ArrowRight className="w-3 h-3 text-slate-300 group-hover:text-white" />
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 px-1">
@@ -832,45 +746,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* 1. GUEST PROMO (Moved right above Layanan Utama) */}
-      {(!user || !isRegistered) && (
-        <div className="mx-1 mt-2 mb-2">
-          <Link href={user ? "/programs" : "/register"}>
-            <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] to-[#500000] shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:shadow-[#800000]/20">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 blur-3xl -mr-20 -mt-20 rounded-full animate-pulse" />
-              <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-                <div className="flex-1 text-center sm:text-left">
-                  <Badge className="bg-amber-400 text-[#800000] mb-4 font-black tracking-widest uppercase py-1 px-3 animate-bounce">
-                    PROMO TERBATAS!
-                  </Badge>
-                  <h2 className="text-3xl sm:text-4xl font-black text-white font-headline leading-tight mb-3">
-                    Level Up Hafalan<br />
-                    <span className="text-amber-400">Hi Mufradat</span>
-                  </h2>
-                  <p className="text-slate-100 text-sm font-medium leading-relaxed mb-6 opacity-90 max-w-md">
-                    Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik bersama Admin AQLI.
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
-                    <div className="flex items-center gap-2">
-                      <SparklesIcon className="w-4 h-4 text-amber-400" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Keringanan Referral 5rb</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Hanya 20rb per bulan!</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-shrink-0 w-full sm:w-auto">
-                  <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-6 py-3 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-all">
-                    DAFTAR KINI <ArrowRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Link>
-        </div>
-      )}
 
       {/* Layanan Utama - 4-Column Icon Grid */}
       <div className="space-y-4 px-1">
