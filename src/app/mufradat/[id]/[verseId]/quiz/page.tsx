@@ -563,9 +563,9 @@ function MufradatQuizContent() {
         const hour = now.getHours();
         if (hour >= 4 && hour < 6) await awardBadge('subuh_warrior', 'Bintang Subuh', '🌅');
 
-        // Check Total Passed (Hafidzah Muda)
+        // Check Total Passed (Ahli Mufradat)
         const { count } = await supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_passed', true);
-        if ((count || 0) >= 100) await awardBadge('hafidzah_100', 'Hafidzah Muda (100 Kuis)', '🎓');
+        if ((count || 0) >= 100) await awardBadge('hafidzah_100', 'Ahli Mufradat (100 Kuis)', '🎓');
         
         toast({ 
           title: "Masyallah! +10 Poin", 

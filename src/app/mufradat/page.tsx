@@ -142,12 +142,11 @@ function MufradatPageContent() {
   const groupAttemptsOptions = useMemo(() => ({
     filters: [
       { column: 'group_id', operator: '==', value: group_id },
-      { column: 'is_passed', operator: '==', value: true },
-      { column: 'created_at', operator: '>=', value: startOfWeek }
+      { column: 'is_passed', operator: '==', value: true }
     ],
     orderBy: { column: 'created_at', ascending: false },
-    limit: 2000 
-  }), [group_id, startOfWeek]);
+    limit: 4000 
+  }), [group_id]);
 
   const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(
     isRankTab && group_id ? "quiz_attempts" : null, 
@@ -171,15 +170,22 @@ function MufradatPageContent() {
     
     allGroupAttempts.forEach(a => {
       if (!attemptsByUserId.has(a.user_id)) {
-        attemptsByUserId.set(a.user_id, { verses: new Set(), pages: new Set(), count: 0 });
+        attemptsByUserId.set(a.user_id, { verses: new Set(), pages: new Set(), count: 0, weeklyVerses: new Set(), weeklyPages: new Set() });
       }
       const stats = attemptsByUserId.get(a.user_id)!;
       stats.count++;
       
+      const isWeekly = a.created_at >= startOfWeek;
+
       if (a.quiz_id?.startsWith('mufradat_page_')) {
-        if (a.page_id) stats.pages.add(Number(a.page_id));
+        if (a.page_id) {
+          stats.pages.add(Number(a.page_id));
+          if (isWeekly) stats.weeklyPages.add(Number(a.page_id));
+        }
       } else {
-        stats.verses.add(`${a.surah_id}:${a.verse_id}`);
+        const verseKey = `${a.surah_id}:${a.verse_id}`;
+        stats.verses.add(verseKey);
+        if (isWeekly) stats.weeklyVerses.add(verseKey);
       }
     });
 
@@ -204,8 +210,10 @@ function MufradatPageContent() {
       return {
         ...u,
         points: u.mufradat_weekly_points || 0,
-        verseCount: stats?.verses.size || 0,
-        pageCount: stats?.pages.size || 0,
+        verseCount: stats?.weeklyVerses.size || 0,
+        pageCount: stats?.weeklyPages.size || 0,
+        totalVerseCount: stats?.verses.size || 0,
+        totalPageCount: stats?.pages.size || 0,
         activityCount: stats?.count || 0,
         reactionSummary: rx
       };
@@ -487,7 +495,7 @@ function MufradatPageContent() {
                    color = "bg-blue-100 text-blue-700 border-blue-200";
                  } else if (b.badge_type === 'hafidzah_100') {
                    icon = <GraduationCap className="w-4 h-4" />;
-                   label = "Hafidzah Muda";
+                   label = "Ahli Mufradat";
                    color = "bg-emerald-100 text-emerald-700 border-emerald-200";
                  }
 
@@ -596,7 +604,7 @@ function MufradatPageContent() {
                     <CardTitle className="text-2xl font-black font-headline uppercase leading-none">Papan Juara Grup</CardTitle>
                   </div>
                   <CardDescription className="text-white/70 font-medium">
-                    {rankMode === 'ayat' ? 'Kategori Pejuang Detail (Per Ayat)' : 'Kategori Pejuang Halaman (Per Mushaf)'}
+                    🏆 Papan Juara Pekanan (Reset Setiap Senin)
                   </CardDescription>
                 </div>
                 <div className="flex items-center bg-white/10 p-1 rounded-2xl backdrop-blur-sm border border-white/20">
@@ -659,7 +667,7 @@ function MufradatPageContent() {
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-slate-800 leading-tight group-hover:text-[#800000] transition-colors">
-                                {u.username || 'Ukhti'}
+                                {u.full_name || u.username || 'Ukhti'}
                               </span>
                               {user?.id === u.id && (
                                 <span className="text-[9px] bg-[#800000]/10 text-[#800000] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Saya</span>
@@ -674,6 +682,12 @@ function MufradatPageContent() {
                                 <CheckCircle2 className={cn("w-3 h-3", rankMode === 'halaman' ? "text-amber-500" : "text-emerald-500")} />
                                 <span className={cn("text-xs font-black", rankMode === 'halaman' ? "text-amber-600" : "text-emerald-600")}>
                                   {rankMode === 'halaman' ? u.pageCount : u.verseCount} <span className="text-[9px] font-medium text-slate-400 uppercase">{rankMode === 'halaman' ? 'Halaman' : 'Ayat'}</span>
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 group/stat" title="Total Akumulasi">
+                                <BookOpen className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs font-black text-slate-500">
+                                  {rankMode === 'halaman' ? u.totalPageCount : u.totalVerseCount} <span className="text-[9px] font-medium text-slate-400 uppercase">Total</span>
                                 </span>
                               </div>
                               <div className="flex items-center gap-1 group/stat" title="Repetisi">
