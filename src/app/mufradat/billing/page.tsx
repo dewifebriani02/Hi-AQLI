@@ -74,8 +74,9 @@ export default function MufradatBillingPage() {
   
   // Payment Form States
   const [senderName, setSenderName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
-  const [amount, setAmount] = useState<string>("50000");
+  const [amount, setAmount] = useState<string>("20000");
   
   // Leave Form States
   const [leaveStart, setLeaveStart] = useState("");
@@ -201,11 +202,14 @@ export default function MufradatBillingPage() {
     if (userData?.username && !senderName) {
       setSenderName(userData.username);
     }
-  }, [userData, senderName]);
+    if ((userData?.whatsapp || userData?.phone) && !whatsapp) {
+      setWhatsapp(userData.whatsapp || userData.phone || "");
+    }
+  }, [userData, senderName, whatsapp]);
 
   const handleUploadProof = async () => {
-    if (!senderName || !proofFile) {
-      toast({ variant: "destructive", title: "Mohon lengkapi data pembayaran." });
+    if (!senderName || !whatsapp || !proofFile) {
+      toast({ variant: "destructive", title: "Mohon lengkapi data pembayaran (Nama, WA, & Bukti)." });
       return;
     }
 
@@ -231,7 +235,7 @@ export default function MufradatBillingPage() {
         user_id: user.id,
         user_name: userData?.username || user?.user_metadata?.full_name,
         user_email: user?.email,
-        whatsapp: userData?.phone,
+        whatsapp: whatsapp,
         halaqah_id: hId, // Now sends a valid UUID or null
         halaqah_title: 'Hi Mufradat (Infaq Bulanan)',
         is_paid: true,
@@ -247,6 +251,12 @@ export default function MufradatBillingPage() {
       });
 
       if (error) throw error;
+
+      // 3. Update User Profile (Sync WhatsApp)
+      await supabase.from("users").update({ 
+        whatsapp: whatsapp,
+        phone: whatsapp 
+      }).eq('id', user.id);
 
       toast({ 
         title: "Bukti Terkirim", 
@@ -668,7 +678,17 @@ export default function MufradatBillingPage() {
                       onChange={(e) => setSenderName(e.target.value)}
                       className="h-12 border-2 rounded-xl font-bold"
                    />
-                </div>                 <div className="grid grid-cols-2 gap-4">
+                </div>
+                 <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Nomor WhatsApp Aktif</Label>
+                    <Input 
+                       placeholder="Contoh: 08123456789" 
+                       value={whatsapp}
+                       onChange={(e) => setWhatsapp(e.target.value)}
+                       className="h-12 border-2 rounded-xl font-bold"
+                    />
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Nominal (Tanpa Titik)</Label>
                      <Input 
