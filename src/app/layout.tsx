@@ -231,8 +231,12 @@ export default function RootLayout({
         <meta name="description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
         
         {/* PWA & iOS Optimization */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+        <meta name="theme-color" content="#800000" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Hi AQLI" />
+        <meta name="application-name" content="Hi AQLI" />
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
@@ -250,7 +254,6 @@ export default function RootLayout({
 
         <link rel="icon" href="/icon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />

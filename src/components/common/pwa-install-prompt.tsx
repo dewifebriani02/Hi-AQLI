@@ -115,6 +115,13 @@ export function PWAInstallPrompt({ deferredPrompt, onInstall }: PWAInstallPrompt
                   <p className="text-xs font-bold text-slate-700 leading-relaxed">
                     Klik tombol di bawah ini, lalu pilih <span className="text-emerald-700 font-black">"Install"</span> atau <span className="text-emerald-700 font-black">"Tambah"</span> saat konfirmasi muncul.
                   </p>
+                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex gap-2.5 items-start">
+                    <Shield className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-[10px] font-medium text-amber-800 leading-tight">
+                      <span className="font-black uppercase block mb-0.5 text-amber-900">Catatan Penting:</span>
+                      Jika muncul peringatan Google Play Protect (Aplikasi diblokir), klik tulisan <span className="font-black underline italic">"Tetap instal"</span> (teks kecil di atas tombol Oke). Aplikasi ini berbasis web yang aman & resmi dari AQLI.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
