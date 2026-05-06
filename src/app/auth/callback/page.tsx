@@ -195,6 +195,7 @@ function AuthCallbackHandler() {
             await supabase.from('users').upsert({
               id: user.id,
               username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
+              full_name: user.user_metadata?.full_name || '',
               email: user.email,
               role_id: 'learner',
               points: 0,
