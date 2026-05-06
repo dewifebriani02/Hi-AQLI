@@ -140,33 +140,40 @@ export default function MutabaahPage() {
   const userWeeklyStats = useMemo(() => {
     if (!quizAttempts) return { weeklyPages: 0, activity7Days: [] };
     
-    const now = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(now.getDate() - (6 - i));
+    const dayOfWeek = new Date().getDay();
+    const diffToMonday = new Date().getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(new Date().setDate(diffToMonday));
+    monday.setHours(0,0,0,0);
+    const startOfWeekStr = monday.toISOString().split('T')[0] + 'T00:00:00Z';
+
+    const currentWeekDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
       return d.toISOString().split('T')[0];
     });
 
     const activeDates = new Set();
     const weeklyPages = new Set();
-    
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
-    const startOfWeek = new Date(now.setDate(diff)).toISOString().split('T')[0] + 'T00:00:00Z';
+    const totalPagesEver = new Set();
 
     quizAttempts.forEach(a => {
       const dateStr = a.created_at.split('T')[0];
       activeDates.add(dateStr);
 
-      if (a.created_at >= startOfWeek && a.quiz_id?.startsWith('mufradat_page_') && a.is_passed) {
+      if (a.quiz_id?.startsWith('mufradat_page_') && a.is_passed) {
         const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
-        if (pageId) weeklyPages.add(Number(pageId));
+        if (pageId) totalPagesEver.add(Number(pageId));
+        
+        if (a.created_at >= startOfWeekStr) {
+          weeklyPages.add(Number(pageId));
+        }
       }
     });
 
     return {
       weeklyPages: weeklyPages.size,
-      activity7Days: last7Days.map(date => activeDates.has(date))
+      totalPagesEver: totalPagesEver.size,
+      activity7Days: currentWeekDays.map(date => activeDates.has(date))
     };
   }, [quizAttempts]);
 
@@ -551,8 +558,9 @@ export default function MutabaahPage() {
                       <div className="flex flex-col">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none">/ {activeActivities.length} Amalan</p>
                         <div className="mt-1 flex items-center gap-1.5">
-                           <Badge variant="outline" className="text-[8px] font-black border-emerald-200 text-emerald-700 bg-emerald-50 px-1 h-4 uppercase">
-                              {userWeeklyStats.weeklyPages} / 1 Halaman Pekanan
+                           <Badge variant="outline" className="text-[8px] font-black border-emerald-200 text-emerald-700 bg-emerald-50 px-1 h-4 uppercase flex flex-col items-start gap-0.5 py-2 h-auto">
+                              <span>{userWeeklyStats.weeklyPages} / 1 Halaman Pekan Ini</span>
+                              <span className="opacity-60 text-[7px]">Total: {userWeeklyStats.totalPagesEver} Hal</span>
                            </Badge>
                         </div>
                       </div>

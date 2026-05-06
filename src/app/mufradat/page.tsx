@@ -78,7 +78,8 @@ function MufradatPageContent() {
   // Fetch all passed attempts for the current user
   const progressOptions = useMemo(() => ({
     filters: [
-      { column: 'user_id', operator: '==', value: user?.id }
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'is_passed', operator: '==', value: true }
     ]
   }), [user?.id]);
 
@@ -142,20 +143,25 @@ function MufradatPageContent() {
   const userWeeklyStats = useMemo(() => {
     if (!progress) return { weeklyVerses: 0, weeklyPages: 0, activity7Days: [] };
     
-    const now = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(now.getDate() - (6 - i));
+    const currentWeekDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
       return d.toISOString().split('T')[0];
     });
 
     const weeklyVerses = new Set();
     const weeklyPages = new Set();
+    const totalPagesEver = new Set();
     const activeDates = new Set();
 
     progress.forEach(a => {
       const dateStr = a.created_at.split('T')[0];
       activeDates.add(dateStr);
+
+      if (a.quiz_id?.startsWith('mufradat_page_')) {
+        const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
+        if (pageId) totalPagesEver.add(Number(pageId));
+      }
 
       if (a.created_at >= startOfWeek) {
         if (a.quiz_id?.startsWith('mufradat_page_')) {
@@ -170,7 +176,8 @@ function MufradatPageContent() {
     return {
       weeklyVerses: weeklyVerses.size,
       weeklyPages: weeklyPages.size,
-      activity7Days: last7Days.map(date => activeDates.has(date))
+      totalPagesEver: totalPagesEver.size,
+      activity7Days: currentWeekDays.map(date => activeDates.has(date))
     };
   }, [progress, startOfWeek]);
 
@@ -439,7 +446,10 @@ function MufradatPageContent() {
                 </div>
                 <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
                   <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-tight opacity-70 line-clamp-1">Target Pekanan</span>
-                  <span className="text-[9px] sm:text-xs font-black uppercase line-clamp-1">{userWeeklyStats.weeklyPages} / 1 HLN</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[9px] sm:text-xs font-black uppercase line-clamp-1">{userWeeklyStats.weeklyPages} / 1 HLM</span>
+                    <span className="text-[7px] sm:text-[9px] font-bold text-muted-foreground uppercase opacity-60">Total: {userWeeklyStats.totalPagesEver}</span>
+                  </div>
                 </div>
               </div>
 

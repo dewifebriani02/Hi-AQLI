@@ -362,11 +362,17 @@ export default function DashboardPage() {
     setStreakDays(streak);
   }, [quizAttempts]);
 
-  // Activity dots for 7 days
+  // Activity dots for current week (Monday to Sunday)
   const activity7Days = useMemo(() => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(new Date().getDate() - (6 - i));
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const monday = new Date(new Date().setDate(diff));
+    monday.setHours(0,0,0,0);
+
+    const currentWeekDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
       return d.toISOString().split('T')[0];
     });
 
@@ -377,24 +383,35 @@ export default function DashboardPage() {
       }
     });
 
-    return last7Days.map(date => activeDates.has(date));
+    return currentWeekDays.map(date => activeDates.has(date));
   }, [quizAttempts]);
 
-  // Weekly pages count
-  const weeklyPagesCount = useMemo(() => {
+  // Page stats (weekly and total)
+  const pageStats = useMemo(() => {
     const now = new Date();
     const day = now.getDay();
     const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
     const startOfWeek = new Date(now.setDate(diff)).toISOString().split('T')[0] + 'T00:00:00Z';
 
     const weeklyPages = new Set();
+    const totalPagesEver = new Set();
+
     quizAttempts?.forEach((a: any) => {
-      if (a.created_at >= startOfWeek && a.quiz_id?.startsWith('mufradat_page_') && a.is_passed) {
+      if (a.quiz_id?.startsWith('mufradat_page_') && a.is_passed) {
         const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
-        if (pageId) weeklyPages.add(Number(pageId));
+        if (pageId) {
+          totalPagesEver.add(Number(pageId));
+          if (a.created_at >= startOfWeek) {
+            weeklyPages.add(Number(pageId));
+          }
+        }
       }
     });
-    return weeklyPages.size;
+
+    return {
+      weekly: weeklyPages.size,
+      total: totalPagesEver.size
+    };
   }, [quizAttempts]);
 
   // Date Formatting
@@ -779,12 +796,15 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center justify-between mt-auto">
               <div>
-                <p className="text-xl sm:text-2xl font-black text-black">{weeklyPagesCount} Halaman</p>
-                <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Target Pekanan</p>
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-xl sm:text-2xl font-black text-black">{pageStats.weekly}</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">/ {pageStats.total} Total</p>
+                </div>
+                <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Halaman Pekan Ini</p>
               </div>
               <div className="text-right">
                 <p className="text-[8px] font-black text-amber-600 uppercase">Min. 1 Hlm</p>
-                {weeklyPagesCount >= 1 ? (
+                {pageStats.weekly >= 1 ? (
                   <Badge className="bg-emerald-500 text-white text-[7px] h-3.5 px-1 font-black">TERCAPAI</Badge>
                 ) : (
                   <Badge variant="outline" className="text-slate-400 border-slate-200 text-[7px] h-3.5 px-1 font-black">PROSES</Badge>
