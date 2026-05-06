@@ -30,7 +30,8 @@ import {
   RotateCcw,
   Gift,
   Sparkles as SparklesIcon,
-  ShieldCheck
+  ShieldCheck,
+  Target
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/tilawah/juz-list";

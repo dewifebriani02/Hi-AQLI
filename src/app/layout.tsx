@@ -110,6 +110,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [mounted, user, userData, isUserDocLoading]);
 
+  const [isPWAOpen, setIsPWAOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenPWA = () => setIsPWAOpen(true);
+    window.addEventListener('open-pwa-install', handleOpenPWA);
+    return () => window.removeEventListener('open-pwa-install', handleOpenPWA);
+  }, []);
+
   const hasAdminAccess = !!isAdminDoc?.id || !!isSuperAdminDoc?.id;
   const points = userData?.points || 0;
   const isBlacklisted = !!userData?.is_blacklisted;
@@ -170,7 +178,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={handleInstallClick}
+                    onClick={() => setIsPWAOpen(true)}
                     className="flex border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-tight gap-1.5 rounded-xl hover:bg-slate-50 transition-all border-2"
                   >
                     <Smartphone className="w-3.5 h-3.5" />
@@ -213,7 +221,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       </div>
       <BottomNav />
       <Toaster />
-      <PWAInstallPrompt deferredPrompt={deferredPrompt} onInstall={handleInstallClick} />
+      <PWAInstallPrompt 
+        deferredPrompt={deferredPrompt} 
+        onInstall={handleInstallClick} 
+        isOpen={isPWAOpen}
+        onClose={() => setIsPWAOpen(false)}
+      />
     </SidebarProvider>
     </>
   );

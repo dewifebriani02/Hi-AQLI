@@ -82,6 +82,21 @@ export default function DashboardPage() {
   const [showSalutationForcer, setShowSalutationForcer] = useState(false);
   const [forcedSalutation, setForcedSalutation] = useState("Ukhti");
   const [isForcerSaving, setIsForcerSaving] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkInstalled = () => {
+        const standalone = window.matchMedia('(display-mode: standalone)').matches 
+          || (window.navigator as any).standalone 
+          || document.referrer.includes('android-app://');
+        setIsInstalled(standalone);
+      };
+      checkInstalled();
+      window.addEventListener('focus', checkInstalled);
+      return () => window.removeEventListener('focus', checkInstalled);
+    }
+  }, []);
 
   useEffect(() => {
     // Show forcer only if user is logged in, but hasn't chosen a salutation yet.
@@ -759,6 +774,35 @@ export default function DashboardPage() {
         </div>
       )}
 
+
+
+      {/* PWA Install Banner (Visible if not installed) */}
+      {!isInstalled && (
+        <div className="mx-1 mb-4 animate-in fade-in slide-in-from-top-4 duration-700">
+           <button 
+             onClick={() => window.dispatchEvent(new CustomEvent('open-pwa-install'))}
+             className="w-full relative group overflow-hidden rounded-3xl bg-white border-2 border-slate-100 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-slate-100/50 hover:border-emerald-200 transition-all active:scale-[0.98]"
+           >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+              <div className="flex items-center gap-5 relative z-10">
+                 <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shadow-inner group-hover:rotate-12 transition-transform">
+                    <Download className="w-7 h-7" />
+                 </div>
+                 <div className="text-left">
+                    <div className="flex items-center gap-2 mb-1">
+                       <Badge className="bg-emerald-500 text-white text-[8px] font-black tracking-widest uppercase py-0.5 h-4">RECOMMENDED</Badge>
+                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Install App</span>
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none">Pasang Aplikasi Hi AQLI</h3>
+                    <p className="text-[10px] sm:text-xs text-slate-500 font-bold mt-1.5 opacity-80">Akses lebih cepat & stabil langsung dari layar utama HP {fullSalutation}.</p>
+                 </div>
+              </div>
+              <div className="flex items-center gap-2 bg-emerald-600 text-white font-black px-6 py-3 rounded-2xl text-[10px] shadow-lg group-hover:scale-105 transition-all self-stretch sm:self-auto justify-center uppercase tracking-widest">
+                 PASANG SEKARANG <ArrowRight className="w-4 h-4 ml-1" />
+              </div>
+           </button>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 px-1">

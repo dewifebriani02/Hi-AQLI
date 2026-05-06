@@ -20,12 +20,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 interface PWAInstallPromptProps {
   deferredPrompt: any;
   onInstall: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function PWAInstallPrompt({ deferredPrompt, onInstall }: PWAInstallPromptProps) {
-  const { user } = useUser();
-  const [isVisible, setIsVisible] = useState(false);
-  const [dontShowAgain, setDontShowAgain] = useState(false);
+export function PWAInstallPrompt({ deferredPrompt, onInstall, isOpen, onClose }: PWAInstallPromptProps) {
   const [platform, setPlatform] = useState<'android' | 'ios' | 'other'>('other');
 
   useEffect(() => {
@@ -36,44 +35,21 @@ export function PWAInstallPrompt({ deferredPrompt, onInstall }: PWAInstallPrompt
     
     if (isIOS) setPlatform('ios');
     else if (isAndroid) setPlatform('android');
-
-    // Check if already in standalone mode (installed)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
-      || (window.navigator as any).standalone 
-      || document.referrer.includes('android-app://');
-
-    // Check localStorage
-    const hasDismissed = localStorage.getItem('hide_pwa_prompt') === 'true';
-
-    // Show after 2 seconds delay if user is logged in and not installed and not dismissed
-    if (user && !isStandalone && !hasDismissed) {
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
-
-  const handleDismiss = () => {
-    if (dontShowAgain) {
-      localStorage.setItem('hide_pwa_prompt', 'true');
-    }
-    setIsVisible(false);
-  };
+  }, []);
 
   const handleInstallClick = () => {
     onInstall();
-    // We don't hide yet, wait for outcome in layout
+    // Logic for hiding is handled by the parent
   };
 
-  if (!isVisible) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-500">
         <div className="relative p-6">
           <button 
-            onClick={handleDismiss}
+            onClick={onClose}
             className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -139,26 +115,11 @@ export function PWAInstallPrompt({ deferredPrompt, onInstall }: PWAInstallPrompt
               
               <Button 
                 variant="ghost"
-                onClick={handleDismiss}
+                onClick={onClose}
                 className="w-full text-slate-400 font-black h-12 rounded-2xl uppercase tracking-widest text-[10px] hover:bg-slate-50 transition-all"
               >
-                {platform === 'ios' ? "SUDAH MENGERTI" : "NANTI SAJA"}
+                TUTUP
               </Button>
-
-              <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-50 w-full">
-                <Checkbox 
-                  id="dont-show" 
-                  checked={dontShowAgain}
-                  onCheckedChange={(checked) => setDontShowAgain(!!checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <label 
-                  htmlFor="dont-show" 
-                  className="text-[10px] font-bold text-slate-400 cursor-pointer select-none"
-                >
-                  Jangan tampilkan informasi ini lagi
-                </label>
-              </div>
             </div>
           </div>
         </div>
