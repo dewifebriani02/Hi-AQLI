@@ -11,13 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff, Zap as ZapIcon, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff, Zap as ZapIcon, ShieldCheck, AlertTriangle, Smartphone } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import Link from 'next/link';
 import { Logo } from '@/components/common/logo';
 import { Suspense } from 'react';
 import { validateEmail, cn } from '@/lib/utils';
+import { normalizeWhatsapp, whatsappErrorMessage } from '@/lib/whatsapp';
 
 // Debug check for components to avoid Error #130
 
@@ -41,6 +42,7 @@ function RegisterContent() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [salutation, setSalutation] = useState('Ukhti');
   const [fullName, setFullName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
 
   // Referral Validation State
   const [referralStatus, setReferralStatus] = useState<{
@@ -168,6 +170,7 @@ function RegisterContent() {
             salutation: salutation || 'Ukhti',
             referred_by_id: referrerId,
             referral_code: generatedCode,
+            whatsapp: whatsapp || user.user_metadata?.whatsapp || '',
             metadata: {
               has_chosen_salutation: true
             },
@@ -216,6 +219,13 @@ function RegisterContent() {
       return;
     }
 
+    const waError = whatsappErrorMessage(whatsapp);
+    if (waError) {
+      setError(`Nomor WhatsApp tidak valid: ${waError}`);
+      setLoading(false);
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Kata sandi tidak cocok. Mohon ulangi kembali.');
       setLoading(false);
@@ -231,7 +241,8 @@ function RegisterContent() {
     const { data: signUpData, error: signUpError } = await initiateEmailSignUp(cleanEmail, password, {
       data: { 
         full_name: fullName,
-        username: cleanUsername 
+        username: cleanUsername,
+        whatsapp: normalizeWhatsapp(whatsapp)
       }
     });
 
@@ -375,6 +386,27 @@ function RegisterContent() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp" className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nomor WhatsApp (Aktif)</Label>
+              <div className="relative">
+                <Smartphone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="whatsapp"
+                  name="whatsapp"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="misal: 081234567890"
+                  className="pl-10 h-12 border-2 rounded-xl focus-visible:ring-[#800000]"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  required
+                />
+              </div>
+              {whatsapp && whatsappErrorMessage(whatsapp) && (
+                <p className="text-[10px] text-rose-600 font-bold px-1 animate-in fade-in slide-in-from-top-1">⚠ {whatsappErrorMessage(whatsapp)}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
