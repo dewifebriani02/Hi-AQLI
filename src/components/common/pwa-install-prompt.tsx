@@ -10,7 +10,8 @@ import {
   Share, 
   PlusSquare, 
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
