@@ -109,6 +109,7 @@ function MufradatPageContent() {
   );
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user?.id ? "users" : null, user?.id);
+  const [pageVerseCounts, setPageVerseCounts] = useState<Record<number, number>>({});
 
   // FETCH BADGES
   const badgesOptions = useMemo(() => ({
@@ -141,8 +142,27 @@ function MufradatPageContent() {
     return new Date(now.setDate(diff)).toISOString().split('T')[0] + 'T00:00:00Z';
   }, []);
 
+  // Fetch verse counts for each page in weekly progress
+  useEffect(() => {
+    if (!progress) return;
+    const uniquePageIds = [...new Set(progress.filter(a => a.created_at >= startOfWeek).map(a => a.page_id).filter(id => !!id))];
+    
+    uniquePageIds.forEach(async (pId) => {
+      if (pageVerseCounts[pId]) return;
+      try {
+        const res = await fetch(`https://api.quran.com/api/v4/verses/by_page/${pId}?fields=id`);
+        const data = await res.json();
+        if (data.verses) {
+          setPageVerseCounts(prev => ({ ...prev, [pId]: data.verses.length }));
+        }
+      } catch (e) {
+        console.error(`Failed to fetch verse count for page ${pId}:`, e);
+      }
+    });
+  }, [progress, startOfWeek]);
+
   const userWeeklyStats = useMemo(() => {
-    if (!progress) return { weeklyVerses: 0, weeklyPages: 0, activity7Days: [] };
+    if (!progress) return { weeklyVerses: 0, weeklyPages: 0, weeklyPageProgress: 0, activity7Days: [] };
     
     const currentWeekDays = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(startOfWeek);
@@ -167,20 +187,37 @@ function MufradatPageContent() {
       if (a.created_at >= startOfWeek) {
         if (a.quiz_id?.startsWith('mufradat_page_')) {
           const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
-          if (pageId) weeklyPages.add(Number(pageId));
+          if (pageId) {
+            weeklyPages.add(Number(pageId));
+            // Full page kuis counts as 1.0 progress
+            const pIdNum = Number(pageId);
+            if (!versesByPage.has(pIdNum)) versesByPage.set(pIdNum, new Set());
+            // We'll mark it as a special "full" entry if needed, but for now just count verses if available
+          }
         } else {
           weeklyVerses.add(`${a.surah_id}:${a.verse_id}`);
+          if (a.page_id) {
+            if (!versesByPage.has(a.page_id)) versesByPage.set(a.page_id, new Set());
+            versesByPage.get(a.page_id)!.add(`${a.surah_id}:${a.verse_id}`);
+          }
         }
       }
+    });
+
+    let weeklyPageProgress = 0;
+    versesByPage.forEach((verses, pId) => {
+      const totalOnPage = pageVerseCounts[pId] || 15;
+      weeklyPageProgress += verses.size / totalOnPage;
     });
 
     return {
       weeklyVerses: weeklyVerses.size,
       weeklyPages: weeklyPages.size,
+      weeklyPageProgress: Math.round(weeklyPageProgress * 10) / 10,
       totalPagesEver: totalPagesEver.size,
       activity7Days: currentWeekDays.map(date => activeDates.has(date))
     };
-  }, [progress, startOfWeek]);
+  }, [progress, startOfWeek, pageVerseCounts]);
 
   const groupAttemptsOptions = useMemo(() => ({
     filters: [
@@ -437,18 +474,18 @@ function MufradatPageContent() {
               {/* TARGET PEKANAN */}
               <div className={cn(
                 "h-12 px-2 sm:px-5 rounded-2xl border-2 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 transition-all",
-                userWeeklyStats.weeklyPages >= 1 ? "bg-emerald-50 border-emerald-500/20 text-emerald-700" : "bg-amber-50 border-amber-500/20 text-amber-700"
+                userWeeklyStats.weeklyPageProgress >= 1 ? "bg-emerald-50 border-emerald-500/20 text-emerald-700" : "bg-amber-50 border-amber-500/20 text-amber-700"
               )}>
                 <div className={cn(
                   "w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
-                  userWeeklyStats.weeklyPages >= 1 ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+                  userWeeklyStats.weeklyPageProgress >= 1 ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
                 )}>
                   <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
                   <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-tight opacity-70 line-clamp-1">Target Pekanan</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-[9px] sm:text-xs font-black uppercase line-clamp-1">{userWeeklyStats.weeklyPages} / 1 HLM</span>
+                    <span className="text-[9px] sm:text-xs font-black uppercase line-clamp-1">{userWeeklyStats.weeklyPageProgress} / 1 HLM</span>
                     <span className="text-[7px] sm:text-[9px] font-bold text-muted-foreground uppercase opacity-60">Total: {userWeeklyStats.totalPagesEver}</span>
                   </div>
                 </div>
@@ -478,10 +515,10 @@ function MufradatPageContent() {
       {/* Multi-state Access Banner */}
       {user && (access.showSoftReminder || access.status === 'trial') && (
         <div className={cn(
-          "p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm",
+          "p-5 rounded-3xl flex flex-col gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm mb-8",
           access.status === 'trial' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
         )}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-4">
             <div className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
               access.status === 'trial' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
@@ -507,8 +544,8 @@ function MufradatPageContent() {
             </div>
           </div>
           <Button asChild size="sm" className={cn(
-            "font-black text-[10px] h-9 px-4 rounded-xl shrink-0 shadow-sm",
-            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
+            "w-full font-black text-[11px] h-11 rounded-xl shadow-lg transition-all active:scale-[0.98]",
+            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200/50" : "bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200/50"
           )}>
             <Link href="/mufradat/billing">
               {access.status === 'trial' ? 'LIHAT STATUS' : 'INFAQ SEKARANG'}

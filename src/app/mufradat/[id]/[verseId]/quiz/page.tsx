@@ -58,6 +58,7 @@ function MufradatQuizContent() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [pageVerseCounts, setPageVerseCounts] = useState<Record<number, number>>({});
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [totalTime, setTotalTime] = useState(0);
@@ -125,11 +126,46 @@ function MufradatQuizContent() {
 
   const { data: weeklyAttempts, refresh: refreshWeekly } = useCollection(user ? "quiz_attempts" : null, weeklyProgressOptions);
 
-  const weeklyVerseCount = useMemo(() => {
-    if (!weeklyAttempts) return 0;
-    const uniqueVerses = new Set(weeklyAttempts.map(a => `${a.surah_id}:${a.verse_id}`));
-    return uniqueVerses.size;
+  // Fetch verse counts for each page in weekly progress
+  useEffect(() => {
+    if (!weeklyAttempts) return;
+    const uniquePageIds = [...new Set(weeklyAttempts.map(a => a.page_id).filter(id => !!id))];
+    
+    uniquePageIds.forEach(async (pId) => {
+      if (pageVerseCounts[pId]) return;
+      try {
+        const res = await fetch(`https://api.quran.com/api/v4/verses/by_page/${pId}?fields=id`);
+        const data = await res.json();
+        if (data.verses) {
+          setPageVerseCounts(prev => ({ ...prev, [pId]: data.verses.length }));
+        }
+      } catch (e) {
+        console.error(`Failed to fetch verse count for page ${pId}:`, e);
+      }
+    });
   }, [weeklyAttempts]);
+
+  const weeklyPageProgress = useMemo(() => {
+    if (!weeklyAttempts) return 0;
+    
+    // Group unique verses by page_id
+    const versesByPage = new Map<number, Set<string>>();
+    weeklyAttempts.forEach(a => {
+      if (!a.page_id) return;
+      if (!versesByPage.has(a.page_id)) versesByPage.set(a.page_id, new Set());
+      versesByPage.get(a.page_id)!.add(`${a.surah_id}:${a.verse_id}`);
+    });
+
+    let totalProgress = 0;
+    versesByPage.forEach((verses, pId) => {
+      const totalOnPage = pageVerseCounts[pId] || 15; // Fallback to 15 if not loaded
+      totalProgress += verses.size / totalOnPage;
+    });
+
+    return Math.min(totalProgress, 5); // Cap for display if needed, though usually target is 1
+  }, [weeklyAttempts, pageVerseCounts]);
+
+  const weeklyVerseCount = Math.round(weeklyPageProgress * 10) / 10; // For backward compatibility/display if needed
 
   const uniqueLeaderboard = useMemo(() => {
     if (!allAttempts) return [];
@@ -606,8 +642,8 @@ function MufradatQuizContent() {
       `*Hafalan:* Surah ${surahName} Ayat ${verseId}\n` +
       `*Skor:* ${score}/${questions.length} (100% Sempurna!)\n` +
       `*Waktu:* ${duration}\n\n` +
-      `*Pencapaian Pekan Ini:* ${weeklyVerseCount} Ayat\n` +
-      `${weeklyVerseCount >= 15 ? '✅ Target 1 Halaman Pekan Ini Tercapai!' : '⏳ Sedikit lagi menuju target 1 halaman.'}\n\n` +
+      `*Pencapaian Pekan Ini:* ${weeklyVerseCount} Halaman\n` +
+      `${weeklyPageProgress >= 1 ? '✅ Target 1 Halaman Pekan Ini Tercapai!' : '⏳ Sedikit lagi menuju target 1 halaman.'}\n\n` +
       `Alhamdulillah, satu langkah lebih dekat memahami Al-Qur'an! 📖✨`;
 
     const encodedText = encodeURIComponent(text);
@@ -626,8 +662,8 @@ function MufradatQuizContent() {
       `*Hafalan:* Surah ${surahName} Ayat ${verseId}\n` +
       `*Skor:* ${score}/${questions.length} (100% Sempurna!)\n` +
       `*Waktu:* ${duration}\n\n` +
-      `*Pencapaian Pekan Ini:* ${weeklyVerseCount} Ayat\n` +
-      `${weeklyVerseCount >= 15 ? '✅ Target 1 Halaman Pekan Ini Tercapai!' : '⏳ Sedikit lagi menuju target 1 halaman.'}\n\n` +
+      `*Pencapaian Pekan Ini:* ${weeklyVerseCount} Halaman\n` +
+      `${weeklyPageProgress >= 1 ? '✅ Target 1 Halaman Pekan Ini Tercapai!' : '⏳ Sedikit lagi menuju target 1 halaman.'}\n\n` +
       `Alhamdulillah, satu langkah lebih dekat memahami Al-Qur'an! 📖✨`;
 
     navigator.clipboard.writeText(text);
@@ -696,22 +732,22 @@ function MufradatQuizContent() {
              {/* WEEKLY PROGRESS SUMMARY */}
              <div className={cn(
                "p-4 rounded-2xl border-2 text-left space-y-2",
-               weeklyVerseCount >= 15 ? "bg-emerald-50 border-emerald-100" : "bg-blue-50 border-blue-100"
+               weeklyPageProgress >= 1 ? "bg-emerald-50 border-emerald-100" : "bg-blue-50 border-blue-100"
              )}>
                 <div className="flex items-center justify-between">
-                   <p className={cn("text-[10px] font-black uppercase tracking-widest", weeklyVerseCount >= 15 ? "text-emerald-600" : "text-blue-600")}>
+                   <p className={cn("text-[10px] font-black uppercase tracking-widest", weeklyPageProgress >= 1 ? "text-emerald-600" : "text-blue-600")}>
                       Progres Pekanan
                    </p>
-                   {weeklyVerseCount >= 15 && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                   {weeklyPageProgress >= 1 && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
                 </div>
                 <div className="flex items-baseline gap-1">
                    <span className="text-2xl font-black">{weeklyVerseCount}</span>
-                   <span className="text-xs font-bold text-muted-foreground">/ 15 Ayat</span>
+                   <span className="text-xs font-bold text-muted-foreground">/ 1 Halaman</span>
                 </div>
                 <p className="text-[10px] font-medium leading-relaxed opacity-70">
-                   {weeklyVerseCount >= 15 
-                     ? "Masyallah! Target minimal 1 halaman (15 ayat) pekan ini sudah tercapai. Ukhti hebat!" 
-                     : `Tinggal ${15 - weeklyVerseCount} ayat lagi untuk mencapai target minimal 1 halaman pekan ini. Semangat!`}
+                   {weeklyPageProgress >= 1 
+                     ? "Masyallah! Target minimal 1 halaman pekan ini sudah tercapai. Ukhti hebat!" 
+                     : `Tinggal ${(1 - weeklyPageProgress).toFixed(1)} halaman lagi untuk mencapai target minimal 1 halaman pekan ini. Semangat!`}
                 </p>
              </div>
           </CardContent>
