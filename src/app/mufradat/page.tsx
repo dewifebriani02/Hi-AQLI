@@ -174,6 +174,8 @@ function MufradatPageContent() {
     const weeklyPages = new Set();
     const totalPagesEver = new Set();
     const activeDates = new Set();
+    const versesByPage = new Map<number, Set<string>>();
+    const completedPagesInWeek = new Set<number>();
 
     progress.forEach(a => {
       const dateStr = a.created_at.split('T')[0];
@@ -189,10 +191,7 @@ function MufradatPageContent() {
           const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
           if (pageId) {
             weeklyPages.add(Number(pageId));
-            // Full page kuis counts as 1.0 progress
-            const pIdNum = Number(pageId);
-            if (!versesByPage.has(pIdNum)) versesByPage.set(pIdNum, new Set());
-            // We'll mark it as a special "full" entry if needed, but for now just count verses if available
+            completedPagesInWeek.add(Number(pageId));
           }
         } else {
           weeklyVerses.add(`${a.surah_id}:${a.verse_id}`);
@@ -205,9 +204,16 @@ function MufradatPageContent() {
     });
 
     let weeklyPageProgress = 0;
-    versesByPage.forEach((verses, pId) => {
-      const totalOnPage = pageVerseCounts[pId] || 15;
-      weeklyPageProgress += verses.size / totalOnPage;
+    const allUniquePageIds = new Set([...versesByPage.keys(), ...completedPagesInWeek]);
+    
+    allUniquePageIds.forEach(pId => {
+      if (completedPagesInWeek.has(pId)) {
+        weeklyPageProgress += 1;
+      } else {
+        const verses = versesByPage.get(pId);
+        const totalOnPage = pageVerseCounts[pId] || 15;
+        weeklyPageProgress += Math.min((verses?.size || 0) / totalOnPage, 1);
+      }
     });
 
     return {

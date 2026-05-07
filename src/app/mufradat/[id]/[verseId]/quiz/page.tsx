@@ -150,19 +150,33 @@ function MufradatQuizContent() {
     
     // Group unique verses by page_id
     const versesByPage = new Map<number, Set<string>>();
+    const completedPagesInWeek = new Set<number>();
+
     weeklyAttempts.forEach(a => {
-      if (!a.page_id) return;
-      if (!versesByPage.has(a.page_id)) versesByPage.set(a.page_id, new Set());
-      versesByPage.get(a.page_id)!.add(`${a.surah_id}:${a.verse_id}`);
+      if (a.quiz_id?.startsWith('mufradat_page_')) {
+        const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
+        if (pageId) completedPagesInWeek.add(Number(pageId));
+      } else {
+        if (!a.page_id) return;
+        if (!versesByPage.has(a.page_id)) versesByPage.set(a.page_id, new Set());
+        versesByPage.get(a.page_id)!.add(`${a.surah_id}:${a.verse_id}`);
+      }
     });
 
     let totalProgress = 0;
-    versesByPage.forEach((verses, pId) => {
-      const totalOnPage = pageVerseCounts[pId] || 15; // Fallback to 15 if not loaded
-      totalProgress += verses.size / totalOnPage;
+    const allUniquePageIds = new Set([...versesByPage.keys(), ...completedPagesInWeek]);
+
+    allUniquePageIds.forEach(pId => {
+      if (completedPagesInWeek.has(pId)) {
+        totalProgress += 1;
+      } else {
+        const verses = versesByPage.get(pId);
+        const totalOnPage = pageVerseCounts[pId] || 15;
+        totalProgress += Math.min((verses?.size || 0) / totalOnPage, 1);
+      }
     });
 
-    return Math.min(totalProgress, 5); // Cap for display if needed, though usually target is 1
+    return Math.min(totalProgress, 5); 
   }, [weeklyAttempts, pageVerseCounts]);
 
   const weeklyVerseCount = Math.round(weeklyPageProgress * 10) / 10; // For backward compatibility/display if needed
