@@ -108,6 +108,13 @@ export default function BerbagiPage() {
   // Include both verified and pending for the feed, but only verified for stats
   const verifiedDonations = allDonations.filter(d => d.status === 'verified');
 
+  // Fetch Mufradat Payouts for transparency
+  const { data: mufradatPayouts } = useCollection("mufradat_payouts");
+  const mufradatContribution = useMemo(() => {
+    if (!mufradatPayouts) return 0;
+    return mufradatPayouts.reduce((acc, p: any) => acc + (p.payout_breakdown?.hiBerbagiTotal || 0), 0);
+  }, [mufradatPayouts]);
+
   // Aggregation Logic
   const { donationStats, totalDonated, totalDonorsCount } = useMemo(() => {
     const stats: Record<string, { total: number; count: number }> = {};
@@ -296,6 +303,39 @@ export default function BerbagiPage() {
           Salurkan infaq terbaik Ukhti untuk mendukung operasional dakwah dan fasilitas hafalan Qur'an para thalibah. Semoga menjadi pemberat timbangan amal di hari akhir.
         </p>
       </div>
+
+      {/* Program Contribution Transparency Card */}
+      {mufradatContribution > 0 && (
+        <div className="px-1">
+          <Card className="border-none shadow-xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white overflow-hidden rounded-[2rem] relative group">
+            <div className="absolute right-[-20px] top-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
+              <Zap className="w-40 h-40" />
+            </div>
+            <CardContent className="p-8 flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10">
+              <div className="space-y-2 text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <Badge className="bg-white/20 text-white border-none font-black text-[9px] px-2 py-0.5 uppercase tracking-widest">Kontribusi Program</Badge>
+                  <div className="h-1 w-1 rounded-full bg-white/40" />
+                  <span className="text-[10px] font-bold text-emerald-100/80 uppercase tracking-widest">Hi Mufradat x Hi Berbagi</span>
+                </div>
+                <h2 className="text-2xl font-black font-headline tracking-tight uppercase leading-none">
+                  Dana Operasional & Sosial
+                </h2>
+                <p className="text-xs font-medium text-emerald-50/70 max-w-md leading-relaxed">
+                  Alhamdulillah, sebagian dari infaq pendaftaran & kode unik program **Hi Mufradat** telah disalurkan untuk mendukung kegiatan sosial di Hi Berbagi.
+                </p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 flex flex-col items-center sm:items-end gap-1 shadow-2xl">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Total Kontribusi</span>
+                <span className="text-3xl font-black text-[#D4AF37] drop-shadow-lg">
+                  Rp {mufradatContribution.toLocaleString('id-ID')}
+                </span>
+                <span className="text-[9px] font-bold text-emerald-100/60 italic">*Terakumulasi secara otomatis</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {step === 1 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-1">

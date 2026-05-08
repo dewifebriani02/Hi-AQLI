@@ -392,13 +392,25 @@ export default function MufradatSurahDetailPage() {
           </div>
         </div>
 
+        <div className="sm:hidden flex justify-center">
+          <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border w-full justify-between px-4">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ukuran Teks</span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => adjustFontSize(-4)}><Minus className="h-4 w-4" /></Button>
+              <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => adjustFontSize(4)}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Multi-state Access Banner */}
       {user && (access.showSoftReminder || access.status === 'trial') && (
         <div className={cn(
-          "mx-4 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm",
+          "mx-4 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm",
           access.status === 'trial' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
         )}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-4">
             <div className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
               access.status === 'trial' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
@@ -424,8 +436,8 @@ export default function MufradatSurahDetailPage() {
             </div>
           </div>
           <Button asChild size="sm" className={cn(
-            "font-black text-[10px] h-9 px-4 rounded-xl shrink-0 shadow-sm",
-            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
+            "w-full font-black text-[11px] h-11 rounded-xl shadow-lg transition-all active:scale-[0.98]",
+            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200/50" : "bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200/50"
           )}>
             <Link href="/mufradat/billing">
               {access.status === 'trial' ? 'STATUS' : 'INFAQ SEKARANG'}
@@ -433,17 +445,6 @@ export default function MufradatSurahDetailPage() {
           </Button>
         </div>
       )}
-        <div className="sm:hidden flex justify-center">
-          <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border w-full justify-between px-4">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ukuran Teks</span>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => adjustFontSize(-4)}><Minus className="h-4 w-4" /></Button>
-              <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => adjustFontSize(4)}><Plus className="h-4 w-4" /></Button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Murajaah Quiz Banner - Access after completing enough verses */}
       {completedVerseNumbers.size >= Math.min(verses.length, 3) && (

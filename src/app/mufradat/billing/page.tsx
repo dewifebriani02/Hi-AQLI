@@ -77,10 +77,18 @@ export default function MufradatBillingPage() {
   const [whatsapp, setWhatsapp] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [amount, setAmount] = useState<string>("20000");
+  const [uniqueCode, setUniqueCode] = useState(0);
   
   // Leave Form States
   const [leaveStart, setLeaveStart] = useState("");
   const [leaveEnd, setLeaveEnd] = useState("");
+
+  // Initialize unique code
+  useEffect(() => {
+    if (mode === 'pay' && uniqueCode === 0) {
+      setUniqueCode(Math.floor(100 + Math.random() * 899));
+    }
+  }, [mode, uniqueCode]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -239,7 +247,8 @@ export default function MufradatBillingPage() {
         halaqah_id: hId, // Now sends a valid UUID or null
         halaqah_title: 'Hi Mufradat (Infaq Bulanan)',
         is_paid: true,
-        amount: parseInt(amount),
+        amount: parseInt(amount) + uniqueCode,
+        unique_code: uniqueCode,
         payment_method: "transfer",
         sender_name: senderName,
         proof_file_name: proofFile.name,
@@ -660,9 +669,13 @@ export default function MufradatBillingPage() {
                    <span className="text-muted-foreground">Tujuan Transfer:</span>
                    <Badge className="bg-[#800000]">BSI (BANK SYARIAH INDONESIA)</Badge>
                 </div>
-                  <div className="flex items-center justify-between text-lg font-black">
-                     <span>7209432468</span>
+                  <div className="flex items-center justify-between text-2xl font-black text-[#800000]">
+                     <span>Rp {(parseInt(amount) + uniqueCode).toLocaleString('id-ID')}</span>
                      <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. Dewi Febriani</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm font-bold border-t border-dashed border-amber-200 pt-2 mt-2">
+                     <span className="text-muted-foreground">No. Rekening:</span>
+                     <span className="text-lg">7209432468</span>
                   </div>
                   <p className="text-[9px] text-muted-foreground font-medium italic mt-2 leading-relaxed">
                     Selisih nominal dari kode unik verifikasi akan disalurkan sebagai infaq melalui program Hi Berbagi di Hi AQLI.
@@ -697,10 +710,13 @@ export default function MufradatBillingPage() {
                          onChange={(e) => setAmount(e.target.value)}
                          className="h-12 border-2 rounded-xl font-black text-[#800000]"
                      />
-                     <div className="space-y-1">
-                       <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
-                         <Info className="w-3 h-3" /> Minimal infaq: Rp 20.000 (Mendukung Operasional)
-                       </p>
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-black text-amber-600 flex items-center gap-1">
+                          <Info className="w-3.5 h-3.5" /> + KODE UNIK: {uniqueCode}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
+                          <Info className="w-3 h-3" /> Minimal infaq: Rp 20.000 (Mendukung Operasional)
+                        </p>
                        <p className="text-[9px] text-[#800000] font-medium opacity-70 italic leading-relaxed">
                          Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu.
                        </p>

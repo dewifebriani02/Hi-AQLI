@@ -375,23 +375,25 @@ export default function MufradatJuzDetailPage() {
           </div>
         )}
 
-        {access.showSoftReminder && (
-            <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                        <Heart className="w-5 h-5 fill-amber-500" />
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
-                        <p className="text-[11px] font-medium text-amber-900 leading-tight">{access.message}</p>
-                    </div>
-                </div>
-                <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-9 px-4 rounded-xl shrink-0">
-                    <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
-                </Button>
-            </div>
-        )}
+        </div>
       </div>
+
+      {access.showSoftReminder && (
+          <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 shadow-sm">
+              <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                      <Heart className="w-5 h-5 fill-amber-500" />
+                  </div>
+                  <div>
+                      <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
+                      <p className="text-[11px] font-medium text-amber-900 leading-tight">{access.message}</p>
+                  </div>
+              </div>
+              <Button asChild size="sm" className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] h-11 rounded-xl shadow-lg shadow-amber-200/50 transition-all active:scale-[0.98]">
+                  <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
+              </Button>
+          </div>
+      )}
 
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>
