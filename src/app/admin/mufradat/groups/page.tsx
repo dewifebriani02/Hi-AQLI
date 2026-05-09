@@ -734,7 +734,7 @@ export default function MufradatGroupsPage() {
                     onChange={e => setNewGroup(v => ({ ...v, fonnte_group_id: e.target.value }))}
                     className="h-10 rounded-xl focus:border-[#800000]/30 font-mono text-[10px]"
                   />
-                  <p className="text-[8px] text-muted-foreground italic">Dapatkan ID ini dari dashboard Fonnte -> Groups.</p>
+                  <p className="text-[8px] text-muted-foreground italic">Dapatkan ID ini dari dashboard Fonnte -&gt; Groups.</p>
                </div>
 
               {/* Musyrifah Selection */}

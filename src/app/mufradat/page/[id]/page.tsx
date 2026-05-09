@@ -18,6 +18,7 @@ import {
 import { useUser } from "@/supabase";
 import { useCollection, useDoc } from "@/supabase/db";
 import { getJuzForPage } from "@/lib/quran-mapping";
+import { getMufradatStatus } from "@/lib/mufradat-access";
 
 interface WordData {
   id: number;
@@ -55,6 +56,21 @@ export default function MufradatPageDetailPage() {
     const fromProfile = userData?.mufradat_status === 'active' || userData?.mufradat_status === 'trial';
     return fromRegs || fromProfile;
   }, [registrations, userData]);
+
+  const { data: redemptions } = useCollection(user ? "voucher_redemptions" : null, {
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }],
+    select: "*, vouchers(*)"
+  });
+
+  const access = useMemo(() => {
+    return getMufradatStatus({
+      user: userData, 
+      registrations: registrations || [], 
+      isStudent, 
+      pageId: pageNum,
+      redemptions: redemptions || []
+    });
+  }, [userData, registrations, isStudent, pageNum, redemptions]);
 
   useEffect(() => {
     if (!isUserLoading && !isUserDataLoading && !isStudent && !isMushafPageFree(pageNum)) {
@@ -248,6 +264,7 @@ export default function MufradatPageDetailPage() {
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
+      </div>
  
       {access.showSoftReminder && showReminder && (
           <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 shadow-sm relative">

@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, X, Gift } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, X, Gift, Zap } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
@@ -403,6 +403,7 @@ export default function MufradatSurahDetailPage() {
             </div>
           </div>
         </div>
+      </div>
  
       {/* Multi-state Access Banner */}
       {user && (access.showSoftReminder || access.status === 'trial') && showReminder && (
@@ -644,8 +645,6 @@ export default function MufradatSurahDetailPage() {
             </Card>
           </Link>
         </div>
-      )}
-
       )}
 
       {/* Access Blocked Overlay - Only show if not a Free Surah or if user is logged in but blocked */}

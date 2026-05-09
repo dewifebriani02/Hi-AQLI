@@ -316,6 +316,7 @@ function VerseDetailContent() {
             </Tooltip>
           </TooltipProvider>
         </div>
+        </div>
  
       {/* Soft Reminder Banner */}
       {access.showSoftReminder && showReminder && (
@@ -490,8 +491,8 @@ function VerseDetailContent() {
             <div className="text-slate-700 leading-relaxed text-base" dangerouslySetInnerHTML={{ __html: apiTafsir || "Memuat penjelasan..." }} />
           </CardContent>
         </Card>
-
       </div>
+
 
       {/* Access Blocked Overlay */}
       {access.isBlocked && (
