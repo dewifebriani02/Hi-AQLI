@@ -316,7 +316,6 @@ function VerseDetailContent() {
             </Tooltip>
           </TooltipProvider>
         </div>
-      </div>
  
       {/* Soft Reminder Banner */}
       {access.showSoftReminder && showReminder && (

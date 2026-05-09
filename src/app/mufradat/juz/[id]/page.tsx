@@ -376,7 +376,6 @@ export default function MufradatJuzDetailPage() {
           </div>
         )}
 
-        </div>
       </div>
  
       {/* Soft Reminder Banner */}

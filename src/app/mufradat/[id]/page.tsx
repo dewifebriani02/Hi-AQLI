@@ -403,7 +403,6 @@ export default function MufradatSurahDetailPage() {
             </div>
           </div>
         </div>
-      </div>
  
       {/* Multi-state Access Banner */}
       {user && (access.showSoftReminder || access.status === 'trial') && showReminder && (
