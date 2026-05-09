@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, X, Gift } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
@@ -83,6 +83,7 @@ export default function MufradatSurahDetailPage() {
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [showReminder, setShowReminder] = useState(true);
 
   // Fetch progress for the current surah to handle locking
   // Unified global progress fetch (no surah filter to avoid type/sync issues)
@@ -403,14 +404,23 @@ export default function MufradatSurahDetailPage() {
           </div>
         </div>
       </div>
-
+ 
       {/* Multi-state Access Banner */}
-      {user && (access.showSoftReminder || access.status === 'trial') && (
+      {user && (access.showSoftReminder || access.status === 'trial') && showReminder && (
         <div className={cn(
-          "mx-4 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm",
+          "mx-4 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm relative",
           access.status === 'trial' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
         )}>
-          <div className="flex items-start gap-4">
+          <button 
+            onClick={() => setShowReminder(false)}
+            className={cn(
+              "absolute top-3 right-3 p-1 rounded-full transition-colors",
+              access.status === 'trial' ? "hover:bg-emerald-100 text-emerald-600" : "hover:bg-amber-100 text-amber-600"
+            )}
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="flex items-start gap-4 pr-6">
             <div className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
               access.status === 'trial' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
@@ -445,6 +455,8 @@ export default function MufradatSurahDetailPage() {
           </Button>
         </div>
       )}
+
+
 
       {/* Murajaah Quiz Banner - Access after completing enough verses */}
       {completedVerseNumbers.size >= Math.min(verses.length, 3) && (
@@ -634,6 +646,9 @@ export default function MufradatSurahDetailPage() {
           </Link>
         </div>
       )}
+
+      )}
+
       {/* Access Blocked Overlay - Only show if not a Free Surah or if user is logged in but blocked */}
       {(![1, 112, 113, 114].includes(parseInt(id)) || (user && access.isBlocked)) && access.isBlocked && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">

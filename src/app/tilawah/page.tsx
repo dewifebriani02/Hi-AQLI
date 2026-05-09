@@ -32,7 +32,8 @@ export default function QuranPage() {
     filters: [{ column: 'user_id', operator: '==', value: user.id }]
   } : undefined);
 
-  const isStudent = useMemo(() => checkIsStudent(registrations), [registrations]);
+  const isStudent = true; // Open access for everyone as requested
+
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const [searchReciter, setSearchReciter] = useState("");
   const [showReciterDialog, setShowReciterDialog] = useState(false);

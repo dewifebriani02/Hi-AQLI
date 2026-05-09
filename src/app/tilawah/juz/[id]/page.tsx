@@ -49,19 +49,11 @@ export default function TilawahJuzDetailPage() {
     filters: [{ column: 'user_id', operator: '==', value: user.id }]
   } : undefined);
 
-  const isStudent = useMemo(() => checkIsStudent(registrations), [registrations]);
+  const isStudent = true; // Open access for everyone
 
-  useEffect(() => {
-    const jId = Number(id);
-    if (!isStudent && jId && !isJuzFree(jId)) {
-      toast({
-        variant: "destructive",
-        title: "Juz Terkunci",
-        description: "Ukhti perlu mendaftar program untuk membuka materi ini."
-      });
-      router.push('/tilawah');
-    }
-  }, [id, isStudent, router, toast]);
+
+  // Access is now open for everyone
+
 
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);

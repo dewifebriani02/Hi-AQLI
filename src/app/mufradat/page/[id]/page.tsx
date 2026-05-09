@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, Layout } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, Layout, Heart, X } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +66,7 @@ export default function MufradatPageDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeWordKey, setActiveWordKey] = useState<string | null>(null);
   const [wordCounts, setWordCounts] = useState<Record<string, number>>({});
+  const [showReminder, setShowReminder] = useState(true);
 
   const juzNum = useMemo(() => getJuzForPage(pageNum), [pageNum]);
 
@@ -248,6 +249,29 @@ export default function MufradatPageDetailPage() {
           </Button>
         </div>
       </div>
+ 
+      {access.showSoftReminder && showReminder && (
+          <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 shadow-sm relative">
+              <button 
+                onClick={() => setShowReminder(false)}
+                className="absolute top-3 right-3 p-1 hover:bg-amber-100 rounded-full transition-colors text-amber-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-start gap-4 pr-6">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                      <Heart className="w-5 h-5 fill-amber-500" />
+                  </div>
+                  <div>
+                      <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
+                      <p className="text-[11px] font-medium text-amber-900 leading-tight">{access.message}</p>
+                  </div>
+              </div>
+              <Button asChild size="sm" className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] h-11 rounded-xl shadow-lg shadow-amber-200/50 transition-all active:scale-[0.98]">
+                  <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
+              </Button>
+          </div>
+      )}
 
       <Card className="border-none bg-muted/20">
         <CardContent className="pt-8 pb-10 px-6 text-right" dir="rtl">
@@ -397,6 +421,7 @@ export default function MufradatPageDetailPage() {
           </CardContent>
         </Card>
       </div>
+
     </div>
   );
 }

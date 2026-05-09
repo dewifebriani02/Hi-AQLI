@@ -59,19 +59,11 @@ export default function SurahDetailPage() {
     filters: [{ column: 'user_id', operator: '==', value: user.id }]
   } : undefined);
 
-  const isStudent = useMemo(() => checkIsStudent(registrations), [registrations]);
+  const isStudent = true; // Open access for everyone
 
-  useEffect(() => {
-    const sId = Number(id);
-    if (!isStudent && sId && !isSurahFree(sId)) {
-      toast({
-        variant: "destructive",
-        title: "Surat Terkunci",
-        description: "Ukhti perlu mendaftar program untuk membuka materi ini."
-      });
-      router.push('/tilawah');
-    }
-  }, [id, isStudent, router, toast]);
+
+  // Access is now open for everyone
+
 
   const [surah, setSurah] = useState<SurahInfo | null>(() => {
     const sId = Number(id);

@@ -3,7 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, ShieldAlert, CreditCard, Heart, Zap } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, ShieldAlert, CreditCard, Heart, Zap, X } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
@@ -59,6 +59,7 @@ function VerseDetailContent() {
   const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
 
   const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
+  const [showReminder, setShowReminder] = useState(true);
 
   const progressOptions = useMemo(() => ({
     filters: [
@@ -316,11 +317,17 @@ function VerseDetailContent() {
           </TooltipProvider>
         </div>
       </div>
-
+ 
       {/* Soft Reminder Banner */}
-      {access.showSoftReminder && (
-        <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4">
-          <div className="flex items-start gap-4">
+      {access.showSoftReminder && showReminder && (
+        <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 relative">
+          <button 
+            onClick={() => setShowReminder(false)}
+            className="absolute top-3 right-3 p-1 hover:bg-amber-100 rounded-full transition-colors text-amber-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="flex items-start gap-4 pr-6">
             <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
               <Heart className="w-5 h-5 fill-amber-500" />
             </div>
@@ -336,6 +343,8 @@ function VerseDetailContent() {
           </Button>
         </div>
       )}
+
+
 
       <Card ref={studyCardRef} className="border-none bg-muted/20 scroll-mt-24">
         <CardContent className="pt-8 pb-10 px-6 text-right" dir="rtl">

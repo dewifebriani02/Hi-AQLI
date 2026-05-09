@@ -182,15 +182,6 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
     e.preventDefault();
     const p = parseInt(inputPage);
     if (p >= 1 && p <= 604) {
-      if (!isStudent && !isMushafPageFree(p)) {
-        toast({
-          variant: "destructive",
-          title: "Halaman Terkunci",
-          description: "Silakan mendaftar program untuk membuka seluruh halaman Al-Qur'an."
-        });
-        setInputPage(page.toString());
-        return;
-      }
       setPage(p);
     } else {
       setInputPage(page.toString());
@@ -212,11 +203,8 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
             <Button 
               variant="ghost" 
               size="icon" 
-              disabled={page <= 1 || loading || (!isStudent && page === 604)} 
-              onClick={() => {
-                if (!isStudent && page === 604) setPage(1);
-                else setPage(p => p - 1);
-              }}
+              disabled={page <= 1 || loading} 
+              onClick={() => setPage(p => p - 1)}
               className="text-[#800000]"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -238,11 +226,8 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
             <Button 
               variant="ghost" 
               size="icon" 
-              disabled={page >= 604 || loading || (!isStudent && page === 1)} 
-              onClick={() => {
-                if (!isStudent && page === 1) setPage(604);
-                else setPage(p => p + 1);
-              }}
+              disabled={page >= 604 || loading} 
+              onClick={() => setPage(p => p + 1)}
               className="text-[#800000]"
             >
               <ChevronRight className="h-5 w-5" />

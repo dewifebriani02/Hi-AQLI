@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, GraduationCap, Check, Grid3X3, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, GraduationCap, Check, Grid3X3, ChevronDown, ChevronUp, X, Zap } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
@@ -57,6 +57,7 @@ export default function MufradatJuzDetailPage() {
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [showReminder, setShowReminder] = useState(true);
 
   // Fetch progress for this Juz
   const { data: userProgress, isLoading: isUserProgressLoading } = useCollection(user ? "quiz_attempts" : null, {
@@ -377,10 +378,17 @@ export default function MufradatJuzDetailPage() {
 
         </div>
       </div>
-
-      {access.showSoftReminder && (
-          <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 shadow-sm">
-              <div className="flex items-start gap-4">
+ 
+      {/* Soft Reminder Banner */}
+      {access.showSoftReminder && showReminder && (
+          <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 shadow-sm relative mb-4">
+              <button 
+                onClick={() => setShowReminder(false)}
+                className="absolute top-3 right-3 p-1 hover:bg-amber-100 rounded-full transition-colors text-amber-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-start gap-4 pr-6">
                   <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
                       <Heart className="w-5 h-5 fill-amber-500" />
                   </div>
@@ -394,6 +402,8 @@ export default function MufradatJuzDetailPage() {
               </Button>
           </div>
       )}
+
+
 
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>
@@ -523,6 +533,7 @@ export default function MufradatJuzDetailPage() {
           })}
         </TooltipProvider>
       </div>
+
 
       {parseInt(id) < 30 && (
         <div className="px-4 pb-12 pt-8">

@@ -31,7 +31,8 @@ import {
   Gift,
   Sparkles as SparklesIcon,
   ShieldCheck,
-  Target
+  Target,
+  X
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/tilawah/juz-list";
@@ -75,6 +76,7 @@ function MufradatPageContent() {
   const [showSeasonRecap, setShowSeasonRecap] = useState(false);
   const [previousLeague, setPreviousLeague] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showReminder, setShowReminder] = useState(true);
 
   // Fetch all passed attempts for the current user
   const progressOptions = useMemo(() => ({
@@ -518,47 +520,7 @@ function MufradatPageContent() {
         </div>
       </div>
 
-      {/* Multi-state Access Banner */}
-      {user && (access.showSoftReminder || access.status === 'trial') && (
-        <div className={cn(
-          "p-5 rounded-3xl flex flex-col gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm mb-8",
-          access.status === 'trial' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
-        )}>
-          <div className="flex items-start gap-4">
-            <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-              access.status === 'trial' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
-            )}>
-              {access.status === 'trial' ? <Gift className="w-5 h-5 animate-bounce" /> : <Heart className="w-5 h-5 fill-amber-500" />}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className={cn(
-                  "text-[10px] font-black uppercase tracking-tight",
-                  access.status === 'trial' ? "text-emerald-800" : "text-amber-800"
-                )}>
-                  {access.status === 'trial' ? "Akses Trial Aktif" : "Support Hi AQLI"}
-                </p>
-                {access.status === 'trial' && <Badge className="bg-emerald-500 text-white text-[8px] h-4">24 JAM</Badge>}
-              </div>
-              <p className={cn(
-                "text-[11px] font-medium leading-tight",
-                access.status === 'trial' ? "text-emerald-900" : "text-amber-900"
-              )}>
-                {access.message}
-              </p>
-            </div>
-          </div>
-          <Button asChild size="sm" className={cn(
-            "w-full font-black text-[11px] h-11 rounded-xl shadow-lg transition-all active:scale-[0.98]",
-            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200/50" : "bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200/50"
-          )}>
-            <Link href="/mufradat/billing">
-              {access.status === 'trial' ? 'LIHAT STATUS' : 'INFAQ SEKARANG'}
-            </Link>
-          </Button>
-        </div>
-      )}
+
 
       {/* ACHIEVEMENT BADGES SECTION */}
       {user && (userBadges || []).length > 0 && (
@@ -916,6 +878,56 @@ function MufradatPageContent() {
            </div>
         </DialogContent>
       </Dialog>
+      {/* Multi-state Access Banner */}
+      {user && (access.showSoftReminder || access.status === 'trial') && showReminder && (
+        <div className={cn(
+          "p-5 rounded-3xl flex flex-col gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm my-8 relative",
+          access.status === 'trial' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+        )}>
+          <button 
+            onClick={() => setShowReminder(false)}
+            className={cn(
+              "absolute top-3 right-3 p-1 rounded-full transition-colors",
+              access.status === 'trial' ? "hover:bg-emerald-100 text-emerald-600" : "hover:bg-amber-100 text-amber-600"
+            )}
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="flex items-start gap-4 pr-6">
+            <div className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+              access.status === 'trial' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+            )}>
+              {access.status === 'trial' ? <Gift className="w-5 h-5 animate-bounce" /> : <Heart className="w-5 h-5 fill-amber-500" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className={cn(
+                  "text-[10px] font-black uppercase tracking-tight",
+                  access.status === 'trial' ? "text-emerald-800" : "text-amber-800"
+                )}>
+                  {access.status === 'trial' ? "Akses Trial Aktif" : "Support Hi AQLI"}
+                </p>
+                {access.status === 'trial' && <Badge className="bg-emerald-500 text-white text-[8px] h-4">24 JAM</Badge>}
+              </div>
+              <p className={cn(
+                "text-[11px] font-medium leading-tight",
+                access.status === 'trial' ? "text-emerald-900" : "text-amber-900"
+              )}>
+                {access.message}
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" className={cn(
+            "w-full font-black text-[11px] h-11 rounded-xl shadow-lg transition-all active:scale-[0.98]",
+            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200/50" : "bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200/50"
+          )}>
+            <Link href="/mufradat/billing">
+              {access.status === 'trial' ? 'LIHAT STATUS' : 'INFAQ SEKARANG'}
+            </Link>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
