@@ -25,10 +25,11 @@ import {
   Zap,
   Settings,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  BookOpen
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect, Suspense, Fragment } from "react";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -146,28 +147,55 @@ function MufradatMonitoringContent() {
     const safeRegs = registrations || [];
     const sevenDaysAgo = subDays(new Date(), 7);
 
+    // Build a map of verses per page from all passed attempts
+    // This helps estimate how many verses are on each page
+    const globalVersesInPage = new Map<number, Set<string>>();
+    safeAttempts.forEach(a => {
+      if (a.is_passed && a.page_id) {
+        if (!globalVersesInPage.has(a.page_id)) globalVersesInPage.set(a.page_id, new Set());
+        globalVersesInPage.get(a.page_id)!.add(`${a.surah_id}:${a.verse_id}`);
+      }
+    });
+
     return users.map(user => {
       const userReg = safeRegs.find(r => r.user_id === user.id);
       const meta = userReg?.metadata || {};
       const targetStr = meta.target || "1-halaman";
       const schedule = meta.schedule || "harian";
       
-      let pages = 1;
-      if (targetStr.includes("2")) pages = 2;
-      else if (targetStr.includes("3")) pages = 3;
-      else if (targetStr.includes("5")) pages = 5;
-      else if (targetStr.includes("10")) pages = 10;
+      let pagesCount = 1;
+      if (targetStr.includes("2")) pagesCount = 2;
+      else if (targetStr.includes("3")) pagesCount = 3;
+      else if (targetStr.includes("5")) pagesCount = 5;
+      else if (targetStr.includes("10")) pagesCount = 10;
       
-      const userTargetVerses = pages * 15;
-      const userPassedAttempts = safeAttempts.filter(a => a.user_id === user.id);
+      const userTargetLines = pagesCount * 15;
+      const userPassedAttempts = safeAttempts.filter(a => a.user_id === user.id && a.is_passed);
+      
+      // Weekly Progress (in Lines)
       const weeklyPassed = userPassedAttempts.filter(a => new Date(a.created_at) > sevenDaysAgo);
-      const uniqueVersesWeekly = new Set(weeklyPassed.map(a => `${a.surah_id}:${a.verse_id}`));
-      const weeklyCount = uniqueVersesWeekly.size;
-      const reachedWeeklyTarget = weeklyCount >= userTargetVerses;
+      const weeklyVersesByPage = new Map<number, Set<string>>();
+      weeklyPassed.forEach(a => {
+        if (a.page_id) {
+          if (!weeklyVersesByPage.has(a.page_id)) weeklyVersesByPage.set(a.page_id, new Set());
+          weeklyVersesByPage.get(a.page_id)!.add(`${a.surah_id}:${a.verse_id}`);
+        }
+      });
 
-      const uniqueVerses = new Set(userPassedAttempts.map(a => `${a.surah_id}:${a.verse_id}`));
-      const passedCount = uniqueVerses.size;
+      let weeklyLines = 0;
+      weeklyVersesByPage.forEach((verses, pageId) => {
+        // Heuristic: Use the global max seen verses for this page, or fallback to a reasonable number
+        const totalInPage = Math.max(globalVersesInPage.get(pageId)?.size || 12, verses.size);
+        weeklyLines += (verses.size / totalInPage) * 15;
+      });
+
+      // Total Progress (ever)
+      const uniqueVersesEver = new Set(userPassedAttempts.map(a => `${a.surah_id}:${a.verse_id}`));
+      const passedCount = uniqueVersesEver.size;
       const progressPercent = (passedCount / TOTAL_QURAN_VERSES) * 100;
+      
+      // Total Pages Accessed (passed at least 1 quiz on that page)
+      const totalPassedPages = new Set(userPassedAttempts.map(a => a.page_id)).size;
       
       const lastAttempt = [...userPassedAttempts].sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -176,9 +204,10 @@ function MufradatMonitoringContent() {
       return {
         ...user,
         passedCount,
-        weeklyCount,
-        reachedWeeklyTarget,
-        userTargetVerses,
+        totalPassedPages,
+        weeklyCount: Math.round(weeklyLines * 10) / 10,
+        reachedWeeklyTarget: weeklyLines >= userTargetLines,
+        userTargetVerses: userTargetLines,
         targetStr,
         schedule,
         progressPercent,
@@ -194,16 +223,27 @@ function MufradatMonitoringContent() {
     const s = search.toLowerCase();
     const now = new Date();
     return userStats.filter(u => {
-      // Hanya peseta yang TERVERIFIKASI di halaqah_registrations
-      const hasVerifiedReg = registrations?.some(r => r.user_id === u.id && r.status === 'verified');
-      if (!hasVerifiedReg) return false;
-      // Hanya peserta resmi yang masih dalam masa berlaku
-      if (!u.mufradat_due_date) return false;
-      if (new Date(u.mufradat_due_date) < now) return false;
+      // Filter by Group ID
+      if (selectedGroupId !== "all" && u.mufradat_group_id !== selectedGroupId) return false;
+
+      // Tampilkan peserta yang memiliki grup dan status bukan inactive
+      if (!u.mufradat_group_id || u.mufradat_status === 'inactive') return false;
+
       // Search filter
-      return (u.username || u.full_name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s);
+      return (u.username || u.full_name || u.phone || u.email || '').toLowerCase().includes(s);
     });
-  }, [userStats, search, registrations]);
+  }, [userStats, search, selectedGroupId]);
+
+  const groupedStats = useMemo(() => {
+    const groupsMap: Record<string, any[]> = {};
+    filteredStats.forEach(u => {
+      const gName = u.groupName || "Grup Tidak Diketahui";
+      if (!groupsMap[gName]) groupsMap[gName] = [];
+      groupsMap[gName].push(u);
+    });
+    // Sort groups alphabetically
+    return Object.entries(groupsMap).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredStats]);
 
   const sendWhatsAppReminder = (u: any) => {
     const waNumber = u.whatsapp || u.phone;
@@ -330,6 +370,17 @@ function MufradatMonitoringContent() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div><CardTitle className="text-xl font-black text-[#800000]">DAFTAR PROGRESS</CardTitle></div>
             <div className="flex items-center gap-3 w-full md:w-auto">
+              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                <SelectTrigger className="w-full md:w-48 h-10 border-none bg-muted/50 rounded-lg text-xs font-bold text-[#800000]">
+                  <SelectValue placeholder="Pilih Grup" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Grup</SelectItem>
+                  {groups?.map((g: any) => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input placeholder="Cari..." className="w-full md:w-64 h-10 border-none bg-muted/50 rounded-lg" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           </div>
@@ -340,6 +391,7 @@ function MufradatMonitoringContent() {
               <TableRow>
                 <TableHead className="pl-6">Peserta</TableHead>
                 <TableHead>Target</TableHead>
+                <TableHead>Halaman</TableHead>
                 <TableHead>Status Pekanan</TableHead>
                 <TableHead>Progres (%)</TableHead>
                 <TableHead>Status WA</TableHead>
@@ -347,69 +399,96 @@ function MufradatMonitoringContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStats.map((u: any) => (
-                <TableRow key={u.id}>
-                  <TableCell className="pl-6">
-                    <div className="flex items-center gap-3">
-                      <Avatar><AvatarImage src={u.photo_url || u.photoURL} /><AvatarFallback className="bg-[#800000] text-white font-bold">{(u.full_name || u.username)?.[0]?.toUpperCase()}</AvatarFallback></Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-[#800000]">{u.full_name || u.username}</span>
-                        <span className="text-[10px] text-muted-foreground">{u.email}</span>
+              {groupedStats.map(([groupName, members]) => (
+                <Fragment key={groupName}>
+                  <TableRow className="bg-muted/30 border-y-2 border-muted">
+                    <TableCell colSpan={6} className="py-2 pl-6">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-[10px] uppercase tracking-widest text-[#800000]">{groupName}</span>
+                        <Badge variant="outline" className="bg-white text-[9px] h-5">{members.length} Peserta</Badge>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge variant="outline">{u.targetStr}</Badge></TableCell>
-                  <TableCell>
-                    {u.reachedWeeklyTarget ? <Badge className="bg-emerald-500">AMAN</Badge> : <Badge variant="destructive">DI BAWAH</Badge>}
-                    <div className="text-[10px] mt-1">{u.weeklyCount} / {u.userTargetVerses} ayat</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <Progress value={u.progressPercent} className="h-2 w-32" />
-                      {u.lastWaReminder && (
-                        <span className="text-[9px] font-bold text-emerald-600">Terakhir: {formatDistanceToNow(new Date(u.lastWaReminder.created_at), { addSuffix: true, locale: idLocale })}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {u.wa_blocked_at ? (
-                      <div className="flex flex-col gap-1">
-                        <Badge variant="destructive" className="text-[9px] px-1 h-5 animate-pulse">AUTO BLOCKED</Badge>
-                        <span className="text-[8px] text-muted-foreground">{u.wa_failed_count}x gagal</span>
-                      </div>
-                    ) : (
-                      <Badge variant="outline" className="text-[9px] px-1 h-5 text-emerald-600 border-emerald-200">NORMAL</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right pr-6">
-                    <div className="flex items-center justify-end gap-2">
-                      {u.wa_blocked_at && (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-8 w-8 p-0 text-amber-600 border-amber-200 hover:bg-amber-50 rounded-full"
-                          onClick={() => handleUnblock(u.id)}
-                          disabled={isTriggering}
-                          title="Buka Blokir Otomatis"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50 rounded-full"
-                        onClick={() => handleTriggerSingle(u.id)}
-                        disabled={isTriggering || !!u.wa_blocked_at}
-                        title={u.wa_blocked_at ? "User terblokir" : "Tes Kirim Otomatis Server"}
-                      >
-                        <Zap className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" className={cn("rounded-full h-8", u.reachedWeeklyTarget ? "bg-muted text-muted-foreground" : "bg-[#25D366] hover:bg-[#128C7E] text-white")} onClick={() => sendWhatsAppReminder(u)}>JAPRI WA</Button>
-                    </div>
+                    </TableCell>
+                  </TableRow>
+                  {members.map((u: any) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="pl-6">
+                        <div className="flex items-center gap-3">
+                          <Avatar><AvatarImage src={u.photo_url || u.photoURL} /><AvatarFallback className="bg-[#800000] text-white font-bold">{(u.full_name || u.username)?.[0]?.toUpperCase()}</AvatarFallback></Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-[#800000]">{u.full_name || u.username}</span>
+                            <span className="text-[10px] text-muted-foreground">{u.email}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell><Badge variant="outline">{u.targetStr}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <BookOpen className="w-3 h-3 text-blue-500" />
+                          <span className="font-bold text-xs">{u.totalPassedPages} hlm</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {u.reachedWeeklyTarget ? <Badge className="bg-emerald-500 text-white border-none">AMAN</Badge> : <Badge variant="destructive" className="border-none">DI BAWAH</Badge>}
+                        <div className="text-[10px] mt-1 font-medium">{u.weeklyCount} / {u.userTargetVerses} baris</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <Progress value={u.progressPercent} className="h-2 w-32" />
+                          {u.lastWaReminder && (
+                            <span className="text-[9px] font-bold text-emerald-600">Terakhir: {formatDistanceToNow(new Date(u.lastWaReminder.created_at), { addSuffix: true, locale: idLocale })}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {u.wa_blocked_at ? (
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="destructive" className="text-[9px] px-1 h-5 animate-pulse">AUTO BLOCKED</Badge>
+                            <span className="text-[8px] text-muted-foreground">{u.wa_failed_count}x gagal</span>
+                          </div>
+                        ) : u.mufradat_due_date && new Date(u.mufradat_due_date) < new Date() ? (
+                          <Badge variant="destructive" className="text-[9px] px-1 h-5 bg-red-600">MASA AKTIF HABIS</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[9px] px-1 h-5 text-emerald-600 border-emerald-200 font-bold uppercase">NORMAL</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          {u.wa_blocked_at && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 w-8 p-0 text-amber-600 border-amber-200 hover:bg-amber-50 rounded-full"
+                              onClick={() => handleUnblock(u.id)}
+                              disabled={isTriggering}
+                              title="Buka Blokir Otomatis"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50 rounded-full"
+                            onClick={() => handleTriggerSingle(u.id)}
+                            disabled={isTriggering || !!u.wa_blocked_at}
+                            title={u.wa_blocked_at ? "User terblokir" : "Tes Kirim Otomatis Server"}
+                          >
+                            <Zap className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" className={cn("rounded-full h-8 text-[10px] font-black uppercase tracking-tight", u.reachedWeeklyTarget ? "bg-muted text-muted-foreground" : "bg-[#25D366] hover:bg-[#128C7E] text-white shadow-lg shadow-emerald-200")} onClick={() => sendWhatsAppReminder(u)}>JAPRI WA</Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </Fragment>
+              ))}
+              {filteredStats.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground font-medium">
+                    Tidak ada peserta yang ditemukan.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>

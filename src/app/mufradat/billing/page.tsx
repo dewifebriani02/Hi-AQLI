@@ -572,32 +572,6 @@ export default function MufradatBillingPage() {
             </div>
           </div>
 
-          {/* Voucher Section */}
-          <div className="p-5 bg-slate-50 rounded-2xl border-2 border-dashed space-y-3">
-             <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-slate-500" />
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Punya Kode Voucher?</h4>
-             </div>
-             <div className="flex gap-2">
-                <Input 
-                   placeholder="KODE VOUCHER" 
-                   value={voucherCode}
-                   onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                   className="h-10 border-2 rounded-xl font-bold text-xs"
-                />
-                <Button 
-                   onClick={handleRedeemVoucher}
-                   disabled={isRedeeming || !voucherCode.trim()}
-                   className="bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] h-10 px-6 rounded-xl"
-                >
-                   {isRedeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
-                </Button>
-             </div>
-              <p className="text-[9px] text-muted-foreground font-black italic mt-1">
-                 *Hubungi admin untuk mendapatkan kode voucher atau aktivasi manual.
-              </p>
-          </div>
-
           {access.status !== 'active' && mode === 'view' && (
             <div className={cn(
               "p-5 rounded-2xl space-y-3 animate-in fade-in zoom-in border-2",
@@ -651,6 +625,32 @@ export default function MufradatBillingPage() {
               </div>
             </div>
           )}
+
+          {/* Voucher Section */}
+          <div className="p-5 bg-slate-50 rounded-2xl border-2 border-dashed space-y-3">
+             <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-slate-500" />
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Punya Kode Voucher?</h4>
+             </div>
+             <div className="flex gap-2">
+                <Input 
+                   placeholder="KODE VOUCHER" 
+                   value={voucherCode}
+                   onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                   className="h-10 border-2 rounded-xl font-bold text-xs"
+                />
+                <Button 
+                   onClick={handleRedeemVoucher}
+                   disabled={isRedeeming || !voucherCode.trim()}
+                   className="bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] h-10 px-6 rounded-xl"
+                >
+                   {isRedeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
+                </Button>
+             </div>
+              <p className="text-[9px] text-muted-foreground font-black italic mt-1">
+                 *Hubungi admin untuk mendapatkan kode voucher atau aktivasi manual.
+              </p>
+          </div>
         </CardContent>
       </Card>
 
