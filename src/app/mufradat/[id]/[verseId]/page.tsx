@@ -280,13 +280,19 @@ function VerseDetailContent() {
 
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32 px-4 sm:px-0">
-      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
-        <Button asChild variant="ghost" size="icon" className="text-[#800000]"><Link href={`/mufradat/${id}`}><ChevronLeft className="h-6 w-6" /></Link></Button>
-        <div className="flex-1">
-          <h1 className="text-lg font-bold font-headline">{surahName} : ({verseId})</h1>
-          <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Hi Mufradat • Tadabbur Ayat</p>
+      <div className="flex items-center gap-2 sm:gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b px-2 sm:px-0">
+        <Button asChild variant="ghost" size="icon" className="text-[#800000] shrink-0 w-8 h-8 sm:w-10 sm:h-10">
+          <Link href={`/mufradat/${id}`}><ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" /></Link>
+        </Button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-sm sm:text-lg font-black font-headline truncate sm:whitespace-normal leading-tight">
+            {surahName} <span className="text-[#800000]/40 mx-1">:</span> ({verseId})
+          </h1>
+          <p className="text-[8px] sm:text-[9px] uppercase tracking-tighter sm:tracking-widest text-[#800000] font-black truncate">
+            Hi Mufradat • Tadabbur Ayat
+          </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <Button asChild={Boolean(user || access.isFree)} variant="ghost" size="icon" className="text-[#D4AF37]">
             <Link href={(user || access.isFree) ? `/mufradat/${id}/${verseId}/quiz${from ? `?from=${from}` : ''}` : `/login?redirectTo=/mufradat/${id}/${verseId}${from ? `?from=${from}` : ''}`}>
               <GraduationCap className="h-5 w-5" />
