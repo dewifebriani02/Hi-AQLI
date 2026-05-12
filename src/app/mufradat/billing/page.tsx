@@ -572,30 +572,37 @@ export default function MufradatBillingPage() {
             </div>
           </div>
 
-          {access.status !== 'active' && mode === 'view' && (
+          {access.status !== 'trial' && mode === 'view' && (
             <div className={cn(
               "p-5 rounded-2xl space-y-3 animate-in fade-in zoom-in border-2",
-              access.status === 'inactive' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+              access.status === 'inactive' ? "bg-emerald-50 border-emerald-200" : 
+              access.status === 'active' ? "bg-slate-50 border-slate-200" : "bg-amber-50 border-amber-200"
             )}>
               <div className="flex items-center gap-3">
-                {access.status === 'inactive' ? <BookOpen className="w-5 h-5 text-emerald-600" /> : <Heart className="w-5 h-5 fill-amber-500" />}
+                {access.status === 'inactive' ? <BookOpen className="w-5 h-5 text-emerald-600" /> : 
+                 access.status === 'active' ? <Calendar className="w-5 h-5 text-slate-600" /> : <Heart className="w-5 h-5 fill-amber-500" />}
                 <h4 className={cn(
                   "font-black text-sm uppercase tracking-tight",
-                  access.status === 'inactive' ? "text-emerald-800" : "text-amber-800"
+                  access.status === 'inactive' ? "text-emerald-800" : 
+                  access.status === 'active' ? "text-slate-800" : "text-amber-800"
                 )}>
                   {registrations?.some(r => r.status === 'pending_verification') 
                     ? "Menunggu Verifikasi Manual" 
-                    : access.status === 'inactive' ? "Pendaftaran Diperlukan" : "Dukungan & Konfirmasi"}
+                    : access.status === 'inactive' ? "Pendaftaran Diperlukan" : 
+                      access.status === 'active' ? "Perpanjang Pendaftaran" : "Dukungan & Konfirmasi"}
                 </h4>
               </div>
               <p className={cn(
                 "text-xs leading-relaxed font-medium italic",
-                access.status === 'inactive' ? "text-emerald-900" : "text-amber-900"
+                access.status === 'inactive' ? "text-emerald-900" : 
+                access.status === 'active' ? "text-slate-600" : "text-amber-900"
               )}>
                 {registrations?.some(r => r.status === 'pending_verification')
                   ? `Sabar menunggu ya ${fullSalutation}. Pendaftaran/pembayaran ${fullSalutation} sedang dalam antrean verifikasi manual oleh Musyrifah. Mohon tunggu maksimal 1x24 jam kerja.`
                   : access.status === 'inactive' ? 
                   `${fullSalutation} belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu untuk pembukaan akses dan penempatan kelompok (halaqah).` :
+                  access.status === 'active' ?
+                  `Masa aktif ${fullSalutation} saat ini masih aman. Namun ${fullSalutation} tetap bisa melakukan pembayaran iuran untuk periode berikutnya agar akses tidak terputus di kemudian hari.` :
                   access.status === 'blocked' ? 
                   `Selesaikan infaq ${fullSalutation} untuk terus mendukung operasional Hi AQLI dan membuka kembali akses ayat.` :
                   `Status Infaq ${fullSalutation} belum terverifikasi untuk periode ini. Silakan lakukan konfirmasi di bawah guna mendukung operasional Hi AQLI.`
@@ -612,11 +619,14 @@ export default function MufradatBillingPage() {
                   </Button>
                 ) : (
                   <>
-                    <Button onClick={() => setMode('pay')} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-10 rounded-xl">
-                      INFAQ SEKARANG
+                    <Button onClick={() => setMode('pay')} className={cn(
+                      "flex-1 font-black text-[10px] h-10 rounded-xl shadow-md",
+                      access.status === 'active' ? "bg-slate-800 hover:bg-slate-900 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
+                    )}>
+                      {access.status === 'active' ? "PERPANJANG PENDAFTARAN" : "INFAQ SEKARANG"}
                     </Button>
                     {userData.mufradat_leave_balance > 0 && access.status !== 'blocked' && (
-                      <Button onClick={() => setMode('leave')} variant="outline" className="flex-1 border-amber-300 text-amber-700 font-black text-[10px] h-10 rounded-xl">
+                      <Button onClick={() => setMode('leave')} variant="outline" className="flex-1 border-slate-300 text-slate-700 font-black text-[10px] h-10 rounded-xl">
                         AJUKAN CUTI
                       </Button>
                     )}
@@ -661,7 +671,11 @@ export default function MufradatBillingPage() {
             <CardTitle className="text-lg font-black flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-amber-400" /> KONFIRMASI PEMBAYARAN
             </CardTitle>
-            <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Periode: {access.nextBillingMonth || 'Bulan Ini'}</p>
+            <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">
+              Pembayaran untuk periode: {access.nextBillingMonth ? 
+                new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(access.nextBillingMonth + "-15")) : 
+                'Bulan Ini'}
+            </p>
           </CardHeader>
           <CardContent className="pt-6 space-y-6">
              <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border-2 border-dashed">

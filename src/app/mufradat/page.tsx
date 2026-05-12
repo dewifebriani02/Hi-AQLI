@@ -878,54 +878,46 @@ function MufradatPageContent() {
            </div>
         </DialogContent>
       </Dialog>
-      {/* Multi-state Access Banner */}
+      {/* Multi-state Access Banner (Horizontal) */}
       {user && (access.showSoftReminder || access.status === 'trial') && showReminder && (
         <div className={cn(
-          "p-5 rounded-3xl flex flex-col gap-4 animate-in slide-in-from-top-4 border-2 shadow-sm my-8 relative",
-          access.status === 'trial' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+          "px-4 py-3 rounded-2xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 border-2 shadow-sm relative overflow-hidden",
+          access.status === 'trial' ? "bg-emerald-50 border-emerald-100" : "bg-amber-50 border-amber-100"
         )}>
-          <button 
-            onClick={() => setShowReminder(false)}
-            className={cn(
-              "absolute top-3 right-3 p-1 rounded-full transition-colors",
-              access.status === 'trial' ? "hover:bg-emerald-100 text-emerald-600" : "hover:bg-amber-100 text-amber-600"
-            )}
-          >
-            <X className="w-4 h-4" />
-          </button>
-          <div className="flex items-start gap-4 pr-6">
+          <div className="flex items-center gap-3 min-w-0">
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-              access.status === 'trial' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+              "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
+              access.status === 'trial' ? "bg-white text-emerald-600" : "bg-white text-amber-600"
             )}>
-              {access.status === 'trial' ? <Gift className="w-5 h-5 animate-bounce" /> : <Heart className="w-5 h-5 fill-amber-500" />}
+              {access.status === 'trial' ? <Gift className="w-4 h-4" /> : <Heart className="w-4 h-4 fill-amber-500" />}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className={cn(
-                  "text-[10px] font-black uppercase tracking-tight",
-                  access.status === 'trial' ? "text-emerald-800" : "text-amber-800"
-                )}>
-                  {access.status === 'trial' ? "Akses Trial Aktif" : "Support Hi AQLI"}
-                </p>
-                {access.status === 'trial' && <Badge className="bg-emerald-500 text-white text-[8px] h-4">24 JAM</Badge>}
-              </div>
+            <div className="min-w-0">
               <p className={cn(
-                "text-[11px] font-medium leading-tight",
+                "text-[11px] font-black leading-tight truncate",
                 access.status === 'trial' ? "text-emerald-900" : "text-amber-900"
               )}>
-                {access.message}
+                {access.status === 'trial' ? "Mode Trial Aktif" : access.message}
               </p>
+              {access.status === 'trial' && <p className="text-[9px] text-emerald-700/70 font-bold">Akses terbuka sementara 24 jam.</p>}
             </div>
           </div>
-          <Button asChild size="sm" className={cn(
-            "w-full font-black text-[11px] h-11 rounded-xl shadow-lg transition-all active:scale-[0.98]",
-            access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200/50" : "bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200/50"
-          )}>
-            <Link href="/mufradat/billing">
-              {access.status === 'trial' ? 'LIHAT STATUS' : 'INFAQ SEKARANG'}
-            </Link>
-          </Button>
+          
+          <div className="flex items-center gap-2 shrink-0">
+            <Button asChild size="sm" className={cn(
+              "font-black text-[10px] h-8 px-3 rounded-lg shadow-sm transition-all active:scale-[0.98]",
+              access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
+            )}>
+              <Link href="/mufradat/billing">
+                {access.status === 'trial' ? 'CEK STATUS' : 'INFAQ'}
+              </Link>
+            </Button>
+            <button 
+              onClick={() => setShowReminder(false)}
+              className="p-1 hover:bg-black/5 rounded-full transition-colors text-muted-foreground"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
     </div>

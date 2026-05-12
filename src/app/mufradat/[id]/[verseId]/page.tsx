@@ -318,29 +318,32 @@ function VerseDetailContent() {
         </div>
         </div>
  
-      {/* Soft Reminder Banner */}
+      {/* Soft Reminder Banner (Horizontal Sleek) */}
       {access.showSoftReminder && showReminder && (
-        <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 relative">
-          <button 
-            onClick={() => setShowReminder(false)}
-            className="absolute top-3 right-3 p-1 hover:bg-amber-100 rounded-full transition-colors text-amber-600"
-          >
-            <X className="w-4 h-4" />
-          </button>
-          <div className="flex items-start gap-4 pr-6">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-              <Heart className="w-5 h-5 fill-amber-500" />
+        <div className="bg-amber-50 border-2 border-amber-100 px-4 py-3 rounded-2xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 relative shadow-sm">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-amber-600 shrink-0 shadow-sm">
+              <Heart className="w-4 h-4 fill-amber-500" />
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
-              <p className="text-[11px] font-medium text-amber-900 leading-tight">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black leading-tight text-amber-900 truncate">Support Hi AQLI</p>
+              <p className="text-[10px] font-medium text-amber-900/80 leading-tight truncate">
                 {access.message}
               </p>
             </div>
           </div>
-          <Button asChild size="sm" className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] h-11 rounded-xl shadow-lg shadow-amber-200/50 transition-all active:scale-[0.98]">
-            <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
-          </Button>
+          
+          <div className="flex items-center gap-2 shrink-0">
+            <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-8 px-3 rounded-lg shadow-sm">
+              <Link href="/mufradat/billing">INFAQ</Link>
+            </Button>
+            <button 
+              onClick={() => setShowReminder(false)}
+              className="p-1 hover:bg-amber-100 rounded-full transition-colors text-amber-600"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 

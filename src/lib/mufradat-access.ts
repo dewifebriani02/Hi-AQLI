@@ -205,6 +205,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isBlocked: true,
       isVerified,
       showSoftReminder: false,
+      nextBillingMonth: format(today, 'yyyy-MM'),
       message: `Masa aktif akses ${fullSalutation} belum tersedia. Silakan lakukan aktivasi pembayaran.`,
       redirectTo: '/mufradat/billing'
     };
@@ -242,6 +243,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isVerified,
       showSoftReminder: false,
       dueDate: dueDate,
+      nextBillingMonth: format(dueDate, 'yyyy-MM'),
       message: `Akses Terhenti. Masa aktif Hi Mufradat ${fullSalutation} sudah habis. Mohon lakukan konfirmasi infaq.`,
       redirectTo: '/mufradat/billing',
       buttonText: 'KONFIRMASI PEMBAYARAN'
@@ -255,6 +257,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isVerified,
       showSoftReminder: true,
       dueDate: dueDate,
+      nextBillingMonth: format(dueDate, 'yyyy-MM'),
       message: `Masa aktif akses ${fullSalutation} telah berakhir pada ${format(dueDate, 'd MMM')}. Mohon segera konfirmasi pendaftaran.`
     };
   }
@@ -263,6 +266,12 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
   const diffTime = dueDate.getTime() - today.getTime();
   const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+  // Determine the next month that needs to be paid
+  // If they are expired or blocked, they are paying for the current/past due month
+  // If they are active, they are paying for the month AFTER their current due date
+  const nextMonthDate = isExpired ? today : addMonths(dueDate, 1);
+  const nextBillingMonth = format(nextMonthDate, 'yyyy-MM');
+
   return {
     status: 'active',
     isBlocked: false,
@@ -270,6 +279,7 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
     showSoftReminder: daysRemaining <= 3,
     daysRemaining,
     dueDate,
+    nextBillingMonth,
     message: daysRemaining <= 3 
       ? `Akses aktif. Sisa masa aktif ${fullSalutation} tinggal ${daysRemaining} hari lagi.` 
       : `Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!`

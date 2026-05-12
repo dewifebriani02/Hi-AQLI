@@ -95,6 +95,7 @@ export default function MufradatFinancePage() {
   const [manualAmount, setManualAmount] = useState<string>("0");
   const [manualMonth, setManualMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
   const [manualUniqueCode, setManualUniqueCode] = useState<string>("0");
+  const [manualRegFee, setManualRegFee] = useState<string>("0");
   const [manualType, setManualType] = useState<string>("monthly"); // 'initial' or 'monthly'
 
   // Edit Transaction States
@@ -174,8 +175,14 @@ export default function MufradatFinancePage() {
 
       const amount = Number(reg.amount) || 0;
       const uniqueCode = Number(reg.unique_code) || (amount % 1000);
-      const regFeeGross = Number(reg.registration_fee) || 0;
-      const refDiscount = Number(reg.referral_discount_amount) || 0;
+      
+      // Only count registration fee for initial/first-time registrations
+      const isInitial = reg.payment_type === 'initial' || 
+                        reg.is_first_registration || 
+                        (!reg.payment_type || !['monthly', 'leave_request'].includes(reg.payment_type));
+      
+      const regFeeGross = isInitial ? (Number(reg.registration_fee) || 0) : 0;
+      const refDiscount = isInitial ? (Number(reg.referral_discount_amount) || 0) : 0;
 
       // Tracking Totals
       months[monthKey].totalRevenue += amount;
@@ -367,6 +374,7 @@ export default function MufradatFinancePage() {
         start_date: new Date().toISOString(),
         amount: totalAmount,
         unique_code: parseInt(manualUniqueCode),
+        registration_fee: parseInt(manualRegFee),
         billing_month: manualMonth,
         payment_method: "manual_transfer",
         is_paid: true,
@@ -483,7 +491,7 @@ export default function MufradatFinancePage() {
     try {
       const { error } = await supabase.from("mufradat_payouts").insert({
         billing_month: monthData.month,
-        total_revenue: splits.totalRevenue,
+        total_revenue: monthData.totalRevenue,
         total_unique_code: splits.totalUniqueCode,
         payout_breakdown: splits,
         status: "sudah_cair",
@@ -773,7 +781,11 @@ export default function MufradatFinancePage() {
                     <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
                       Tipe Transaksi
                     </Label>
-                    <Select value={manualType} onValueChange={setManualType}>
+                    <Select value={manualType} onValueChange={(val) => {
+                      setManualType(val);
+                      if (val === 'initial') setManualRegFee("10000");
+                      else setManualRegFee("0");
+                    }}>
                       <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
                         <SelectValue />
                       </SelectTrigger>
@@ -784,6 +796,27 @@ export default function MufradatFinancePage() {
                     </Select>
                   </div>
                 </div>
+
+                {manualType === 'initial' && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <Label className="text-[10px] font-black uppercase text-[#800000] tracking-widest">
+                      Uang Pendaftaran (Registration Fee)
+                    </Label>
+                    <Select value={manualRegFee} onValueChange={setManualRegFee}>
+                      <SelectTrigger className="h-12 border-2 border-[#800000]/30 rounded-xl font-black">
+                        <SelectValue placeholder="Pilih Nominal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5000">Rp 5.000</SelectItem>
+                        <SelectItem value="10000">Rp 10.000</SelectItem>
+                        <SelectItem value="0">Tanpa Pendaftaran</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[9px] text-muted-foreground italic font-medium">
+                      *Hanya untuk pendaftar pertama saja (5k atau 10k).
+                    </p>
+                  </div>
+                )}
 
                 <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-start gap-3">
                   <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -1030,7 +1063,13 @@ export default function MufradatFinancePage() {
                   mufradatRegistrations.reduce((acc, r) => {
                     const amt = Number(r.amount) || 0;
                     const code = Number(r.unique_code) || (amt % 1000);
-                    return acc + (amt - code) * 0.1 + code;
+                    const isInitial = r.payment_type === 'initial' || 
+                                     r.is_first_registration || 
+                                     (!r.payment_type || !['monthly', 'leave_request'].includes(r.payment_type));
+                    const netReg = isInitial ? ((Number(r.registration_fee) || 0) - (Number(r.referral_discount_amount) || 0)) : 0;
+                    
+                    // Hi Berbagi = 10% of (Penerimaan - Kode - Registration) + 100% of Kode
+                    return acc + (amt - code - netReg) * 0.1 + code;
                   }, 0),
                 )}
               </p>
@@ -1055,7 +1094,10 @@ export default function MufradatFinancePage() {
                   mufradatRegistrations.reduce((acc, r) => {
                     const amt = Number(r.amount) || 0;
                     const code = Number(r.unique_code) || (amt % 1000);
-                    const netReg = (Number(r.registration_fee) || 0) - (Number(r.referral_discount_amount) || 0);
+                    const isInitial = r.payment_type === 'initial' || 
+                                     r.is_first_registration || 
+                                     (!r.payment_type || !['monthly', 'leave_request'].includes(r.payment_type));
+                    const netReg = isInitial ? ((Number(r.registration_fee) || 0) - (Number(r.referral_discount_amount) || 0)) : 0;
                     return acc + (amt - code - netReg) * 0.2;
                   }, 0),
                 )}
@@ -1079,6 +1121,10 @@ export default function MufradatFinancePage() {
               <p className="text-3xl font-black tracking-tighter">
                 {FORMATTER.format(
                   mufradatRegistrations.reduce((acc, r) => {
+                    const isInitial = r.payment_type === 'initial' || 
+                                     r.is_first_registration || 
+                                     (!r.payment_type || !['monthly', 'leave_request'].includes(r.payment_type));
+                    if (!isInitial) return acc;
                     return acc + (Number(r.registration_fee) || 0) - (Number(r.referral_discount_amount) || 0);
                   }, 0),
                 )}
