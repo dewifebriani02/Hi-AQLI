@@ -17,42 +17,42 @@ const QUIET_START_WIB = 6;          // do not send before 06:00 WIB
 const QUIET_END_WIB = 21;           // do not send after 21:00 WIB
 const MAX_CONSECUTIVE_FAILURES = 3; // auto-block after this many failures
 
-const SIGNATURE = "\n\n— Team Hi AQLI 🌷";
+const SIGNATURE = "\n\n— Admin Hi AQLI";
 
 // Template variants (rotate to reduce spam-pattern detection)
 // Each category has 3 variants: pantun, hadis/quote, ringan/santai
 const TEMPLATES: Record<string, string[]> = {
   harian: [
     // Pantun
-    "Assalamu'alaikum Ukhti {name} 🌸\n\nBeli santan di pasar Senin,\nDisimpan rapi dalam botol kaca,\nYuk Ukhti, semangat rutin,\nSetor Mufradat hari ini, bismillah saja! ✨",
+    "Assalamu'alaikum {salutation} {name} 🌸\n\nBeli santan di pasar Senin,\nDisimpan rapi dalam botol kaca,\nYuk {salutation}, semangat rutin,\nSetor Mufradat hari ini, bismillah saja! ✨",
     // Hadis/quote
-    "Assalamu'alaikum Ukhti {name} 🌷\n\n\"Amalan yang paling dicintai Allah adalah yang paling istiqomah, walau sedikit.\" (HR. Bukhari)\n\nHari ini belum ada setoran nih. Yuk luangkan 5 menit untuk kuis Mufradat sebelum maghrib 💛",
+    "Assalamu'alaikum {salutation} {name} 🌷\n\n\"Amalan yang paling dicintai Allah adalah yang paling istiqomah, walau sedikit.\" (HR. Bukhari)\n\nHari ini belum ada setoran nih. Yuk luangkan 5 menit untuk kuis Mufradat sebelum maghrib 💛",
     // Islamic / Pantun 2
-    "Assalamu'alaikum Ukhti {name} 🌸\n\nMenanam bunga di dalam taman,\nBunga mekar indah berseri,\nMari kumpulkan amal di tangan,\nSetor Mufradat hari ini. ✨\n\nSemangat ya Ukhti, bismillah! 📖",
+    "Assalamu'alaikum {salutation} {name} 🌸\n\nMenanam bunga di dalam taman,\nBunga mekar indah berseri,\nMari kumpulkan amal di tangan,\nSetor Mufradat hari ini. ✨\n\nSemangat ya {salutation}, bismillah! 📖",
   ],
   weekend: [
     // Pantun
-    "Assalamu'alaikum Ukhti {name} 🌺\n\nKapal layar berlayar ke utara,\nSinggah sebentar di pelabuhan,\nAkhir pekan ini ayo segera,\nTutup target dengan kemenangan! 🎯",
+    "Assalamu'alaikum {salutation} {name} 🌺\n\nKapal layar berlayar ke utara,\nSinggah sebentar di pelabuhan,\nAkhir pekan ini ayo segera,\nTutup target dengan kemenangan! 🎯",
     // Quote
-    "Assalamu'alaikum Ukhti {name} 🌷\n\nSudah Ahad sore nih, target weekend Ukhti belum tercapai. Tinggal sedikit lagi sebelum Senin datang.\n\n\"Sebaik-baik amal adalah yang istiqomah.\" Yuk selesaikan, Ukhti pasti bisa! 💪",
+    "Assalamu'alaikum {salutation} {name} 🌷\n\nSudah Ahad sore nih, target weekend {salutation} belum tercapai. Tinggal sedikit lagi sebelum Senin datang.\n\n\"Sebaik-baik amal adalah yang istiqomah.\" Yuk selesaikan, {salutation} pasti bisa! 💪",
     // Islamic / Pantun 2
-    "Assalamu'alaikum Ukhti {name} 🌺\n\nKe bukit tinggi mencari bekal,\nBekal dibawa untuk di jalan,\nJangan biarkan target terbengkal,\nYuk tuntaskan hafalan pekanan! ✨\n\nin syaa Allah jadi pemberat timbangan kebaikan. 🤲",
+    "Assalamu'alaikum {salutation} {name} 🌺\n\nKe bukit tinggi mencari bekal,\nBekal dibawa untuk di jalan,\nJangan biarkan target terbengkal,\nYuk tuntaskan hafalan pekanan! ✨\n\nin syaa Allah jadi pemberat timbangan kebaikan. 🤲",
   ],
   fleksibel: [
     // Pantun
-    "Assalamu'alaikum Ukhti {name} 🌷\n\nDaun pandan harum baunya,\nDipotong kecil masuk ke nasi,\nPekan ini progress Ukhti tertera,\nBaru {progress} ayat, yuk lanjutkan lagi! ✨",
+    "Assalamu'alaikum {salutation} {name} 🌷\n\nDaun pandan harum baunya,\nDipotong kecil masuk ke nasi,\nPekan ini progress {salutation} tertera,\nBaru {progress} ayat, yuk lanjutkan lagi! ✨",
     // Quote
-    "Assalamu'alaikum Ukhti {name} 🌸\n\nMengingatkan target pekanan ya. Baru tercapai {progress} ayat nih.\n\n\"Sesungguhnya bersama kesulitan ada kemudahan.\" (QS. Al-Insyirah: 6)\n\nSemangat menuntaskan, Ukhti! 💛",
+    "Assalamu'alaikum {salutation} {name} 🌸\n\nMengingatkan target pekanan ya. Baru tercapai {progress} ayat nih.\n\n\"Sesungguhnya bersama kesulitan ada kemudahan.\" (QS. Al-Insyirah: 6)\n\nSemangat menuntaskan, {salutation}! 💛",
     // Islamic / Pantun 2
-    "Assalamu'alaikum Ukhti {name} 🌷\n\nBurung merpati hinggap di dahan,\nHinggap sebentar mencari makan,\nIngat janji kepada Tuhan,\nHafalan Quran jangan lupakan. ✨\n\nPekan ini baru {progress} ayat nih, yuk semangat genapkan targetnya! 📖",
+    "Assalamu'alaikum {salutation} {name} 🌷\n\nBurung merpati hinggap di dahan,\nHinggap sebentar mencari makan,\nIngat janji kepada Tuhan,\nHafalan Quran jangan lupakan. ✨\n\nPekan ini baru {progress} ayat nih, yuk semangat genapkan targetnya! 📖",
   ],
   monday_spirit: [
     // Pantun
-    "Assalamu'alaikum Ukhti {name} 🌅\n\nSenin pagi mentari bersinar,\nEmbun pagi menetes di daun,\nPekan baru semangat berbinar,\nMufradat lancar selama bertahun! ✨\n\nSelamat memulai pekan, semangat menjaga hafalan! 💛",
+    "Assalamu'alaikum {salutation} {name} 🌅\n\nSenin pagi mentari bersinar,\nEmbun pagi menetes di daun,\nPekan baru semangat berbinar,\nMufradat lancar selama bertahun! ✨\n\nSelamat memulai pekan, semangat menjaga hafalan! 💛",
     // Hadis
-    "Assalamu'alaikum Ukhti {name} 🌷\n\nSelamat Senin pagi! 🌟\n\n\"Sebaik-baik kalian adalah yang mempelajari Al-Qur'an dan mengajarkannya.\" (HR. Bukhari)\n\nSemoga Allah bukakan pintu kemudahan untuk Ukhti menjaga hafalan di pekan ini. Bismillah! ✨",
+    "Assalamu'alaikum {salutation} {name} 🌷\n\nSelamat Senin pagi! 🌟\n\n\"Sebaik-baik kalian adalah yang mempelajari Al-Qur'an dan mengajarkannya.\" (HR. Bukhari)\n\nSemoga Allah bukakan pintu kemudahan untuk {salutation} menjaga hafalan di pekan ini. Bismillah! ✨",
     // Islamic / Pantun 2
-    "Assalamu'alaikum Ukhti {name} 🌅\n\nPohon jati tumbuh berjajar,\nTumbuh subur di tanah hulu,\nSenin pagi semangat belajar,\nMufradat jadi teman selalu. 📖✨\n\nSelamat beraktivitas kembali di pekan yang berkah ini! 🌸",
+    "Assalamu'alaikum {salutation} {name} 🌅\n\nPohon jati tumbuh berjajar,\nTumbuh subur di tanah hulu,\nSenin pagi semangat belajar,\nMufradat jadi teman selalu. 📖✨\n\nSelamat beraktivitas kembali di pekan yang berkah ini! 🌸",
   ],
 };
 
@@ -72,19 +72,75 @@ function getDisplayName(fullName: string | null, username: string | null): strin
   return "Ukhti";
 }
 
-function pickTemplate(category: string, name: string, progress: number, userSalutation?: string | null): string {
-  const arr = TEMPLATES[category] || TEMPLATES.fleksibel;
-  const tpl = arr[Math.floor(Math.random() * arr.length)];
+function pickTemplate(category: string, name: string, progress: number, userSalutation?: string | null, dbTemplates: any[] = []): string {
+  // Filter templates by category
+  const variants = dbTemplates.filter(t => t.category === category);
+  
+  // Fallback if no templates found for category in DB
+  if (variants.length === 0) {
+    const fallbacks = TEMPLATES[category] || ["Assalamu'alaikum {salutation} {name}, semangat menjaga hafalan!"];
+    const tpl = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    const salutation = userSalutation?.trim() || (name.toLowerCase().includes('ummu') ? '' : 'Ukhti');
+    return tpl
+      .replace(/\{salutation\}/g, salutation)
+      .replace(/\{name\}/g, name)
+      .replace(/\{progress\}/g, String(progress))
+      .replace(/  +/g, ' ')
+      .trim() + SIGNATURE;
+  }
+
+  const tpl = variants[Math.floor(Math.random() * variants.length)].content;
   
   // Use chosen salutation, fallback to logic if not set
-  const salutation = userSalutation ? userSalutation + ' ' : (name.toLowerCase().includes('ummu') ? '' : 'Ukhti ');
+  const salutation = userSalutation?.trim() || (name.toLowerCase().includes('ummu') ? '' : 'Ukhti');
   
   const finalMessage = tpl
-    .replace(/Ukhti /g, salutation)
+    .replace(/\{salutation\}/g, salutation)
     .replace(/\{name\}/g, name)
-    .replace(/\{progress\}/g, String(progress));
+    .replace(/\{progress\}/g, String(progress))
+    .replace(/  +/g, ' '); // Collapse double spaces if salutation is empty
   
-  return finalMessage + SIGNATURE;
+  return finalMessage.trim() + SIGNATURE;
+}
+
+// --- SENDING LOGIC ---
+async function sendWhatsApp(target: string, msg: string) {
+  if (PROVIDER === "gowa") {
+    const url = GOWA_URL?.endsWith('/') ? GOWA_URL + 'send' : (GOWA_URL || '') + '/send';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GOWA_API_KEY || ''}`.trim() 
+      },
+      body: JSON.stringify({
+        phone: target,
+        message: msg
+      }),
+    });
+    const resData = await response.json().catch(() => ({}));
+    // Gowa typically returns { status: true, ... } or { code: 200, ... }
+    const ok = resData.status === true || resData.code === 200 || resData.status === "success";
+    return { ok, resData, status: response.status };
+  } else {
+    // Default Fonnte
+    const params: any = {
+      target: target,
+      message: msg,
+      delay: String(FONNTE_DELAY_PARAM),
+      countryCode: '62',
+    };
+    
+    // If target is a group ID (contains @g.us), Fonnte handles it automatically if passed as target
+    const response = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: { 'Authorization': (FONNTE_API_KEY || '').trim() },
+      body: new URLSearchParams(params),
+    });
+    const resData = await response.json().catch(() => ({}));
+    const ok = !!resData.status;
+    return { ok, resData, status: response.status };
+  }
 }
 
 function sleep(ms: number) {
@@ -101,7 +157,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
     const body = await req.json().catch(() => ({}));
     const { userId, mode } = body;
-    // mode: 'harian', 'weekend', 'fleksibel', 'monday_spirit', 'auto_block_pasif'
+    // mode: 'harian', 'weekend', 'fleksibel', 'monday_spirit', 'auto_block_pasif', 'motivation_broadcast'
 
     const isManualSingle = !!userId; // admin testing one user → relax some checks
 
@@ -132,6 +188,51 @@ serve(async (req) => {
           skipped_reason: `daily_cap_reached (sent today: ${todayCount}, cap: ${DAILY_CAP})`
         }), { headers: { "Content-Type": "application/json" } });
       }
+    }
+
+    // --- MOTIVATION BROADCAST FLOW (GROUP) ---
+    if (mode === 'motivation_broadcast') {
+      // 1. Fetch one active motivation
+      const { data: motivation } = await supabase
+        .from('mufradat_motivations')
+        .select('content')
+        .eq('active', true)
+        .order('last_sent_at', { ascending: true }) // rotate through them
+        .limit(1)
+        .maybeSingle();
+      
+      if (!motivation) {
+        return new Response(JSON.stringify({ error: 'No active motivations found' }), { status: 400 });
+      }
+
+      // 2. Fetch groups with WhatsApp ID
+      const { data: groups } = await supabase
+        .from('mufradat_groups')
+        .select('id, name, fonnte_group_id')
+        .not('fonnte_group_id', 'is', null);
+      
+      if (!groups || groups.length === 0) {
+        return new Response(JSON.stringify({ message: 'No groups linked with WhatsApp ID' }), { status: 200 });
+      }
+
+      const results: any[] = [];
+      for (const group of groups) {
+        const msg = motivation.content + SIGNATURE;
+        
+        // Skip sleep on first run
+        if (results.length > 0) await sleep(SLEEP_MS_BETWEEN_SENDS);
+
+        const { ok, resData, status: httpStatus } = await sendWhatsApp(group.fonnte_group_id, msg);
+        
+        results.push({ group: group.name, status: ok ? 'sent' : 'failed', target: group.fonnte_group_id, response: resData });
+
+        // Update last_sent_at for the motivation if at least one sent
+        if (ok) {
+           await supabase.from('mufradat_motivations').update({ last_sent_at: new Date().toISOString() }).eq('content', motivation.content);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, results }), { headers: { "Content-Type": "application/json" } });
     }
 
     // 1. Get user(s) — hanya peserta resmi Hi Mufradat yang masih dalam masa berlaku
@@ -174,6 +275,10 @@ serve(async (req) => {
     }
 
     console.log(`REMINDER_ENGINE: Mode: ${mode || 'All'}. Target: ${filteredUsers.length} users. WIB hour: ${hourWib}. Remaining cap: ${remainingDailyCap}`);
+
+    // Fetch all templates once for this run
+    const { data: dbTemplates } = await supabase.from('mufradat_reminder_templates').select('*');
+    const safeDbTemplates = dbTemplates || [];
 
     const today = now.getDay();
     const results: any[] = [];
@@ -236,7 +341,7 @@ serve(async (req) => {
       if (mode === 'monday_spirit') {
         if (today !== 1 && !userId) continue; // Run only on Monday
         const dn = getDisplayName(user.full_name, user.username);
-        message = pickTemplate('monday_spirit', dn, 0, user.salutation);
+        message = pickTemplate('monday_spirit', dn, 0, user.salutation, safeDbTemplates);
       }
       // --- REGULAR REMINDERS ---
       else {
@@ -273,8 +378,8 @@ serve(async (req) => {
 
         if (actualProgress < target || userId) {
           const dn = getDisplayName(user.full_name, user.username);
-          const tplKey = schedule === 'harian' ? 'harian' : (schedule === 'weekend' || schedule === 'pekanan') ? 'weekend' : 'fleksibel';
-          message = pickTemplate(tplKey, dn, actualProgress, user.salutation);
+          const tplKey = schedule === 'harian' ? 'harian' : (schedule === 'weekend' || schedule === 'pekanan') ? 'weekend' : 'pekanan';
+          message = pickTemplate(tplKey, dn, actualProgress, user.salutation, safeDbTemplates);
         }
       }
 
@@ -298,42 +403,6 @@ serve(async (req) => {
         await sleep(SLEEP_MS_BETWEEN_SENDS);
       }
 
-      // --- SENDING LOGIC ---
-      async function sendWhatsApp(target: string, msg: string) {
-        if (PROVIDER === "gowa") {
-          const url = GOWA_URL?.endsWith('/') ? GOWA_URL + 'send' : (GOWA_URL || '') + '/send';
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${GOWA_API_KEY || ''}`.trim() 
-            },
-            body: JSON.stringify({
-              phone: target,
-              message: msg
-            }),
-          });
-          const resData = await response.json().catch(() => ({}));
-          // Gowa typically returns { status: true, ... } or { code: 200, ... }
-          const ok = resData.status === true || resData.code === 200 || resData.status === "success";
-          return { ok, resData, status: response.status };
-        } else {
-          // Default Fonnte
-          const response = await fetch('https://api.fonnte.com/send', {
-            method: 'POST',
-            headers: { 'Authorization': (FONNTE_API_KEY || '').trim() },
-            body: new URLSearchParams({
-              target: target,
-              message: msg,
-              delay: String(FONNTE_DELAY_PARAM),
-              countryCode: '62',
-            }),
-          });
-          const resData = await response.json().catch(() => ({}));
-          const ok = !!resData.status;
-          return { ok, resData, status: response.status };
-        }
-      }
 
       const { ok, resData, status: httpStatus } = await sendWhatsApp(cleanNumber, message);
 

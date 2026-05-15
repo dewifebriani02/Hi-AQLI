@@ -232,24 +232,58 @@ function MufradatQuizContent() {
         if (data && data.verse && data.verse.words) {
           setPageId(data.verse.page_number);
           const words = data.verse.words.filter((w: any) => w.char_type_name === 'word');
-          
+
           // Simple "decoy" translations for multi-choice
           const decoys = ["Maha Pengasih", "Maha Penyayang", "Segala Puji", "Tuhan", "Manusia", "Raja", "Sembahan", "Petunjuk", "Jalan", "Lurus"];
-          
+
+          // Create fallback translation map from page data
+          const pageTranslationMap = new Map<number, string>();
+          pageWords.forEach((pw: {arabic: string, indonesian: string}) => {
+            // Try to match by arabic text to find the word id
+            const matchingWord = words.find(w => w.text_uthmani === pw.arabic);
+            if (matchingWord) {
+              pageTranslationMap.set(matchingWord.id, pw.indonesian);
+            }
+          });
+
           const generated = words.map((w: any, idx: number) => {
-            const correct = w.translation?.text || "???";
-            const filteredDecoys = decoys.filter(d => d !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
-            
+            // Use verse API translation, but fallback to page translation if it looks invalid
+            let correct = w.translation?.text || "???";
+
+            // Check if the translation seems invalid (empty, just question marks, or doesn't match the page data)
+            const pageTranslation = pageTranslationMap.get(w.id);
+            if (pageTranslation && (correct === "???" || correct.trim().length === 0)) {
+              correct = pageTranslation;
+            }
+
+            // Log warning if there's a discrepancy (for debugging)
+            if (pageTranslation && pageTranslation !== correct && correct !== "???") {
+              console.warn(`Translation mismatch for word ${w.id} (${w.text_uthmani}): API says "${correct}", page says "${pageTranslation}"`);
+            }
+
+            // Create options ensuring correct answer is included
+            // Use Set to remove duplicates from decoys array
+            const uniqueDecoys = [...new Set(decoys)].filter(d => d !== correct && d.trim() !== correct.trim());
+            const filteredDecoys = uniqueDecoys.sort(() => Math.random() - 0.5).slice(0, 3);
+
+            // Create options array and verify correct answer is included
+            const options = [correct, ...filteredDecoys];
+
+            // Log warning if correct answer is missing from options
+            if (!options.includes(correct)) {
+              console.error(`CRITICAL: Correct answer "${correct}" not found in options for word ${w.id} (${w.text_uthmani})`);
+            }
+
             // Default type is mcq
             return {
               id: w.id,
               arabic: w.text_uthmani,
               correct: correct,
-              options: [correct, ...filteredDecoys].sort(() => Math.random() - 0.5),
+              options: options.sort(() => Math.random() - 0.5),
               type: 'mcq' as const
             };
-          });
-          
+          }).filter((q: Question | null) => q !== null && q.correct !== "???") as Question[]; // Filter out words without valid translations
+
           setQuestions(generated);
 
           // Fetch next verse metadata to check for page break
@@ -362,7 +396,48 @@ function MufradatQuizContent() {
     // Apply Mode effects to questions
     setQuestions(prev => {
       let updated = [...prev];
-      
+
+      // Validate each question to ensure correct answer is in options
+      updated = updated.map(q => {
+        let newOptions = q.options;
+
+        // Verify and fix options for each question type
+        if (q.type === 'mcq' || q.type === 'tricky') {
+          const correct = q.correct;
+          const hasCorrect = newOptions.includes(correct);
+
+          if (!hasCorrect) {
+            console.error(`Question ${q.id}: Correct answer "${correct}" not in options [${newOptions.join(', ')}]. Fixing...`);
+            // Recreate options ensuring correct answer is included
+            const otherOptions = newOptions.filter(o => o !== correct);
+            const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
+            newOptions = [correct, ...decoysToUse];
+          }
+        } else if (q.type === 'reverse') {
+          const correct = q.arabic;
+          const hasCorrect = newOptions.includes(correct);
+
+          if (!hasCorrect) {
+            console.error(`Question ${q.id}: Correct answer "${correct}" not in options [${newOptions.join(', ')}]. Fixing...`);
+            const otherOptions = newOptions.filter(o => o !== correct);
+            const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
+            newOptions = [correct, ...decoysToUse];
+          }
+        } else if (q.type === 'scrambled') {
+          const correctWords = q.correct.split(' ');
+          const hasAllCorrect = correctWords.every(w => q.scrambledOptions?.includes(w));
+
+          if (!hasAllCorrect) {
+            console.error(`Question ${q.id}: Scrambled options missing correct words. Fixing...`);
+            const scrambledOptions = q.scrambledOptions || [];
+            const missingWords = correctWords.filter(w => !scrambledOptions.includes(w));
+            q.scrambledOptions = [...scrambledOptions, ...missingWords].sort(() => Math.random() - 0.5);
+          }
+        }
+
+        return { ...q, options: newOptions };
+      });
+
       if (mode === "runut") {
         updated = updated.map(q => {
           const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3, 'indonesian');
@@ -414,6 +489,38 @@ function MufradatQuizContent() {
           }
         });
       }
+
+      // Final validation: ensure all questions have valid options with correct answer
+      updated = updated.map(q => {
+        if (q.type === 'mcq' || q.type === 'tricky') {
+          const correct = q.correct;
+          if (!q.options.includes(correct)) {
+            console.error(`Question ${q.id}: Correct answer "${correct}" missing from options!`);
+            // Fix: ensure correct answer is included
+            const otherOptions = q.options.filter(o => o !== correct);
+            const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
+            return { ...q, options: [correct, ...decoysToUse] };
+          }
+        } else if (q.type === 'reverse') {
+          const correct = q.arabic;
+          if (!q.options.includes(correct)) {
+            console.error(`Question ${q.id}: Correct answer "${correct}" missing from options!`);
+            const otherOptions = q.options.filter(o => o !== correct);
+            const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
+            return { ...q, options: [correct, ...decoysToUse] };
+          }
+        } else if (q.type === 'scrambled') {
+          const correctWords = q.correct.split(' ');
+          const scrambledOptions = q.scrambledOptions || [];
+          if (!correctWords.every(w => scrambledOptions.includes(w))) {
+            console.error(`Question ${q.id}: Correct words missing from scrambled options!`);
+            const missingWords = correctWords.filter(w => !scrambledOptions.includes(w));
+            return { ...q, scrambledOptions: [...scrambledOptions, ...missingWords].sort(() => Math.random() - 0.5) };
+          }
+        }
+        return q;
+      });
+
       return updated;
     });
   };

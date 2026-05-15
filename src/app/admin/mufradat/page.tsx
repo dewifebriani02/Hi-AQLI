@@ -26,7 +26,11 @@ import {
   Settings,
   RefreshCw,
   AlertCircle,
-  BookOpen
+  BookOpen,
+  MessageSquare,
+  Sparkles,
+  ClipboardList,
+  Trash2
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState, useMemo, useEffect, Suspense, Fragment } from "react";
@@ -56,6 +60,20 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, X } from "lucide-react";
 
 const TOTAL_QURAN_VERSES = 6236;
 
@@ -77,6 +95,18 @@ function MufradatMonitoringContent() {
 
   const [selectedTestUser, setSelectedTestUser] = useState("");
   const [testMessage, setTestMessage] = useState("");
+
+  const [isMotivationDialogOpen, setIsMotivationDialogOpen] = useState(false);
+  const [motivations, setMotivations] = useState<any[]>([]);
+  const [newMotivation, setNewMotivation] = useState("");
+  const [isLoadingMotivations, setIsLoadingMotivations] = useState(false);
+
+  // New Management State
+  const [isManagementDialogOpen, setIsManagementDialogOpen] = useState(false);
+  const [dbTemplates, setDbTemplates] = useState<any[]>([]);
+  const [dbConfigs, setDbConfigs] = useState<any[]>([]);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState("manual");
 
   const generateCron = (day: string, hour: string, minute: string) => {
     return `${minute} ${hour} * * ${day}`;
@@ -252,10 +282,99 @@ function MufradatMonitoringContent() {
       return;
     }
     const displayName = u.full_name || u.username;
-    const salutation = u.salutation ? u.salutation + ' ' : (displayName?.toLowerCase().includes('ummu') ? '' : 'Ukhti ');
-    const message = `Assalamualaikum ${salutation}${displayName}, sekadar mengingatkan target Mufradat pekan ini (${u.targetStr}). Progres saat ini baru ${u.weeklyCount} ayat. Semoga Allah mudahkan dalam menjaga hafalan. Semangat, bismillah! ✨`;
+    const salutationValue = u.salutation?.trim() || (displayName?.toLowerCase().includes('ummu') ? '' : 'Ukhti');
+    const salutation = salutationValue ? salutationValue + ' ' : '';
+    
+    // Pick a manual template from DB
+    const manualVariants = dbTemplates.filter(t => t.category === 'manual');
+    let template = "Assalamualaikum {salutation}{name}, sekadar mengingatkan target Mufradat pekan ini ({targetStr}). Progres saat ini baru {weeklyCount} ayat. Semoga Allah mudahkan dalam menjaga hafalan. Semangat, bismillah! ✨";
+    
+    if (manualVariants.length > 0) {
+      template = manualVariants[Math.floor(Math.random() * manualVariants.length)].content;
+    }
+
+    const message = template
+      .replace(/\{salutation\}/g, salutation)
+      .replace(/\{name\}/g, displayName)
+      .replace(/\{targetStr\}/g, u.targetStr)
+      .replace(/\{weeklyCount\}/g, String(u.weeklyCount))
+      .replace(/  +/g, ' ')
+      .trim() + "\n\n— Admin Hi AQLI";
+
     window.open(`https://wa.me/${waNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
   };
+
+  const fetchSettings = async () => {
+    setIsLoadingSettings(true);
+    try {
+      const res = await fetch('/api/admin/reminders', { 
+        method: 'POST', 
+        body: JSON.stringify({ action: 'fetch_settings' }) 
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDbTemplates(data.templates);
+        setDbConfigs(data.configs);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  };
+
+  const saveTemplate = async (id: string | null, category: string, content: string) => {
+    try {
+      const res = await fetch('/api/admin/reminders', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'save_template', id, category, content })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Template Disimpan" });
+        fetchSettings();
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal menyimpan template" });
+    }
+  };
+
+  const deleteTemplate = async (id: string) => {
+    if (!confirm("Hapus variasi pesan ini?")) return;
+    try {
+      const res = await fetch('/api/admin/reminders', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete_template', id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Template Dihapus" });
+        fetchSettings();
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal menghapus template" });
+    }
+  };
+
+  const updateConfig = async (category: string, schedule: string) => {
+    try {
+      const res = await fetch('/api/admin/reminders', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'update_schedule', category, schedule })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: `Jadwal ${category} Berhasil Diupdate` });
+        fetchSettings();
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal update jadwal" });
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   const handleTriggerAutomated = async () => {
     if (!confirm("Kirim pengingat otomatis sekarang?")) return;
@@ -327,6 +446,56 @@ function MufradatMonitoringContent() {
     }
   };
 
+  const fetchMotivations = async () => {
+    setIsLoadingMotivations(true);
+    try {
+      const { data, error } = await supabase
+        .from('mufradat_motivations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setMotivations(data || []);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal memuat motivasi", description: e.message });
+    } finally {
+      setIsLoadingMotivations(false);
+    }
+  };
+
+  const handleAddMotivation = async () => {
+    if (!newMotivation.trim()) return;
+    setIsLoadingMotivations(true);
+    try {
+      const { error } = await supabase
+        .from('mufradat_motivations')
+        .insert({ content: newMotivation.trim() });
+      if (error) throw error;
+      setNewMotivation("");
+      fetchMotivations();
+      toast({ title: "Motivasi Ditambahkan" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal menyimpan", description: e.message });
+    } finally {
+      setIsLoadingMotivations(false);
+    }
+  };
+
+  const handleDeleteMotivation = async (id: string) => {
+    try {
+      const { error } = await supabase.from('mufradat_motivations').delete().eq('id', id);
+      if (error) throw error;
+      fetchMotivations();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal menghapus" });
+    }
+  };
+
+  useEffect(() => {
+    if (isMotivationDialogOpen) {
+      fetchMotivations();
+    }
+  }, [isMotivationDialogOpen]);
+
   if (isUsersLoading || isAttemptsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -352,11 +521,8 @@ function MufradatMonitoringContent() {
             <p className="text-muted-foreground font-medium text-sm">Hanya peserta resmi Hi Mufradat (status aktif). Monitor target 1 halaman sepekan dan kirim pengingat via WhatsApp.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setIsSettingsDialogOpen(true)} className="h-10 text-[10px] font-black uppercase tracking-widest border-2 border-blue-500 text-blue-600 rounded-xl">
-             <Settings className="w-3.5 h-3.5 mr-2" /> Pengaturan WA
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsScheduleDialogOpen(true)} className="h-10 text-[10px] font-black uppercase tracking-widest border-2 border-amber-500 text-amber-600 rounded-xl">
-             <CalendarDays className="w-3.5 h-3.5 mr-2" /> Atur Jadwal
+          <Button variant="outline" size="sm" onClick={() => setIsManagementDialogOpen(true)} className="h-10 text-[10px] font-black uppercase tracking-widest border-2 border-emerald-500 text-emerald-600 rounded-xl bg-emerald-50">
+             <MessageSquare className="w-3.5 h-3.5 mr-2" /> Kelola Pesan & Jadwal
           </Button>
           <Button disabled={isTriggering} onClick={handleTriggerAutomated} size="sm" className="h-10 text-[10px] font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xl">
             {isTriggering ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Zap className="w-3.5 h-3.5 mr-2" />}
@@ -391,6 +557,7 @@ function MufradatMonitoringContent() {
               <TableRow>
                 <TableHead className="pl-6">Peserta</TableHead>
                 <TableHead>Target</TableHead>
+                <TableHead>Jadwal</TableHead>
                 <TableHead>Halaman</TableHead>
                 <TableHead>Status Pekanan</TableHead>
                 <TableHead>Progres (%)</TableHead>
@@ -421,6 +588,11 @@ function MufradatMonitoringContent() {
                         </div>
                       </TableCell>
                       <TableCell><Badge variant="outline">{u.targetStr}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 capitalize text-[10px] font-bold">
+                          {u.schedule || 'harian'}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <BookOpen className="w-3 h-3 text-blue-500" />
@@ -536,125 +708,199 @@ function MufradatMonitoringContent() {
         </CardContent>
       </Card>
 
-      <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Atur Jadwal Japri Otomatis</DialogTitle>
-            <DialogDescription>Atur jadwal pengiriman pesan WhatsApp otomatis ke peserta Hi Mufradat.</DialogDescription>
+      {/* MANAGEMENT DIALOG: TEMPLATES & SCHEDULES */}
+      <Dialog open={isManagementDialogOpen} onOpenChange={setIsManagementDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl rounded-3xl">
+          <DialogHeader className="p-8 bg-emerald-600 text-white rounded-t-3xl">
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
+              <Settings className="w-8 h-8" /> Manajemen Reminder WhatsApp
+            </DialogTitle>
+            <DialogDescription className="text-emerald-50 text-[11px] font-bold uppercase tracking-widest mt-1">
+              Atur Variasi Pesan, Jadwal Pengiriman, dan Monitoring Server
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-6">
-            <div className="space-y-3">
-              <Label>Hari Kirim</Label>
-              <Select value={scheduleDay} onValueChange={setScheduleDay}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Setiap Minggu</SelectItem>
-                  <SelectItem value="1">Setiap Senin</SelectItem>
-                  <SelectItem value="2">Setiap Selasa</SelectItem>
-                  <SelectItem value="3">Setiap Rabu</SelectItem>
-                  <SelectItem value="4">Setiap Kamis</SelectItem>
-                  <SelectItem value="5">Setiap Jumat</SelectItem>
-                  <SelectItem value="6">Setiap Sabtu</SelectItem>
-                  <SelectItem value="*">Setiap Hari</SelectItem>
-                </SelectContent>
-              </Select>
+
+          <Tabs defaultValue="templates" className="w-full">
+            <div className="px-8 bg-emerald-600/5 border-b">
+              <TabsList className="bg-transparent h-12 gap-6">
+                <TabsTrigger value="templates" className="data-[state=active]:border-b-4 data-[state=active]:border-emerald-600 rounded-none h-full font-black text-[10px] uppercase tracking-widest text-muted-foreground data-[state=active]:text-emerald-700">Variasi Pesan</TabsTrigger>
+                <TabsTrigger value="schedules" className="data-[state=active]:border-b-4 data-[state=active]:border-emerald-600 rounded-none h-full font-black text-[10px] uppercase tracking-widest text-muted-foreground data-[state=active]:text-emerald-700">Jadwal Otomatis</TabsTrigger>
+                <TabsTrigger value="server" className="data-[state=active]:border-b-4 data-[state=active]:border-emerald-600 rounded-none h-full font-black text-[10px] uppercase tracking-widest text-muted-foreground data-[state=active]:text-emerald-700">Status & Test</TabsTrigger>
+              </TabsList>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <Label>Jam (WIB)</Label>
-                <Select value={scheduleHour} onValueChange={setScheduleHour}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <SelectItem key={i} value={i.toString()}>
-                        {i.toString().padStart(2, '0')}:00
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <TabsContent value="templates" className="p-8 space-y-6">
+              <div className="bg-blue-50 border-2 border-blue-100 p-4 rounded-2xl text-[11px] text-blue-700 font-medium">
+                <p>💡 <strong>Tips:</strong> Gunakan lebih dari 2 variasi pesan per kategori untuk menghindari deteksi spam oleh WhatsApp. Pesan akan dirotasi secara otomatis.</p>
+                <p className="mt-2"><strong>Placeholder:</strong> <code className="bg-blue-200 px-1 rounded">{"{salutation}"}</code>, <code className="bg-blue-200 px-1 rounded">{"{name}"}</code>, <code className="bg-blue-200 px-1 rounded">{"{progress}"}</code> (untuk pekanan), <code className="bg-blue-200 px-1 rounded">{"{targetStr}"}</code> (untuk manual)</p>
               </div>
-              <div className="space-y-3">
-                <Label>Menit</Label>
-                <Select value={scheduleMinute} onValueChange={setScheduleMinute}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 60 }, (_, i) => (
-                      <SelectItem key={i} value={i.toString()}>
-                        {i.toString().padStart(2, '0')} menit
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Jadwal yang diatur:</span>
-                <span className="font-bold">{newSchedule}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Waktu (UTC):</span>
-                <span className="font-bold">
-                  {scheduleMinute.toString().padStart(2, '0')}:{scheduleHour.toString().padStart(2, '0')} UTC
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Waktu (WIB):</span>
-                <span className="font-bold">
-                  {(parseInt(scheduleHour) + 7 >= 24 ? parseInt(scheduleHour) - 17 : parseInt(scheduleHour) + 7).toString().padStart(2, '0')}:{scheduleMinute.toString().padStart(2, '0')} WIB
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                * Server menggunakan UTC (UTC+0). Tampilan WIB sudah dikonversi otomatis.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleUpdateSchedule}>Simpan Jadwal</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <Accordion type="single" collapsible className="w-full space-y-4">
+                {['manual', 'harian', 'weekend', 'pekanan', 'monday_spirit'].map((cat) => (
+                  <AccordionItem key={cat} value={cat} className="border rounded-2xl px-4 bg-white shadow-sm overflow-hidden">
+                    <AccordionTrigger className="hover:no-underline py-4">
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-emerald-100 text-emerald-700 border-none font-black text-[10px] uppercase px-3">
+                          {cat.replace('_', ' ')}
+                        </Badge>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          {dbTemplates.filter(t => t.category === cat).length} Variasi
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-6 space-y-4">
+                      <div className="space-y-3">
+                        {dbTemplates.filter(t => t.category === cat).map((tpl, idx) => (
+                          <div key={tpl.id} className="group relative bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="absolute top-2 right-2 h-7 w-7 text-rose-400 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => deleteTemplate(tpl.id)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                            <label className="text-[9px] font-black uppercase text-slate-400 block mb-2">Variasi #{idx + 1}</label>
+                            <Textarea 
+                              className="text-xs font-medium leading-relaxed bg-white border-slate-200 focus:border-emerald-500 min-h-[80px]"
+                              value={tpl.content}
+                              onChange={(e) => {
+                                const newTemplates = [...dbTemplates];
+                                const target = newTemplates.find(t => t.id === tpl.id);
+                                if (target) target.content = e.target.value;
+                                setDbTemplates(newTemplates);
+                              }}
+                              onBlur={() => saveTemplate(tpl.id, cat, tpl.content)}
+                            />
+                          </div>
+                        ))}
+                        <Button 
+                          variant="outline" 
+                          className="w-full border-dashed border-2 py-8 rounded-xl text-muted-foreground hover:text-emerald-600 hover:border-emerald-300 transition-all"
+                          onClick={() => saveTemplate(null, cat, "Tulis pesan baru di sini...")}
+                        >
+                          <Plus className="w-4 h-4 mr-2" /> Tambah Variasi Pesan
+                        </Button>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </TabsContent>
 
-      <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Pengaturan Pengiriman WhatsApp</DialogTitle>
-            <DialogDescription>Kelola pengiriman pesan WhatsApp, test koneksi, dan lihat log error.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-6">
-            {/* Test Kirim ke User Spesifik */}
-            <div className="space-y-3 border-b pb-4">
-              <h3 className="font-bold text-sm uppercase tracking-wider text-[#800000]">Test Kirim ke Peserta</h3>
-              <div className="grid gap-3">
-                <div>
-                  <Label>Pilih Peserta</Label>
-                  <Select value={selectedTestUser} onValueChange={setSelectedTestUser}>
-                    <SelectTrigger><SelectValue placeholder="Pilih peserta..." /></SelectTrigger>
-                    <SelectContent>
-                      {filteredStats.map((u: any) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.username || u.full_name} ({u.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Pesan Test (kosongkan untuk template otomatis)</Label>
-                  <Input
-                    placeholder="Kosongkan untuk pakai template reminder otomatis..."
-                    value={testMessage}
-                    onChange={(e) => setTestMessage(e.target.value)}
-                  />
+            <TabsContent value="schedules" className="p-8 space-y-8">
+              {['harian', 'weekend', 'pekanan', 'monday_spirit'].map((cat) => {
+                const config = dbConfigs.find(c => c.category === cat);
+                const cron = config?.schedule_cron || "0 14 * * 0";
+                const parts = cron.split(' ');
+                
+                return (
+                  <div key={cat} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-black text-xs uppercase tracking-widest text-[#800000]">
+                        Jadwal Reminder {cat.replace('_', ' ')}
+                      </h3>
+                      {config?.updated_at && (
+                        <span className="text-[9px] text-muted-foreground">Terakhir diupdate: {new Date(config.updated_at).toLocaleString('id-ID')}</span>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-4 gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Hari</label>
+                        <Select 
+                          value={parts[4]} 
+                          onValueChange={(val) => {
+                            const newCron = `${parts[0]} ${parts[1]} * * ${val}`;
+                            updateConfig(cat, newCron);
+                          }}
+                        >
+                          <SelectTrigger className="h-10 text-xs font-bold"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Minggu</SelectItem>
+                            <SelectItem value="1">Senin</SelectItem>
+                            <SelectItem value="2">Selasa</SelectItem>
+                            <SelectItem value="3">Rabu</SelectItem>
+                            <SelectItem value="4">Kamis</SelectItem>
+                            <SelectItem value="5">Jumat</SelectItem>
+                            <SelectItem value="6">Sabtu</SelectItem>
+                            <SelectItem value="*">Setiap Hari</SelectItem>
+                            <SelectItem value="1-5">Senin - Jumat</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Jam (WIB)</label>
+                        <Select 
+                          value={parts[1]} 
+                          onValueChange={(val) => {
+                            const newCron = `${parts[0]} ${val} * * ${parts[4]}`;
+                            updateConfig(cat, newCron);
+                          }}
+                        >
+                          <SelectTrigger className="h-10 text-xs font-bold"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <SelectItem key={i} value={i.toString()}>{i.toString().padStart(2, '0')}:00</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Menit</label>
+                        <Select 
+                          value={parts[0]} 
+                          onValueChange={(val) => {
+                            const newCron = `${val} ${parts[1]} * * ${parts[4]}`;
+                            updateConfig(cat, newCron);
+                          }}
+                        >
+                          <SelectTrigger className="h-10 text-xs font-bold"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {['0', '15', '30', '45'].map(m => (
+                              <SelectItem key={m} value={m}>{m} Menit</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-end pb-0.5">
+                        <div className="bg-emerald-50 text-emerald-700 px-4 h-10 rounded-lg flex items-center justify-center w-full text-[10px] font-black uppercase tracking-tight border border-emerald-100">
+                          Aktif
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </TabsContent>
+
+            <TabsContent value="server" className="p-8 space-y-8">
+              {/* Test Kirim ke User Spesifik */}
+              <div className="space-y-4">
+                <h3 className="font-black text-sm uppercase tracking-widest text-[#800000]">Test Kirim ke Peserta</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase ml-1">Pilih Peserta</Label>
+                    <Select value={selectedTestUser} onValueChange={setSelectedTestUser}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="Cari peserta..." /></SelectTrigger>
+                      <SelectContent>
+                        {filteredStats.slice(0, 50).map((u: any) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.username || u.full_name} ({u.whatsapp || u.phone})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase ml-1">Pesan Custom (Optional)</Label>
+                    <Input
+                      placeholder="Kosongkan untuk pakai template manual..."
+                      value={testMessage}
+                      onChange={(e) => setTestMessage(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
                 </div>
                 <Button
                   onClick={async () => {
@@ -667,74 +913,62 @@ function MufradatMonitoringContent() {
                       });
                       const data = await res.json();
                       if (data.success) {
-                        toast({ title: "Pesan Terkirim!", description: data.summary?.sent ? "Berhasil kirim pesan test" : "Cek log untuk detail" });
+                        toast({ title: "Pesan Test Terkirim!" });
                       } else {
                         toast({ variant: "destructive", title: "Gagal", description: data.error });
                       }
                     } catch (err: any) {
-                      toast({ variant: "destructive", title: "Gagal Kirim", description: err.message });
+                      toast({ variant: "destructive", title: "Error", description: err.message });
                     } finally {
                       setIsTriggering(false);
                     }
                   }}
                   disabled={!selectedTestUser || isTriggering}
-                  className="w-full"
+                  className="w-full h-12 bg-[#800000] text-white font-black uppercase tracking-widest rounded-xl"
                 >
                   {isTriggering ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
-                  Kirim Pesan Test
+                  Kirim Pesan Test Sekarang
                 </Button>
               </div>
-            </div>
 
-            {/* Status Info */}
-            <div className="space-y-3">
-              <h3 className="font-bold text-sm uppercase tracking-wider text-[#800000]">Status Device Fonnte</h3>
-              <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Periksa koneksi device di:</span>
-                  <a href="https://fonnte.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
-                    Fonnte Dashboard →
-                  </a>
+              {/* Status Info */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                  <h3 className="font-black text-xs uppercase tracking-widest text-[#800000]">Status Device Fonnte</h3>
+                  <div className="bg-muted/50 p-4 rounded-xl space-y-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">Dashboard Provider:</span>
+                      <a href="https://fonnte.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold text-xs">
+                        BUKA FONNTE →
+                      </a>
+                    </div>
+                    <p className="text-[10px] leading-relaxed text-muted-foreground italic">
+                      💡 Periksa status "Connected" di dashboard provider. Jika terputus, silakan scan ulang QR Code di sana.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Error "disconnected device" berarti perlu reconnect device WhatsApp di dashboard Fonnte.
-                </p>
-              </div>
-            </div>
 
-            {/* Konfigurasi Pengiriman (Read-only - ini di Edge Function) */}
-            <div className="space-y-3 border-t pt-4">
-              <h3 className="font-bold text-sm uppercase tracking-wider text-[#800000]">Konfigurasi Pengiriman</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-muted/50 p-3 rounded-lg">
-                  <div className="text-muted-foreground text-xs">Daily Cap</div>
-                  <div className="font-bold text-lg">200</div>
-                  <div className="text-xs text-muted-foreground">pesan/hari</div>
-                </div>
-                <div className="bg-muted/50 p-3 rounded-lg">
-                  <div className="text-muted-foreground text-xs">Quiet Hours</div>
-                  <div className="font-bold text-lg">06:00 - 21:00</div>
-                  <div className="text-xs text-muted-foreground">WIB</div>
-                </div>
-                <div className="bg-muted/50 p-3 rounded-lg">
-                  <div className="text-muted-foreground text-xs">Delay antar pesan</div>
-                  <div className="font-bold text-lg">8 detik</div>
-                  <div className="text-xs text-muted-foreground">mencegah rate-limit</div>
-                </div>
-                <div className="bg-muted/50 p-3 rounded-lg">
-                  <div className="text-muted-foreground text-xs">Auto-block</div>
-                  <div className="font-bold text-lg">3 gagal</div>
-                  <div className="text-xs text-muted-foreground">user terblokir</div>
+                <div className="space-y-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                  <h3 className="font-black text-xs uppercase tracking-widest text-[#800000]">Limit & Keamanan</h3>
+                  <div className="grid grid-cols-2 gap-3 text-[10px] font-bold">
+                    <div className="bg-slate-50 p-3 rounded-lg border">
+                      <div className="text-slate-400 mb-1">Daily Cap</div>
+                      <div className="text-slate-800">200 Pesan</div>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-lg border">
+                      <div className="text-slate-400 mb-1">Delay</div>
+                      <div className="text-slate-800">8 Detik</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                * Sistem mendukung 2 provider: **Fonnte** & **Gowa**. 
-                Konfigurasi ini diatur di Edge Function `send-weekly-reminder` via Supabase Secrets.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsSettingsDialogOpen(false)}>Tutup</Button>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="p-8 bg-slate-50 rounded-b-3xl border-t">
+            <Button onClick={() => setIsManagementDialogOpen(false)} className="w-full h-12 bg-slate-800 text-white font-black uppercase tracking-widest rounded-xl hover:bg-slate-900">
+              Selesai & Tutup
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

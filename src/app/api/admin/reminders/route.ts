@@ -50,46 +50,84 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, summary: { sent, failed, skipped, total: results.length }, data });
     }
 
+    if (action === 'fetch_settings') {
+      const { data: templates } = await supabaseAdmin.from('mufradat_reminder_templates').select('*');
+      const { data: configs } = await supabaseAdmin.from('mufradat_reminder_configs').select('*');
+      return NextResponse.json({ success: true, templates: templates || [], configs: configs || [] });
+    }
+
+    if (action === 'save_template') {
+      const { id, category, content } = await req.json();
+      const { data, error } = id 
+        ? await supabaseAdmin.from('mufradat_reminder_templates').update({ content }).eq('id', id).select().single()
+        : await supabaseAdmin.from('mufradat_reminder_templates').insert({ category, content }).select().single();
+      
+      if (error) throw error;
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (action === 'delete_template') {
+      const { id } = await req.json();
+      const { error } = await supabaseAdmin.from('mufradat_reminder_templates').delete().eq('id', id);
+      if (error) throw error;
+      return NextResponse.json({ success: true });
+    }
+
     if (action === 'update_schedule') {
-      // Execute SQL to update pg_cron job
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      );
-
+      const { category, schedule } = await req.json();
+      const jobName = `reminder-${category}`;
+      
       try {
-        // First, remove old job if exists
-        await supabase.rpc('cron', {
-          procedure_name: 'unschedule',
-          args: { job_name: 'send-weekly-reminders' }
-        }).catch(() => {}); // Ignore if job doesn't exist
+        // 1. Update config in database
+        await supabaseAdmin.from('mufradat_reminder_configs').upsert({ 
+          category, 
+          schedule_cron: schedule,
+          updated_at: new Date().toISOString()
+        });
 
-        // Then schedule new job
-        await supabase.rpc('cron', {
+        // 2. Update pg_cron job
+        // Unschedule existing
+        try {
+          await supabaseAdmin.rpc('cron', {
+            procedure_name: 'unschedule',
+            args: { job_name: jobName }
+          });
+        } catch (e) {
+          // Ignore if job doesn't exist
+        }
+
+        // Schedule new
+        // Note: The Edge Function now needs a 'mode' parameter to know which category to send
+        await supabaseAdmin.rpc('cron', {
           procedure_name: 'schedule',
           args: {
-            job_name: 'send-weekly-reminders',
+            job_name: jobName,
             schedule: schedule,
             command: `
               SELECT net.http_post(
                 url := '${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-weekly-reminder',
                 headers := '{"Content-Type": "application/json", "Authorization": "Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}"}'::jsonb,
-                body := '{}'::jsonb
+                body := '{"mode": "${category}"}'::jsonb
               )
             `
           }
         });
 
-        return NextResponse.json({
-          success: true,
-          message: `Jadwal berhasil diupdate: ${schedule}`
-        });
+        return NextResponse.json({ success: true, message: `Jadwal ${category} diupdate: ${schedule}` });
       } catch (err: any) {
-        return NextResponse.json({
-          success: false,
-          error: err.message || 'Gagal update jadwal. Pastikan pg_cron aktif.'
-        }, { status: 500 });
+        return NextResponse.json({ success: false, error: err.message }, { status: 500 });
       }
+    }
+
+    if (action === 'fetch_groups') {
+      const response = await fetch('https://api.fonnte.com/get-groups', {
+        method: 'POST',
+        headers: { 
+          'Authorization': process.env.FONNTE_API_KEY || ''
+        }
+      });
+      const data = await response.json();
+      return NextResponse.json({ success: true, groups: data.data || [] });
     }
 
     if (action === 'unblock') {

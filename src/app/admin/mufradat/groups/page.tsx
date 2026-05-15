@@ -48,7 +48,8 @@ import {
   ChevronRight,
   Trash2,
   AlertTriangle,
-  Calendar
+  Calendar,
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -106,6 +107,9 @@ export default function MufradatGroupsPage() {
     fonnte_group_id: ""
   });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const [fonnteGroups, setFonnteGroups] = useState<any[]>([]);
+  const [isFetchingFonnte, setIsFetchingFonnte] = useState(false);
 
   const { data: groups, isLoading, refresh } = useCollection("mufradat_groups", {
     orderBy: { column: 'created_at', ascending: true }
@@ -389,6 +393,24 @@ export default function MufradatGroupsPage() {
     }
   };
 
+  const fetchFonnteGroups = async () => {
+    setIsFetchingFonnte(true);
+    try {
+      const res = await fetch('/api/admin/reminders', { 
+        method: 'POST', 
+        body: JSON.stringify({ action: 'fetch_groups' }) 
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFonnteGroups(data.groups || []);
+        toast({ title: "Berhasil!", description: `${data.groups?.length || 0} grup WhatsApp ditemukan.` });
+      } else throw new Error(data.error);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal ambil grup", description: e.message });
+    } finally {
+      setIsFetchingFonnte(false);
+    }
+  };
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -623,12 +645,38 @@ export default function MufradatGroupsPage() {
                               onChange={e => setEditValues(v => ({ ...v, whatsapp_link: e.target.value }))}
                               className="h-9 text-xs"
                             />
-                            <Input 
-                              placeholder="Fonnte Group ID (e.g. 120363...@g.us)"
-                              value={editValues.fonnte_group_id} 
-                              onChange={e => setEditValues(v => ({ ...v, fonnte_group_id: e.target.value }))}
-                              className="h-9 text-[10px] font-mono mt-1"
-                            />
+                            <div className="flex flex-col gap-2 w-full">
+                              <div className="flex gap-2">
+                                <Input 
+                                  placeholder="Fonnte Group ID (e.g. 120363...@g.us)"
+                                  value={editValues.fonnte_group_id} 
+                                  onChange={e => setEditValues(v => ({ ...v, fonnte_group_id: e.target.value }))}
+                                  className="h-9 text-[10px] font-mono flex-1"
+                                />
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={fetchFonnteGroups}
+                                  className="h-9 text-[9px] font-black border-2 px-2"
+                                >
+                                  {isFetchingFonnte ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                </Button>
+                              </div>
+                              {fonnteGroups.length > 0 && (
+                                <Select onValueChange={(val) => setEditValues(v => ({ ...v, fonnte_group_id: val }))}>
+                                  <SelectTrigger className="h-8 text-[9px]">
+                                    <SelectValue placeholder="Pilih dari daftar Fonnte..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {fonnteGroups.map(fg => (
+                                      <SelectItem key={fg.id} value={fg.id} className="text-[9px]">
+                                        {fg.name} ({fg.id.substring(0,8)}...)
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -728,13 +776,37 @@ export default function MufradatGroupsPage() {
 
               <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Fonnte Group ID</label>
-                  <Input 
-                    placeholder="Contoh: 1203630239485@g.us" 
-                    value={newGroup.fonnte_group_id}
-                    onChange={e => setNewGroup(v => ({ ...v, fonnte_group_id: e.target.value }))}
-                    className="h-10 rounded-xl focus:border-[#800000]/30 font-mono text-[10px]"
-                  />
-                  <p className="text-[8px] text-muted-foreground italic">Dapatkan ID ini dari dashboard Fonnte -&gt; Groups.</p>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="Contoh: 1203630239485@g.us" 
+                      value={newGroup.fonnte_group_id}
+                      onChange={e => setNewGroup(v => ({ ...v, fonnte_group_id: e.target.value }))}
+                      className="h-10 rounded-xl focus:border-[#800000]/30 font-mono text-[10px] flex-1"
+                    />
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={fetchFonnteGroups}
+                      className="h-10 px-3 border-2 rounded-xl"
+                    >
+                      {isFetchingFonnte ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  {fonnteGroups.length > 0 && (
+                    <Select onValueChange={(val) => setNewGroup(v => ({ ...v, fonnte_group_id: val }))}>
+                      <SelectTrigger className="h-9 text-[10px] rounded-lg mt-1">
+                        <SelectValue placeholder="Pilih dari daftar grup Anda..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fonnteGroups.map(fg => (
+                          <SelectItem key={fg.id} value={fg.id} className="text-[10px]">
+                            {fg.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <p className="text-[8px] text-muted-foreground italic">Klik icon refresh untuk menarik daftar grup dari WhatsApp.</p>
                </div>
 
               {/* Musyrifah Selection */}

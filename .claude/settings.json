@@ -2,10 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(supabase secrets *)",
-      "Bash(kill 7001 7066)"
+      "Bash(kill 7001 7066)",
+      "Bash(awk 'NR>=365 && NR<=375' \"src/app/mufradat/page/[id]/quiz/page.tsx\")",
+      "Bash(awk 'NR==368 {print NR\": \"$0\"}' \"src/app/mufradat/page/[id]/quiz/page.tsx\")"
     ],
     "additionalDirectories": [
-      "/Users/dewifebrinani/My Projects/Hi-AQLI/.next"
+      "/Users/dewifebrinani/My Projects/Hi-AQLI/.next",
+      "/Users/dewifebrinani/My Projects/Hi-AQLI/src/app/mufradat/page/[id]/quiz"
     ]
   }
 }

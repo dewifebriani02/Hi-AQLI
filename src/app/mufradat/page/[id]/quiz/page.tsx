@@ -211,13 +211,19 @@ function PageQuizContent() {
         if (data && data.verses) {
           const allWords = data.verses.flatMap((v: any) => v.words.filter((w: any) => w.char_type_name === 'word'));
           setAllPageWords(allWords);
-          
+
           // Default: Generate first 30 sequential questions
           const selectedWords = allWords.slice(0, 30);
           const decoys = ["Maha Pengasih", "Maha Penyayang", "Segala Puji", "Tuhan", "Manusia", "Raja", "Sembahan", "Petunjuk", "Jalan", "Lurus", "Beriman", "Kafir", "Syurga", "Neraka", "Malaikat", "Kitab", "Rasul", "Hari Kiamat", "Takdir", "Sabar", "Syukur"];
-          
+
           const generated = selectedWords.map((w: any) => {
-            const correct = w.translation?.text || "???";
+            let correct = w.translation?.text || "???";
+
+            // Log if translation appears invalid (helps identify API issues)
+            if (correct === "???" || correct.trim().length === 0) {
+              console.warn(`Invalid translation for word ${w.id} (${w.text_uthmani})`);
+            }
+
             const filteredDecoys = decoys.filter(d => d !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
             return {
               id: w.id,
@@ -226,8 +232,8 @@ function PageQuizContent() {
               options: [correct, ...filteredDecoys].sort(() => Math.random() - 0.5),
               type: 'mcq' as const
             };
-          });
-          
+          }).filter((q: Question | null) => q !== null && q.correct !== "???") as Question[]; // Filter out words without valid translations
+
           setQuestions(generated);
         }
       } catch (err) {
@@ -353,16 +359,49 @@ function PageQuizContent() {
             options: [q.arabic, ...arabicDecoys].sort(() => Math.random() - 0.5)
           };
         } else {
+          const smartDecoys = getSmartDecoys({ arabic: q.arabic, indonesian: q.correct }, 3, 'indonesian');
           return {
             ...q,
-            type: 'tricky' as const
+            type: 'tricky' as const,
+            options: [q.correct, ...smartDecoys].sort(() => Math.random() - 0.5)
           };
         }
       });
     }
 
-    setQuestions(updated);
-  };
+      // Final validation: ensure all questions have valid options with correct answer
+      updated = updated.map(q => {
+        if (q.type === 'mcq' || q.type === 'tricky') {
+          const correct = q.correct;
+          if (!q.options.includes(correct)) {
+            console.error(`Question ${q.id}: Correct answer "${correct}" missing from options!`);
+            // Fix: ensure correct answer is included
+            const otherOptions = q.options.filter(o => o !== correct);
+            const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
+            return { ...q, options: [correct, ...decoysToUse] };
+          }
+        } else if (q.type === 'reverse') {
+          const correct = q.arabic;
+          if (!q.options.includes(correct)) {
+            console.error(`Question ${q.id}: Correct answer "${correct}" missing from options!`);
+            const otherOptions = q.options.filter(o => o !== correct);
+            const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
+            return { ...q, options: [correct, ...decoysToUse] };
+          }
+        } else if (q.type === 'scrambled') {
+          const correctWords = q.correct.split(' ');
+          const scrambledOptions = q.scrambledOptions || [];
+          if (!correctWords.every(w => scrambledOptions.includes(w))) {
+            console.error(`Question ${q.id}: Correct words missing from scrambled options!`);
+            const missingWords = correctWords.filter(w => !scrambledOptions.includes(w));
+            return { ...q, scrambledOptions: [...scrambledOptions, ...missingWords].sort(() => Math.random() - 0.5) };
+          }
+        }
+        return q;
+      });
+
+      setQuestions(updated);
+    };
 
   const handleAnswer = (answer: string) => {
     if (selectedAnswer || isFinished) return;

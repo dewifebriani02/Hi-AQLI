@@ -130,32 +130,54 @@ export default function MufradatFinancePage() {
     },
   );
 
-  const mufradatRegistrations = useMemo(() => {
-    if (!allRegistrations) return [];
-    return allRegistrations.filter(
-      (reg) =>
-        reg.is_premium || 
-        reg.registration_fee > 0 ||
-        reg.halaqah_id?.startsWith("mufradat-") ||
-        reg.metadata?.program === "mufradat" ||
-        reg.halaqah_title?.toLowerCase().includes("mufradat"),
-    );
-  }, [allRegistrations]);
+  const { data: donations, isLoading: isDonationsLoading } = useCollection("donations", {
+    filters: [{ column: "status", operator: "==", value: "verified" }],
+  });
+
+  const getProgram = (item: any) => {
+    // If it has campaign_title, it's from donations table
+    if (item.campaign_title !== undefined || item.sender_name !== undefined) return "hi_berbagi";
+    
+    const id = item.halaqah_id?.toLowerCase() || "";
+    const title = item.halaqah_title?.toLowerCase() || "";
+    const program = item.metadata?.program || "";
+
+    if (id.startsWith("mufradat-") || title.includes("mufradat") || program === "mufradat") return "hi_mufradat";
+    if (id.includes("tikrar") || title.includes("tikrar") || program === "tikrar") return "hi_tikrar";
+    if (id.includes("ngaji") || title.includes("ngaji") || program === "ngaji") return "hi_ngaji";
+    if (id.includes("berbagi") || title.includes("berbagi") || program === "berbagi") return "hi_berbagi";
+    
+    return "others";
+  };
+
+  const combinedTransactions = useMemo(() => {
+    const regs = allRegistrations || [];
+    const dons = (donations || []).map(d => ({
+      ...d,
+      user_name: d.sender_name || "Hamba Allah",
+      halaqah_title: d.campaign_title || "Infaq Umum",
+      is_donation: true
+    }));
+
+    return [...regs, ...dons];
+  }, [allRegistrations, donations]);
 
   // 2. DATA PROCESSING
   const financeData = useMemo(() => {
-    if (!mufradatRegistrations || !groups) return {};
+    if (!combinedTransactions || !groups) return {};
 
     // Grouping registrations by month and group
     const months: Record<string, any> = {};
 
-    mufradatRegistrations.forEach((reg) => {
+    combinedTransactions.forEach((reg) => {
       // Fallback: If billing_month is missing, calculate it based on verification date or current date
       const monthKey =
         reg.billing_month ||
         (reg.verified_at
           ? reg.verified_at.substring(0, 7)
-          : new Date().toISOString().substring(0, 7));
+          : reg.created_at 
+            ? reg.created_at.substring(0, 7)
+            : new Date().toISOString().substring(0, 7));
 
       if (!monthKey) return;
 
@@ -166,6 +188,7 @@ export default function MufradatFinancePage() {
           totalUniqueCode: 0,
           totalRegGross: 0,
           totalRegDiscounts: 0,
+          totalMufradatInfaq: 0, // Specifically for mufradat splits
           referralCommissions: {}, // referrer_id -> { name, amount }
           registrationPayers: [], // { name, amount, totalPaid }
           groups: {},
@@ -175,71 +198,76 @@ export default function MufradatFinancePage() {
 
       const amount = Number(reg.amount) || 0;
       const uniqueCode = Number(reg.unique_code) || (amount % 1000);
+      const program = getProgram(reg);
       
-      // Only count registration fee for initial/first-time registrations
-      const isInitial = reg.payment_type === 'initial' || 
-                        reg.is_first_registration || 
-                        (!reg.payment_type || !['monthly', 'leave_request'].includes(reg.payment_type));
-      
-      const regFeeGross = isInitial ? (Number(reg.registration_fee) || 0) : 0;
-      const refDiscount = isInitial ? (Number(reg.referral_discount_amount) || 0) : 0;
-
       // Tracking Totals
       months[monthKey].totalRevenue += amount;
       months[monthKey].totalUniqueCode += uniqueCode;
-      months[monthKey].totalRegGross += regFeeGross;
-      months[monthKey].totalRegDiscounts += refDiscount;
 
-      if (regFeeGross > 0) {
-        months[monthKey].registrationPayers.push({
-          name: reg.username || reg.metadata?.name || "Thalibah",
-          amount: regFeeGross,
-          totalPaid: amount,
-          isFirst: reg.is_first_registration
-        });
-      }
+      // Handle Mufradat-specific registration and commission logic
+      if (program === 'hi_mufradat') {
+        const isInitial = reg.payment_type === 'initial' || 
+                          reg.is_first_registration || 
+                          (!reg.payment_type || !['monthly', 'leave_request'].includes(reg.payment_type));
+        
+        const regFeeGross = isInitial ? (Number(reg.registration_fee) || 0) : 0;
+        const refDiscount = isInitial ? (Number(reg.referral_discount_amount) || 0) : 0;
 
-      // Handle Referral Commissions (Referrer gets 5k)
-      if (reg.referral_code_used) {
-        const referrer = usersData?.find(u => u.referral_code === reg.referral_code_used);
-        if (referrer) {
-          if (!months[monthKey].referralCommissions[referrer.id]) {
-            months[monthKey].referralCommissions[referrer.id] = {
-              name: referrer.username || "Referrer",
-              amount: 0,
-              bank: {
-                name: referrer.bank_name,
-                no: referrer.bank_account_number,
-                holder: referrer.bank_account_holder
-              }
-            };
-          }
-          months[monthKey].referralCommissions[referrer.id].amount += 5000;
+        months[monthKey].totalRegGross += regFeeGross;
+        months[monthKey].totalRegDiscounts += refDiscount;
+
+        if (regFeeGross > 0) {
+          months[monthKey].registrationPayers.push({
+            name: reg.user_name || reg.metadata?.name || "Thalibah",
+            amount: regFeeGross,
+            totalPaid: amount,
+            isFirst: reg.is_first_registration
+          });
         }
-      }
 
-      const groupId = reg.metadata?.mufradat_group_id || "unassigned";
-      if (!months[monthKey].groups[groupId]) {
-        const groupInfo = groups.find((g) => g.id === groupId);
-        months[monthKey].groups[groupId] = {
-          name: groupInfo?.name || "Lainnya/Tanpa Grup",
-          musyrifah: groupInfo?.musyrifah_name || "-",
-          muallimah: groupInfo?.muallimah_name || "-",
-          revenue: 0,
-          uniqueCode: 0,
-        };
-      }
+        // Handle Referral Commissions (Referrer gets 5k)
+        if (reg.referral_code_used) {
+          const referrer = usersData?.find(u => u.referral_code === reg.referral_code_used);
+          if (referrer) {
+            if (!months[monthKey].referralCommissions[referrer.id]) {
+              months[monthKey].referralCommissions[referrer.id] = {
+                name: referrer.username || "Referrer",
+                amount: 0,
+                bank: {
+                  name: referrer.bank_name,
+                  no: referrer.bank_account_number,
+                  holder: referrer.bank_account_holder
+                }
+              };
+            }
+            months[monthKey].referralCommissions[referrer.id].amount += 5000;
+          }
+        }
 
-      months[monthKey].groups[groupId].revenue += amount;
-      months[monthKey].groups[groupId].uniqueCode += uniqueCode;
-      
-      // Group-specific registration data (to exclude it from group revenue splits)
-      if (!months[monthKey].groups[groupId].regNet) months[monthKey].groups[groupId].regNet = 0;
-      months[monthKey].groups[groupId].regNet += (regFeeGross - refDiscount);
+        // Infaq calculation specifically for Mufradat split
+        months[monthKey].totalMufradatInfaq += (amount - uniqueCode - (regFeeGross - refDiscount));
+
+        const groupId = reg.metadata?.mufradat_group_id || "unassigned";
+        if (!months[monthKey].groups[groupId]) {
+          const groupInfo = groups.find((g) => g.id === groupId);
+          months[monthKey].groups[groupId] = {
+            name: groupInfo?.name || "Lainnya/Tanpa Grup",
+            musyrifah: groupInfo?.musyrifah_name || "-",
+            muallimah: groupInfo?.muallimah_name || "-",
+            revenue: 0,
+            uniqueCode: 0,
+            regNet: 0
+          };
+        }
+
+        months[monthKey].groups[groupId].revenue += amount;
+        months[monthKey].groups[groupId].uniqueCode += uniqueCode;
+        months[monthKey].groups[groupId].regNet += (regFeeGross - refDiscount);
+      }
     });
 
     return months;
-  }, [mufradatRegistrations, groups, payouts]);
+  }, [combinedTransactions, groups, payouts, usersData]);
 
   const sortedMonths = useMemo(() => {
     return Object.values(financeData).sort((a: any, b: any) =>
@@ -253,10 +281,10 @@ export default function MufradatFinancePage() {
     const totalUniqueCode = monthData.totalUniqueCode;
     const totalRegNet = monthData.totalRegGross - monthData.totalRegDiscounts;
     
-    // Infaq Bersih is after Unique Code and the portion of payment that belongs to Registration
-    const baseInfaq = totalRevenue - totalUniqueCode - totalRegNet;
+    // Infaq Bersih specifically for Hi Mufradat splits
+    const baseInfaq = monthData.totalMufradatInfaq || 0;
 
-    // Splits
+    // Splits (Only for Mufradat)
     const musyrifahTotal = baseInfaq * 0.4;
     const muallimahTotal = baseInfaq * 0.1;
     const devTotal = baseInfaq * 0.2;
@@ -630,8 +658,8 @@ export default function MufradatFinancePage() {
   };
 
   const filteredHistory = useMemo(() => {
-    if (!mufradatRegistrations) return [];
-    return mufradatRegistrations
+    if (!combinedTransactions) return [];
+    return combinedTransactions
       .filter(
         (r) =>
           r.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -642,9 +670,9 @@ export default function MufradatFinancePage() {
           new Date(b.created_at || 0).getTime() -
           new Date(a.created_at || 0).getTime(),
       );
-  }, [mufradatRegistrations, searchTerm]);
+  }, [combinedTransactions, searchTerm]);
 
-  if (isGroupsLoading || isRegLoading) {
+  if (isGroupsLoading || isRegLoading || isDonationsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
@@ -1580,7 +1608,10 @@ export default function MufradatFinancePage() {
                     Peserta
                   </TableHead>
                   <TableHead className="text-[10px] font-black uppercase">
-                    Program/Kelas
+                    Program
+                  </TableHead>
+                  <TableHead className="text-[10px] font-black uppercase">
+                    Item/Detail
                   </TableHead>
                   <TableHead className="text-[10px] font-black uppercase text-center">
                     Bulan
@@ -1600,7 +1631,7 @@ export default function MufradatFinancePage() {
                 {filteredHistory.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="py-12 text-center text-muted-foreground italic text-xs"
                     >
                       Data tidak ditemukan.
@@ -1626,6 +1657,18 @@ export default function MufradatFinancePage() {
                             </span>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const prog = getProgram(reg);
+                          switch (prog) {
+                            case 'hi_mufradat': return <Badge className="bg-rose-100 text-rose-700 border-none text-[8px] font-black py-0 px-2 h-5">HI MUFRADAT</Badge>;
+                            case 'hi_tikrar': return <Badge className="bg-blue-100 text-blue-700 border-none text-[8px] font-black py-0 px-2 h-5">HI TIKRAR</Badge>;
+                            case 'hi_berbagi': return <Badge className="bg-emerald-100 text-emerald-700 border-none text-[8px] font-black py-0 px-2 h-5">HI BERBAGI</Badge>;
+                            case 'hi_ngaji': return <Badge className="bg-orange-100 text-orange-700 border-none text-[8px] font-black py-0 px-2 h-5">HI NGAJI</Badge>;
+                            default: return <Badge className="bg-slate-100 text-slate-600 border-none text-[8px] font-black py-0 px-2 h-5 uppercase">{prog.replace('_', ' ')}</Badge>;
+                          }
+                        })()}
                       </TableCell>
                       <TableCell>
                         <span className="text-xs font-bold text-slate-600 truncate max-w-[150px] inline-block">
@@ -1674,24 +1717,30 @@ export default function MufradatFinancePage() {
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                            onClick={() => openEditDialog(reg)}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                            onClick={() =>
-                              handleDeleteRegistration(reg.id, reg.user_name)
-                            }
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {!reg.is_donation ? (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                                onClick={() => openEditDialog(reg)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                onClick={() =>
+                                  handleDeleteRegistration(reg.id, reg.user_name)
+                                }
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-300 italic pr-2">ReadOnly</span>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
