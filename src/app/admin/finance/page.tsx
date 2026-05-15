@@ -1019,7 +1019,7 @@ export default function MufradatFinancePage() {
               </p>
               <p className="text-2xl font-black text-emerald-900 tracking-tighter">
                 {FORMATTER.format(
-                  mufradatRegistrations.reduce(
+                  combinedTransactions.reduce(
                     (acc, r) => acc + (Number(r.amount) || 0),
                     0,
                   ),
@@ -1088,7 +1088,7 @@ export default function MufradatFinancePage() {
               </p>
               <p className="text-3xl font-black tracking-tighter">
                 {FORMATTER.format(
-                  mufradatRegistrations.reduce((acc, r) => {
+                  combinedTransactions.reduce((acc, r) => {
                     const amt = Number(r.amount) || 0;
                     const code = Number(r.unique_code) || (amt % 1000);
                     const isInitial = r.payment_type === 'initial' || 
@@ -1119,7 +1119,7 @@ export default function MufradatFinancePage() {
               </p>
               <p className="text-3xl font-black tracking-tighter">
                 {FORMATTER.format(
-                  mufradatRegistrations.reduce((acc, r) => {
+                  combinedTransactions.reduce((acc, r) => {
                     const amt = Number(r.amount) || 0;
                     const code = Number(r.unique_code) || (amt % 1000);
                     const isInitial = r.payment_type === 'initial' || 
@@ -1148,7 +1148,7 @@ export default function MufradatFinancePage() {
               </p>
               <p className="text-3xl font-black tracking-tighter">
                 {FORMATTER.format(
-                  mufradatRegistrations.reduce((acc, r) => {
+                  combinedTransactions.reduce((acc, r) => {
                     const isInitial = r.payment_type === 'initial' || 
                                      r.is_first_registration || 
                                      (!r.payment_type || !['monthly', 'leave_request'].includes(r.payment_type));

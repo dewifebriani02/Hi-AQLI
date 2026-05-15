@@ -63,7 +63,7 @@ type Donation = {
 };
 
 const paymentMethods = [
-  { id: 'transfer', label: 'Transfer Bank (BSI)', icon: Landmark, detail: 'Bank Syariah Indonesia - 7209432468 a.n. Dewi Febriani' },
+  { id: 'transfer', label: 'Transfer Bank (BSI)', icon: Landmark, detail: 'Bank Syariah Indonesia (Detail rekening muncul di tahap berikutnya)' },
 ];
 
 const normalizeTitle = (title: string) => (title || "").toLowerCase().replace(/[^a-z0-9]/g, '');
