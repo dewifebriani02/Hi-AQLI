@@ -32,6 +32,7 @@ yarn-error.log*
 
 # environment & backups
 .env*
+!.env.deploy.example
 backups/
 # local-only: credentials, runtime uploads, build artifacts
 scripts/deploy.sh
