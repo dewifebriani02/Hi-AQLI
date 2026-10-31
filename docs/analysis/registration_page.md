@@ -31,4 +31,4 @@ Bagian terpenting adalah fungsi `syncProfile` di dalam `useEffect`:
 
 **File Referensi:**
 - [src/app/register/page.tsx](file:///d:/Hi-AQLI/src/app/register/page.tsx) - Logika utama Registrasi.
-- [supabase/migrations/](file:///d:/Hi-AQLI/supabase/migrations/) - Schema tabel `users`.
+- [src/db/](file:///d:/Hi-AQLI/src/db/) - Schema tabel `users`.

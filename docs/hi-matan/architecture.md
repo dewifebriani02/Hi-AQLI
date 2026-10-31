@@ -4,7 +4,7 @@ Arsitektur modul Hi Matan dirancang agar sangat skalabel (multi-matan) dan sepen
 
 ## 1. Database Schema
 
-Materi dikelola melalui tabel-tabel berikut di Supabase:
+Materi dikelola melalui tabel-tabel berikut di PostgreSQL (Hostinger VPS):
 
 ### A. Konten (`public`)
 - `matans`: Metadata kitab (id, title, category, level, slug).
@@ -18,7 +18,7 @@ Materi dikelola melalui tabel-tabel berikut di Supabase:
 ## 2. Dynamic Learning Engine
 
 - **Routing Dst**: `/matan/[slug]/[chapter_id]`
-- **State Management**: Progress tersinkronisasi secara real-time ke Supabase.
+- **State Management**: Progress tersinkronisasi secara real-time ke database.
 - **Component Reusability**: Satu set komponen UI (Reader, Map, Quiz) yang merender data secara dinamis berdasarkan `matan_id`.
 
 ## 3. Integrasi Modul Lain

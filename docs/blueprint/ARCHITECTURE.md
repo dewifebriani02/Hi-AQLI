@@ -8,7 +8,7 @@ Dokumen ini menjelaskan struktur tingkat tinggi dan keputusan arsitektural yang 
 - **Bahasa**: TypeScript
 - **Styling**: Tailwind CSS & Lucide React (Icons)
 - **Komponen UI**: Radix UI (dikelola melalui pola Shadcn/ui)
-- **Backend/Database**: Supabase (PostgreSQL, Auth, Storage)
+- **Backend/Database**: Hostinger VPS (PostgreSQL 16, Self-Hosted Auth & DB)
 - **AI Engine**: Google Genkit (dengan integrasi Google Generative AI)
 - **Validasi Tata Bahasa**: Zod
 - **Form Handling**: React Hook Form
@@ -20,21 +20,21 @@ Sistem mengikuti pola standar Next.js App Router dengan beberapa penyesuaian:
 - `src/app/`: Berisi route, page, dan layout. Menggunakan pola folder grouping dan dynamic routes (misalnya `[id]`).
 - `src/components/`: Komponen UI yang dapat digunakan kembali. Terbagi menjadi sub-folder jika diperlukan.
 - `src/ai/`: Konfigurasi Genkit, definisi tools AI, dan flow kecerdasan buatan.
-- `src/lib/`: Utilitas logika, klien Supabase, dan fungsi pembantu (helpers).
+- `src/lib/`: Utilitas logika, klien database lokal, dan fungsi pembantu (helpers).
 - `src/hooks/`: Custom React hooks untuk logika stateful yang dapat digunakan kembali.
 - `src/data/`: Data statis atau file definisi konstanta.
-- `src/supabase/`: Konfigurasi atau tipe data khusus terkait database.
+- `src/db/`: Konfigurasi atau tipe data khusus terkait database.
 
 ## Pola Alur Data
 
 ### 1. Data Fetching
 - Menggunakan Server Components secara default untuk pengambilan data awal (SEO friendly).
-- Penggunaan Client Components untuk bagian interaktif yang memerlukan integrasi langsung dengan Supabase Client.
+- Penggunaan Client Components untuk bagian interaktif yang memerlukan integrasi langsung dengan Database Client.
 
 ### 2. Autentikasi
-- Menggunakan `@supabase/auth-helpers-nextjs`.
-- Session dikelola oleh Supabase Auth.
-- Proteksi route dilakukan melalui Middleware atau pengecekan di tingkat Page/Layout menggunakan `supabase.auth.getUser()`.
+- Menggunakan Self-Hosted JWT Auth.
+- Session dikelola oleh Self-Hosted JWT Auth.
+- Proteksi route dilakukan melalui Middleware atau pengecekan di tingkat Page/Layout menggunakan `db.auth.getUser()`.
 
 ### 3. Integrasi AI (Genkit)
 - Logika AI dipisahkan dalam folder `src/ai/`.
@@ -43,7 +43,7 @@ Sistem mengikuti pola standar Next.js App Router dengan beberapa penyesuaian:
 
 ## Keamanan
 
-- **Database**: Menggunakan Row Level Security (RLS) di Supabase. Setiap tabel harus memiliki policy yang membatasi akses baca/tulis hanya untuk user yang berhak atau admin.
+- **Database**: Menggunakan Row Level Security (RLS) di PostgreSQL. Setiap tabel harus memiliki policy yang membatasi akses baca/tulis hanya untuk user yang berhak atau admin.
 - **Environment Variables**: Data sensitif (API Keys, DB Secret) disimpan di `.env.local` dan tidak boleh di-commit ke repositori.
 
 ## Prinsip Desain

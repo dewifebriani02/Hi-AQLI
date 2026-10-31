@@ -15,7 +15,7 @@ Arsitektur modul Hi Ngaji dirancang untuk menangani data audio dan analisis AI s
 ## 2. AI Audio Processing Pipeline
 
 - **Frontend**: Menggunakan `MediaRecorder` API untuk menangkap suara Thalibah dalam format Ogg/WebM.
-- **Processing**: Audio diproses melalui Server Action (Vercel/Next.js) dan dikirim ke **Gemini 2.0 Flash API** untuk analisis.
+- **Processing**: Audio diproses melalui Server Action (Next.js) dan dikirim ke **Gemini 2.0 Flash API** untuk analisis.
 - **Feedback Loop**: AI mengembalikan data JSON yang berisi segmentasi makhroj, kesalahan tajwid, dan saran perbaikan yang kemudian ditampilkan secara interaktif di UI.
 
 ## 3. Integration & Extensibility

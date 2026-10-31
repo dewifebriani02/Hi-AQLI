@@ -5,7 +5,7 @@ Rencana eksekusi pengembangan modul Hi Matan dibagi menjadi 3 fase utama untuk m
 ## Fase 1: Fondasi & Basis Data (Mulai)
 - [ ] Migrasi database: Pembuatan tabel `matans`, `chapters`, `items`, dan `progress`.
 - [ ] Penyusunan struktur folder `src/app/matan`.
-- [ ] Integrasi data fetcher untuk mengambil materi dari Supabase.
+- [ ] Integrasi data fetcher untuk mengambil materi dari database.
 
 ## Fase 2: UI/UX & Gamifikasi
 - [ ] Implementasi "World Map" Dashboard.

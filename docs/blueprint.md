@@ -25,7 +25,7 @@
 ## 2. Technical Stack
 - **Framework**: Next.js 15.3.8 (App Router, Turbopack)
 - **Styling**: Tailwind CSS, Shadcn/UI
-- **Backend/Infrastructure**: Supabase (PostgreSQL, Auth, Storage, Real-time)
+- **Backend/Infrastructure**: Hostinger VPS (PostgreSQL 16, Self-Hosted Auth & DB)
 - **AI Core**: Google Gemini (Planned for Tilawah & I'rab analysis)
 - **PWA**: Fully supported offline-capable Progressive Web App
 

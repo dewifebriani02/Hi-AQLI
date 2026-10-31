@@ -31,4 +31,4 @@ Halaman login (`/login`) berfungsi sebagai gerbang utama otentikasi. Berikut ada
 
 **File Referensi:**
 - [src/app/login/page.tsx](file:///d:/Hi-AQLI/src/app/login/page.tsx) - Logika utama Login.
-- [src/supabase/index.ts](file:///d:/Hi-AQLI/src/supabase/index.ts) - Definisi fungsi otentikasi.
+- [src/db/index.ts](file:///d:/Hi-AQLI/src/db/index.ts) - Definisi fungsi otentikasi.
