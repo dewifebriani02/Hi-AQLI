@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/db";
 import { useCollection, authFetch } from "@/db";
+import { useToast } from "@/hooks/use-toast";
 
 // Data Kuis untuk setiap ayat
 const QUIZ_DATA: Record<string, any> = {
@@ -123,6 +124,7 @@ export default function IrabQuizPage() {
   const surahId = params.surahId as string;
   const ayat = params.ayat as string;
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -225,10 +227,23 @@ export default function IrabQuizPage() {
           duration_seconds: totalTime,
         })
       });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        toast({
+          variant: "destructive",
+          title: "Gagal menyimpan progres kuis",
+          description: errData?.error || `Terjadi kesalahan (${response.status}).`,
+        });
+      }
     } catch (e) {
       console.error("Gagal menyimpan progres kuis:", e);
+      toast({
+        variant: "destructive",
+        title: "Gagal menyimpan progres kuis",
+        description: "Periksa koneksi internet Anda dan coba lagi.",
+      });
     }
-  }, [user, surahId, ayat, quizData.questions.length, totalTime, currentAyatKey]);
+  }, [user, surahId, ayat, quizData.questions.length, totalTime, currentAyatKey, toast]);
 
   const handleAnswer = useCallback((answer: string) => {
     if (selectedAnswer) return;

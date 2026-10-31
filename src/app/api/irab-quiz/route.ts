@@ -38,16 +38,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'quiz_id wajib diisi.' }, { status: 400 });
     }
 
-    const duration = duration_seconds === undefined ? 0 : duration_seconds;
+    const rawDuration = duration_seconds === undefined ? 0 : duration_seconds;
     if (
       !isNonNegativeInt(score) ||
       !isNonNegativeInt(total_questions) ||
       score > total_questions ||
-      !isNonNegativeInt(duration) ||
-      duration > MAX_QUIZ_DURATION_SECONDS
+      typeof rawDuration !== 'number' ||
+      !Number.isFinite(rawDuration) ||
+      rawDuration < 0
     ) {
       return NextResponse.json({ error: 'Data skor atau durasi kuis tidak valid.' }, { status: 400 });
     }
+    const duration = Math.min(Math.floor(rawDuration), MAX_QUIZ_DURATION_SECONDS);
 
     const id = crypto.randomUUID();
     const surah = surah_id ? parseInt(String(surah_id), 10) || 0 : 0;

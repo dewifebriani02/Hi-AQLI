@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/db";
 import { useCollection, authFetch } from "@/db";
+import { useToast } from "@/hooks/use-toast";
 import { getPagesForJuz } from "@/lib/quran-mapping";
 
 interface Question {
@@ -43,6 +44,7 @@ export default function MufradatJuzExamPage() {
   const juzId = params.id as string;
   const juzNum = parseInt(juzId);
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -316,7 +318,7 @@ export default function MufradatJuzExamPage() {
   const saveAttempt = async (finalScore: number) => {
     if (!user) return;
     try {
-      await authFetch('/api/quiz-attempts', {
+      const response = await authFetch('/api/quiz-attempts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -333,8 +335,21 @@ export default function MufradatJuzExamPage() {
           page_id: null
         })
       });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        toast({
+          variant: "destructive",
+          title: "Gagal menyimpan hasil ujian",
+          description: errData?.error || `Terjadi kesalahan (${response.status}).`,
+        });
+      }
     } catch (e) {
       console.error("Gagal simpan skor:", e);
+      toast({
+        variant: "destructive",
+        title: "Gagal menyimpan hasil ujian",
+        description: "Periksa koneksi internet Anda dan coba lagi.",
+      });
     }
   };
 
