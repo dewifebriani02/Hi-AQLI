@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
 import { isProgramFree, programKeyFromType } from '@/lib/program-settings';
+import { isValidWhatsapp, normalizeWhatsapp } from '@/lib/whatsapp';
 
 const MUFRADAT_GROUP_CAPACITY = 50;
 
@@ -30,18 +31,25 @@ export async function POST(req: NextRequest) {
   if (!/^[0-9a-f-]{36}$/i.test(halaqahId)) return fail('Program tidak valid.', 400);
 
   const userName = typeof body.user_name === 'string' ? body.user_name.trim().slice(0, 120) : '';
-  const whatsapp = typeof body.whatsapp === 'string' ? body.whatsapp.trim().slice(0, 30) : '';
+  const rawWhatsapp = typeof body.whatsapp === 'string' ? body.whatsapp : '';
   if (!userName) return fail('Nama wajib diisi.', 400);
-  if (!whatsapp) return fail('Nomor WhatsApp wajib diisi.', 400);
+  if (!isValidWhatsapp(rawWhatsapp)) return fail('Nomor WhatsApp tidak valid.', 400);
+  const whatsapp = normalizeWhatsapp(rawWhatsapp);
 
-  const level = Number.isInteger(body.level) && body.level >= 1 && body.level <= 4 ? body.level : null;
+  const level = Number.isInteger(body.level) && body.level >= 1 && body.level <= 3 ? body.level : null;
   const targetJuz = Number.isInteger(body.target_juz) && body.target_juz >= 1 && body.target_juz <= 30 ? body.target_juz : null;
-  const metadata = body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata) ? body.metadata : {};
+
+  // Only known, short metadata fields from the client are stored.
+  const rawMeta = body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata) ? body.metadata : {};
+  const metadata: Record<string, string | boolean> = { akadAccepted: rawMeta.akadAccepted === true };
+  for (const key of ['schedule', 'target', 'level'] as const) {
+    if (typeof rawMeta[key] === 'string' && rawMeta[key].length <= 40) metadata[key] = rawMeta[key];
+  }
 
   const client = await pool.connect();
   try {
     const { rows: halaqahRows } = await client.query(
-      `SELECT id, title, program_type FROM public.halaqahs WHERE id = $1 LIMIT 1`,
+      `SELECT id, title, program_type, quota FROM public.halaqahs WHERE id = $1 LIMIT 1`,
       [halaqahId]
     );
     const halaqah = halaqahRows[0];
@@ -55,7 +63,7 @@ export async function POST(req: NextRequest) {
     await client.query('BEGIN');
 
     const { rows: userRows } = await client.query(
-      `SELECT id, email, followed_halaqahs, mufradat_group_id, is_tikrar_paid
+      `SELECT id, email, followed_halaqahs, mufradat_group_id, is_tikrar_paid, is_blacklisted
          FROM public.users WHERE id = $1 FOR UPDATE`,
       [ctx.userId]
     );
@@ -63,6 +71,10 @@ export async function POST(req: NextRequest) {
     if (!user) {
       await client.query('ROLLBACK');
       return fail('Akun tidak ditemukan.', 404);
+    }
+    if (user.is_blacklisted) {
+      await client.query('ROLLBACK');
+      return fail('Akun ini tidak dapat mendaftar program. Silakan hubungi admin.', 403);
     }
 
     // Idempotent: reuse an existing active registration for this program.
@@ -77,18 +89,35 @@ export async function POST(req: NextRequest) {
     if (!registrationId) {
       // A pending registration from the old paid flow is promoted instead of duplicated.
       const { rows: pendingRows } = await client.query(
+        // Payment fields are kept untouched so a transfer made in the old paid flow stays
+        // traceable (reconciliation, refunds, income reports). Monthly/leave rows are never promoted.
         `UPDATE public.halaqah_registrations
             SET status = 'verified', verified_at = now(), start_date = now(), updated_at = now(),
-                payment_method = 'free', amount = 0, is_paid = false
+                metadata = COALESCE(metadata, '{}'::jsonb) || '{"promoted_free": true}'::jsonb
           WHERE id = (
             SELECT id FROM public.halaqah_registrations
              WHERE user_id = $1 AND halaqah_id = $2 AND status = 'pending_verification'
+               AND (payment_type IS NULL OR payment_type = 'initial')
              ORDER BY created_at DESC LIMIT 1
           )
           RETURNING id`,
         [ctx.userId, halaqahId]
       );
       registrationId = pendingRows[0]?.id;
+    }
+
+    if (!registrationId && (programKey === 'ngaji' || programKey === 'halaqah') && Number(halaqah.quota) > 0) {
+      // Lock the class row so concurrent joins cannot overfill it.
+      await client.query(`SELECT id FROM public.halaqahs WHERE id = $1 FOR UPDATE`, [halaqahId]);
+      const { rows: countRows } = await client.query(
+        `SELECT count(*)::int AS n FROM public.halaqah_registrations
+          WHERE halaqah_id = $1 AND status IN ('verified', 'active', 'pending_verification')`,
+        [halaqahId]
+      );
+      if ((countRows[0]?.n || 0) >= Number(halaqah.quota)) {
+        await client.query('ROLLBACK');
+        return fail('Kuota kelas ini sudah penuh.', 409);
+      }
     }
 
     if (!registrationId) {

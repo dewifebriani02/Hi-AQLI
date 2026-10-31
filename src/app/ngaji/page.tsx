@@ -46,14 +46,15 @@ export default function NgajiPage() {
   const getHalaqahStatus = (id: string) => {
     const reg = userRegs?.find(r => r.halaqah_id === id);
     if (!reg) {
-      if (id === TIKRAR_ID && userData?.isTikrarPaid) return 'active';
+      if (id === TIKRAR_ID && (userData?.is_tikrar_paid ?? userData?.isTikrarPaid)) return 'active';
       if (userData?.followed_halaqahs?.includes(id)) return 'active';
       return 'none';
     }
     return reg.status;
   };
 
-  const isHalaqahActive = (id: string) => getHalaqahStatus(id) === 'active';
+  // 'verified' = disetujui admin atau langsung aktif (program gratis).
+  const isHalaqahActive = (id: string) => ['active', 'verified'].includes(getHalaqahStatus(id));
   const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
 
   const getSisaKuota = (halaqah: any) => {

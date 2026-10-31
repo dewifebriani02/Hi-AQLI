@@ -92,7 +92,8 @@ export default function StudyCirclesPage() {
     return reg.status; // 'active', 'pending_verification', 'rejected'
   };
 
-  const isHalaqahActive = (id: string) => getHalaqahStatus(id) === 'active';
+  // 'verified' = disetujui admin atau langsung aktif (program gratis).
+  const isHalaqahActive = (id: string) => ['active', 'verified'].includes(getHalaqahStatus(id));
   const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
 
   const getFollowingCount = () => {
