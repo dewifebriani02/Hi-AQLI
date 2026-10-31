@@ -37,7 +37,13 @@ import {
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { addMonths, format, parseISO } from "date-fns";
+import {
+  assignMufradatGroup,
+  ensureJuzOneInArray,
+  isMufradatRegistrationRow,
+  revokeMufradatAccessOnReject,
+} from "@/lib/admin-mufradat";
+import { addMonths, parseISO } from "date-fns";
 
 // Types for BSI Statement Entry
 interface BsiTransaction {
@@ -172,13 +178,15 @@ export default function MufradatReconciliationPage() {
 
         if (regError) throw regError;
 
-        // 2. Activate user access (since transfer registrations wait for admin verification)
+        // 2. Activate user access (group placement, due_date, status, Juz 1 / Tikrar)
         if (reg.user_id) {
-          const { data: currentUsr } = await db
+          const { data: currentUsr, error: usrFetchErr } = await db
             .from("users")
             .select("followed_halaqahs, mufradat_group_id, mufradat_due_date, mufradat_accessible_juz")
             .eq("id", reg.user_id)
             .single();
+
+          if (usrFetchErr) throw usrFetchErr;
 
           const currentFollowed = Array.isArray(currentUsr?.followed_halaqahs)
             ? currentUsr.followed_halaqahs
@@ -190,26 +198,11 @@ export default function MufradatReconciliationPage() {
             userUpdate.followed_halaqahs = [...currentFollowed, reg.halaqah_id];
           }
 
-          const isMufradatReg =
-            reg.halaqah_id === "mufradat-premium" ||
-            reg.halaqah_title?.toLowerCase().includes("mufradat");
+          const isMufradatReg = isMufradatRegistrationRow(reg, currentUsr?.mufradat_group_id);
 
           if (isMufradatReg) {
             if (!currentUsr?.mufradat_group_id) {
-              const { data: availableGroups } = await db
-                .from("mufradat_groups")
-                .select("*")
-                .lt("member_count", 50)
-                .order("created_at", { ascending: false })
-                .limit(1);
-
-              if (availableGroups && availableGroups.length > 0) {
-                userUpdate.mufradat_group_id = availableGroups[0].id;
-                await db
-                  .from("mufradat_groups")
-                  .update({ member_count: availableGroups[0].member_count + 1 })
-                  .eq("id", availableGroups[0].id);
-              }
+              userUpdate.mufradat_group_id = await assignMufradatGroup(db, currentUsr?.mufradat_group_id);
             }
 
             const now = new Date();
@@ -220,15 +213,7 @@ export default function MufradatReconciliationPage() {
             const duration = reg.metadata?.paymentDuration || 1;
             userUpdate.mufradat_status = "active";
             userUpdate.mufradat_due_date = addMonths(baseDate, duration).toISOString();
-
-            const currentJuz = Array.isArray(currentUsr?.mufradat_accessible_juz)
-              ? [...currentUsr.mufradat_accessible_juz]
-              : [];
-            if (!currentJuz.includes(1)) {
-              currentJuz.push(1);
-              currentJuz.sort((a: number, b: number) => a - b);
-            }
-            userUpdate.mufradat_accessible_juz = currentJuz;
+            userUpdate.mufradat_accessible_juz = ensureJuzOneInArray(currentUsr?.mufradat_accessible_juz);
           }
 
           const isTikrarReg =
@@ -242,7 +227,12 @@ export default function MufradatReconciliationPage() {
             userUpdate.tikrar_start_date = new Date().toISOString();
           }
 
-          await db.from("users").update(userUpdate).eq("id", reg.user_id);
+          const { error: userErr } = await db
+            .from("users")
+            .update(userUpdate)
+            .eq("id", reg.user_id);
+
+          if (userErr) throw userErr;
         }
 
         results.push(true);
@@ -273,33 +263,28 @@ export default function MufradatReconciliationPage() {
 
     setIsApplying(true);
     try {
-      await Promise.all(unmatchEntries.map(async (m) => {
+      for (const m of unmatchEntries) {
         const reg = m.registration;
-        
-        // 1. Rejected Registration
-        await db
+
+        // 1. Mark Registration as Rejected
+        const { error: regErr } = await db
           .from("halaqah_registrations")
-          .update({ 
-            status: "rejected", 
+          .update({
+            status: "rejected",
             updated_at: new Date().toISOString(),
             metadata: { ...reg.metadata, reject_reason: "Gagal Rekonsiliasi Rekening Koran" }
           })
           .eq("id", reg.id);
 
-        // 2. Revoke User Access
-        await db
-          .from("users")
-          .update({
-            mufradat_status: 'suspended',
-            mufradat_accessible_juz: [],
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", reg.user_id);
-      }));
+        if (regErr) throw regErr;
+
+        // 2. Revoke optimistic Mufradat submit access unless user has another valid verified reg / voucher
+        await revokeMufradatAccessOnReject(db, reg);
+      }
 
       toast({
         title: "Selesai",
-        description: `${unmatchEntries.length} akses thalibah telah dicabut karena tidak ditemukan bukti transfer.`,
+        description: `${unmatchEntries.length} pendaftaran telah ditolak dan akses yang tidak sah dicabut.`,
       });
       refreshRegs();
     } catch (err: any) {
@@ -346,7 +331,7 @@ export default function MufradatReconciliationPage() {
           />
           <Button 
             disabled={isProcessing}
-            onClick={() => document.getElementById('bsi-upload')?.click()}
+            onClick={() => document.getElementById("bsi-upload")?.click()}
             className="bg-white border-2 border-[#800000] text-[#800000] hover:bg-[#800000]/5 font-black h-12 rounded-xl shadow-sm gap-2"
           >
             {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -463,7 +448,7 @@ export default function MufradatReconciliationPage() {
                       </TableRow>
                     ) : matches
                       .filter(m => m.registration.user_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-                      .map((m, idx) => (
+                      .map((m) => (
                       <TableRow key={m.registration.id} className={cn("transition-colors", m.isMatched ? "bg-emerald-50/30" : "bg-white")}>
                         <TableCell className="pl-8 py-5">
                           <div className="flex flex-col">

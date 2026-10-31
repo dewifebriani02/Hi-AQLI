@@ -1,7 +1,7 @@
 'use client';
 
 import { parseISO, addMonths } from "date-fns";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useUser, useCollection, useDoc, authFetch } from "@/db";
 import { 
   Card, 
@@ -79,16 +79,36 @@ export default function MufradatBillingPage() {
   const [uniqueCode, setUniqueCode] = useState(0);
   const [quoteToken, setQuoteToken] = useState<string | null>(null);
   const [serverTotalAmount, setServerTotalAmount] = useState<number | null>(null);
+  const [quotedInfaq, setQuotedInfaq] = useState<number | null>(null);
+  const [isQuoteLoading, setIsQuoteLoading] = useState(false);
+  const [quoteRefreshTick, setQuoteRefreshTick] = useState(0);
+  const lastQuoteTokenRef = useRef<string | null>(null);
   
   // Leave Form States
   const [leaveStart, setLeaveStart] = useState("");
   const [leaveEnd, setLeaveEnd] = useState("");
 
+  const parsedInfaqInput = useMemo(() => parseInt(amount, 10), [amount]);
+  const isAmountValid = Number.isInteger(parsedInfaqInput) && parsedInfaqInput >= 20000;
+
   // Fetch server-computed quote & signed unique_code when payment mode opens or amount changes
   useEffect(() => {
     if (mode !== 'pay' || !user) return;
     let cancelled = false;
-    const parsedAmount = parseInt(amount, 10) || 20000;
+
+    if (!isAmountValid) {
+      setIsQuoteLoading(false);
+      setQuoteToken(null);
+      setServerTotalAmount(null);
+      setQuotedInfaq(null);
+      return;
+    }
+
+    setIsQuoteLoading(true);
+    setQuoteToken(null);
+    setServerTotalAmount(null);
+    setQuotedInfaq(null);
+
     (async () => {
       try {
         const res = await authFetch('/api/registrations', {
@@ -96,24 +116,37 @@ export default function MufradatBillingPage() {
           body: JSON.stringify({
             action: 'quote',
             mode: 'monthly_payment',
-            infaq_amount: parsedAmount,
-            quote_token: quoteToken,
+            infaq_amount: parsedInfaqInput,
+            quote_token: lastQuoteTokenRef.current,
           }),
         });
         const data = await res.json();
-        if (!cancelled && res.ok && data?.breakdown) {
+        if (
+          !cancelled &&
+          res.ok &&
+          data?.breakdown &&
+          typeof data.breakdown.totalAmount === 'number' &&
+          typeof data.quote_token === 'string' &&
+          data.quote_token
+        ) {
+          lastQuoteTokenRef.current = data.quote_token;
           setUniqueCode(data.breakdown.uniqueCode || 0);
-          setServerTotalAmount(data.breakdown.totalAmount ?? null);
-          setQuoteToken(data.quote_token || null);
+          setServerTotalAmount(data.breakdown.totalAmount);
+          setQuotedInfaq(data.breakdown.infaqAmount ?? parsedInfaqInput);
+          setQuoteToken(data.quote_token);
         }
       } catch (err) {
         console.error('Failed to fetch monthly quote:', err);
+      } finally {
+        if (!cancelled) {
+          setIsQuoteLoading(false);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [mode, amount, user]);
+  }, [mode, isAmountValid, parsedInfaqInput, user, quoteRefreshTick]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -158,7 +191,7 @@ export default function MufradatBillingPage() {
         id: red.id,
         type: 'voucher',
         date: red.redeemed_at || red.created_at,
-        title: `Aktivasi Voucher: ${red.vouchers?.code || 'Mufradat'}`,
+        title: `Aktivasi Voucher: ${red.vouchers?.code || red.vouchers?.description || 'Mufradat'}`,
         amount: 0,
         status: 'verified', // Vouchers are instant
         paymentType: 'voucher',
@@ -240,9 +273,25 @@ export default function MufradatBillingPage() {
     }
   }, [userData, senderName, whatsapp]);
 
+  const isQuoteReady =
+    Boolean(quoteToken) &&
+    !isQuoteLoading &&
+    serverTotalAmount !== null &&
+    isAmountValid &&
+    quotedInfaq === parsedInfaqInput;
+
   const handleUploadProof = async () => {
     if (!senderName || !whatsapp || !proofFile) {
       toast({ variant: "destructive", title: "Mohon lengkapi data pembayaran (Nama, WA, & Bukti)." });
+      return;
+    }
+
+    if (!isQuoteReady || !quoteToken || serverTotalAmount === null) {
+      toast({
+        variant: "destructive",
+        title: "Rincian pembayaran belum siap",
+        description: "Mohon tunggu nominal transfer beserta kode unik selesai dimuat.",
+      });
       return;
     }
 
@@ -253,12 +302,11 @@ export default function MufradatBillingPage() {
 
     setIsSubmitting(true);
     try {
-      const parsedAmount = parseInt(amount, 10);
       const res = await authFetch('/api/registrations', {
         method: 'POST',
         body: JSON.stringify({
           action: 'monthly_payment',
-          infaq_amount: parsedAmount,
+          infaq_amount: parsedInfaqInput,
           sender_name: senderName,
           whatsapp: whatsapp,
           proof_file_path: proofFile.name,
@@ -268,6 +316,10 @@ export default function MufradatBillingPage() {
       });
       const data = await res.json();
       if (!res.ok || !data?.success) {
+        if (res.status === 409) {
+          lastQuoteTokenRef.current = null;
+          setQuoteRefreshTick((t) => t + 1);
+        }
         throw new Error(data?.error || 'Gagal mengirim bukti pembayaran.');
       }
 
@@ -623,7 +675,25 @@ export default function MufradatBillingPage() {
                    <Badge className="bg-[#800000]">BSI (BANK SYARIAH INDONESIA)</Badge>
                 </div>
                   <div className="flex items-center justify-between text-2xl font-black text-[#800000]">
-                     <span>Rp {(serverTotalAmount ?? ((parseInt(amount, 10) || 20000) + uniqueCode)).toLocaleString('id-ID')}</span>
+                     {serverTotalAmount !== null && isQuoteReady ? (
+                       <span>Rp {serverTotalAmount.toLocaleString('id-ID')}</span>
+                     ) : isQuoteLoading ? (
+                       <span className="text-sm font-black flex items-center gap-2 text-muted-foreground">
+                         <Loader2 className="w-4 h-4 animate-spin text-[#800000]" /> Menghitung nominal...
+                       </span>
+                     ) : !isAmountValid ? (
+                       <span className="text-sm font-black text-rose-600">Minimal infaq Rp 20.000</span>
+                     ) : (
+                       <Button
+                         type="button"
+                         variant="outline"
+                         size="sm"
+                         onClick={() => setQuoteRefreshTick((t) => t + 1)}
+                         className="text-xs font-black border-[#800000] text-[#800000]"
+                       >
+                         Muat Ulang Nominal Transfer
+                       </Button>
+                     )}
                      <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. Dewi Febriani</span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold border-t border-dashed border-amber-200 pt-2 mt-2">
@@ -665,7 +735,7 @@ export default function MufradatBillingPage() {
                      />
                       <div className="space-y-1">
                         <p className="text-[11px] font-black text-amber-600 flex items-center gap-1">
-                          <Info className="w-3.5 h-3.5" /> + KODE UNIK: {uniqueCode}
+                          <Info className="w-3.5 h-3.5" /> + KODE UNIK: {isQuoteReady ? uniqueCode : "..."}
                         </p>
                         <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
                           <Info className="w-3 h-3" /> Minimal infaq: Rp 20.000 (Mendukung Operasional)
@@ -725,7 +795,7 @@ export default function MufradatBillingPage() {
              <Button 
                 onClick={handleUploadProof} 
                 className="flex-1 bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-12 rounded-xl shadow-lg"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isQuoteReady}
              >
                 {isSubmitting ? <Loader2 className="animate-spin w-5 h-5" /> : <ShieldCheck className="w-5 h-5 mr-2" />}
                 KIRIM BUKTI

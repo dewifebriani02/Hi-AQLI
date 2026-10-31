@@ -6,7 +6,9 @@ import {
   checkWrite,
   isStaff,
   redactUserRow,
+  redactVoucherRow,
   sanitizeOwnedRecord,
+  VOUCHER_SECRET_COLUMNS,
   PolicyError,
 } from '@/lib/db-policy';
 import { v4 as uuidv4 } from 'uuid';
@@ -182,9 +184,15 @@ function buildSelectList(select: string, ctx: AuthContext): { sql: string; embed
 
 function redactRows(table: string, rows: any[], embeds: string[], ctx: AuthContext) {
   return rows.map((row) => {
-    let out = table === 'users' ? redactUserRow(row, ctx) : row;
+    let out = row;
+    if (table === 'users') out = redactUserRow(out, ctx);
+    else if (table === 'vouchers') out = redactVoucherRow(out, ctx);
+
     if (embeds.includes('users') && out?.users) {
       out = { ...out, users: redactUserRow(out.users, ctx) };
+    }
+    if (embeds.includes('vouchers') && out?.vouchers) {
+      out = { ...out, vouchers: redactVoucherRow(out.vouchers, ctx) };
     }
     return out;
   });
@@ -217,6 +225,17 @@ export async function POST(req: NextRequest) {
       } = body;
 
       const policy = checkRead(table, ctx);
+
+      // Prevent non-staff from probing secret voucher columns via filters or ORDER BY side-channels
+      if (table === 'vouchers' && !isStaff(ctx)) {
+        if (Array.isArray(filters) && filters.some((f: any) => VOUCHER_SECRET_COLUMNS.includes(String(f?.column || '').toLowerCase()))) {
+          throw new PolicyError('Akses ditolak.');
+        }
+        if (Array.isArray(orderBy) && orderBy.some((o: any) => VOUCHER_SECRET_COLUMNS.includes(String(o?.column || '').toLowerCase()))) {
+          throw new PolicyError('Akses ditolak.');
+        }
+      }
+
       const values: any[] = [];
       const whereClauses = buildWhere(filters, values, false);
       if (policy.ownerFilter) {

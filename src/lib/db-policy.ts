@@ -91,6 +91,9 @@ export const USER_PRIVATE_COLUMNS = [
   'referral_balance',
 ];
 
+// Secret columns on vouchers hidden from non-staff (validation goes through /api/registrations).
+export const VOUCHER_SECRET_COLUMNS = ['code'];
+
 export function isStaff(ctx: AuthContext): boolean {
   return ctx.isAdmin || ctx.isSuperAdmin || ctx.isMusyrifah;
 }
@@ -218,5 +221,14 @@ export function redactUserRow(row: any, ctx: AuthContext): any {
   delete copy.encrypted_password;
   if (isStaff(ctx) || (ctx.userId && copy.id === ctx.userId)) return copy;
   for (const col of USER_PRIVATE_COLUMNS) delete copy[col];
+  return copy;
+}
+
+/** Strip redeemable voucher codes unless the caller is staff. */
+export function redactVoucherRow(row: any, ctx: AuthContext): any {
+  if (!row || typeof row !== 'object') return row;
+  if (isStaff(ctx)) return row;
+  const copy = { ...row };
+  for (const col of VOUCHER_SECRET_COLUMNS) delete copy[col];
   return copy;
 }

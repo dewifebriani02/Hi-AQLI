@@ -9,6 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckCircle2, Phone, Mail, User, ImageIcon, ArrowLeft, ShieldAlert, BookOpen, XCircle, Pencil, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  assignMufradatGroup,
+  ensureJuzOneInArray,
+  isMufradatRegistrationRow,
+  revokeMufradatAccessOnReject,
+} from "@/lib/admin-mufradat";
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { addMonths, parseISO, format, startOfMonth, addDays } from "date-fns";
@@ -102,7 +108,13 @@ export default function AdminRegistrationsPage() {
       if (regError) throw regError;
 
       // 2. Update User Profile Access
-      const { data: userData } = await db.from("users").select("followed_halaqahs, mufradat_group_id").eq('id', reg.user_id).single();
+      const { data: userData, error: usrFetchErr } = await db
+        .from("users")
+        .select("followed_halaqahs, mufradat_group_id, referred_by_id")
+        .eq('id', reg.user_id)
+        .single();
+      if (usrFetchErr) throw usrFetchErr;
+
       const currentFollowed = userData?.followed_halaqahs || [];
       const currentGroupId = userData?.mufradat_group_id;
 
@@ -112,45 +124,9 @@ export default function AdminRegistrationsPage() {
       };
 
       // Special logic for Hi Mufradat Auto-Grouping (Only if NO GROUP assigned yet)
-      const isMufradatReg = reg.halaqah_id === 'mufradat-premium' || reg.halaqah_title?.toLowerCase().includes('mufradat');
+      const isMufradatReg = isMufradatRegistrationRow(reg, currentGroupId);
       if (!currentGroupId && isMufradatReg) {
-        try {
-          // 1. Find latest group with space (< 50)
-          const { data: availableGroups } = await db
-            .from('mufradat_groups')
-            .select('*')
-            .lt('member_count', 50)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          let targetGroupId;
-
-          if (availableGroups && availableGroups.length > 0) {
-            targetGroupId = availableGroups[0].id;
-            // Increment member count
-            await db
-              .from('mufradat_groups')
-              .update({ member_count: availableGroups[0].member_count + 1 })
-              .eq('id', targetGroupId);
-          } else {
-            // Create new group
-            const { data: allGroups } = await db.from('mufradat_groups').select('id');
-            const nextNum = (allGroups?.length || 0) + 1;
-            const { data: newGroup, error: groupError } = await db
-              .from('mufradat_groups')
-              .insert({ name: `Grup ${nextNum}`, member_count: 1 })
-              .select()
-              .single();
-            
-            if (groupError) throw groupError;
-            targetGroupId = newGroup.id;
-          }
-
-          updateData.mufradat_group_id = targetGroupId;
-        } catch (groupErr) {
-          console.error("Auto-grouping error:", groupErr);
-          // Non-blocking error, just log it
-        }
+        updateData.mufradat_group_id = await assignMufradatGroup(db, currentGroupId);
       }
 
       // Special logic for Tikrar Premium Start Date
@@ -170,11 +146,12 @@ export default function AdminRegistrationsPage() {
         const type = reg.payment_type || 'initial';
         
         // Fetch current user data to see current due date
-        const { data: currentUsr } = await db
+        const { data: currentUsr, error: subFetchErr } = await db
           .from('users')
           .select('mufradat_due_date, mufradat_leave_balance, mufradat_accessible_juz')
           .eq('id', reg.user_id)
           .single();
+        if (subFetchErr) throw subFetchErr;
 
         let subUpdate: any = {
            mufradat_status: 'active',
@@ -193,14 +170,7 @@ export default function AdminRegistrationsPage() {
           const nextDueDate = addMonths(baseDate, duration);
           subUpdate.mufradat_due_date = nextDueDate.toISOString();
           subUpdate.mufradat_status = 'active';
-          const currentJuz = Array.isArray(currentUsr?.mufradat_accessible_juz)
-            ? [...currentUsr.mufradat_accessible_juz]
-            : [];
-          if (!currentJuz.includes(1)) {
-            currentJuz.push(1);
-            currentJuz.sort((a: number, b: number) => a - b);
-          }
-          subUpdate.mufradat_accessible_juz = currentJuz;
+          subUpdate.mufradat_accessible_juz = ensureJuzOneInArray(currentUsr?.mufradat_accessible_juz);
         } 
         else if (type === 'leave_request') {
           // Leave for 1 month from now or from end of current access
@@ -212,7 +182,8 @@ export default function AdminRegistrationsPage() {
           subUpdate.mufradat_leave_balance = Math.max(0, (currentUsr?.mufradat_leave_balance || 3) - 1);
         }
 
-        await db.from("users").update(subUpdate).eq('id', reg.user_id);
+        const { error: subUpdErr } = await db.from("users").update(subUpdate).eq('id', reg.user_id);
+        if (subUpdErr) throw subUpdErr;
       }
       // --- END HI MUFRADAT ---
 
@@ -275,26 +246,32 @@ export default function AdminRegistrationsPage() {
         description: `Masyallah, akses ${reg.halaqah_title} untuk ${reg.user_name} telah aktif mulai hari ini.`,
       });
       refreshPending();
+      refreshHistory();
     } catch (err: any) {
       console.error(err);
-      toast({ variant: "destructive", title: "Gagal memproses verifikasi." });
+      toast({ variant: "destructive", title: "Gagal memproses verifikasi.", description: err?.message });
     } finally {
       setProcessingId(null);
     }
   };
 
-  const handleReject = async (regId: string) => {
-    setProcessingId(regId);
+  const handleReject = async (reg: any) => {
+    if (!reg?.id) return;
+    setProcessingId(reg.id);
     try {
       const { error } = await db.from("halaqah_registrations").update({
         status: "rejected",
         updated_at: new Date().toISOString()
-      }).eq('id', regId);
+      }).eq('id', reg.id);
 
       if (error) throw error;
+
+      await revokeMufradatAccessOnReject(db, reg);
+
       toast({ title: "Pendaftaran Ditolak" });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Gagal menolak pendaftaran." });
+      refreshPending();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal menolak pendaftaran.", description: e?.message });
     } finally {
       setProcessingId(null);
     }
@@ -448,7 +425,7 @@ export default function AdminRegistrationsPage() {
                         <Button
                           variant="ghost"
                           className="text-rose-600 hover:bg-rose-50 font-black h-10 text-[10px] uppercase gap-2 tracking-widest"
-                          onClick={() => handleReject(reg.id)}
+                          onClick={() => handleReject(reg)}
                           disabled={processingId === reg.id}
                         >
                           Tolak Pendaftaran

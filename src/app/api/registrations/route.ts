@@ -17,7 +17,7 @@ import {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const BILLING_MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
-const QUOTE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const QUOTE_HMAC_CONTEXT = 'hiaqli:quote-token:v1';
 
 class ClientError extends Error {
   status: number;
@@ -35,20 +35,26 @@ interface QuoteTokenPayload {
   iat: number;
 }
 
-function getQuoteSecret(): string {
+function getQuoteHmacKey(): Buffer {
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error('JWT_SECRET belum dikonfigurasi di environment server.');
   }
-  return secret;
+  return crypto.createHmac('sha256', secret).update(QUOTE_HMAC_CONTEXT).digest();
 }
 
 function signQuoteToken(payload: QuoteTokenPayload): string {
   const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
-  const sig = crypto.createHmac('sha256', getQuoteSecret()).update(encoded).digest('base64url');
+  const sig = crypto.createHmac('sha256', getQuoteHmacKey()).update(encoded).digest('base64url');
   return `${encoded}.${sig}`;
 }
 
+/**
+ * Verifies a server-issued quote_token and extracts its unique_code (100..999).
+ * Intentionally does NOT reject older/expired tokens as long as the HMAC signature,
+ * uid, mode, and program (hid) match, so a slow bank transfer (> 2 hours) never gets
+ * its unique_code silently replaced on submission.
+ */
 function verifyQuoteToken(
   token: unknown,
   expectedUid: string,
@@ -61,7 +67,7 @@ function verifyQuoteToken(
   const [encoded, sig] = parts;
   if (!encoded || !sig) return null;
 
-  const expectedSig = crypto.createHmac('sha256', getQuoteSecret()).update(encoded).digest('base64url');
+  const expectedSig = crypto.createHmac('sha256', getQuoteHmacKey()).update(encoded).digest('base64url');
   const sigBuf = Buffer.from(sig, 'utf8');
   const expBuf = Buffer.from(expectedSig, 'utf8');
   if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
@@ -78,8 +84,7 @@ function verifyQuoteToken(
       parsed.code < 100 ||
       parsed.code > 999 ||
       typeof parsed.iat !== 'number' ||
-      Date.now() - parsed.iat > QUOTE_TTL_MS ||
-      parsed.iat > Date.now() + 60_000
+      !Number.isFinite(parsed.iat)
     ) {
       return null;
     }
@@ -100,6 +105,26 @@ function makeTxRunner(client: { query: (text: string, values?: any[]) => Promise
       return { rows: res.rows as T[], rowCount: res.rowCount };
     },
   };
+}
+
+async function withTransaction<T>(fn: (txRunner: SqlRunner) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  let releaseErr: Error | undefined;
+  try {
+    await client.query('BEGIN');
+    const result = await fn(makeTxRunner(client));
+    await client.query('COMMIT');
+    return result;
+  } catch (txErr) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rbErr: any) {
+      releaseErr = rbErr instanceof Error ? rbErr : new Error(String(rbErr));
+    }
+    throw txErr;
+  } finally {
+    client.release(releaseErr);
+  }
 }
 
 async function resolveHalaqah(
@@ -524,11 +549,7 @@ export async function POST(req: NextRequest) {
       }
       const normalizedWa = normalizeWhatsapp(String(body.whatsapp));
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const txRunner = makeTxRunner(client);
-
+      const payload = await withTransaction(async (txRunner) => {
         const { rows: userRows } = await txRunner.query<{
           id: string;
           username: string | null;
@@ -579,17 +600,23 @@ export async function POST(req: NextRequest) {
             throw new ClientError('Pendaftaran sudah diproses dan tidak dapat diubah lagi.');
           }
         } else {
+          // Match UI duplicate filter: only block currently active or pending_verification
+          // initial registrations so former inactive Mufradat users and Tikrar users
+          // registering for another juz can re-register cleanly.
           const { rows: dupRows } = await txRunner.query<{ id: string }>(
             `SELECT id FROM public.halaqah_registrations
              WHERE user_id = $1
                AND halaqah_id = $2
-               AND status IN ('active', 'verified', 'pending_verification')
+               AND status IN ('active', 'pending_verification')
                AND (payment_type IS NULL OR payment_type = 'initial')
              LIMIT 1`,
             [userId, halaqah.id]
           );
           if (dupRows.length > 0) {
-            throw new ClientError('Anda sudah memiliki pendaftaran aktif atau menunggu verifikasi di program ini.', 409);
+            throw new ClientError(
+              'Anda sudah memiliki pendaftaran aktif atau menunggu verifikasi di program ini.',
+              409
+            );
           }
         }
 
@@ -684,13 +711,14 @@ export async function POST(req: NextRequest) {
           }
           proofFileName = rawProof;
 
-          const existingUc = Number(existingReg?.unique_code);
           const verifiedUc = verifyQuoteToken(body.quote_token, userId, 'register', halaqah.id);
-          uniqueCode =
-            verifiedUc ??
-            (Number.isInteger(existingUc) && existingUc >= 100 && existingUc <= 999
-              ? existingUc
-              : crypto.randomInt(100, 1000));
+          if (verifiedUc === null) {
+            throw new ClientError(
+              'Rincian pembayaran berubah, muat ulang halaman dan cek kembali nominal transfer.',
+              409
+            );
+          }
+          uniqueCode = verifiedUc;
         }
 
         const breakdown = calculateRegistrationBreakdown({
@@ -764,8 +792,8 @@ export async function POST(req: NextRequest) {
                 ? { voucher_code: voucher.code }
                 : null;
 
-        // Status selalu 'pending_verification' agar antrean Admin (penempatan halaqah/grup WA)
-        // tetap konsisten seperti alur lama.
+        // Status tetap 'pending_verification' agar antrean Admin (penempatan halaqah/grup WA
+        // & verifikasi mutasi) tetap berjalan; bila ditolak Admin, akses Mufradat dicabut kembali.
         const status = 'pending_verification';
         let savedReg: any;
 
@@ -870,10 +898,11 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // Aktivasi Mufradat langsung HANYA bila memakai voucher promo (100% free_access).
-        // Pendaftaran transfer menunggu verifikasi Admin (sementara trial 24 jam tetap
-        // diberikan otomatis oleh getMufradatStatus dari baris pending_verification).
-        if (flags.isMufradat && voucher) {
+        // Sesuai keputusan pemilik: pendaftaran Mufradat (baik transfer maupun voucher)
+        // langsung diaktifkan oleh server saat submit (status='active', Juz 1 terbuka, schedule terisi).
+        // Kolom mufradat_* tetap dilindungi di USER_PROTECTED_COLUMNS, dan bila Admin menolak
+        // registrasi ini maka akses dicabut kembali.
+        if (flags.isMufradat) {
           const nextJuz = ensureJuzOneUnlocked(userRow.mufradat_accessible_juz);
           await txRunner.query(
             `UPDATE public.users
@@ -885,15 +914,6 @@ export async function POST(req: NextRequest) {
              WHERE id = $4`,
             [normalizedWa, JSON.stringify(nextJuz), scheduleStr, userId]
           );
-        } else if (flags.isMufradat) {
-          await txRunner.query(
-            `UPDATE public.users
-             SET whatsapp = $1,
-                 mufradat_schedule = $2,
-                 updated_at = now()
-             WHERE id = $3`,
-            [normalizedWa, scheduleStr, userId]
-          );
         } else {
           await txRunner.query(
             `UPDATE public.users SET whatsapp = $1, updated_at = now() WHERE id = $2`,
@@ -901,18 +921,14 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        await client.query('COMMIT');
-        return NextResponse.json({
+        return {
           success: true,
           registration: savedReg,
           breakdown,
-        });
-      } catch (txErr) {
-        await client.query('ROLLBACK');
-        throw txErr;
-      } finally {
-        client.release();
-      }
+        };
+      });
+
+      return NextResponse.json(payload);
     }
 
     // -------------------------------------------------------------------------
@@ -960,11 +976,7 @@ export async function POST(req: NextRequest) {
         throw new ClientError('Format bulan tagihan tidak valid (YYYY-MM).');
       }
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const txRunner = makeTxRunner(client);
-
+      const payload = await withTransaction(async (txRunner) => {
         const { rows: userRows } = await txRunner.query<{
           username: string | null;
           full_name: string | null;
@@ -981,7 +993,13 @@ export async function POST(req: NextRequest) {
         const halaqah = await resolveHalaqah(txRunner, null, 'hi_mufradat');
         const hid = String(halaqah?.id || 'hi_mufradat');
         const verifiedUc = verifyQuoteToken(body.quote_token, userId, 'monthly_payment', hid);
-        const uniqueCode = verifiedUc ?? crypto.randomInt(100, 1000);
+        if (verifiedUc === null) {
+          throw new ClientError(
+            'Rincian pembayaran berubah, muat ulang halaman dan cek kembali nominal transfer.',
+            409
+          );
+        }
+        const uniqueCode = verifiedUc;
         const totalAmount = rawInfaq + uniqueCode;
 
         const regId = crypto.randomUUID();
@@ -1015,8 +1033,7 @@ export async function POST(req: NextRequest) {
           [normalizedWa, userId]
         );
 
-        await client.query('COMMIT');
-        return NextResponse.json({
+        return {
           success: true,
           registration: insertedRows[0],
           breakdown: {
@@ -1024,13 +1041,10 @@ export async function POST(req: NextRequest) {
             uniqueCode,
             totalAmount,
           },
-        });
-      } catch (txErr) {
-        await client.query('ROLLBACK');
-        throw txErr;
-      } finally {
-        client.release();
-      }
+        };
+      });
+
+      return NextResponse.json(payload);
     }
 
     // -------------------------------------------------------------------------
@@ -1071,11 +1085,7 @@ export async function POST(req: NextRequest) {
         throw new ClientError('Format bulan cuti tidak valid (YYYY-MM).');
       }
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const txRunner = makeTxRunner(client);
-
+      const payload = await withTransaction(async (txRunner) => {
         const { rows: userRows } = await txRunner.query<{
           username: string | null;
           full_name: string | null;
@@ -1143,17 +1153,13 @@ export async function POST(req: NextRequest) {
           ]
         );
 
-        await client.query('COMMIT');
-        return NextResponse.json({
+        return {
           success: true,
           registration: insertedRows[0],
-        });
-      } catch (txErr) {
-        await client.query('ROLLBACK');
-        throw txErr;
-      } finally {
-        client.release();
-      }
+        };
+      });
+
+      return NextResponse.json(payload);
     }
 
     // -------------------------------------------------------------------------
@@ -1165,11 +1171,7 @@ export async function POST(req: NextRequest) {
         throw new ClientError('Kode voucher kosong.');
       }
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const txRunner = makeTxRunner(client);
-
+      const payload = await withTransaction(async (txRunner) => {
         const { rows: userRows } = await txRunner.query<{ mufradat_accessible_juz: any }>(
           `SELECT mufradat_accessible_juz FROM public.users WHERE id = $1 FOR UPDATE`,
           [userId]
@@ -1199,8 +1201,7 @@ export async function POST(req: NextRequest) {
           [JSON.stringify(nextJuz), userId]
         );
 
-        await client.query('COMMIT');
-        return NextResponse.json({
+        return {
           success: true,
           voucher: {
             id: voucher.id,
@@ -1208,13 +1209,10 @@ export async function POST(req: NextRequest) {
             program_id: voucher.program_id,
             expiry_date: voucher.expiry_date || null,
           },
-        });
-      } catch (txErr) {
-        await client.query('ROLLBACK');
-        throw txErr;
-      } finally {
-        client.release();
-      }
+        };
+      });
+
+      return NextResponse.json(payload);
     }
 
     return NextResponse.json({ error: `Action '${action}' tidak didukung.` }, { status: 400 });

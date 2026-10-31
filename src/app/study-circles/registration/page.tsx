@@ -546,6 +546,11 @@ function RegistrationForm() {
       toast({ variant: "destructive", title: "Lengkapi data pembayaran" });
       return;
     }
+    if (isPremiumProgram && !appliedVoucher && !quoteToken) {
+      toast({ variant: "destructive", title: "Rincian pembayaran belum siap", description: "Silakan cek kembali nominal transfer terlebih dahulu." });
+      setStep(2);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -574,6 +579,11 @@ function RegistrationForm() {
       });
       const data = await res.json();
       if (!res.ok || !data?.success) {
+        if (res.status === 409 && isPremiumProgram && !appliedVoucher && data?.error?.toLowerCase().includes('rincian pembayaran')) {
+          setQuoteToken(null);
+          setServerQuote(null);
+          setStep(2);
+        }
         throw new Error(data?.error || 'Gagal mengirim pendaftaran.');
       }
 
@@ -1433,7 +1443,7 @@ function RegistrationForm() {
                 <span className="text-[10px] font-black text-[#800000] uppercase tracking-widest opacity-60">Total yang harus ditransfer</span>
                 <div className="flex flex-col gap-1 items-center">
                    <h2 className="text-4xl font-black text-[#800000] tracking-tighter">
-                     Rp {totalCalculated.toLocaleString('id-ID')}
+                     {serverQuote && quoteToken ? `Rp ${serverQuote.totalAmount.toLocaleString('id-ID')}` : "Menghitung..."}
                    </h2>
                    <div className="flex items-center gap-1.5 bg-[#800000] text-white px-3 py-1 rounded-full text-[10px] font-black uppercase animate-pulse">
                      <Zap className="w-3 h-3 fill-current" /> Transfer Tepat Nominal
@@ -1449,7 +1459,7 @@ function RegistrationForm() {
                 </div>
                 <p className="text-[10px] font-bold text-center text-muted-foreground">a.n. Dewi Febriani</p>
               </div>
-              <Button onClick={() => setStep(3)} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-xl">Saya Sudah Transfer</Button>
+              <Button onClick={() => setStep(3)} disabled={isPremiumProgram && !appliedVoucher && (!quoteToken || !serverQuote)} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-xl">Saya Sudah Transfer</Button>
             </div>
           ) : (
             <div className="space-y-8 animate-in fade-in duration-500">
@@ -1476,7 +1486,7 @@ function RegistrationForm() {
                   <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk {fullSalutation}. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
                 </div>
               )}
-              <Button onClick={handleConfirm} disabled={loading} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-2xl">
+              <Button onClick={handleConfirm} disabled={loading || (isPremiumProgram && !appliedVoucher && !quoteToken)} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-2xl">
                 {loading ? <Loader2 className="animate-spin h-6 w-6" /> : "Kirim Pendaftaran"}
               </Button>
             </div>
