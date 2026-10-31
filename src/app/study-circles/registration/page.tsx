@@ -39,7 +39,8 @@ import {
   AlertCircle,
   Image as ImageIcon,
 } from "lucide-react";
-import {useUser, db } from "@/db";
+import {useUser, db, authFetch } from "@/db";
+import { isProgramFree, programKeyFromType } from "@/lib/program-settings";
 import { useDoc, useCollection } from "@/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -289,9 +290,13 @@ function RegistrationForm() {
   const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
   const isNgaji = (circle?.program_type || circle?.programType) === 'hi_ngaji' || programParam === 'hi_ngaji';
 
+  const programKey = isMufradat ? 'mufradat' : isTikrar ? 'tikrar' : isNgaji ? 'ngaji' : programKeyFromType(circle?.program_type || circle?.programType);
+  const isFree = isProgramFree(programKey);
+
   const isPremiumProgram = useMemo(() => {
+    if (isFree) return false;
     return circle?.is_premium === true || isMufradat || isTikrar;
-  }, [circle?.is_premium, isMufradat, isTikrar]);
+  }, [isFree, circle?.is_premium, isMufradat, isTikrar]);
 
   // Minimum Infaq Calculation
   const minInfaq = useMemo(() => {
@@ -318,8 +323,8 @@ function RegistrationForm() {
     return sameProgramRegs.length === 0;
   }, [user, registrationsHistory, circle, isMufradat, isTikrar]);
 
-  const registrationFee = isFirstRegistration ? 10000 : 0;
-  const referralDiscount = (appliedReferral && !appliedVoucher && !hasUsedReferral) ? 5000 : 0;
+  const registrationFee = (!isFree && isFirstRegistration) ? 10000 : 0;
+  const referralDiscount = (!isFree && appliedReferral && !appliedVoucher && !hasUsedReferral) ? 5000 : 0;
 
   const totalCalculated = useMemo(() => {
     if (!isPremiumProgram || appliedVoucher) return 0;
@@ -532,6 +537,30 @@ function RegistrationForm() {
 
       if (!verifiedUuid || !uuidRegex.test(verifiedUuid)) {
         throw new Error("Gagal memproses ID Program. Mohon muat ulang halaman atau hubungi Admin.");
+      }
+
+      // Program gratis: server mencatat pendaftaran sebagai verified dan langsung mengaktifkan akses.
+      if (isFree) {
+        const res = await authFetch('/api/programs/join', {
+          method: 'POST',
+          body: JSON.stringify({
+            halaqah_id: verifiedUuid,
+            user_name: name,
+            whatsapp: normalizeWhatsapp(whatsapp),
+            level: isTikrar ? parseInt(level) : null,
+            target_juz: isTikrar ? parseInt(targetJuz) : null,
+            metadata: isMufradat
+              ? { schedule: durationMonths, target: mufradatTarget, akadAccepted: true }
+              : isTikrar
+                ? { target: targetJuz, level, akadAccepted: true }
+                : { akadAccepted: true },
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error?.message || 'Gagal mendaftar program.');
+        setSubmitted(true);
+        toast({ title: "Pendaftaran Berhasil", description: "Akses program sudah aktif." });
+        return;
       }
 
       const regData = {
@@ -751,11 +780,16 @@ function RegistrationForm() {
             <div className="mx-auto bg-green-100 text-green-600 rounded-full p-4 w-fit animate-bounce">
               <CheckCircle2 className="h-12 w-12" />
             </div>
-            <h2 className="text-2xl font-bold font-headline text-[#800000]">Pendaftaran Dikirim</h2>
+            <h2 className="text-2xl font-bold font-headline text-[#800000]">{isFree ? "Pendaftaran Berhasil" : "Pendaftaran Dikirim"}</h2>
             <div className="space-y-4 px-4">
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Jazakallahu Khairan, pendaftaran {fullSalutation} sedang kami proses. <br/>
-                <span className="text-[#800000] font-black italic">🎁 {fullSalutation} sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span>
+                {isFree ? (
+                  <>Jazakallahu Khairan, pendaftaran {fullSalutation} berhasil. <br/>
+                  <span className="text-[#800000] font-black italic">🎁 Program ini gratis dan akses {fullSalutation} sudah aktif. Selamat belajar!</span></>
+                ) : (
+                  <>Jazakallahu Khairan, pendaftaran {fullSalutation} sedang kami proses. <br/>
+                  <span className="text-[#800000] font-black italic">🎁 {fullSalutation} sudah bisa mulai belajar sekarang sambil menunggu verifikasi manual kami.</span></>
+                )}
               </p>
 
               {(isMufradat || selectedHalaqahId === 'mufradat-premium') && (
@@ -922,6 +956,7 @@ function RegistrationForm() {
               </div>
 
               {/* Referral Code Section */}
+              {!isFree && (
               <div className={cn(
                 "p-6 rounded-3xl border-2 transition-all duration-500",
                 appliedReferral 
@@ -1004,6 +1039,7 @@ function RegistrationForm() {
                   </div>
                 )}
               </div>
+              )}
 
               {isTikrar && (
                 <div className="space-y-6">
@@ -1013,7 +1049,7 @@ function RegistrationForm() {
                       <Select value={level} onValueChange={setLevel}>
                         <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name} - Rp {l.price.toLocaleString('id-ID')}</SelectItem>)}
+                          {levels.map(l => <SelectItem key={l.id} value={l.id}>{isFree ? l.name : `${l.name} - Rp ${l.price.toLocaleString('id-ID')}`}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1028,7 +1064,7 @@ function RegistrationForm() {
                     </div>
                   </div>
 
-                  {circle?.payment_type === 'selectable' ? (
+                  {!isFree && (circle?.payment_type === 'selectable' ? (
                     <div className="space-y-3">
                        <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Pilih Level Infaq</Label>
                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -1061,7 +1097,7 @@ function RegistrationForm() {
                         />
                       </div>
                     </div>
-                  )}
+                  ))}
 
                   {/* Voucher Section - Tikrar */}
                   {isPremiumProgram && (
@@ -1171,6 +1207,7 @@ function RegistrationForm() {
                       </Select>
                     </div>
                   </div>
+                  {!isFree && (<>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-[#800000]">Nominal Infaq</Label>
                     
@@ -1270,6 +1307,7 @@ function RegistrationForm() {
                       )}
                     </p>
                   </div>
+                  </>)}
 
                   {/* Voucher Section - Mufradat */}
                   {isPremiumProgram && (

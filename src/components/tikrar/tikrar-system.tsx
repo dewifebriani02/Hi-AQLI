@@ -94,7 +94,8 @@ export function TikrarSystem() {
   const { toast } = useToast();
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user ? "users" : null, user?.id);
-  const paidJuz = userData?.paid_juz || 1;
+  // Semua juz terbuka (program gratis); paid_juz / "paidJuz" hanya menjadi juz awal.
+  const paidJuz = Number(userData?.paid_juz ?? userData?.paidJuz) || 1;
 
   const [juz, setJuz] = useState(1);
   const [page, setPage] = useState(1);
@@ -398,6 +399,21 @@ export function TikrarSystem() {
 
       <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md border-[#800000]/10">
         <div className="flex items-center gap-3">
+          <select
+            aria-label="Pilih Juz"
+            value={juz}
+            disabled={loading}
+            onChange={(e) => {
+              const j = Number(e.target.value);
+              setJuz(j);
+              setPage(JUZ_PAGES[j - 1] || 1);
+            }}
+            className="h-10 rounded-xl border-2 border-[#800000]/20 bg-white px-2 text-sm font-black text-[#800000]"
+          >
+            {JUZ_PAGES.map((_, i) => (
+              <option key={i + 1} value={i + 1}>Juz {i + 1}</option>
+            ))}
+          </select>
           <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(JUZ_PAGES[juz - 1] || 1, p - 1))} disabled={loading || page <= (JUZ_PAGES[juz - 1] || 1)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
             <ChevronLeft className="h-5 w-5 text-[#800000]" />
           </Button>

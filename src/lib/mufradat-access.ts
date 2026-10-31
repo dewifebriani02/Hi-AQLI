@@ -1,5 +1,6 @@
 import { subMonths, format, getDate, isAfter, parseISO, startOfMonth, addDays, differenceInHours, addMonths } from "date-fns";
 import { SURAH_START_PAGES, getJuzForPage } from "./quran-mapping";
+import { isProgramFree } from "./program-settings";
 
 export type MufradatAccessStatus = 
   | 'active'           // Fully paid and in good standing
@@ -70,6 +71,51 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       isVerified: true, // Free contents are effectively verified
       showSoftReminder: false,
       message: `Selamat Datang! ${fullSalutation} sedang menikmati akses gratis halaman pertama/terakhir Al-Quran.`
+    };
+  }
+
+  // FREE PROGRAM: no billing, no trial window, no blocking. Anyone registered has full access.
+  if (isProgramFree('mufradat')) {
+    if (!user) {
+      return {
+        status: 'inactive',
+        isBlocked: true,
+        isVerified: false,
+        showSoftReminder: false,
+        message: "Silakan masuk dan daftar (gratis) untuk mengakses seluruh ayat Hi Mufradat.",
+        redirectTo: '/programs',
+        buttonText: 'DAFTAR GRATIS SEKARANG'
+      };
+    }
+
+    const isRegistered =
+      user.mufradat_status === 'active' ||
+      user.mufradat_status === 'on_leave' ||
+      !!user.mufradat_group_id ||
+      registrations?.some(r =>
+        r.status !== 'rejected' &&
+        (r.halaqah_id === 'mufradat-premium' || r.halaqah_title?.toLowerCase().includes('mufradat'))
+      );
+
+    if (isRegistered) {
+      return {
+        status: 'active',
+        isBlocked: false,
+        isFree: true,
+        isVerified: true,
+        showSoftReminder: false,
+        message: `Akses Aktif. Hi Mufradat gratis untuk ${fullSalutation}. Selamat belajar!`
+      };
+    }
+
+    return {
+      status: 'inactive',
+      isBlocked: true,
+      isVerified: false,
+      showSoftReminder: false,
+      message: `${fullSalutation} belum terdaftar di Hi Mufradat. Daftar gratis, akses langsung aktif.`,
+      redirectTo: '/programs',
+      buttonText: 'DAFTAR GRATIS SEKARANG'
     };
   }
 

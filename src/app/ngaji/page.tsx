@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/db";
 import { useDoc, useCollection, useCount } from "@/db";
 import { useMemo } from "react";
+import { isProgramFree } from "@/lib/program-settings";
 
 // Special ID for Tikrar Premium logic
 const TIKRAR_ID = 'tikrar-j30-b1';
@@ -157,7 +158,7 @@ export default function NgajiPage() {
                 {circle.has_exam || circle.hasExam ? <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4 flex items-center gap-1"><GraduationCap className="w-2 h-2" /> UJIAN</Badge> : null}
                 {circle.has_certificate || circle.hasCertificate ? <Badge variant="outline" className="text-[8px] border-blue-200 text-blue-700 bg-blue-50 h-4 flex items-center gap-1"><Award className="w-2 h-2" /> SERTIFIKAT</Badge> : null}
               </div>
-              {user && (circle.is_premium || circle.isPremium) && !isActive && !isPending && (
+              {user && !isProgramFree('ngaji') && (circle.is_premium || circle.isPremium) && !isActive && !isPending && (
                 <span className="text-xs font-black text-[#800000]">Rp {(circle.base_price || circle.basePrice)?.toLocaleString('id-ID')}</span>
               )}
             </div>

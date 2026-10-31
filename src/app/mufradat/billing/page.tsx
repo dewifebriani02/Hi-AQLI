@@ -33,6 +33,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { getMufradatStatus } from "@/lib/mufradat-access";
+import { isProgramFree } from "@/lib/program-settings";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -432,6 +433,32 @@ export default function MufradatBillingPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
         <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">Memuat Status Infaq...</p>
+      </div>
+    );
+  }
+
+  if (isProgramFree('mufradat')) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-2xl space-y-8 pb-32">
+        <Card className="border-none shadow-xl text-center">
+          <CardContent className="pt-10 pb-10 space-y-5">
+            <div className="mx-auto bg-emerald-100 text-emerald-600 rounded-full p-4 w-fit">
+              <Heart className="h-10 w-10" />
+            </div>
+            <h2 className="text-2xl font-black font-headline text-[#800000]">Hi Mufradat Gratis</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Saat ini Hi Mufradat gratis untuk semua peserta. Tidak ada tagihan, infaq wajib, maupun batas masa aktif.
+            </p>
+            <div className="grid gap-2">
+              <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 font-black h-12 rounded-xl">
+                <Link href="/mufradat">Lanjut Belajar</Link>
+              </Button>
+              <Button asChild variant="outline" className="font-black h-12 rounded-xl border-[#800000]/20 text-[#800000]">
+                <Link href="/berbagi">Berinfaq Sukarela</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

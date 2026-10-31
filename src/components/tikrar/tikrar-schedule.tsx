@@ -57,15 +57,16 @@ export function TikrarSchedule() {
 
   const { data: userData } = useDoc(user ? "users" : null, user?.id);
 
-  const isPaid = userData?.isTikrarPaid || false;
-  const juz = userData?.paidJuz || 1;
-  const levelId = userData?.tikrarLevel || 3;
+  const isPaid = userData?.is_tikrar_paid ?? userData?.isTikrarPaid ?? false;
+  const juz = Number(userData?.paid_juz ?? userData?.paidJuz) || 1;
+  const levelId = Number(userData?.tikrar_level ?? userData?.tikrarLevel) || 3;
   const level = LEVELS.find(l => l.id === levelId) || LEVELS[2];
 
   const scheduleData = useMemo(() => {
     const startPage = JUZ_PAGES[juz - 1] || 1;
     const endPage = juz < 30 ? (JUZ_PAGES[juz] || 604) - 1 : 604;
-    const adminStartDate = userData?.tikrarStartDate ? new Date(userData.tikrarStartDate) :
+    const startDateRaw = userData?.tikrar_start_date ?? userData?.tikrarStartDate;
+    const adminStartDate = startDateRaw ? new Date(startDateRaw) :
       userData?.created_at ? new Date(userData.created_at) :
       new Date();
 
