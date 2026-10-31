@@ -37,7 +37,7 @@ import {
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { addMonths, format, parseISO } from "date-fns";
 
 // Types for BSI Statement Entry
 interface BsiTransaction {
@@ -149,8 +149,9 @@ export default function MufradatReconciliationPage() {
     try {
       const matchEntries = matches.filter(m => m.bsiEntry);
       
-      // We'll perform updates in batches or sequence
-      const results = await Promise.all(matchEntries.map(async (m) => {
+      // Perform updates sequentially to avoid race conditions on group assignment
+      const results: boolean[] = [];
+      for (const m of matchEntries) {
         const reg = m.registration;
         
         // 1. Update Registration to Verified
@@ -171,10 +172,81 @@ export default function MufradatReconciliationPage() {
 
         if (regError) throw regError;
 
-        // 2. We don't need to update mufradat_status because of "Grace Period" logic 
-        // (they are already active), but we keep it verified for records.
-        return true;
-      }));
+        // 2. Activate user access (since transfer registrations wait for admin verification)
+        if (reg.user_id) {
+          const { data: currentUsr } = await db
+            .from("users")
+            .select("followed_halaqahs, mufradat_group_id, mufradat_due_date, mufradat_accessible_juz")
+            .eq("id", reg.user_id)
+            .single();
+
+          const currentFollowed = Array.isArray(currentUsr?.followed_halaqahs)
+            ? currentUsr.followed_halaqahs
+            : [];
+          const userUpdate: Record<string, any> = {
+            updated_at: new Date().toISOString(),
+          };
+          if (reg.halaqah_id && !currentFollowed.includes(reg.halaqah_id)) {
+            userUpdate.followed_halaqahs = [...currentFollowed, reg.halaqah_id];
+          }
+
+          const isMufradatReg =
+            reg.halaqah_id === "mufradat-premium" ||
+            reg.halaqah_title?.toLowerCase().includes("mufradat");
+
+          if (isMufradatReg) {
+            if (!currentUsr?.mufradat_group_id) {
+              const { data: availableGroups } = await db
+                .from("mufradat_groups")
+                .select("*")
+                .lt("member_count", 50)
+                .order("created_at", { ascending: false })
+                .limit(1);
+
+              if (availableGroups && availableGroups.length > 0) {
+                userUpdate.mufradat_group_id = availableGroups[0].id;
+                await db
+                  .from("mufradat_groups")
+                  .update({ member_count: availableGroups[0].member_count + 1 })
+                  .eq("id", availableGroups[0].id);
+              }
+            }
+
+            const now = new Date();
+            const currentDue = currentUsr?.mufradat_due_date
+              ? parseISO(currentUsr.mufradat_due_date)
+              : null;
+            const baseDate = currentDue && currentDue > now ? currentDue : now;
+            const duration = reg.metadata?.paymentDuration || 1;
+            userUpdate.mufradat_status = "active";
+            userUpdate.mufradat_due_date = addMonths(baseDate, duration).toISOString();
+
+            const currentJuz = Array.isArray(currentUsr?.mufradat_accessible_juz)
+              ? [...currentUsr.mufradat_accessible_juz]
+              : [];
+            if (!currentJuz.includes(1)) {
+              currentJuz.push(1);
+              currentJuz.sort((a: number, b: number) => a - b);
+            }
+            userUpdate.mufradat_accessible_juz = currentJuz;
+          }
+
+          const isTikrarReg =
+            reg.halaqah_id === "tikrar-j30-b1" ||
+            reg.halaqah_id === "tikrar-premium" ||
+            reg.halaqah_title?.toLowerCase().includes("tikrar");
+          if (isTikrarReg) {
+            userUpdate.is_tikrar_paid = true;
+            userUpdate.paid_juz = reg.target_juz || 30;
+            userUpdate.tikrar_level = reg.level || 3;
+            userUpdate.tikrar_start_date = new Date().toISOString();
+          }
+
+          await db.from("users").update(userUpdate).eq("id", reg.user_id);
+        }
+
+        results.push(true);
+      }
 
       toast({
         title: "Rekonsiliasi Selesai",

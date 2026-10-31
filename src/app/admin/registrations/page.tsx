@@ -172,7 +172,7 @@ export default function AdminRegistrationsPage() {
         // Fetch current user data to see current due date
         const { data: currentUsr } = await db
           .from('users')
-          .select('mufradat_due_date, mufradat_leave_balance')
+          .select('mufradat_due_date, mufradat_leave_balance, mufradat_accessible_juz')
           .eq('id', reg.user_id)
           .single();
 
@@ -193,6 +193,14 @@ export default function AdminRegistrationsPage() {
           const nextDueDate = addMonths(baseDate, duration);
           subUpdate.mufradat_due_date = nextDueDate.toISOString();
           subUpdate.mufradat_status = 'active';
+          const currentJuz = Array.isArray(currentUsr?.mufradat_accessible_juz)
+            ? [...currentUsr.mufradat_accessible_juz]
+            : [];
+          if (!currentJuz.includes(1)) {
+            currentJuz.push(1);
+            currentJuz.sort((a: number, b: number) => a - b);
+          }
+          subUpdate.mufradat_accessible_juz = currentJuz;
         } 
         else if (type === 'leave_request') {
           // Leave for 1 month from now or from end of current access

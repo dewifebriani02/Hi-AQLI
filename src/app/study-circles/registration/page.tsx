@@ -39,18 +39,20 @@ import {
   AlertCircle,
   Image as ImageIcon,
 } from "lucide-react";
-import {useUser, db } from "@/db";
-import { useDoc, useCollection } from "@/db";
+import { useUser, db, useDoc, useCollection, authFetch } from "@/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { normalizeWhatsapp, whatsappErrorMessage } from "@/lib/whatsapp";
+import {
+  TIKRAR_LEVELS,
+  calculateMinInfaq,
+  calculateRegistrationBreakdown,
+  detectProgramFlags,
+  type RegistrationBreakdown,
+} from "@/lib/pricing";
 import Link from "next/link";
 
-const levels = [
-  { id: "1", name: "Intensif", price: 100000 },
-  { id: "2", name: "Reguler", price: 75000 },
-  { id: "3", name: "Santai", price: 50000 },
-];
+const levels = TIKRAR_LEVELS;
 
 const INFAQ_LEVELS = [50000, 75000, 100000, 250000, 500000, 1000000];
 
@@ -284,47 +286,49 @@ function RegistrationForm() {
     }
   }, [userData?.referred_by_id, searchParams, appliedReferral]);
 
-  // Program Detection
-  const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium');
-  const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
-  const isNgaji = (circle?.program_type || circle?.programType) === 'hi_ngaji' || programParam === 'hi_ngaji';
+  // Program Detection (shared with server pricing module)
+  const programFlags = useMemo(
+    () => detectProgramFlags(circle, programParam || selectedHalaqahId),
+    [circle, programParam, selectedHalaqahId]
+  );
+  const { isMufradat, isTikrar, isNgaji, isPremiumProgram } = programFlags;
 
-  const isPremiumProgram = useMemo(() => {
-    return circle?.is_premium === true || isMufradat || isTikrar;
-  }, [circle?.is_premium, isMufradat, isTikrar]);
+  const [serverQuote, setServerQuote] = useState<RegistrationBreakdown | null>(null);
+  const [quoteToken, setQuoteToken] = useState<string | null>(null);
 
   // Minimum Infaq Calculation
-  const minInfaq = useMemo(() => {
-    const adminBase = circle?.base_price || 0;
-    
-    if (isMufradat) {
-      return Math.max(20000, adminBase);
-    }
-    if (isTikrar) {
-      return levels.find(l => l.id === level)?.price || 50000;
-    }
-    if (circle?.payment_type === 'selectable') {
-      return adminBase || 50000;
-    }
-    return adminBase || 0;
-  }, [isMufradat, isTikrar, level, circle]);
+  const minInfaq = useMemo(
+    () => calculateMinInfaq({ halaqah: circle, isMufradat, isTikrar, level }),
+    [isMufradat, isTikrar, level, circle]
+  );
 
   const isFirstRegistration = useMemo(() => {
     if (!user || !registrationsHistory || !circle) return true;
-    const sameProgramRegs = registrationsHistory.filter(r => 
-      r.user_id === user.id && 
+    const sameProgramRegs = registrationsHistory.filter(r =>
+      r.user_id === user.id &&
       (r.halaqah_id === circle.id || r.halaqah_title?.toLowerCase().includes(isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : '---')))
     );
     return sameProgramRegs.length === 0;
   }, [user, registrationsHistory, circle, isMufradat, isTikrar]);
 
-  const registrationFee = isFirstRegistration ? 10000 : 0;
-  const referralDiscount = (appliedReferral && !appliedVoucher && !hasUsedReferral) ? 5000 : 0;
+  const previewBreakdown = useMemo(
+    () =>
+      calculateRegistrationBreakdown({
+        isPremiumProgram,
+        hasVoucher: Boolean(appliedVoucher),
+        minInfaq,
+        infaqAmount,
+        paymentDuration,
+        isFirstRegistration,
+        hasEligibleReferral: Boolean(appliedReferral && !appliedVoucher && !hasUsedReferral),
+        uniqueCode: uniqueCode || 100,
+      }),
+    [isPremiumProgram, appliedVoucher, minInfaq, infaqAmount, paymentDuration, isFirstRegistration, appliedReferral, hasUsedReferral, uniqueCode]
+  );
 
-  const totalCalculated = useMemo(() => {
-    if (!isPremiumProgram || appliedVoucher) return 0;
-    return Math.max(0, (infaqAmount * paymentDuration) + registrationFee - referralDiscount + uniqueCode);
-  }, [isPremiumProgram, infaqAmount, paymentDuration, registrationFee, referralDiscount, uniqueCode, appliedVoucher]);
+  const registrationFee = serverQuote?.registrationFee ?? previewBreakdown.registrationFee;
+  const referralDiscount = serverQuote?.referralDiscount ?? previewBreakdown.referralDiscount;
+  const totalCalculated = serverQuote?.totalAmount ?? previewBreakdown.totalAmount;
 
   useEffect(() => {
     if (infaqAmount < minInfaq) {
@@ -349,14 +353,40 @@ function RegistrationForm() {
   }, [user, isUserLoading, router, name, halaqahId]);
 
   useEffect(() => {
-    if (step === 2 && isPremiumProgram && !appliedVoucher) {
-      if (forceShowForm && existingReg?.unique_code) {
-        setUniqueCode(existingReg.unique_code);
-      } else {
-        setUniqueCode(Math.floor(100 + Math.random() * 899));
+    if (step !== 2 || !isPremiumProgram || appliedVoucher || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch('/api/registrations', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'quote',
+            mode: 'register',
+            halaqah_id: resolvedHalaqahId,
+            program_hint: programParam || selectedHalaqahId,
+            level,
+            infaq_amount: infaqAmount,
+            payment_duration: paymentDuration,
+            voucher_code: appliedVoucher?.code || null,
+            referral_code: appliedReferral?.referral_code || null,
+            resume_registration_id: forceShowForm ? existingReg?.id : null,
+            quote_token: quoteToken,
+          }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok && data?.breakdown) {
+          setServerQuote(data.breakdown);
+          setUniqueCode(data.breakdown.uniqueCode || 0);
+          setQuoteToken(data.quote_token || null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch registration quote:', err);
       }
-    }
-  }, [step, isPremiumProgram, appliedVoucher, forceShowForm, existingReg]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, isPremiumProgram, appliedVoucher, user, resolvedHalaqahId, programParam, selectedHalaqahId, level, infaqAmount, paymentDuration, appliedReferral, forceShowForm, existingReg?.id]);
 
   useEffect(() => {
     if (forceShowForm && existingReg) {
@@ -372,55 +402,27 @@ function RegistrationForm() {
 
   const handleValidateVoucher = async () => {
     if (!voucherCode.trim()) return;
-    
+
     setIsValidatingVoucher(true);
     try {
-      const { data: voucher, error: vError } = await db
-        .from("vouchers")
-        .select("*")
-        .eq("code", voucherCode.trim().toUpperCase())
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (vError || !voucher) {
-        throw new Error("Voucher tidak ditemukan atau sudah tidak aktif.");
+      const res = await authFetch('/api/registrations', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'validate_voucher',
+          voucher_code: voucherCode.trim().toUpperCase(),
+          halaqah_id: resolvedHalaqahId,
+          program_hint: programParam || selectedHalaqahId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.voucher) {
+        throw new Error(data?.error || 'Voucher tidak ditemukan atau sudah tidak aktif.');
       }
 
-      if (voucher.expiry_date && new Date(voucher.expiry_date) < new Date()) {
-        throw new Error("Voucher sudah kadaluarsa.");
-      }
-
-      const programType = circle?.program_type || (isMufradat ? 'mufradat' : (isTikrar ? 'tikrar' : ''));
-      if (voucher.program_id !== 'all' && !programType.includes(voucher.program_id) && voucher.program_id !== 'mufradat') {
-         if (!(selectedHalaqahId === 'mufradat-premium' && voucher.program_id === 'mufradat')) {
-            throw new Error(`Voucher ini hanya berlaku untuk program ${voucher.program_id.toUpperCase()}.`);
-         }
-      }
-
-      const { data: existing } = await db
-        .from("voucher_redemptions")
-        .select("id")
-        .eq("voucher_id", voucher.id)
-        .eq("user_id", user?.id)
-        .maybeSingle();
-
-      if (existing) {
-        throw new Error(`${fullSalutation} sudah pernah menggunakan voucher ini sebelumnya.`);
-      }
-
-      if (voucher.usage_limit) {
-        const { count } = await db
-          .from("voucher_redemptions")
-          .select("id", { count: 'exact', head: true })
-          .eq("voucher_id", voucher.id);
-        
-        if (count !== null && count >= voucher.usage_limit) {
-          throw new Error("Kuota penggunaan voucher ini sudah habis.");
-        }
-      }
-
-      setAppliedVoucher(voucher);
-      toast({ title: "Voucher Berhasil!", description: `Kode ${voucher.code} berhasil dipasang.` });
+      setAppliedVoucher(data.voucher);
+      setServerQuote(null);
+      setQuoteToken(null);
+      toast({ title: "Voucher Berhasil!", description: `Kode ${data.voucher.code} berhasil dipasang.` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Voucher Gagal", description: err.message });
       setAppliedVoucher(null);
@@ -431,10 +433,10 @@ function RegistrationForm() {
 
   const handleValidateReferral = async () => {
     if (!referralCodeInput.trim()) return;
-    
+
     if (hasUsedReferral) {
-      toast({ 
-        title: "Referral Tidak Berlaku", 
+      toast({
+        title: "Referral Tidak Berlaku",
         description: "Potongan referral hanya berlaku untuk pendaftaran pertama kali di Hi AQLI.",
         variant: "destructive"
       });
@@ -443,22 +445,22 @@ function RegistrationForm() {
 
     setIsValidatingReferral(true);
     try {
-      const { data: referrer, error } = await db
-        .from("users")
-        .select("id, referral_code, username")
-        .eq("referral_code", referralCodeInput.trim().toUpperCase())
-        .maybeSingle();
-
-      if (error || !referrer) {
-        throw new Error("Kode Referral tidak valid atau tidak ditemukan.");
+      const res = await authFetch('/api/registrations', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'validate_referral',
+          referral_code: referralCodeInput.trim().toUpperCase(),
+          halaqah_id: resolvedHalaqahId,
+          program_hint: programParam || selectedHalaqahId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.referral) {
+        throw new Error(data?.error || 'Kode Referral tidak valid atau tidak ditemukan.');
       }
 
-      if (referrer.id === user?.id) {
-        throw new Error("Tidak bisa menggunakan kode referral milik sendiri.");
-      }
-
-      setAppliedReferral(referrer);
-      toast({ title: "Referral Berhasil!", description: `${fullSalutation} mendapatkan potongan Rp 5.000 dari ${referrer.referral_code}.` });
+      setAppliedReferral(data.referral);
+      toast({ title: "Referral Berhasil!", description: `${fullSalutation} mendapatkan potongan Rp 5.000 dari ${data.referral.referral_code}.` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Referral Gagal", description: err.message });
       setAppliedReferral(null);
@@ -467,7 +469,7 @@ function RegistrationForm() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedHalaqahId) {
       toast({ variant: "destructive", title: "Mohon pilih program terlebih dahulu" });
       return;
@@ -482,9 +484,9 @@ function RegistrationForm() {
       return;
     }
     if (isTikrar && !akadAccepted) {
-        toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Commitment Tikrar" });
-        return;
-      }
+      toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Commitment Tikrar" });
+      return;
+    }
     if (isNgaji && !akadAccepted) {
       toast({ variant: "destructive", title: "Mohon baca dan setujui Akad Komitmen Hi Ngaji" });
       return;
@@ -493,11 +495,40 @@ function RegistrationForm() {
       toast({ variant: "destructive", title: `Minimal infaq untuk target ini adalah Rp ${minInfaq.toLocaleString('id-ID')}` });
       return;
     }
-    
+
     if (appliedVoucher) {
       setStep(3);
     } else if (isPremiumProgram) {
-      setStep(2);
+      setLoading(true);
+      try {
+        const res = await authFetch('/api/registrations', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'quote',
+            mode: 'register',
+            halaqah_id: resolvedHalaqahId,
+            program_hint: programParam || selectedHalaqahId,
+            level,
+            infaq_amount: infaqAmount,
+            payment_duration: paymentDuration,
+            referral_code: appliedReferral?.referral_code || null,
+            resume_registration_id: forceShowForm ? existingReg?.id : null,
+            quote_token: quoteToken,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.breakdown) {
+          throw new Error(data?.error || 'Gagal menghitung rincian pembayaran dari server.');
+        }
+        setServerQuote(data.breakdown);
+        setUniqueCode(data.breakdown.uniqueCode || 0);
+        setQuoteToken(data.quote_token || null);
+        setStep(2);
+      } catch (err: any) {
+        toast({ variant: "destructive", title: "Gagal memproses rincian", description: err.message });
+      } finally {
+        setLoading(false);
+      }
     } else {
       setStep(3);
     }
@@ -511,122 +542,44 @@ function RegistrationForm() {
   };
 
   const handleConfirm = async () => {
-    if (isPremiumProgram && !appliedVoucher && (!senderName || !proofFile)) {
+    if (isPremiumProgram && !appliedVoucher && (!senderName || (!proofFile && !(forceShowForm && existingReg?.proof_file_name)))) {
       toast({ variant: "destructive", title: "Lengkapi data pembayaran" });
       return;
     }
 
     setLoading(true);
     try {
-      const finalHalaqahId = resolvedHalaqahId;
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      let verifiedUuid = finalHalaqahId;
-      
-      if (finalHalaqahId && !uuidRegex.test(finalHalaqahId)) {
-        const pType = finalHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
-        const { data: hData } = await db.from("halaqahs").select("id").eq("program_type", pType).maybeSingle();
-        if (hData?.id) {
-          verifiedUuid = hData.id;
-        }
-      }
-
-      if (!verifiedUuid || !uuidRegex.test(verifiedUuid)) {
-        throw new Error("Gagal memproses ID Program. Mohon muat ulang halaman atau hubungi Admin.");
-      }
-
-      const regData = {
-        user_id: user?.id,
-        user_name: name,
-        user_email: user?.email,
-        whatsapp: normalizeWhatsapp(whatsapp),
-        halaqah_id: verifiedUuid,
-        halaqah_title: circle?.title || (isMufradat ? 'Hi Mufradat' : (isTikrar ? 'Hi Tikrar' : (isNgaji ? 'Hi Ngaji' : (programDisplayName || 'Halaqah')))),
-        is_paid: isPremiumProgram || !!appliedVoucher,
-        level: isTikrar ? parseInt(level) : null,
-        target_juz: isTikrar ? parseInt(targetJuz) : null,
-        amount: appliedVoucher ? 0 : totalCalculated,
-        payment_method: appliedVoucher ? "voucher" : (isPremiumProgram ? "transfer" : "free"),
-        sender_name: appliedVoucher ? `VOUCHER: ${appliedVoucher.code}` : (isPremiumProgram ? senderName : null),
-        proof_file_name: appliedVoucher ? "VOUCHER_ACTIVATED" : (proofFile?.name || (forceShowForm ? existingReg?.proof_file_name : null)),
-        status: "pending_verification",
-        created_at: forceShowForm ? existingReg?.created_at : new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        registration_fee: registrationFee,
-        referral_code_used: appliedReferral?.referral_code || null,
-        referral_discount_amount: referralDiscount,
-        is_first_registration: isFirstRegistration,
-        unique_code: uniqueCode,
-        metadata: isMufradat ? {
+      const res = await authFetch('/api/registrations', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'register',
+          halaqah_id: resolvedHalaqahId,
+          program_hint: programParam || selectedHalaqahId,
+          user_name: name,
+          whatsapp: normalizeWhatsapp(whatsapp),
+          level: isTikrar ? parseInt(level, 10) : null,
+          target_juz: isTikrar ? parseInt(targetJuz, 10) : null,
           schedule: durationMonths,
-          target: mufradatTarget,
-          akadAccepted: true,
-          unitPrice: 0,
-          infaqBase: infaqAmount,
-          paymentDuration: paymentDuration,
+          mufradat_target: mufradatTarget,
+          infaq_amount: infaqAmount,
+          payment_duration: paymentDuration,
+          akad_accepted: isMufradat || isTikrar || isNgaji ? akadAccepted : true,
           voucher_code: appliedVoucher?.code || null,
           referral_code: appliedReferral?.referral_code || null,
-          is_resume: forceShowForm
-        } : isNgaji ? {
-          akadAccepted: true,
-          infaqBase: infaqAmount,
-          paymentDuration: paymentDuration,
-          voucher_code: appliedVoucher?.code || null,
-          referral_code: appliedReferral?.referral_code || null,
-        } : isTikrar ? {
-          akadAccepted: true,
-          target: targetJuz,
-          level: level,
-          infaqBase: infaqAmount,
-          paymentDuration: paymentDuration,
-          voucher_code: appliedVoucher?.code || null,
-          referral_code: appliedReferral?.referral_code || null,
-        } : (appliedVoucher ? { voucher_code: appliedVoucher.code } : null)
-      };
-
-      if (forceShowForm && existingReg?.id) {
-        const { error } = await db
-          .from("halaqah_registrations")
-          .update(regData)
-          .eq('id', existingReg.id);
-        if (error) throw error;
-      } else {
-        const { error } = await db.from("halaqah_registrations").insert(regData);
-        if (error) throw error;
+          sender_name: isPremiumProgram && !appliedVoucher ? senderName : null,
+          proof_file_path: proofFile?.name || (forceShowForm ? existingReg?.proof_file_name : null),
+          resume_registration_id: forceShowForm && existingReg?.id ? existingReg.id : null,
+          quote_token: quoteToken,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Gagal mengirim pendaftaran.');
       }
 
-      if (user?.id) {
-        await db.from("users").update({ whatsapp: regData.whatsapp }).eq('id', user.id);
-      }
-
-      if (appliedVoucher) {
-        await db.from("voucher_redemptions").insert({
-          voucher_id: appliedVoucher.id,
-          user_id: user?.id
-        });
-      }
-
-      if (isMufradat) {
-        const { data: currentUser } = await db
-          .from('users')
-          .select('mufradat_accessible_juz')
-          .eq('id', user?.id)
-          .single();
-
-        let currentJuz = Array.isArray(currentUser?.mufradat_accessible_juz) 
-          ? currentUser?.mufradat_accessible_juz 
-          : [];
-          
-        if (!currentJuz.includes(1)) {
-           currentJuz.push(1);
-           currentJuz.sort((a: number, b: number) => a - b);
-        }
-
-        await db.from('users').update({
-          mufradat_status: 'active',
-          mufradat_accessible_juz: currentJuz,
-          mufradat_schedule: durationMonths,
-          updated_at: new Date().toISOString()
-        }).eq('id', user?.id);
+      if (data.breakdown) {
+        setServerQuote(data.breakdown);
+        setUniqueCode(data.breakdown.uniqueCode || 0);
       }
 
       setSubmitted(true);

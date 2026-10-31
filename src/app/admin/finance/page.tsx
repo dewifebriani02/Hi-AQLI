@@ -456,6 +456,14 @@ export default function MufradatFinancePage() {
       // Subscription logic for Hi Mufradat
       if (isMufradatReg) {
         updateData.mufradat_status = 'active';
+        const currentJuz = Array.isArray(selectedUser.mufradat_accessible_juz)
+          ? [...selectedUser.mufradat_accessible_juz]
+          : [];
+        if (!currentJuz.includes(1)) {
+          currentJuz.push(1);
+          currentJuz.sort((a: number, b: number) => a - b);
+        }
+        updateData.mufradat_accessible_juz = currentJuz;
         if (manualType === 'monthly') {
           const monthDate = parseISO(`${manualMonth}-01`);
           updateData.mufradat_due_date = addDays(addMonths(monthDate, 1), 9).toISOString();

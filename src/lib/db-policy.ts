@@ -23,7 +23,6 @@ export const OWNER_COLUMN: Record<string, string> = {
   matan_user_progress: 'user_id',
   mufradat_mabar_participants: 'user_id',
   halaqah_registrations: 'user_id',
-  voucher_redemptions: 'user_id',
   page_exams: 'user_id',
   donations: 'user_id',
   mufradat_reactions: 'from_user_id',
@@ -63,7 +62,22 @@ const USER_PROTECTED_COLUMNS = new Set([
   'encrypted_password',
   'is_blacklisted',
   'referral_balance',
+  'mufradat_status',
+  'mufradat_accessible_juz',
+  'mufradat_due_date',
+  'mufradat_leave_balance',
+  'mufradat_leave_from',
+  'mufradat_leave_until',
+  'mufradat_schedule',
+  'mufradat_group_id',
+  'is_tikrar_paid',
+  'paid_juz',
+  'tikrar_level',
+  'tikrar_start_date',
 ]);
+
+// Columns on halaqah_registrations a learner may update on their own row (safe contact info only).
+const HALAQAH_REGISTRATION_SAFE_UPDATE_COLUMNS = new Set(['whatsapp', 'updated_at']);
 
 // Columns on users hidden from anyone who is not staff and not the row owner.
 export const USER_PRIVATE_COLUMNS = [
@@ -146,6 +160,10 @@ export function checkWrite(table: string, action: Exclude<DbAction, 'select'>, c
   if (!ownerColumn) throw new PolicyError('Akses ditolak.');
   // Donations are confirmed by staff; learners may only create them.
   if (table === 'donations' && action === 'update') throw new PolicyError('Akses ditolak.');
+  // Registrations must go through /api/registrations; learners may only update safe contact fields.
+  if (table === 'halaqah_registrations' && (action === 'insert' || action === 'upsert')) {
+    throw new PolicyError('Pendaftaran harus dikirim melalui endpoint resmi.');
+  }
   return { ownerColumn };
 }
 
@@ -174,6 +192,14 @@ export function sanitizeOwnedRecord(
       if (USER_PROTECTED_COLUMNS.has(col)) throw new PolicyError(`Kolom '${col}' tidak boleh diubah.`);
       if ((col === 'role_id' || col === 'roleId') && out[col] !== 'learner') {
         throw new PolicyError('Tidak boleh mengubah role sendiri.');
+      }
+    }
+  }
+
+  if (table === 'halaqah_registrations' && isUpdate) {
+    for (const col of Object.keys(out)) {
+      if (!HALAQAH_REGISTRATION_SAFE_UPDATE_COLUMNS.has(col)) {
+        throw new PolicyError(`Kolom '${col}' pada pendaftaran tidak boleh diubah.`);
       }
     }
   }

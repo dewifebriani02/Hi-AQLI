@@ -2,8 +2,7 @@
 
 import { parseISO, addMonths } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
-import {useUser, db } from "@/db";
-import { useCollection, useDoc } from "@/db";
+import { useUser, useCollection, useDoc, authFetch } from "@/db";
 import { 
   Card, 
   CardContent, 
@@ -78,17 +77,43 @@ export default function MufradatBillingPage() {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [amount, setAmount] = useState<string>("20000");
   const [uniqueCode, setUniqueCode] = useState(0);
+  const [quoteToken, setQuoteToken] = useState<string | null>(null);
+  const [serverTotalAmount, setServerTotalAmount] = useState<number | null>(null);
   
   // Leave Form States
   const [leaveStart, setLeaveStart] = useState("");
   const [leaveEnd, setLeaveEnd] = useState("");
 
-  // Initialize unique code
+  // Fetch server-computed quote & signed unique_code when payment mode opens or amount changes
   useEffect(() => {
-    if (mode === 'pay' && uniqueCode === 0) {
-      setUniqueCode(Math.floor(100 + Math.random() * 899));
-    }
-  }, [mode, uniqueCode]);
+    if (mode !== 'pay' || !user) return;
+    let cancelled = false;
+    const parsedAmount = parseInt(amount, 10) || 20000;
+    (async () => {
+      try {
+        const res = await authFetch('/api/registrations', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'quote',
+            mode: 'monthly_payment',
+            infaq_amount: parsedAmount,
+            quote_token: quoteToken,
+          }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok && data?.breakdown) {
+          setUniqueCode(data.breakdown.uniqueCode || 0);
+          setServerTotalAmount(data.breakdown.totalAmount ?? null);
+          setQuoteToken(data.quote_token || null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch monthly quote:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, amount, user]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -228,51 +253,31 @@ export default function MufradatBillingPage() {
 
     setIsSubmitting(true);
     try {
-      // 1. Get a valid halaqah_id for Hi Mufradat (Must be a UUID from halaqahs table)
-      const { data: halaqahData } = await db
-        .from("halaqahs")
-        .select("id")
-        .or("program_type.eq.hi_mufradat,programType.eq.hi_mufradat")
-        .limit(1)
-        .maybeSingle();
-
-      const hId = halaqahData?.id || null;
-
-      // 2. Insert into halaqah_registrations
-      const { error } = await db.from("halaqah_registrations").insert({
-        user_id: user.id,
-        user_name: userData?.username || user?.user_metadata?.full_name,
-        user_email: user?.email,
-        whatsapp: whatsapp,
-        halaqah_id: hId, // Now sends a valid UUID or null
-        halaqah_title: 'Hi Mufradat (Infaq Bulanan)',
-        is_paid: true,
-        amount: parseInt(amount) + uniqueCode,
-        unique_code: uniqueCode,
-        payment_method: "transfer",
-        sender_name: senderName,
-        proof_file_name: proofFile.name,
-        status: "pending_verification",
-        payment_type: "monthly",
-        billing_month: access.nextBillingMonth || new Date().toISOString().slice(0, 7),
-        metadata: {},
-        created_at: new Date().toISOString()
+      const parsedAmount = parseInt(amount, 10);
+      const res = await authFetch('/api/registrations', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'monthly_payment',
+          infaq_amount: parsedAmount,
+          sender_name: senderName,
+          whatsapp: whatsapp,
+          proof_file_path: proofFile.name,
+          billing_month: access.nextBillingMonth || new Date().toISOString().slice(0, 7),
+          quote_token: quoteToken,
+        }),
       });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Gagal mengirim bukti pembayaran.');
+      }
 
-      if (error) throw error;
-
-      // 3. Update User Profile (Sync WhatsApp)
-      await db.from("users").update({ 
-        whatsapp: whatsapp,
-        phone: whatsapp 
-      }).eq('id', user.id);
-
-      toast({ 
-        title: "Bukti Terkirim", 
-        description: "Alhamdulillah, bukti transfer telah kami terima. Mohon tunggu verifikasi Admin." 
+      toast({
+        title: "Bukti Terkirim",
+        description: "Alhamdulillah, bukti transfer telah kami terima. Mohon tunggu verifikasi Admin."
       });
       setMode('view');
       refreshRegs();
+      refreshUser();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal mengirim bukti", description: e.message });
     } finally {
@@ -281,65 +286,42 @@ export default function MufradatBillingPage() {
   };
 
   const handleRequestLeave = async () => {
-    if (userData?.mufradat_leave_balance <= 0) {
+    if ((userData?.mufradat_leave_balance ?? 3) <= 0) {
       toast({ variant: "destructive", title: "Kuota Cuti Habis", description: "Ukhti sudah menggunakan batas maksimal 3 bulan cuti." });
       return;
     }
 
     const today = new Date();
     if (today.getDate() > 10) {
-      toast({ 
-        variant: "destructive", 
-        title: "Batas Waktu Terlewati", 
-        description: "Permohonan cuti hanya dapat diajukan sebelum tanggal 10 setiap bulannya." 
+      toast({
+        variant: "destructive",
+        title: "Batas Waktu Terlewati",
+        description: "Permohonan cuti hanya dapat diajukan sebelum tanggal 10 setiap bulannya."
       });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // 1. Get a valid halaqah_id for Hi Mufradat (Must be a UUID)
-      const { data: halaqahData } = await db
-        .from("halaqahs")
-        .select("id")
-        .or("program_type.eq.hi_mufradat,programType.eq.hi_mufradat")
-        .limit(1)
-        .maybeSingle();
-
-      const hId = halaqahData?.id || null;
-
-      // 2. Insert into halaqah_registrations
-      // If access.nextBillingMonth is not set (e.g. status is already active),
-      // we assume the leave is for the NEXT period.
       const targetMonth = access.nextBillingMonth || new Date(today.getFullYear(), today.getMonth() + 1, 15).toISOString().slice(0, 7);
 
-      const metadata: any = { 
-        request_date: new Date().toISOString(), 
-        type: 'cuti',
-        leave_from: leaveStart ? new Date(leaveStart).toISOString() : null,
-        leave_until: leaveEnd ? new Date(leaveEnd).toISOString() : null
-      };
-
-      const { error } = await db.from("halaqah_registrations").insert({
-        user_id: user?.id,
-        user_name: userData?.username || user?.user_metadata?.full_name,
-        user_email: user?.email,
-        whatsapp: userData?.phone,
-        halaqah_id: hId, 
-        halaqah_title: `Hi Mufradat (Cuti: ${leaveStart || '1 Bln'})`,
-        is_paid: false,
-        status: "pending_verification",
-        payment_type: "leave_request",
-        billing_month: targetMonth,
-        created_at: new Date().toISOString(),
-        metadata: metadata
+      const res = await authFetch('/api/registrations', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'leave_request',
+          leave_from: leaveStart || null,
+          leave_until: leaveEnd || null,
+          billing_month: targetMonth,
+        }),
       });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Gagal memproses permohonan cuti.');
+      }
 
-      if (error) throw error;
-
-      toast({ 
-        title: "Permohonan Dikirim", 
-        description: "Permohonan cuti Ukhti sedang ditinjau oleh Musyrifah." 
+      toast({
+        title: "Permohonan Dikirim",
+        description: "Permohonan cuti Ukhti sedang ditinjau oleh Musyrifah."
       });
       setMode('view');
       refreshRegs();
@@ -358,68 +340,25 @@ export default function MufradatBillingPage() {
 
     setIsRedeeming(true);
     try {
-      // 1. Find the voucher
-      const { data: voucher, error: vError } = await db
-        .from("vouchers")
-        .select("*")
-        .eq("code", voucherCode.trim().toUpperCase())
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (vError || !voucher) {
-        throw new Error("Voucher tidak valid atau sudah tidak aktif.");
+      const res = await authFetch('/api/registrations', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'redeem_voucher',
+          voucher_code: voucherCode.trim().toUpperCase(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Gagal klaim voucher.');
       }
 
-      // 2. Check Expiry
-      if (voucher.expiry_date && new Date(voucher.expiry_date) < new Date()) {
-        throw new Error("Voucher sudah kadaluarsa.");
-      }
-
-      // 3. Check Program ID
-      if (voucher.program_id !== 'all' && voucher.program_id !== 'mufradat') {
-        throw new Error(`Voucher ini hanya berlaku untuk program ${voucher.program_id.toUpperCase()}.`);
-      }
-
-      // 4. Check if already redeemed by this user
-      const { data: existing } = await db
-        .from("voucher_redemptions")
-        .select("id")
-        .eq("voucher_id", voucher.id)
-        .eq("user_id", user?.id)
-        .maybeSingle();
-
-      if (existing) {
-        throw new Error("Ukhti sudah pernah menggunakan voucher ini sebelumnya.");
-      }
-
-      // 5. Check Usage Limit
-      if (voucher.usage_limit) {
-        const { count } = await db
-          .from("voucher_redemptions")
-          .select("id", { count: 'exact', head: true })
-          .eq("voucher_id", voucher.id);
-        
-        if (count !== null && count >= voucher.usage_limit) {
-          throw new Error("Kuota penggunaan voucher ini sudah habis.");
-        }
-      }
-
-      // 6. Redeem
-      const { error: rError } = await db
-        .from("voucher_redemptions")
-        .insert({
-          voucher_id: voucher.id,
-          user_id: user?.id
-        });
-
-      if (rError) throw rError;
-
-      toast({ 
-        title: "Voucher Berhasil!", 
-        description: `Alhamdulillah, voucher ${voucher.code} berhasil diaktifkan.` 
+      toast({
+        title: "Voucher Berhasil!",
+        description: `Alhamdulillah, voucher ${data.voucher?.code || voucherCode.trim().toUpperCase()} berhasil diaktifkan.`
       });
       setVoucherCode("");
       refreshRedemptions();
+      refreshUser();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal klaim voucher", description: e.message });
     } finally {
@@ -684,7 +623,7 @@ export default function MufradatBillingPage() {
                    <Badge className="bg-[#800000]">BSI (BANK SYARIAH INDONESIA)</Badge>
                 </div>
                   <div className="flex items-center justify-between text-2xl font-black text-[#800000]">
-                     <span>Rp {(parseInt(amount) + uniqueCode).toLocaleString('id-ID')}</span>
+                     <span>Rp {(serverTotalAmount ?? ((parseInt(amount, 10) || 20000) + uniqueCode)).toLocaleString('id-ID')}</span>
                      <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. Dewi Febriani</span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold border-t border-dashed border-amber-200 pt-2 mt-2">
