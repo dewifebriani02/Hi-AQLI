@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useUser, initiateEmailSignUp, initiateGoogleSignIn, supabase } from '@/supabase';
+import {useUser, initiateEmailSignUp, initiateGoogleSignIn, db } from '@/db';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
@@ -85,7 +85,7 @@ function RegisterContent() {
 
       setReferralStatus(prev => ({ ...prev, isLoading: true }));
       try {
-        const { data, error } = await supabase
+        const { data, error } = await db
           .from('users')
           .select('username')
           .eq('referral_code', referralCode.toUpperCase())
@@ -106,7 +106,7 @@ function RegisterContent() {
   useEffect(() => {
     if (user && !isUserLoading) {
       const syncProfile = async () => {
-        const { data: profile } = await supabase
+        const { data: profile } = await db
           .from('users')
           .select('*')
           .eq('id', user.id)
@@ -117,7 +117,7 @@ function RegisterContent() {
 
           // 1. Resolve Referrer ID if ref code exists
           if (referralCode) {
-            const { data: referrer } = await supabase
+            const { data: referrer } = await db
               .from('users')
               .select('id, referral_balance')
               .eq('referral_code', referralCode.toUpperCase())
@@ -140,7 +140,7 @@ function RegisterContent() {
             const seqStr = sequence.toString().padStart(2, '0');
             generatedCode = `AQLI-${firstName}${seqStr}`;
 
-            const { data: existing } = await supabase
+            const { data: existing } = await db
               .from("users")
               .select("id")
               .eq("referral_code", generatedCode)
@@ -159,7 +159,7 @@ function RegisterContent() {
           }
 
           // 3. Create missing profile with referred_by_id and referral_code
-          await supabase.from('users').upsert({
+          await db.from('users').upsert({
             id: user.id,
             full_name: fullName || user.user_metadata?.full_name || '',
             username: username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Hamba Allah',
@@ -261,7 +261,7 @@ function RegisterContent() {
       setLoading(false);
     } else {
       // Sign up success!
-      // If email confirmation is ON, Supabase return user but session is null.
+      // If email confirmation is ON, return user but session is null.
       // If email confirmation is OFF, session is returned and useUser state will change.
       setLoading(false);
       if (signUpData.user) {

@@ -23,10 +23,10 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/supabase";
+import {db } from "@/db";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/supabase";
-import { useCollection, useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection, useDoc } from "@/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Question {
@@ -461,7 +461,7 @@ function PageQuizContent() {
     try {
       const isPassed = finalScore === questions.length;
       
-      const { error: insertError } = await supabase
+      const { error: insertError } = await db
         .from('quiz_attempts')
         .insert({
           user_id: user.id,
@@ -508,7 +508,7 @@ function PageQuizContent() {
         else if (newWeeklyPoints > 300) newLeague = 'Emas';
         else if (newWeeklyPoints > 100) newLeague = 'Perak';
 
-        await supabase
+        await db
           .from('users')
           .update({ 
             points: (userData?.points || 0) + pointsEarned,

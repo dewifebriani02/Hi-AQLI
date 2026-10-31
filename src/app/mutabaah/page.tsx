@@ -44,8 +44,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import Link from "next/link";
-import { useUser, supabase } from "@/supabase";
-import { useDoc, useCollection } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useDoc, useCollection } from "@/db";
 import React, { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -248,7 +248,7 @@ export default function MutabaahPage() {
     // Optimistic Update
     setOptimisticLogs(prev => ({ ...prev, [activityId]: completed }));
 
-    const { error } = await supabase
+    const { error } = await db
       .from("mutabaah_logs")
       .upsert({
         user_id: user.id,
@@ -282,7 +282,7 @@ export default function MutabaahPage() {
     // Update points if completed
     if (completed) {
       const currentPoints = userData?.points || 0;
-      const { error: pointError } = await supabase.from("users").update({ points: currentPoints + 5 }).eq('id', user.id);
+      const { error: pointError } = await db.from("users").update({ points: currentPoints + 5 }).eq('id', user.id);
       if (pointError) console.error("DEBUG [Mutabaah]: Points update failed", pointError);
       // reloadUser(); // Optimization: Removed redundant reload; handled by useDoc real-time sync
     }

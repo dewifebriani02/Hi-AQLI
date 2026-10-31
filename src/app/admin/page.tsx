@@ -2,8 +2,8 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection } from "@/db";
 import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog, Library, HeartHandshake } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";

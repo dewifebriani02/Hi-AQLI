@@ -28,9 +28,9 @@ import {
   Share2,
   Info
 } from "lucide-react";
-import { useUser } from "@/supabase";
-import { useDoc, useCollection, useCount } from "@/supabase/db";
-import { addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
+import { useUser } from "@/db";
+import { useDoc, useCollection, useCount } from "@/db";
+import { addDocumentNonBlocking } from "@/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -85,7 +85,7 @@ export default function BerbagiPage() {
   const { user } = useUser();
   const { toast } = useToast();
 
-  // Fetch campaigns from Supabase
+  // Fetch campaigns from database
   const campaignOptions = useMemo(() => ({
     filters: [{ column: 'is_active', operator: '==', value: true }],
     orderBy: { column: 'created_at', ascending: false }
@@ -122,7 +122,7 @@ export default function BerbagiPage() {
     const uniqueDonors = new Set();
 
     verifiedDonations.forEach(d => {
-      const amount = d.amount || 0;
+      const amount = Number(d.amount) || 0;
       total += amount;
       uniqueDonors.add((d.sender_name || "Hamba Allah") + d.amount + d.created_at);
 
@@ -154,8 +154,9 @@ export default function BerbagiPage() {
       const titleKey = normalizeTitle(camp.title);
       return {
         ...camp,
-        current: donationStats[titleKey]?.total || 0,
-        donors: donationStats[titleKey]?.count || 0,
+        goal: Number(camp.goal || 0),
+        current: Number(donationStats[titleKey]?.total || 0),
+        donors: Number(donationStats[titleKey]?.count || 0),
         days_left: realDaysLeft
       };
     }) || [];
@@ -221,10 +222,10 @@ export default function BerbagiPage() {
         const fileExt = proofFile.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-        // Important: Needs standard supabase client to use storage, assuming it's exported from @/supabase
-        const { supabase } = await import('@/supabase');
+        // Important: Needs standard db client to use storage, assuming it's exported from @/db
+        const { db } = await import('@/db');
         
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError, data } = await db.storage
           .from('gambar')
           .upload(`donations/${fileName}`, proofFile);
 
@@ -328,7 +329,7 @@ export default function BerbagiPage() {
               <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 flex flex-col items-center sm:items-end gap-1 shadow-2xl">
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Total Kontribusi</span>
                 <span className="text-3xl font-black text-[#D4AF37] drop-shadow-lg">
-                  Rp {mufradatContribution.toLocaleString('id-ID')}
+                  Rp {Number(mufradatContribution || 0).toLocaleString('id-ID')}
                 </span>
                 <span className="text-[9px] font-bold text-emerald-100/60 italic">*Terakumulasi secara otomatis</span>
               </div>
@@ -395,8 +396,8 @@ export default function BerbagiPage() {
                           <span className="text-[9px] font-bold text-[#800000] uppercase">Target</span>
                         </div>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-sm font-black text-[#800000]">Rp {(camp.current || 0).toLocaleString('id-ID')}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground">/ Rp {(camp.goal || 0).toLocaleString('id-ID')}</span>
+                          <span className="text-sm font-black text-[#800000]">Rp {Number(camp.current || 0).toLocaleString('id-ID')}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground">/ Rp {Number(camp.goal || 0).toLocaleString('id-ID')}</span>
                         </div>
                       </div>
                       <span className="text-[10px] font-black text-[#D4AF37]">{Math.round(progress)}%</span>
@@ -422,7 +423,7 @@ export default function BerbagiPage() {
                   >
                     <a 
                       href={`https://wa.me/?text=${encodeURIComponent(
-                        `*PROGRAM INFAQ HI BERBAGI* 🌿\n\n*${camp.title.toUpperCase()}*\n\n${camp.description}\n\n🎯 *Target:* Rp ${camp.goal.toLocaleString('id-ID')}\n💰 *Terkumpul:* Rp ${camp.current.toLocaleString('id-ID')} (${Math.round(progress)}%)\n\nSalurkan infaq terbaik melalui:\n🔗 https://hiaqli.pro/berbagi`
+                        `*PROGRAM INFAQ HI BERBAGI* 🌿\n\n*${camp.title.toUpperCase()}*\n\n${camp.description}\n\n🎯 *Target:* Rp ${Number(camp.goal || 0).toLocaleString('id-ID')}\n💰 *Terkumpul:* Rp ${Number(camp.current || 0).toLocaleString('id-ID')} (${Math.round(progress)}%)\n\nSalurkan infaq terbaik melalui:\n🔗 https://hiaqli.pro/berbagi`
                       )}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
@@ -635,16 +636,12 @@ export default function BerbagiPage() {
         {[
           { 
             label: "Infaq Terkumpul", 
-            value: totalDonated >= 1000000 
-              ? `Rp ${(totalDonated / 1000000).toFixed(1)}M` 
-              : totalDonated > 0 
-                ? `Rp ${totalDonated.toLocaleString('id-ID')}`
-                : 'Rp 0', 
+            value: `Rp ${Number(totalDonated || 0).toLocaleString('id-ID')}`, 
             icon: TrendingUp 
           },
-          { label: "Total Donatur", value: totalDonors.toLocaleString('id-ID'), icon: Users },
+          { label: "Total Donatur", value: Number(totalDonors).toLocaleString('id-ID'), icon: Users },
           { label: "Kampanye Aktif", value: (enrichedCampaigns?.length || 0).toString(), icon: Target },
-          { label: "Pemanfaat Program", value: totalBeneficiaries.toLocaleString('id-ID'), icon: Zap },
+          { label: "Pemanfaat Program", value: Number(totalBeneficiaries).toLocaleString('id-ID'), icon: Zap },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-[#800000]/10 flex flex-col items-center text-center gap-1">
             <stat.icon className="w-5 h-5 text-[#D4AF37] mb-1" />
@@ -703,7 +700,7 @@ export default function BerbagiPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-xs font-black text-emerald-600">Rp {don.amount.toLocaleString('id-ID')}</span>
+                    <span className="text-xs font-black text-emerald-600">Rp {Number(don.amount || 0).toLocaleString('id-ID')}</span>
                     <span className="text-[8px] font-bold text-muted-foreground flex items-center gap-1 uppercase tracking-tighter">
                       <Calendar className="w-2 h-2" /> {new Date(don.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                     </span>

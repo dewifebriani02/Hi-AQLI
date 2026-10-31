@@ -28,9 +28,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { supabase, useUser } from "@/supabase";
-import { useCollection, useDoc } from "@/supabase/db";
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/supabase/non-blocking-updates";
+import {db, useUser } from "@/db";
+import { useCollection, useDoc } from "@/db";
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/db";
 import { useMemo } from "react";
 
 interface WordData {
@@ -249,7 +249,7 @@ export default function MurajaahQuizPage() {
       });
 
       if (isPerfect) {
-        const { data: uData } = await supabase
+        const { data: uData } = await db
           .from('users')
           .select('points')
           .eq('id', user.id)

@@ -8,9 +8,9 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/common/bottom-nav';
 import { PWAInstallPrompt } from '@/components/common/pwa-install-prompt';
-import { SupabaseProvider, useUser, supabase } from '@/supabase';
-import { signOut } from '@/supabase/auth';
-import { useDoc, useCollection } from '@/supabase/db';
+import {AuthProvider, useUser, db } from '@/db';
+import { signOut } from '@/db';
+import { useDoc, useCollection } from '@/db';
 import { Trophy, Zap, Star, ShieldAlert, LogOut, Smartphone } from 'lucide-react';
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -85,7 +85,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         hasAttemptedSync.current = true;
         try {
           // Use upsert to avoid 409 Conflict errors if the user already exists
-          const { error } = await supabase.from('users').upsert({
+          const { error } = await db.from('users').upsert({
             id: user.id,
             username: user.user_metadata?.full_name || user.email?.split('@')[0],
             email: user.email,
@@ -272,9 +272,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
-        <SupabaseProvider>
+        <AuthProvider>
           <LayoutContent>{children}</LayoutContent>
-        </SupabaseProvider>
+        </AuthProvider>
       </body>
     </html>
   );

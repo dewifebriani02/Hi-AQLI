@@ -25,8 +25,8 @@ import { TikrarSystem } from "@/components/tikrar/tikrar-system";
 import { ProgressClient } from "@/components/progress/progress-client";
 import { HifzProgressChart } from "@/components/progress/hifz-progress-chart";
 import { TikrarSchedule } from "@/components/tikrar/tikrar-schedule";
-import { useUser } from "@/supabase";
-import { useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useDoc } from "@/db";
 
 const tajweedRules = [
   {

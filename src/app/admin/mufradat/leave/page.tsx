@@ -1,6 +1,6 @@
 'use client';
 
-import { useCollection } from "@/supabase/db";
+import { useCollection } from "@/db";
 import { 
   Card, 
   CardContent, 
@@ -29,7 +29,7 @@ import {
   Calendar
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { supabase } from "@/supabase";
+import {db } from "@/db";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,7 +80,7 @@ export default function AdminLeaveManagementPage() {
     setIsProcessing(request.id);
     try {
       // 1. Get user data to calculate current balance
-      const { data: userData, error: userError } = await supabase
+      const { data: userData, error: userError } = await db
         .from('users')
         .select('mufradat_leave_balance')
         .eq('id', request.user_id)
@@ -109,7 +109,7 @@ export default function AdminLeaveManagementPage() {
       }
 
       // 3. Update User
-      const { error: userUpdateError } = await supabase
+      const { error: userUpdateError } = await db
         .from('users')
         .update({
           mufradat_status: 'on_leave',
@@ -123,7 +123,7 @@ export default function AdminLeaveManagementPage() {
       if (userUpdateError) throw userUpdateError;
 
       // 4. Update Registration
-      const { error: regError } = await supabase
+      const { error: regError } = await db
         .from('halaqah_registrations')
         .update({ 
           status: 'verified',
@@ -145,7 +145,7 @@ export default function AdminLeaveManagementPage() {
   const handleReject = async (request: any) => {
     setIsProcessing(request.id);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('halaqah_registrations')
         .update({ 
           status: 'rejected',

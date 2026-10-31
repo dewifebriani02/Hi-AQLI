@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
-import { useUser } from "@/supabase";
+import {db } from "@/db";
+import { useCollection } from "@/db";
+import { useUser } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
 import { 
   Card, 
@@ -95,7 +95,7 @@ export default function AdminVouchersPage() {
 
     setIsCreating(true);
     try {
-      const { error } = await supabase.from("vouchers").insert({
+      const { error } = await db.from("vouchers").insert({
         code: newVoucher.code.trim().toUpperCase(),
         description: newVoucher.description,
         program_id: newVoucher.program_id,
@@ -121,7 +121,7 @@ export default function AdminVouchersPage() {
   const handleDeleteVoucher = async (id: string) => {
     setIsDeleting(id);
     try {
-      const { error } = await supabase.from("vouchers").delete().eq("id", id);
+      const { error } = await db.from("vouchers").delete().eq("id", id);
       if (error) throw error;
       toast({ title: "Voucher Dihapus" });
       refreshVouchers();

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/supabase';
+import {db } from '@/db';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +22,7 @@ export default function ResetPasswordPage() {
     useEffect(() => {
         // Check if we have a session (the hash from email link should auto-login the user temporarily)
         const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await db.auth.getSession();
             if (!session) {
                 setError('Tautan pemulihan tidak valid atau telah kedaluwarsa.');
             }
@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
         setLoading(true);
         setError(null);
         try {
-            const { error } = await supabase.auth.updateUser({ password });
+            const { error } = await db.auth.updateUser({ password });
             if (error) throw error;
 
             toast({

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { useUser, supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useCollection } from "@/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -123,7 +123,7 @@ export default function AdminThalibahPage() {
   const handleToggleBlacklist = async (thalibah: any) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from("users")
         .update({ is_blacklisted: !thalibah.is_blacklisted })
         .eq('id', thalibah.id);
@@ -150,7 +150,7 @@ export default function AdminThalibahPage() {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from("halaqah_registrations")
         .delete()
         .eq('id', registrationId);

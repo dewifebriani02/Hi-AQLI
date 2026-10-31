@@ -1,19 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 import { startOfDay, endOfDay } from 'date-fns';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const FONNTE_API_KEY = process.env.FONNTE_API_KEY;
 
 export async function GET(req: Request) {
-  // Simple security check (use CRON_SECRET in environment)
+  // Simple security check
   const { searchParams } = new URL(req.url);
   const secret = searchParams.get('secret');
-  if (secret !== process.env.CRON_SECRET) {
+  if (secret !== process.env.CRON_SECRET && process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -23,12 +18,10 @@ export async function GET(req: Request) {
     const end = endOfDay(today).toISOString();
 
     // 1. Get all groups that have Fonnte Group ID
-    const { data: groups, error: groupErr } = await supabaseAdmin
-      .from('mufradat_groups')
-      .select('*')
-      .not('fonnte_group_id', 'is', null);
+    const { rows: groups } = await query(
+      `SELECT * FROM public.mufradat_groups WHERE fonnte_group_id IS NOT NULL`
+    );
 
-    if (groupErr) throw groupErr;
     if (!groups || groups.length === 0) {
       return NextResponse.json({ message: 'No groups with Fonnte ID found' });
     }
@@ -37,60 +30,56 @@ export async function GET(req: Request) {
 
     for (const group of groups) {
       // 2. Get all verified members of this group
-      const { data: members, error: memberErr } = await supabaseAdmin
-        .from('users')
-        .select('id, username, full_name, mufradat_status')
-        .eq('mufradat_group_id', group.id)
-        .eq('mufradat_status', 'active');
+      const { rows: members } = await query(
+        `SELECT id, username, full_name, mufradat_status FROM public.users
+         WHERE mufradat_group_id = $1 AND mufradat_status = 'active'`,
+        [group.id]
+      );
 
-      if (memberErr) continue;
       if (!members || members.length === 0) continue;
 
-      const memberIds = members.map(m => m.id);
+      const memberIds = members.map((m: any) => m.id);
 
       // 3. Get today's successful attempts for these members
-      const { data: attempts, error: attemptErr } = await supabaseAdmin
-        .from('quiz_attempts')
-        .select('user_id, surah_id, verse_id, created_at')
-        .in('user_id', memberIds)
-        .eq('is_passed', true)
-        .gte('created_at', start)
-        .lte('created_at', end);
-
-      if (attemptErr) continue;
+      const { rows: attempts } = await query(
+        `SELECT user_id, surah_id, verse_id, created_at FROM public.quiz_attempts
+         WHERE user_id = ANY($1::uuid[]) AND is_passed = true AND created_at >= $2 AND created_at <= $3`,
+        [memberIds, start, end]
+      );
 
       // 4. Calculate stats
-      const stats = members.map(m => {
-        const userAttempts = (attempts || []).filter(a => a.user_id === m.id);
-        // Count unique verses for today
-        const uniqueVerses = new Set(userAttempts.map(a => `${a.surah_id}:${a.verse_id}`));
+      const stats = members.map((m: any) => {
+        const userAttempts = (attempts || []).filter((a: any) => a.user_id === m.id);
+        const uniqueVerses = new Set(userAttempts.map((a: any) => `${a.surah_id}:${a.verse_id}`));
         return {
           id: m.id,
           name: m.full_name || m.username,
           count: uniqueVerses.size,
-          lastActivity: userAttempts.length > 0 
-            ? new Date(userAttempts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at)
+          lastActivity: userAttempts.length > 0
+            ? new Date(userAttempts.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at)
             : null
         };
       });
 
       // 5. Rank Top 10
-      const activeStats = stats.filter(s => s.count > 0).sort((a, b) => b.count - a.count || (a.lastActivity?.getTime() || 0) - (b.lastActivity?.getTime() || 0));
+      const activeStats = stats
+        .filter((s: any) => s.count > 0)
+        .sort((a: any, b: any) => b.count - a.count || (a.lastActivity?.getTime() || 0) - (b.lastActivity?.getTime() || 0));
       const topTen = activeStats.slice(0, 10);
 
       // 6. List Inactive
-      const inactive = stats.filter(s => s.count === 0).map(s => s.name);
+      const inactive = stats.filter((s: any) => s.count === 0).map((s: any) => s.name);
 
       // 7. Compose Message
       const dateStr = today.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      
+
       let message = `🌟 *LAPORAN HARIAN ${group.name.toUpperCase()}* 🌟\n`;
       message += `📅 ${dateStr}\n`;
       message += `⏰ 19:00 WIB\n\n`;
 
       message += `🏆 *TOP 10 AKTIF HARI INI*\n`;
       if (topTen.length > 0) {
-        topTen.forEach((s, i) => {
+        topTen.forEach((s: any, i: number) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '•';
           message += `${medal} ${s.name} - ${s.count} Ayat\n`;
         });
@@ -100,9 +89,8 @@ export async function GET(req: Request) {
 
       message += `\n🌿 *BELUM AKTIF HARI INI*\n`;
       if (inactive.length > 0) {
-        // Limit to 20 names to avoid too long messages
         const displayInactive = inactive.slice(0, 20);
-        message += displayInactive.map(name => `• ${name}`).join('\n');
+        message += displayInactive.map((name: string) => `• ${name}`).join('\n');
         if (inactive.length > 20) message += `\n...dan ${inactive.length - 20} thalibah lainnya.`;
       } else {
         message += `_Masyallah, semua thalibah aktif!_ ✨\n`;

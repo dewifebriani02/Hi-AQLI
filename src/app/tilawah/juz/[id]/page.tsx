@@ -15,8 +15,8 @@ import {
   TooltipPortal,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection } from "@/db";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { checkIsStudent, isJuzFree } from "@/lib/access-control";

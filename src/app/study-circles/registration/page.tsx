@@ -39,8 +39,8 @@ import {
   AlertCircle,
   Image as ImageIcon,
 } from "lucide-react";
-import { useUser, supabase } from "@/supabase";
-import { useDoc, useCollection } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useDoc, useCollection } from "@/db";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { normalizeWhatsapp, whatsappErrorMessage } from "@/lib/whatsapp";
@@ -256,7 +256,7 @@ function RegistrationForm() {
 
         // Priority 1: From URL (Parameters) - explicit intent
         if (urlReferral) {
-          const { data } = await supabase
+          const { data } = await db
             .from("users")
             .select("id, referral_code, username")
             .eq("referral_code", urlReferral.toUpperCase())
@@ -266,7 +266,7 @@ function RegistrationForm() {
 
         // Priority 2: From Profile (Persistent) - ALWAYS apply if user has referred_by_id
         if (!referrer && effectiveReferralId) {
-          const { data } = await supabase
+          const { data } = await db
             .from("users")
             .select("id, referral_code, username")
             .eq("id", effectiveReferralId)
@@ -375,7 +375,7 @@ function RegistrationForm() {
     
     setIsValidatingVoucher(true);
     try {
-      const { data: voucher, error: vError } = await supabase
+      const { data: voucher, error: vError } = await db
         .from("vouchers")
         .select("*")
         .eq("code", voucherCode.trim().toUpperCase())
@@ -397,7 +397,7 @@ function RegistrationForm() {
          }
       }
 
-      const { data: existing } = await supabase
+      const { data: existing } = await db
         .from("voucher_redemptions")
         .select("id")
         .eq("voucher_id", voucher.id)
@@ -409,7 +409,7 @@ function RegistrationForm() {
       }
 
       if (voucher.usage_limit) {
-        const { count } = await supabase
+        const { count } = await db
           .from("voucher_redemptions")
           .select("id", { count: 'exact', head: true })
           .eq("voucher_id", voucher.id);
@@ -443,7 +443,7 @@ function RegistrationForm() {
 
     setIsValidatingReferral(true);
     try {
-      const { data: referrer, error } = await supabase
+      const { data: referrer, error } = await db
         .from("users")
         .select("id, referral_code, username")
         .eq("referral_code", referralCodeInput.trim().toUpperCase())
@@ -524,7 +524,7 @@ function RegistrationForm() {
       
       if (finalHalaqahId && !uuidRegex.test(finalHalaqahId)) {
         const pType = finalHalaqahId.includes('mufradat') ? 'hi_mufradat' : 'tikrar_daily';
-        const { data: hData } = await supabase.from("halaqahs").select("id").eq("program_type", pType).maybeSingle();
+        const { data: hData } = await db.from("halaqahs").select("id").eq("program_type", pType).maybeSingle();
         if (hData?.id) {
           verifiedUuid = hData.id;
         }
@@ -584,29 +584,29 @@ function RegistrationForm() {
       };
 
       if (forceShowForm && existingReg?.id) {
-        const { error } = await supabase
+        const { error } = await db
           .from("halaqah_registrations")
           .update(regData)
           .eq('id', existingReg.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("halaqah_registrations").insert(regData);
+        const { error } = await db.from("halaqah_registrations").insert(regData);
         if (error) throw error;
       }
 
       if (user?.id) {
-        await supabase.from("users").update({ whatsapp: regData.whatsapp }).eq('id', user.id);
+        await db.from("users").update({ whatsapp: regData.whatsapp }).eq('id', user.id);
       }
 
       if (appliedVoucher) {
-        await supabase.from("voucher_redemptions").insert({
+        await db.from("voucher_redemptions").insert({
           voucher_id: appliedVoucher.id,
           user_id: user?.id
         });
       }
 
       if (isMufradat) {
-        const { data: currentUser } = await supabase
+        const { data: currentUser } = await db
           .from('users')
           .select('mufradat_accessible_juz')
           .eq('id', user?.id)
@@ -621,7 +621,7 @@ function RegistrationForm() {
            currentJuz.sort((a: number, b: number) => a - b);
         }
 
-        await supabase.from('users').update({
+        await db.from('users').update({
           mufradat_status: 'active',
           mufradat_accessible_juz: currentJuz,
           mufradat_schedule: durationMonths,

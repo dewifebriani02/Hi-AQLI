@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/supabase';
+import { useUser } from '@/db';
 import { 
   Smartphone, 
   X, 

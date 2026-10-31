@@ -36,8 +36,8 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/tilawah/juz-list";
-import { useDoc, useCollection } from "@/supabase/db";
-import { supabase, useUser } from "@/supabase";
+import { useDoc, useCollection } from "@/db";
+import {db, useUser } from "@/db";
 import { useMemo, useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -316,7 +316,7 @@ function MufradatPageContent() {
   const sendReaction = async (toUserId: string, type: string) => {
     if (!user) return;
     try {
-      await supabase.from('mufradat_reactions').insert({
+      await db.from('mufradat_reactions').insert({
         from_user_id: user.id,
         to_user_id: toUserId,
         reaction_type: type,
@@ -384,7 +384,7 @@ function MufradatPageContent() {
         setPreviousLeague(userData.mufradat_league || 'Perunggu');
         setShowSeasonRecap(true);
 
-        await supabase
+        await db
           .from('users')
           .update({
             mufradat_weekly_points: 0,
@@ -409,7 +409,7 @@ function MufradatPageContent() {
     setShowOnboarding(false);
     
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('users')
         .update({
           metadata: {

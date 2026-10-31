@@ -3,8 +3,8 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useUser } from "@/supabase";
-import { useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useDoc } from "@/db";
 import {
   CheckCircle2,
   CalendarDays,

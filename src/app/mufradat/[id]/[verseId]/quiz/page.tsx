@@ -25,10 +25,10 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/supabase";
+import {db } from "@/db";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/supabase";
-import { useCollection, useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection, useDoc } from "@/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { getJuzForPage } from "@/lib/quran-mapping";
@@ -599,7 +599,7 @@ function MufradatQuizContent() {
     try {
       const isPassed = finalScore === questions.length;
       
-      const { error: insertError } = await supabase
+      const { error: insertError } = await db
         .from('quiz_attempts')
         .insert({
           user_id: user.id,
@@ -621,7 +621,7 @@ function MufradatQuizContent() {
       // --- MABAR SCORING LOGIC ---
       if (isPassed && pageId) {
         const currentJuz = getJuzForPage(pageId);
-        const { data: activeMabar } = await supabase
+        const { data: activeMabar } = await db
           .from('mufradat_mabar_sessions')
           .select('id')
           .eq('status', 'active')
@@ -629,7 +629,7 @@ function MufradatQuizContent() {
           .maybeSingle();
 
         if (activeMabar) {
-          const { data: participant } = await supabase
+          const { data: participant } = await db
             .from('mufradat_mabar_participants')
             .select('points_earned')
             .eq('session_id', activeMabar.id)
@@ -637,7 +637,7 @@ function MufradatQuizContent() {
             .maybeSingle();
 
           if (participant) {
-            await supabase
+            await db
               .from('mufradat_mabar_participants')
               .update({ 
                 points_earned: (participant.points_earned || 0) + 10,
@@ -683,7 +683,7 @@ function MufradatQuizContent() {
           });
         }
 
-        await supabase
+        await db
           .from('users')
           .update({ 
             points: (userData?.points || 0) + 10,
@@ -702,9 +702,9 @@ function MufradatQuizContent() {
 
         // 3. --- BADGE AWARD LOGIC ---
         const awardBadge = async (type: string, title: string, icon: string) => {
-           const { data: existing } = await supabase.from('user_badges').select('id').eq('user_id', user.id).eq('badge_type', type).maybeSingle();
+           const { data: existing } = await db.from('user_badges').select('id').eq('user_id', user.id).eq('badge_type', type).maybeSingle();
            if (!existing) {
-             await supabase.from('user_badges').insert({ user_id: user.id, badge_type: type });
+             await db.from('user_badges').insert({ user_id: user.id, badge_type: type });
              toast({ 
                title: `LENCANA BARU: ${title}`, 
                description: "Masyallah! Ukhti mendapatkan penghargaan baru.", 
@@ -721,7 +721,7 @@ function MufradatQuizContent() {
         if (hour >= 4 && hour < 6) await awardBadge('subuh_warrior', 'Bintang Subuh', '🌅');
 
         // Check Total Passed (Ahli Mufradat)
-        const { count } = await supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_passed', true);
+        const { count } = await db.from('quiz_attempts').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_passed', true);
         if ((count || 0) >= 100) await awardBadge('hafidzah_100', 'Ahli Mufradat (100 Kuis)', '🎓');
         
         toast({ 

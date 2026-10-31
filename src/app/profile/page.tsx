@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useUser, signOut, supabase } from '@/supabase';
-import { useDoc, useCollection, useCount } from '@/supabase/db';
-import { updateDocumentNonBlocking } from '@/supabase/non-blocking-updates';
+import {useUser, signOut, db } from '@/db';
+import { useDoc, useCollection, useCount } from '@/db';
+import { updateDocumentNonBlocking } from '@/db';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -161,7 +161,7 @@ export default function ProfilePage() {
         updatePayload.wa_blocked_at = null;
       }
 
-      const { error } = await supabase
+      const { error } = await db
         .from('users')
         .update(updatePayload)
         .eq('id', user.id);

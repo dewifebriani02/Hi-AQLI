@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useUser, supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useCollection } from "@/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,7 +66,7 @@ export default function AdminRegistrationsPage() {
     if (!editingReg) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("halaqah_registrations").update({
+      const { error } = await db.from("halaqah_registrations").update({
         amount: parseInt(editAmount),
         billing_month: editMonth,
         updated_at: new Date().toISOString()
@@ -93,7 +93,7 @@ export default function AdminRegistrationsPage() {
 
     try {
       // 1. Update Registration Status with start date
-      const { error: regError } = await supabase.from("halaqah_registrations").update({
+      const { error: regError } = await db.from("halaqah_registrations").update({
         status: "verified",
         verified_at: new Date().toISOString(),
         start_date: new Date().toISOString()
@@ -102,7 +102,7 @@ export default function AdminRegistrationsPage() {
       if (regError) throw regError;
 
       // 2. Update User Profile Access
-      const { data: userData } = await supabase.from("users").select("followed_halaqahs, mufradat_group_id").eq('id', reg.user_id).single();
+      const { data: userData } = await db.from("users").select("followed_halaqahs, mufradat_group_id").eq('id', reg.user_id).single();
       const currentFollowed = userData?.followed_halaqahs || [];
       const currentGroupId = userData?.mufradat_group_id;
 
@@ -116,7 +116,7 @@ export default function AdminRegistrationsPage() {
       if (!currentGroupId && isMufradatReg) {
         try {
           // 1. Find latest group with space (< 50)
-          const { data: availableGroups } = await supabase
+          const { data: availableGroups } = await db
             .from('mufradat_groups')
             .select('*')
             .lt('member_count', 50)
@@ -128,15 +128,15 @@ export default function AdminRegistrationsPage() {
           if (availableGroups && availableGroups.length > 0) {
             targetGroupId = availableGroups[0].id;
             // Increment member count
-            await supabase
+            await db
               .from('mufradat_groups')
               .update({ member_count: availableGroups[0].member_count + 1 })
               .eq('id', targetGroupId);
           } else {
             // Create new group
-            const { data: allGroups } = await supabase.from('mufradat_groups').select('id');
+            const { data: allGroups } = await db.from('mufradat_groups').select('id');
             const nextNum = (allGroups?.length || 0) + 1;
-            const { data: newGroup, error: groupError } = await supabase
+            const { data: newGroup, error: groupError } = await db
               .from('mufradat_groups')
               .insert({ name: `Grup ${nextNum}`, member_count: 1 })
               .select()
@@ -162,7 +162,7 @@ export default function AdminRegistrationsPage() {
         updateData.tikrar_start_date = new Date().toISOString();
       }
 
-      const { error: userError } = await supabase.from("users").update(updateData).eq('id', reg.user_id);
+      const { error: userError } = await db.from("users").update(updateData).eq('id', reg.user_id);
       if (userError) throw userError;
 
       // --- HI MUFRADAT SUBSCRIPTION LOGIC ---
@@ -170,7 +170,7 @@ export default function AdminRegistrationsPage() {
         const type = reg.payment_type || 'initial';
         
         // Fetch current user data to see current due date
-        const { data: currentUsr } = await supabase
+        const { data: currentUsr } = await db
           .from('users')
           .select('mufradat_due_date, mufradat_leave_balance')
           .eq('id', reg.user_id)
@@ -204,7 +204,7 @@ export default function AdminRegistrationsPage() {
           subUpdate.mufradat_leave_balance = Math.max(0, (currentUsr?.mufradat_leave_balance || 3) - 1);
         }
 
-        await supabase.from("users").update(subUpdate).eq('id', reg.user_id);
+        await db.from("users").update(subUpdate).eq('id', reg.user_id);
       }
       // --- END HI MUFRADAT ---
 
@@ -217,14 +217,14 @@ export default function AdminRegistrationsPage() {
         
         // Find referrer by code or ID
         if (reg.referral_code_used) {
-          const { data } = await supabase
+          const { data } = await db
             .from("users")
             .select("id, referral_balance, username")
             .eq("referral_code", reg.referral_code_used)
             .maybeSingle();
           referrer = data;
         } else if (userData?.referred_by_id) {
-          const { data } = await supabase
+          const { data } = await db
             .from("users")
             .select("id, referral_balance, username")
             .eq("id", userData.referred_by_id)
@@ -234,7 +234,7 @@ export default function AdminRegistrationsPage() {
         
         if (referrer) {
           // Check if any OTHER verified registrations exist for this user
-          const { count } = await supabase
+          const { count } = await db
             .from("halaqah_registrations")
             .select("*", { count: 'exact', head: true })
             .eq("user_id", reg.user_id)
@@ -244,7 +244,7 @@ export default function AdminRegistrationsPage() {
           // If no other verified registrations, award bonus
           if (count === 0) {
             const newBal = (referrer.referral_balance || 0) + 5000;
-            const { error: balError } = await supabase
+            const { error: balError } = await db
               .from("users")
               .update({ referral_balance: newBal })
               .eq("id", referrer.id);
@@ -278,7 +278,7 @@ export default function AdminRegistrationsPage() {
   const handleReject = async (regId: string) => {
     setProcessingId(regId);
     try {
-      const { error } = await supabase.from("halaqah_registrations").update({
+      const { error } = await db.from("halaqah_registrations").update({
         status: "rejected",
         updated_at: new Date().toISOString()
       }).eq('id', regId);

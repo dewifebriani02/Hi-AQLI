@@ -10,8 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Mic, BookOpen, Layers, ListFilter } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
-import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection } from "@/db";
 import { RECITERS } from "@/lib/quran-reciters";
 import { Mic2, Check, Search } from "lucide-react";
 import {

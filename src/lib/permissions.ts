@@ -1,4 +1,4 @@
-import { useDoc } from "@/supabase/db";
+import { useDoc } from "@/db";
 
 export type ProgramType = 'hi_mufradat' | 'hi_tikrar' | 'hi_ngaji' | 'hi_berbagi' | 'hi_mutabaah' | 'hi_muhasabah';
 

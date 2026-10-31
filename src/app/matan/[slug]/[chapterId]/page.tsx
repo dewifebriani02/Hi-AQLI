@@ -34,8 +34,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-import { useUser, supabase } from '@/supabase';
-import { useCollection } from '@/supabase/db';
+import {useUser, db } from '@/db';
+import { useCollection } from '@/db';
 import { addMonth } from 'date-fns'; // if needed, but we use now() mostly
 
 export default function MatanChapterReader() {
@@ -151,7 +151,7 @@ export default function MatanChapterReader() {
           const isPassed = score === currentItem.quizzes?.length;
 
           // 1. Save Quiz Attempt (Standardized format)
-          await supabase.from('quiz_attempts').insert({
+          await db.from('quiz_attempts').insert({
             user_id: user.id,
             quiz_id: `matan_${slug}_${currentItem.id}`,
             score: score,
@@ -164,7 +164,7 @@ export default function MatanChapterReader() {
           // 2. Save Matan User Progress (Only if passed/perfect?)
           // Usually we save progress if they understand/pass
           if (isPassed) {
-             await supabase.from('matan_user_progress').upsert({
+             await db.from('matan_user_progress').upsert({
                user_id: user.id,
                item_id: currentItem.id,
                status_paham: true,

@@ -17,8 +17,8 @@ import {
 import { getVerseAnalysis } from "@/app/actions";
 import { type AnalyzeVerseOutput } from "@/ai/flows/verse-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection } from "@/db";
 
 interface WordData {
   id: number;

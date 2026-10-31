@@ -9,8 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/supabase";
-import { useDoc, useCollection } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useDoc, useCollection } from "@/db";
 import { useMemo } from "react";
 
 const studyCircles = [

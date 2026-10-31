@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-import { useUser } from "@/supabase";
-import { useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useDoc } from "@/db";
 
 export function HifzProgressChart() {
   const { user } = useUser();

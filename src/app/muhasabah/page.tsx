@@ -34,8 +34,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import Link from "next/link";
-import { useUser, supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useCollection } from "@/db";
 import React, { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -149,7 +149,7 @@ export default function MuhasabahPage() {
     // Optimistic Update
     setOptimisticLogs(prev => ({ ...prev, [activityId]: completed }));
     
-    const { error } = await supabase
+    const { error } = await db
       .from("mutabaah_logs")
       .upsert({
         user_id: user.id,

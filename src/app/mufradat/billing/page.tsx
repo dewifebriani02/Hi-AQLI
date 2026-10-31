@@ -2,8 +2,8 @@
 
 import { parseISO, addMonths } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
-import { useUser, supabase } from "@/supabase";
-import { useCollection, useDoc } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useCollection, useDoc } from "@/db";
 import { 
   Card, 
   CardContent, 
@@ -229,7 +229,7 @@ export default function MufradatBillingPage() {
     setIsSubmitting(true);
     try {
       // 1. Get a valid halaqah_id for Hi Mufradat (Must be a UUID from halaqahs table)
-      const { data: halaqahData } = await supabase
+      const { data: halaqahData } = await db
         .from("halaqahs")
         .select("id")
         .or("program_type.eq.hi_mufradat,programType.eq.hi_mufradat")
@@ -239,7 +239,7 @@ export default function MufradatBillingPage() {
       const hId = halaqahData?.id || null;
 
       // 2. Insert into halaqah_registrations
-      const { error } = await supabase.from("halaqah_registrations").insert({
+      const { error } = await db.from("halaqah_registrations").insert({
         user_id: user.id,
         user_name: userData?.username || user?.user_metadata?.full_name,
         user_email: user?.email,
@@ -262,7 +262,7 @@ export default function MufradatBillingPage() {
       if (error) throw error;
 
       // 3. Update User Profile (Sync WhatsApp)
-      await supabase.from("users").update({ 
+      await db.from("users").update({ 
         whatsapp: whatsapp,
         phone: whatsapp 
       }).eq('id', user.id);
@@ -299,7 +299,7 @@ export default function MufradatBillingPage() {
     setIsSubmitting(true);
     try {
       // 1. Get a valid halaqah_id for Hi Mufradat (Must be a UUID)
-      const { data: halaqahData } = await supabase
+      const { data: halaqahData } = await db
         .from("halaqahs")
         .select("id")
         .or("program_type.eq.hi_mufradat,programType.eq.hi_mufradat")
@@ -320,7 +320,7 @@ export default function MufradatBillingPage() {
         leave_until: leaveEnd ? new Date(leaveEnd).toISOString() : null
       };
 
-      const { error } = await supabase.from("halaqah_registrations").insert({
+      const { error } = await db.from("halaqah_registrations").insert({
         user_id: user?.id,
         user_name: userData?.username || user?.user_metadata?.full_name,
         user_email: user?.email,
@@ -359,7 +359,7 @@ export default function MufradatBillingPage() {
     setIsRedeeming(true);
     try {
       // 1. Find the voucher
-      const { data: voucher, error: vError } = await supabase
+      const { data: voucher, error: vError } = await db
         .from("vouchers")
         .select("*")
         .eq("code", voucherCode.trim().toUpperCase())
@@ -381,7 +381,7 @@ export default function MufradatBillingPage() {
       }
 
       // 4. Check if already redeemed by this user
-      const { data: existing } = await supabase
+      const { data: existing } = await db
         .from("voucher_redemptions")
         .select("id")
         .eq("voucher_id", voucher.id)
@@ -394,7 +394,7 @@ export default function MufradatBillingPage() {
 
       // 5. Check Usage Limit
       if (voucher.usage_limit) {
-        const { count } = await supabase
+        const { count } = await db
           .from("voucher_redemptions")
           .select("id", { count: 'exact', head: true })
           .eq("voucher_id", voucher.id);
@@ -405,7 +405,7 @@ export default function MufradatBillingPage() {
       }
 
       // 6. Redeem
-      const { error: rError } = await supabase
+      const { error: rError } = await db
         .from("voucher_redemptions")
         .insert({
           voucher_id: voucher.id,

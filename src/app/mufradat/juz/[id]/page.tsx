@@ -15,8 +15,8 @@ import {
   TooltipPortal,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/supabase";
-import { useCollection, useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection, useDoc } from "@/db";
 import { JUZ_PAGE_MAPPING, getJuzForPage } from "@/lib/quran-mapping";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";

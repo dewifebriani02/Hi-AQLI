@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useCollection } from "@/supabase/db";
-import { useUser, supabase } from "@/supabase";
+import { useCollection } from "@/db";
+import {useUser, db } from "@/db";
 import { 
   Card, 
   CardContent, 

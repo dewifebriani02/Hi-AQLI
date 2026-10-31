@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { useUser, supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
-import { updateDocumentNonBlocking, addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
+import {useUser, db } from "@/db";
+import { useCollection } from "@/db";
+import { updateDocumentNonBlocking, addDocumentNonBlocking } from "@/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -115,7 +115,7 @@ export default function AdminUsersPage() {
   useEffect(() => {
     async function loadMusyrifahPrograms() {
       if (editingUser?.role_id === 'musyrifah') {
-        const { data } = await supabase
+        const { data } = await db
           .from('roles_musyrifah')
           .select('assigned_programs')
           .eq('id', editingUser.id)
@@ -150,30 +150,30 @@ export default function AdminUsersPage() {
     };
 
     try {
-      const { error } = await supabase.from('users').update(updateData).eq('id', editingUser.id);
+      const { error } = await db.from('users').update(updateData).eq('id', editingUser.id);
       if (error) throw error;
 
       // Handle Admin Role
       if (editingUser.role_id === 'admin') {
-        await supabase.from('roles_admin').upsert({ id: editingUser.id });
+        await db.from('roles_admin').upsert({ id: editingUser.id });
       } else {
         // Remove admin role if changed from admin
-        await supabase.from('roles_admin').delete().eq('id', editingUser.id);
+        await db.from('roles_admin').delete().eq('id', editingUser.id);
       }
 
       // Handle Musyrifah Role with Program Assignments
       if (editingUser.role_id === 'musyrifah') {
         if (editingAssignedPrograms.length > 0) {
-          await supabase.from('roles_musyrifah').upsert({
+          await db.from('roles_musyrifah').upsert({
             id: editingUser.id,
             assigned_programs: editingAssignedPrograms
           });
         } else {
-          await supabase.from('roles_musyrifah').delete().eq('id', editingUser.id);
+          await db.from('roles_musyrifah').delete().eq('id', editingUser.id);
         }
       } else {
         // Remove musyrifah role if changed from musyrifah
-        await supabase.from('roles_musyrifah').delete().eq('id', editingUser.id);
+        await db.from('roles_musyrifah').delete().eq('id', editingUser.id);
       }
 
       toast({
@@ -192,10 +192,10 @@ export default function AdminUsersPage() {
 
     try {
       // First, try to remove from roles_admin manually just in case
-      await supabase.from('roles_admin').delete().eq('id', userToDelete.id);
+      await db.from('roles_admin').delete().eq('id', userToDelete.id);
 
       // Now delete the user. The DB should handle cascading for quiz_attempts, voucher_redemptions, etc.
-      const { data, error } = await supabase.from('users').delete().eq('id', userToDelete.id).select();
+      const { data, error } = await db.from('users').delete().eq('id', userToDelete.id).select();
       
       if (error) {
         // Handle the specific foreign key error with a helpful message if DB migration hasn't run yet

@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { query } from '@/lib/db';
 import { getJuzForPage, JUZ_PAGE_MAPPING } from '@/lib/quran-mapping';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies();
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
     const body = await request.json();
     const { user_id, quiz_id, surah_id, verse_id, score, total_questions, duration_seconds, is_passed, wrong_words, page_id } = body;
 
@@ -19,165 +14,100 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Try to insert with standardized snake_case naming
-    const insertData: any = {
-      user_id,
-      quiz_id,
-      surah_id: surah_id?.toString() || "0",
-      verse_id: verse_id?.toString() || "0",
-      score: Number(score) || 0,
-      total_questions: Number(total_questions) || 0,
-      is_passed: !!is_passed,
-      duration_seconds: Number(duration_seconds) || 0,
-      wrong_words: Array.isArray(wrong_words) ? wrong_words : [], 
-      page_id: page_id ? Number(page_id) : null,
-      created_at: new Date().toISOString(),
-    };
+    const attemptId = uuidv4();
+    const surahId = surah_id ? parseInt(surah_id.toString()) || 0 : 0;
+    const verseId = verse_id ? parseInt(verse_id.toString()) || 0 : 0;
+    const numScore = Number(score) || 0;
+    const numTotal = Number(total_questions) || 0;
+    const passed = !!is_passed;
+    const duration = Number(duration_seconds) || 0;
+    const pageNum = page_id ? Number(page_id) : null;
+    const wrongWordsJson = JSON.stringify(Array.isArray(wrong_words) ? wrong_words : []);
 
-    let { error: insertError } = await supabase
-      .from('quiz_attempts')
-      .insert(insertData);
+    await query(
+      `INSERT INTO public.quiz_attempts (
+        id, user_id, quiz_id, surah_id, verse_id, score, total_questions, is_passed, duration_seconds, page_id, wrong_words, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, now())`,
+      [attemptId, user_id, quiz_id, surahId, verseId, numScore, numTotal, passed, duration, pageNum, wrongWordsJson]
+    );
 
-    // GRACEFUL DEGRADATION: If the insert fails because of 'wrong_words' or 'page_id' column missing
-    // or ANY column mismatch error (code 42703), retry without the newest fields.
-    if (insertError && (insertError.code === '42703' || insertError.message.includes('wrong_words') || insertError.message.includes('page_id'))) {
-      console.warn(`Column mismatch in [quiz_attempts]. Retrying without new fields. Error: ${insertError.message}`);
-      const { wrong_words: _, page_id: __, ...legacyData } = insertData;
-      const { error: retryError } = await supabase
-        .from('quiz_attempts')
-        .insert(legacyData);
-      insertError = retryError;
-    }
-
-    if (insertError) {
-      console.error('Supabase error saving mufradat quiz:', insertError);
-      
-      // If table is missing completely (42P01)
-      if (insertError.code === '42P01') {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Table missing', 
-          message: 'Database not initialized. Please run the SQL script provided.' 
-        }, { status: 200 });
-      }
-
-      return NextResponse.json({ 
-        error: 'Failed to save quiz attempt', 
-        details: insertError.message,
-        code: insertError.code
-      }, { status: 500 });
-    }
-
-    // If perfect score, add points to user
-    if (is_passed) {
+    // If passed, add points to user
+    if (passed) {
       try {
         // 1. UPDATE REGULAR USER POINTS
-        const { data: userData, error: userFetchError } = await supabase
-          .from('users')
-          .select('points, mufradat_group_id')
-          .eq('id', user_id)
-          .maybeSingle();
+        const { rows: userRows } = await query(
+          `SELECT points FROM public.users WHERE id = $1 LIMIT 1`,
+          [user_id]
+        );
 
-        if (userFetchError) {
-          console.error('Error fetching user points:', userFetchError);
-        } else if (userData) {
-          const currentPoints = userData.points || 0;
-          await supabase
-            .from('users')
-            .update({
-              points: currentPoints + 10,
-              updated_at: new Date().toISOString(),
-            } as any)
-            .eq('id', user_id);
+        if (userRows.length > 0) {
+          const currentPoints = userRows[0].points || 0;
+          await query(
+            `UPDATE public.users SET points = $1, updated_at = now() WHERE id = $2`,
+            [currentPoints + 10, user_id]
+          );
         }
 
         // 2. MABAR POINT SYNC
-        // Find Juz ID for this attempt
-        let juzId = page_id ? getJuzForPage(Number(page_id)) : null;
-        
-        // If no page_id (old mode), we can try to derive from quiz_id if it's a page quiz
+        let juzId = pageNum ? getJuzForPage(pageNum) : null;
         if (!juzId && quiz_id.startsWith('mufradat_page_')) {
           const derivedPage = parseInt(quiz_id.replace('mufradat_page_', ''));
           juzId = getJuzForPage(derivedPage);
         }
 
         if (juzId) {
-          // Check for active Mabar session for this Juz
-          const { data: activeSession } = await supabase
-            .from('mufradat_mabar_sessions')
-            .select('id')
-            .eq('juz_id', juzId)
-            .eq('status', 'active')
-            .maybeSingle();
+          const { rows: sessionRows } = await query(
+            `SELECT id FROM public.mufradat_mabar_sessions WHERE juz_id = $1 AND status = 'active' LIMIT 1`,
+            [juzId]
+          );
 
-          if (activeSession) {
-            console.log(`MABAR_SYNC: Active session found for Juz ${juzId} [${activeSession.id}]`);
-            
-            // Increment participant points
-            const { data: participant } = await supabase
-              .from('mufradat_mabar_participants')
-              .select('points_earned')
-              .eq('session_id', activeSession.id)
-              .eq('user_id', user_id)
-              .maybeSingle();
-
-            if (participant) {
-              await supabase
-                .from('mufradat_mabar_participants')
-                .update({ 
-                  points_earned: (participant.points_earned || 0) + 10,
-                  last_activity_at: new Date().toISOString()
-                })
-                .eq('session_id', activeSession.id)
-                .eq('user_id', user_id);
-            }
+          if (sessionRows.length > 0) {
+            const sessionId = sessionRows[0].id;
+            await query(
+              `INSERT INTO public.mufradat_mabar_participants (session_id, user_id, points_earned, last_activity_at)
+               VALUES ($1, $2, 10, now())
+               ON CONFLICT (session_id, user_id)
+               DO UPDATE SET points_earned = public.mufradat_mabar_participants.points_earned + 10, last_activity_at = now()`,
+              [sessionId, user_id]
+            );
           }
         }
 
         // 3. AUTO-UNLOCK NEXT JUZ FOR HI-MUFRADAT
-        if (juzId && page_id) {
+        if (juzId && pageNum) {
           const mapping = JUZ_PAGE_MAPPING[juzId];
-          if (mapping && Number(page_id) === mapping.endPage) {
-            console.log(`AUTO_UNLOCK: User ${user_id} finished Juz ${juzId}. Unlocking Juz ${juzId + 1}`);
-            
-            const { data: userProfile } = await supabase
-              .from('users')
-              .select('mufradat_accessible_juz')
-              .eq('id', user_id)
-              .single();
+          if (mapping && pageNum === mapping.endPage) {
+            const { rows: profileRows } = await query(
+              `SELECT mufradat_accessible_juz FROM public.users WHERE id = $1 LIMIT 1`,
+              [user_id]
+            );
 
-            let accessibleJuz = Array.isArray(userProfile?.mufradat_accessible_juz) 
-              ? [...userProfile.mufradat_accessible_juz] 
-              : [];
-            
-            const nextJuz = juzId + 1;
-            if (nextJuz <= 30 && !accessibleJuz.includes(nextJuz)) {
-              accessibleJuz.push(nextJuz);
-              accessibleJuz.sort((a, b) => a - b);
-              
-              await supabase
-                .from('users')
-                .update({ 
-                  mufradat_accessible_juz: accessibleJuz,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', user_id);
-              
-              console.log(`AUTO_UNLOCK: Success for User ${user_id}. New access: ${accessibleJuz}`);
+            if (profileRows.length > 0) {
+              let accessibleJuz: number[] = Array.isArray(profileRows[0].mufradat_accessible_juz)
+                ? [...profileRows[0].mufradat_accessible_juz]
+                : [];
+
+              const nextJuz = juzId + 1;
+              if (nextJuz <= 30 && !accessibleJuz.includes(nextJuz)) {
+                accessibleJuz.push(nextJuz);
+                accessibleJuz.sort((a, b) => a - b);
+
+                await query(
+                  `UPDATE public.users SET mufradat_accessible_juz = $1::jsonb, updated_at = now() WHERE id = $2`,
+                  [JSON.stringify(accessibleJuz), user_id]
+                );
+              }
             }
           }
         }
       } catch (innerErr) {
-        console.error('Unexpected error in points update:', innerErr);
+        console.error('Points update error:', innerErr);
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('API error in quiz-attempts:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      message: error?.message 
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', message: error?.message }, { status: 500 });
   }
 }

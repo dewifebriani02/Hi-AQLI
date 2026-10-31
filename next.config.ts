@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'lhqbqzrghdbbmstnhple.supabase.co',
+        hostname: 'hiaqli.pro',
         port: '',
         pathname: '/**',
       },

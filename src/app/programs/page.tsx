@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from "react";
-import { useUser } from "@/supabase";
-import { useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useDoc } from "@/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

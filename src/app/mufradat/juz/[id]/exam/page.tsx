@@ -24,8 +24,8 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection } from "@/db";
 import { getPagesForJuz } from "@/lib/quran-mapping";
 
 interface Question {

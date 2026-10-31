@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useUser, signOut } from "@/supabase";
-import { useDoc } from "@/supabase/db";
+import { useUser, signOut } from "@/db";
+import { useDoc } from "@/db";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ShieldAlert, Lock, Loader2, Home, LogOut } from "lucide-react";

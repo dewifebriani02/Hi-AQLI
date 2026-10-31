@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/supabase';
+import { useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/db';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';

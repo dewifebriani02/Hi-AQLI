@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { useUser, supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useCollection } from "@/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -115,7 +115,7 @@ export default function AdminCampaignsPage() {
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await db.storage
           .from('gambar')
           .upload(fileName, imageFile);
 
@@ -124,7 +124,7 @@ export default function AdminCampaignsPage() {
           throw uploadError;
         }
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = db.storage
           .from('gambar')
           .getPublicUrl(fileName);
         
@@ -147,11 +147,11 @@ export default function AdminCampaignsPage() {
       };
 
       if (editingId) {
-        const { error } = await supabase.from("campaigns").update(payload).eq("id", editingId);
+        const { error } = await db.from("campaigns").update(payload).eq("id", editingId);
         if (error) throw error;
         toast({ title: "Kampanye Diperbarui", description: `"${title}" berhasil disimpan.` });
       } else {
-        const { error } = await supabase.from("campaigns").insert(payload);
+        const { error } = await db.from("campaigns").insert(payload);
         if (error) throw error;
         toast({ title: "Kampanye Dibuat", description: `"${title}" berhasil ditambahkan.` });
       }
@@ -169,7 +169,7 @@ export default function AdminCampaignsPage() {
     if (!confirm(`Ukhti yakin ingin menghapus kampanye "${name}"?`)) return;
 
     try {
-      const { error } = await supabase.from("campaigns").delete().eq("id", id);
+      const { error } = await db.from("campaigns").delete().eq("id", id);
       if (error) throw error;
       toast({ title: "Kampanye Dihapus", description: `"${name}" telah dihapus.` });
       refresh();
@@ -180,7 +180,7 @@ export default function AdminCampaignsPage() {
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase.from("campaigns").update({ is_active: !currentStatus }).eq("id", id);
+      const { error } = await db.from("campaigns").update({ is_active: !currentStatus }).eq("id", id);
       if (error) throw error;
       toast({ title: currentStatus ? "Kampanye Dinonaktifkan" : "Kampanye Diaktifkan" });
       refresh();

@@ -2,10 +2,10 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { useUser, supabase } from "@/supabase";
-import { useCollection, useDoc } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useCollection, useDoc } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/supabase/non-blocking-updates";
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -209,11 +209,11 @@ export default function AdminClassesPage() {
     setIsSaving(true);
     try {
       if (editingHalaqah) {
-        const { error } = await supabase.from("halaqahs").update(finalData).eq('id', editingHalaqah.id);
+        const { error } = await db.from("halaqahs").update(finalData).eq('id', editingHalaqah.id);
         if (error) throw error;
         toast({ title: "Kelas Diperbarui" });
       } else {
-        const { error } = await supabase.from("halaqahs").insert({
+        const { error } = await db.from("halaqahs").insert({
           ...finalData,
           created_at: new Date().toISOString()
         });
@@ -249,7 +249,7 @@ export default function AdminClassesPage() {
       const regId = `manual_${selectedHalaqah.id}_${newParticipantId}`;
 
       // 1. Create Registration Record
-      const { error: regError } = await supabase.from("halaqah_registrations").upsert({
+      const { error: regError } = await db.from("halaqah_registrations").upsert({
         id: regId,
         user_id: newParticipantId,
         user_name: userToAdd.username || userToAdd.email,
@@ -267,7 +267,7 @@ export default function AdminClassesPage() {
       // 2. Update User Profile followed_halaqahs
       const currentFollowed = userToAdd.followed_halaqahs || [];
       if (!currentFollowed.includes(selectedHalaqah.id)) {
-        const { error: userError } = await supabase.from("users").update({
+        const { error: userError } = await db.from("users").update({
           followed_halaqahs: [...currentFollowed, selectedHalaqah.id],
           updated_at: new Date().toISOString()
         }).eq('id', newParticipantId);
@@ -286,7 +286,7 @@ export default function AdminClassesPage() {
   const handleRemoveParticipant = async (regId: string, userId: string) => {
     if (!confirm("Hapus akses kelas Thalibah ini?")) return;
     try {
-      const { error } = await supabase.from("halaqah_registrations").delete().eq('id', regId);
+      const { error } = await db.from("halaqah_registrations").delete().eq('id', regId);
       if (error) throw error;
       toast({ title: "Peserta Dihapus dari Kelas" });
     } catch (e) {
@@ -312,7 +312,7 @@ export default function AdminClassesPage() {
     setIsTransferring(true);
     try {
       // 1. Update Registration Record
-      const { error: regError } = await supabase
+      const { error: regError } = await db
         .from("halaqah_registrations")
         .update({
           halaqah_id: destHalaqah.id,
@@ -324,7 +324,7 @@ export default function AdminClassesPage() {
       if (regError) throw regError;
 
       // 2. Update User Profile followed_halaqahs
-      const { data: userToUpdate, error: fetchErr } = await supabase
+      const { data: userToUpdate, error: fetchErr } = await db
         .from("users")
         .select("followed_halaqahs")
         .eq('id', transferTargetParticipant.user_id)
@@ -340,7 +340,7 @@ export default function AdminClassesPage() {
           updatedFollowed.push(destHalaqah.id);
         }
 
-        const { error: userError } = await supabase
+        const { error: userError } = await db
           .from("users")
           .update({
             followed_halaqahs: updatedFollowed,
@@ -370,7 +370,7 @@ export default function AdminClassesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus kelas ini? Tindakan ini tidak dapat dibatalkan.")) return;
     try {
-      const { error } = await supabase.from("halaqahs").delete().eq('id', id);
+      const { error } = await db.from("halaqahs").delete().eq('id', id);
       if (error) throw error;
       toast({ title: "Kelas Dihapus" });
     } catch (e) {

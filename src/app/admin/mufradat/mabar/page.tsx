@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { useCollection } from "@/supabase/db";
-import { supabase } from "@/supabase";
+import { useCollection } from "@/db";
+import {db } from "@/db";
 import { 
   Card, 
   CardContent, 
@@ -69,7 +69,7 @@ export default function AdminMabarManagementPage() {
 
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('mufradat_mabar_sessions')
         .insert({
           title: newMabar.title,
@@ -94,7 +94,7 @@ export default function AdminMabarManagementPage() {
   const updateStatus = async (id: string, status: string) => {
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('mufradat_mabar_sessions')
         .update({ status })
         .eq('id', id);
@@ -114,7 +114,7 @@ export default function AdminMabarManagementPage() {
 
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('mufradat_mabar_sessions')
         .delete()
         .eq('id', id);

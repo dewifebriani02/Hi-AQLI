@@ -9,8 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Banknote, Calendar, GraduationCap, Award, Bot, Lock, Mic } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/supabase";
-import { useDoc, useCollection, useCount } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useDoc, useCollection, useCount } from "@/db";
 import { useMemo } from "react";
 
 // Special ID for Tikrar Premium logic
@@ -23,7 +23,7 @@ export default function NgajiPage() {
   const { data: userData } = useDoc("users", user?.id);
   const salutation = userData?.salutation || "Ukhti";
 
-  // Fetch all classes from Supabase
+  // Fetch all classes from database
   const { data: dbHalaqahs, isLoading: isHalaqahsLoading } = useCollection("halaqahs");
 
   const userRegOptions = useMemo(() => ({

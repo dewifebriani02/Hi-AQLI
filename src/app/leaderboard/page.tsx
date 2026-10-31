@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useUser } from "@/supabase";
+import { useUser } from "@/db";
 import { getCallSign } from "@/lib/utils";
-import { useCollection, useDoc } from "@/supabase/db";
+import { useCollection, useDoc } from "@/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

@@ -51,8 +51,8 @@ import {
   Loader2
 } from 'lucide-react';
 import Link from "next/link";
-import { useUser, supabase } from "@/supabase";
-import { useDoc, useCollection } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useDoc, useCollection } from "@/db";
 import { useToast } from "@/hooks/use-toast";
 import { QURAN_CHAPTERS, SURAH_MAP_STR } from "@/lib/quran-data";
 import { cn } from "@/lib/utils";
@@ -118,7 +118,7 @@ export default function DashboardPage() {
     if (!user) return;
     setIsForcerSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('users')
         .update({
           salutation: forcedSalutation,
@@ -483,7 +483,7 @@ export default function DashboardPage() {
           code = `AQLI-${firstName}${seqStr}`;
 
           // Check if code exists
-          const { data: existing } = await supabase
+          const { data: existing } = await db
             .from("users")
             .select("id")
             .eq("referral_code", code)
@@ -497,7 +497,7 @@ export default function DashboardPage() {
         }
 
         // Save code
-        await supabase
+        await db
           .from("users")
           .update({ referral_code: code })
           .eq("id", user.id);

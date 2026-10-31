@@ -35,8 +35,8 @@ import {
 import dynamic from 'next/dynamic';
 const Logo = dynamic(() => import('./logo').then(mod => mod.Logo), { ssr: false });
 import { cn } from "@/lib/utils";
-import { useUser } from "@/supabase";
-import { useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useDoc } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
 
 const adminItems = [

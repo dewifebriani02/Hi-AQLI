@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { useCollection } from "@/supabase/db";
-import { supabase } from "@/supabase";
-import { useUser } from "@/supabase";
+import { useCollection } from "@/db";
+import {db } from "@/db";
+import { useUser } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
 import { 
   Card, 
@@ -181,7 +181,7 @@ export default function MufradatGroupsPage() {
   const handleSave = async (id: string) => {
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('mufradat_groups')
         .update({
           name: editValues.name,
@@ -210,7 +210,7 @@ export default function MufradatGroupsPage() {
   const handleRemoveMember = async (userId: string, groupId: string) => {
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('users')
         .update({ mufradat_group_id: null })
         .eq('id', userId);
@@ -218,12 +218,12 @@ export default function MufradatGroupsPage() {
       if (error) throw error;
 
       // Recount members
-      const { data: members } = await supabase
+      const { data: members } = await db
         .from('users')
         .select('id')
         .eq('mufradat_group_id', groupId);
       
-      await supabase
+      await db
         .from('mufradat_groups')
         .update({ member_count: members?.length || 0 })
         .eq('id', groupId);
@@ -246,7 +246,7 @@ export default function MufradatGroupsPage() {
 
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('users')
         .update({ mufradat_group_id: groupId })
         .eq('id', userId);
@@ -254,12 +254,12 @@ export default function MufradatGroupsPage() {
       if (error) throw error;
 
       // Recount members
-      const { data: members } = await supabase
+      const { data: members } = await db
         .from('users')
         .select('id')
         .eq('mufradat_group_id', groupId);
       
-      await supabase
+      await db
         .from('mufradat_groups')
         .update({ member_count: members?.length || 0 })
         .eq('id', groupId);
@@ -281,7 +281,7 @@ export default function MufradatGroupsPage() {
 
     setIsProcessing(true);
     try {
-      const { data: ungroupedUsers, error: fetchErr } = await supabase
+      const { data: ungroupedUsers, error: fetchErr } = await db
         .from('users')
         .select('id')
         .is('mufradat_group_id', null);
@@ -304,15 +304,15 @@ export default function MufradatGroupsPage() {
           const batchToMove = remainingUsers.splice(0, spaceAvailable);
           const userIds = batchToMove.map(u => u.id);
           
-          const { error: moveErr } = await supabase
+          const { error: moveErr } = await db
             .from('users')
             .update({ mufradat_group_id: group.id })
             .in('id', userIds);
           
           if (moveErr) throw moveErr;
 
-          const { data: memberCount } = await supabase.from('users').select('id', { count: 'exact', head: true }).eq('mufradat_group_id', group.id);
-          await supabase.from('mufradat_groups').update({ member_count: memberCount?.length || 0 }).eq('id', group.id);
+          const { data: memberCount } = await db.from('users').select('id', { count: 'exact', head: true }).eq('mufradat_group_id', group.id);
+          await db.from('mufradat_groups').update({ member_count: memberCount?.length || 0 }).eq('id', group.id);
           
           updatedCount += userIds.length;
         }
@@ -338,7 +338,7 @@ export default function MufradatGroupsPage() {
 
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('mufradat_groups')
         .insert({
           name: newGroup.name,
@@ -368,7 +368,7 @@ export default function MufradatGroupsPage() {
     setIsProcessing(true);
     try {
       // 1. Set mufradat_group_id to null for all members
-      const { error: memberErr } = await supabase
+      const { error: memberErr } = await db
         .from('users')
         .update({ mufradat_group_id: null })
         .eq('mufradat_group_id', id);
@@ -376,7 +376,7 @@ export default function MufradatGroupsPage() {
       if (memberErr) throw memberErr;
 
       // 2. Delete the group
-      const { error: groupErr } = await supabase
+      const { error: groupErr } = await db
         .from('mufradat_groups')
         .delete()
         .eq('id', id);

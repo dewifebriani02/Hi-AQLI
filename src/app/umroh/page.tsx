@@ -24,7 +24,7 @@ import {
   Luggage,
 } from "lucide-react";
 import Link from "next/link";
-import { useUser } from "@/supabase";
+import { useUser } from "@/db";
 
 // Mock data for umrah packages
 const umrahPackages = [

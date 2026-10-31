@@ -1,6 +1,6 @@
 'use client';
 
-import { useCollection } from "@/supabase/db";
+import { useCollection } from "@/db";
 import {
   Card,
   CardContent,
@@ -40,7 +40,7 @@ import { id as idLocale } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { supabase } from "@/supabase";
+import {db } from "@/db";
 import { useToast } from "@/hooks/use-toast";
 
 import {
@@ -449,7 +449,7 @@ function MufradatMonitoringContent() {
   const fetchMotivations = async () => {
     setIsLoadingMotivations(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('mufradat_motivations')
         .select('*')
         .order('created_at', { ascending: false });
@@ -466,7 +466,7 @@ function MufradatMonitoringContent() {
     if (!newMotivation.trim()) return;
     setIsLoadingMotivations(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('mufradat_motivations')
         .insert({ content: newMotivation.trim() });
       if (error) throw error;
@@ -482,7 +482,7 @@ function MufradatMonitoringContent() {
 
   const handleDeleteMotivation = async (id: string) => {
     try {
-      const { error } = await supabase.from('mufradat_motivations').delete().eq('id', id);
+      const { error } = await db.from('mufradat_motivations').delete().eq('id', id);
       if (error) throw error;
       fetchMotivations();
     } catch (e: any) {

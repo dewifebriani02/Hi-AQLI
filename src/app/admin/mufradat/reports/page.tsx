@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from "react";
-import { useCollection } from "@/supabase/db";
+import { useCollection } from "@/db";
 import { 
   Card, 
   CardContent, 

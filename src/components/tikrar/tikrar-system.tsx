@@ -46,9 +46,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useUser, supabase } from "@/supabase";
-import { useDoc, useCollection } from "@/supabase/db";
-import { addDocumentNonBlocking } from "@/supabase/non-blocking-updates";
+import {useUser, db } from "@/db";
+import { useDoc, useCollection } from "@/db";
+import { addDocumentNonBlocking } from "@/db";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";

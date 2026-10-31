@@ -15,8 +15,8 @@ import {
   TooltipTrigger,
   TooltipPortal,
 } from "@/components/ui/tooltip";
-import { useUser } from "@/supabase";
-import { useCollection, useDoc } from "@/supabase/db";
+import { useUser } from "@/db";
+import { useCollection, useDoc } from "@/db";
 import { getJuzForPage } from "@/lib/quran-mapping";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 

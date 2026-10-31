@@ -1,8 +1,8 @@
 'use client';
 
 import { useParams, useRouter } from "next/navigation";
-import { useDoc, useCollection } from "@/supabase/db";
-import { useUser, supabase } from "@/supabase";
+import { useDoc, useCollection } from "@/db";
+import {useUser, db } from "@/db";
 import { useState, useEffect, useMemo } from "react";
 import { 
   Card, 
@@ -57,7 +57,7 @@ export default function MufradatMabarRoomPage() {
   const currentUserParticipant = participants?.find(p => p.user_id === user?.id);
   const isJoined = !!currentUserParticipant;
 
-  // 3. Realtime is already handled by useCollection hook in @/supabase/db
+  // 3. Realtime is already handled by useCollection hook in @/db
 
   // 4. Timer Logic
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function MufradatMabarRoomPage() {
     
     setIsJoining(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('mufradat_mabar_participants')
         .insert({
           session_id: id,

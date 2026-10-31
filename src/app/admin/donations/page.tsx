@@ -2,8 +2,8 @@
 'use client';
 
 import { useState } from "react";
-import { useUser, supabase } from "@/supabase";
-import { useCollection, useCount } from "@/supabase/db";
+import {useUser, db } from "@/db";
+import { useCollection, useCount } from "@/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -75,7 +75,7 @@ export default function AdminDonationsPage() {
 
   const handleUpdateCampaign = async (donationId: string, campaignTitle: string) => {
     try {
-      const { error } = await supabase.from("donations").update({
+      const { error } = await db.from("donations").update({
         campaign_title: campaignTitle,
       }).eq('id', donationId);
 
@@ -93,7 +93,7 @@ export default function AdminDonationsPage() {
   const handleVerify = async (donationId: string) => {
     setProcessingId(donationId);
     try {
-      const { error } = await supabase.from("donations").update({
+      const { error } = await db.from("donations").update({
         status: "verified",
       }).eq('id', donationId);
 
@@ -271,7 +271,7 @@ export default function AdminDonationsPage() {
                               className="h-8 font-bold text-[9px] gap-1.5"
                               asChild
                             >
-                              <a href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gambar/${d.proof_file_name}`} target="_blank" rel="noopener noreferrer">
+                              <a href={`/uploads/donations/${d.proof_file_name}`} target="_blank" rel="noopener noreferrer">
                                 <ArrowUpRight className="w-3 h-3" /> BUKTI
                               </a>
                             </Button>

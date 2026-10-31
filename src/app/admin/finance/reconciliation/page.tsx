@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useCollection } from "@/supabase/db";
-import { supabase } from "@/supabase";
+import { useCollection } from "@/db";
+import {db } from "@/db";
 import {
   Card,
   CardContent,
@@ -154,7 +154,7 @@ export default function MufradatReconciliationPage() {
         const reg = m.registration;
         
         // 1. Update Registration to Verified
-        const { error: regError } = await supabase
+        const { error: regError } = await db
           .from("halaqah_registrations")
           .update({
             status: "verified",
@@ -205,7 +205,7 @@ export default function MufradatReconciliationPage() {
         const reg = m.registration;
         
         // 1. Rejected Registration
-        await supabase
+        await db
           .from("halaqah_registrations")
           .update({ 
             status: "rejected", 
@@ -215,7 +215,7 @@ export default function MufradatReconciliationPage() {
           .eq("id", reg.id);
 
         // 2. Revoke User Access
-        await supabase
+        await db
           .from("users")
           .update({
             mufradat_status: 'suspended',

@@ -21,8 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-import { useUser } from '@/supabase';
-import { useCollection } from '@/supabase/db';
+import { useUser } from '@/db';
+import { useCollection } from '@/db';
 
 export default function MatanQuestMap() {
   const params = useParams();

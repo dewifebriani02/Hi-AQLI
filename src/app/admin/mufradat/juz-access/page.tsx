@@ -1,8 +1,8 @@
 
 'use client';
 
-import { supabase } from "@/supabase";
-import { useCollection } from "@/supabase/db";
+import {db } from "@/db";
+import { useCollection } from "@/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +65,7 @@ export default function MufradatJuzAccessPage() {
     }
 
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('users')
         .update({ mufradat_accessible_juz: currentAccessible })
         .eq('id', userId);
@@ -88,7 +88,7 @@ export default function MufradatJuzAccessPage() {
     setIsSaving("bulk-sync");
     try {
       // 1. Fetch all users who have registered (have mufradat_group_id)
-      const { data: mufradatUsers, error: fetchError } = await supabase
+      const { data: mufradatUsers, error: fetchError } = await db
         .from('users')
         .select('id, mufradat_accessible_juz, username')
         .not('mufradat_group_id', 'is', null);
@@ -114,7 +114,7 @@ export default function MufradatJuzAccessPage() {
       let successCount = 0;
       for (const u of usersToUpdate) {
         const current = Array.isArray(u.mufradat_accessible_juz) ? u.mufradat_accessible_juz : [];
-        const { error: upError } = await supabase
+        const { error: upError } = await db
           .from('users')
           .update({ 
             mufradat_accessible_juz: [1, ...current].sort((a,b) => a-b),
@@ -145,7 +145,7 @@ export default function MufradatJuzAccessPage() {
   const revokeAll = async (userId: string) => {
     setIsSaving(userId);
     try {
-      await supabase.from('users').update({ mufradat_accessible_juz: [] }).eq('id', userId);
+      await db.from('users').update({ mufradat_accessible_juz: [] }).eq('id', userId);
       refresh();
     } finally { setIsSaving(null); }
   };

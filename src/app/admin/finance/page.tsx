@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useCollection } from "@/supabase/db";
-import { supabase } from "@/supabase";
+import { useCollection } from "@/db";
+import {db } from "@/db";
 import {
   Card,
   CardContent,
@@ -412,7 +412,7 @@ export default function MufradatFinancePage() {
         referral_code_used: selectedUser.referral_code_used || null, // Fallback to provided if any
       };
 
-      const { data: newReg, error: regError } = await supabase
+      const { data: newReg, error: regError } = await db
         .from("halaqah_registrations")
         .insert(regData)
         .select()
@@ -429,7 +429,7 @@ export default function MufradatFinancePage() {
 
       // Auto-Grouping Logic for Mufradat
       if (!selectedUser.mufradat_group_id && isMufradatReg) {
-        const { data: availableGroups } = await supabase
+        const { data: availableGroups } = await db
           .from('mufradat_groups')
           .select('*')
           .lt('member_count', 50)
@@ -438,11 +438,11 @@ export default function MufradatFinancePage() {
 
         if (availableGroups && availableGroups.length > 0) {
           updateData.mufradat_group_id = availableGroups[0].id;
-          await supabase.from('mufradat_groups').update({ member_count: availableGroups[0].member_count + 1 }).eq('id', availableGroups[0].id);
+          await db.from('mufradat_groups').update({ member_count: availableGroups[0].member_count + 1 }).eq('id', availableGroups[0].id);
         } else {
-          const { data: allGroups } = await supabase.from('mufradat_groups').select('id');
+          const { data: allGroups } = await db.from('mufradat_groups').select('id');
           const nextNum = (allGroups?.length || 0) + 1;
-          const { data: newGroup } = await supabase.from('mufradat_groups').insert({ name: `Grup ${nextNum}`, member_count: 1 }).select().single();
+          const { data: newGroup } = await db.from('mufradat_groups').insert({ name: `Grup ${nextNum}`, member_count: 1 }).select().single();
           if (newGroup) updateData.mufradat_group_id = newGroup.id;
         }
       }
@@ -464,14 +464,14 @@ export default function MufradatFinancePage() {
         }
       }
 
-      const { error: userError } = await supabase.from("users").update(updateData).eq('id', selectedUser.id);
+      const { error: userError } = await db.from("users").update(updateData).eq('id', selectedUser.id);
       if (userError) throw userError;
 
       // 3. Referral Bonus Logic
       const referralCodeUsed = regData.referral_code_used || selectedUser.referred_by_id;
       if (referralCodeUsed) {
         // Check if any OTHER verified registrations exist
-        const { count } = await supabase
+        const { count } = await db
           .from("halaqah_registrations")
           .select("*", { count: 'exact', head: true })
           .eq("user_id", selectedUser.id)
@@ -481,15 +481,15 @@ export default function MufradatFinancePage() {
         if (count === 0) {
           let referrer = null;
           if (regData.referral_code_used) {
-            const { data } = await supabase.from("users").select("id, referral_balance, username").eq("referral_code", regData.referral_code_used).maybeSingle();
+            const { data } = await db.from("users").select("id, referral_balance, username").eq("referral_code", regData.referral_code_used).maybeSingle();
             referrer = data;
           } else if (selectedUser.referred_by_id) {
-            const { data } = await supabase.from("users").select("id, referral_balance, username").eq("id", selectedUser.referred_by_id).maybeSingle();
+            const { data } = await db.from("users").select("id, referral_balance, username").eq("id", selectedUser.referred_by_id).maybeSingle();
             referrer = data;
           }
 
           if (referrer) {
-            await supabase.from("users").update({ referral_balance: (referrer.referral_balance || 0) + 5000 }).eq("id", referrer.id);
+            await db.from("users").update({ referral_balance: (referrer.referral_balance || 0) + 5000 }).eq("id", referrer.id);
             console.log(`Manual Reward: 5000 to ${referrer.username}`);
           }
         }
@@ -517,7 +517,7 @@ export default function MufradatFinancePage() {
 
     setIsCairkanLoading(true);
     try {
-      const { error } = await supabase.from("mufradat_payouts").insert({
+      const { error } = await db.from("mufradat_payouts").insert({
         billing_month: monthData.month,
         total_revenue: monthData.totalRevenue,
         total_unique_code: splits.totalUniqueCode,
@@ -560,7 +560,7 @@ export default function MufradatFinancePage() {
 
     setIsCairkanLoading(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from("mufradat_payouts")
         .delete()
         .eq("billing_month", month);
@@ -591,7 +591,7 @@ export default function MufradatFinancePage() {
       return;
 
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from("halaqah_registrations")
         .delete()
         .eq("id", regId);
@@ -625,7 +625,7 @@ export default function MufradatFinancePage() {
     try {
       const totalAmount = parseInt(editAmount) + parseInt(editUniqueCode);
       
-      const { error } = await supabase
+      const { error } = await db
         .from("halaqah_registrations")
         .update({
           user_name: editName,
