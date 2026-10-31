@@ -25,7 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/db";
-import { useCollection } from "@/db";
+import { useCollection, authFetch } from "@/db";
 import { getPagesForJuz } from "@/lib/quran-mapping";
 
 interface Question {
@@ -224,7 +224,7 @@ export default function MufradatJuzExamPage() {
       };
     });
 
-    let updated = [...generated];
+    let updated: Question[] = [...generated];
 
     if (mode === "variasi") {
         updated = updated.map(q => {
@@ -316,7 +316,7 @@ export default function MufradatJuzExamPage() {
   const saveAttempt = async (finalScore: number) => {
     if (!user) return;
     try {
-      await fetch('/api/quiz-attempts', {
+      await authFetch('/api/quiz-attempts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

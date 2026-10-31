@@ -1,49 +1,78 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { v4 as uuidv4 } from 'uuid';
+import { getAuthContext } from '@/lib/auth-server';
+
+const MAX_QUIZ_DURATION_SECONDS = 3600;
+
+function isNonNegativeInt(val: unknown): val is number {
+  return typeof val === 'number' && Number.isInteger(val) && val >= 0;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { user_id, quiz_id, surah_id, ayat, score, total_questions, duration_seconds } = body;
-
-    if (!user_id || !quiz_id) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const ctx = await getAuthContext(request);
+    if (!ctx.userId) {
+      return NextResponse.json({ error: 'Silakan login terlebih dahulu.' }, { status: 401 });
     }
 
-    const id = uuidv4();
-    const surah = surah_id ? parseInt(surah_id.toString()) || 0 : 0;
-    const verse = ayat ? parseInt(ayat.toString()) || 0 : 0;
-    const numScore = Number(score) || 0;
-    const numTotal = Number(total_questions) || 0;
-    const isPassed = numScore === numTotal;
-    const duration = Number(duration_seconds) || 0;
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Body JSON tidak valid.' }, { status: 400 });
+    }
+
+    const { user_id, quiz_id, surah_id, ayat, score, total_questions, duration_seconds } = body || {};
+
+    if (user_id !== undefined && user_id !== null && user_id !== ctx.userId) {
+      return NextResponse.json(
+        { error: 'Tidak boleh menyimpan progres kuis milik pengguna lain.' },
+        { status: 403 }
+      );
+    }
+
+    const userId = ctx.userId;
+
+    if (typeof quiz_id !== 'string' || !quiz_id.trim()) {
+      return NextResponse.json({ error: 'quiz_id wajib diisi.' }, { status: 400 });
+    }
+
+    const duration = duration_seconds === undefined ? 0 : duration_seconds;
+    if (
+      !isNonNegativeInt(score) ||
+      !isNonNegativeInt(total_questions) ||
+      score > total_questions ||
+      !isNonNegativeInt(duration) ||
+      duration > MAX_QUIZ_DURATION_SECONDS
+    ) {
+      return NextResponse.json({ error: 'Data skor atau durasi kuis tidak valid.' }, { status: 400 });
+    }
+
+    const id = crypto.randomUUID();
+    const surah = surah_id ? parseInt(String(surah_id), 10) || 0 : 0;
+    const verse = ayat ? parseInt(String(ayat), 10) || 0 : 0;
+    // TODO: Verifikasi jawaban kuis i'rab sepenuhnya di server (anti-cheat poin).
+    const isPassed = total_questions > 0 && score === total_questions;
 
     await query(
       `INSERT INTO public.quiz_attempts (
         id, user_id, quiz_id, surah_id, verse_id, score, total_questions, is_passed, duration_seconds, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())`,
-      [id, user_id, quiz_id, surah, verse, numScore, numTotal, isPassed, duration]
+      [id, userId, quiz_id.trim(), surah, verse, score, total_questions, isPassed, duration]
     );
 
     // If perfect score, add points to user
     if (isPassed) {
-      const { rows } = await query(
-        `SELECT points FROM public.users WHERE id = $1 LIMIT 1`,
-        [user_id]
+      await query(
+        `UPDATE public.users SET points = COALESCE(points, 0) + 10, updated_at = now() WHERE id = $1`,
+        [userId]
       );
-      if (rows.length > 0) {
-        const currentPoints = rows[0].points || 0;
-        await query(
-          `UPDATE public.users SET points = $1, updated_at = now() WHERE id = $2`,
-          [currentPoints + 10, user_id]
-        );
-      }
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('API error in irab-quiz:', error);
-    return NextResponse.json({ error: 'Internal server error', message: error?.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

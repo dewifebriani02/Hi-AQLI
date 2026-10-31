@@ -1,6 +1,6 @@
 'use client';
 
-import { useCollection } from "@/db";
+import { useCollection, authFetch } from "@/db";
 import {
   Card,
   CardContent,
@@ -307,7 +307,7 @@ function MufradatMonitoringContent() {
   const fetchSettings = async () => {
     setIsLoadingSettings(true);
     try {
-      const res = await fetch('/api/admin/reminders', { 
+      const res = await authFetch('/api/admin/reminders', { 
         method: 'POST', 
         body: JSON.stringify({ action: 'fetch_settings' }) 
       });
@@ -325,7 +325,7 @@ function MufradatMonitoringContent() {
 
   const saveTemplate = async (id: string | null, category: string, content: string) => {
     try {
-      const res = await fetch('/api/admin/reminders', {
+      const res = await authFetch('/api/admin/reminders', {
         method: 'POST',
         body: JSON.stringify({ action: 'save_template', id, category, content })
       });
@@ -342,7 +342,7 @@ function MufradatMonitoringContent() {
   const deleteTemplate = async (id: string) => {
     if (!confirm("Hapus variasi pesan ini?")) return;
     try {
-      const res = await fetch('/api/admin/reminders', {
+      const res = await authFetch('/api/admin/reminders', {
         method: 'POST',
         body: JSON.stringify({ action: 'delete_template', id })
       });
@@ -358,7 +358,7 @@ function MufradatMonitoringContent() {
 
   const updateConfig = async (category: string, schedule: string) => {
     try {
-      const res = await fetch('/api/admin/reminders', {
+      const res = await authFetch('/api/admin/reminders', {
         method: 'POST',
         body: JSON.stringify({ action: 'update_schedule', category, schedule })
       });
@@ -380,7 +380,7 @@ function MufradatMonitoringContent() {
     if (!confirm("Kirim pengingat otomatis sekarang?")) return;
     setIsTriggering(true);
     try {
-      const res = await fetch('/api/admin/reminders', { method: 'POST', body: JSON.stringify({ action: 'trigger_now' }) });
+      const res = await authFetch('/api/admin/reminders', { method: 'POST', body: JSON.stringify({ action: 'trigger_now' }) });
       const data = await res.json();
       if (data.success) toast({ title: "Reminder Dipicu" });
       else throw new Error(data.error);
@@ -394,7 +394,7 @@ function MufradatMonitoringContent() {
   const handleTriggerSingle = async (userId: string) => {
     setIsTriggering(true);
     try {
-      const res = await fetch('/api/admin/reminders', {
+      const res = await authFetch('/api/admin/reminders', {
         method: 'POST',
         body: JSON.stringify({ action: 'trigger_now', userId })
       });
@@ -413,7 +413,7 @@ function MufradatMonitoringContent() {
 
   const handleUpdateSchedule = async () => {
     try {
-      const res = await fetch('/api/admin/reminders', { method: 'POST', body: JSON.stringify({ action: 'update_schedule', schedule: newSchedule }) });
+      const res = await authFetch('/api/admin/reminders', { method: 'POST', body: JSON.stringify({ action: 'update_schedule', schedule: newSchedule }) });
       const data = await res.json();
       if (data.success) {
         toast({ title: "Jadwal Disimpan" });
@@ -428,7 +428,7 @@ function MufradatMonitoringContent() {
     if (!confirm("Buka blokir WhatsApp untuk peserta ini?")) return;
     setIsTriggering(true);
     try {
-      const res = await fetch('/api/admin/reminders', {
+      const res = await authFetch('/api/admin/reminders', {
         method: 'POST',
         body: JSON.stringify({ action: 'unblock', userId })
       });
@@ -907,7 +907,7 @@ function MufradatMonitoringContent() {
                     if (!selectedTestUser) return;
                     setIsTriggering(true);
                     try {
-                      const res = await fetch('/api/admin/reminders', {
+                      const res = await authFetch('/api/admin/reminders', {
                         method: 'POST',
                         body: JSON.stringify({ action: 'trigger_now', userId: selectedTestUser, customMessage: testMessage })
                       });

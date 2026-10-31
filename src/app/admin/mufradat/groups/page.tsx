@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { useCollection } from "@/db";
+import { useCollection, authFetch } from "@/db";
 import {db } from "@/db";
 import { useUser } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
@@ -396,7 +396,7 @@ export default function MufradatGroupsPage() {
   const fetchFonnteGroups = async () => {
     setIsFetchingFonnte(true);
     try {
-      const res = await fetch('/api/admin/reminders', { 
+      const res = await authFetch('/api/admin/reminders', { 
         method: 'POST', 
         body: JSON.stringify({ action: 'fetch_groups' }) 
       });

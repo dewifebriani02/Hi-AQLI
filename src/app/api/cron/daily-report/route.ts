@@ -1,16 +1,51 @@
-import { NextResponse } from 'next/server';
+import crypto from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { startOfDay, endOfDay } from 'date-fns';
 
-const FONNTE_API_KEY = process.env.FONNTE_API_KEY;
-
-export async function GET(req: Request) {
-  // Simple security check
+function extractCronSecret(req: NextRequest): string | null {
+  const authHeader = req.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7).trim();
+  }
+  const headerSecret = req.headers.get('x-cron-secret');
+  if (headerSecret) {
+    return headerSecret.trim();
+  }
+  // TODO: Hapus fallback query param `?secret=` setelah crontab di VPS diperbarui
+  // menggunakan header `Authorization: Bearer <CRON_SECRET>` atau `x-cron-secret`.
   const { searchParams } = new URL(req.url);
-  const secret = searchParams.get('secret');
-  if (secret !== process.env.CRON_SECRET && process.env.CRON_SECRET) {
+  return searchParams.get('secret');
+}
+
+function timingSafeSecretEqual(provided: string, expected: string): boolean {
+  const providedBuf = Buffer.from(provided, 'utf8');
+  const expectedBuf = Buffer.from(expected, 'utf8');
+  if (providedBuf.length !== expectedBuf.length) {
+    // Samakan panjang buffer lebih dulu agar timingSafeEqual tidak melempar RangeError.
+    const padded = Buffer.alloc(expectedBuf.length);
+    providedBuf.copy(padded, 0, 0, Math.min(providedBuf.length, expectedBuf.length));
+    crypto.timingSafeEqual(padded, expectedBuf);
+    return false;
+  }
+  return crypto.timingSafeEqual(providedBuf, expectedBuf);
+}
+
+export async function GET(req: NextRequest) {
+  const expectedSecret = process.env.CRON_SECRET;
+  if (!expectedSecret || expectedSecret.trim() === '') {
+    return NextResponse.json(
+      { error: 'CRON_SECRET belum dikonfigurasi di server.' },
+      { status: 500 }
+    );
+  }
+
+  const providedSecret = extractCronSecret(req);
+  if (!providedSecret || !timingSafeSecretEqual(providedSecret, expectedSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const fonnteApiKey = process.env.FONNTE_API_KEY;
 
   try {
     const today = new Date();
@@ -100,11 +135,11 @@ export async function GET(req: Request) {
       message += `\n— Team Hi AQLI 🌷`;
 
       // 8. Send to Fonnte
-      if (FONNTE_API_KEY && group.fonnte_group_id) {
+      if (fonnteApiKey && group.fonnte_group_id) {
         const fonnteRes = await fetch('https://api.fonnte.com/send', {
           method: 'POST',
           headers: {
-            'Authorization': FONNTE_API_KEY
+            'Authorization': fonnteApiKey
           },
           body: new URLSearchParams({
             target: group.fonnte_group_id,
@@ -120,6 +155,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ success: true, results: reportResults });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error('[CRON_DAILY_REPORT_ERROR]:', err);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

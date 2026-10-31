@@ -45,13 +45,35 @@ function getStoredToken(): string | null {
   try {
     const raw = localStorage.getItem('hiaqli_session');
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed?.access_token) return parsed.access_token;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed?.access_token) return parsed.access_token;
+      } catch {}
     }
     const token = localStorage.getItem('hiaqli_token');
     if (token) return token;
   } catch (e) {}
   return null;
+}
+
+/**
+ * Wrapper around `fetch` for internal API calls that attaches the stored JWT
+ * as `Authorization: Bearer <token>` (plus cookie credentials fallback).
+ */
+export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  const token = getStoredToken();
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (init.body && typeof init.body === 'string' && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  return fetch(input, {
+    ...init,
+    headers,
+    credentials: init.credentials ?? 'include',
+  });
 }
 
 class QueryBuilder {

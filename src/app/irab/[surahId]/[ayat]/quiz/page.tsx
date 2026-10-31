@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/db";
-import { useCollection } from "@/db";
+import { useCollection, authFetch } from "@/db";
 
 // Data Kuis untuk setiap ayat
 const QUIZ_DATA: Record<string, any> = {
@@ -212,7 +212,7 @@ export default function IrabQuizPage() {
     const isPerfect = finalScore === quizData.questions.length;
 
     try {
-      const response = await fetch('/api/irab-quiz', {
+      const response = await authFetch('/api/irab-quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
