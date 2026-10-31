@@ -962,6 +962,14 @@ export default function DashboardPage() {
             <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Muhasabah</span>
           </Link>
 
+          {/* Hi Sehat */}
+          <Link href="/sehat" className="flex flex-col items-center gap-2 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <HeartPulse className="w-7 h-7 text-white" />
+            </div>
+            <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Sehat</span>
+          </Link>
+
           {/* AI (Locked for everyone but AI is always cool) */}
           <div className="flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
             <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
