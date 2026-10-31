@@ -68,7 +68,7 @@ export default function NgajiPage() {
 
   const renderCircleCard = (circle: any) => {
     const status = getHalaqahStatus(circle.id);
-    const isActive = status === 'active';
+    const isActive = isHalaqahActive(circle.id);
     const isPending = status === 'pending_verification';
     const sisaKuota = getSisaKuota(circle);
     const isFull = sisaKuota <= 0 && !isActive && !isPending;

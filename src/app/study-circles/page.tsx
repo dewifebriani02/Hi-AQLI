@@ -104,7 +104,7 @@ export default function StudyCirclesPage() {
 
   const renderCircleCard = (circle: typeof studyCircles[0]) => {
     const status = getHalaqahStatus(circle.id);
-    const isActive = status === 'active';
+    const isActive = isHalaqahActive(circle.id);
     const isPending = status === 'pending_verification';
 
     let href = `/study-circles/registration?id=${circle.id}`;
