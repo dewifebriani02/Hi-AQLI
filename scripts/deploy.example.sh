@@ -47,9 +47,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly ROOT_DIR
 cd "$ROOT_DIR"
 
 INITIAL_VALIDATE_CONFIG="${DEPLOY_VALIDATE_CONFIG_ONLY:-0}"
+readonly INITIAL_VALIDATE_CONFIG
 
 usage() {
   cat <<'USAGE'
@@ -86,7 +88,7 @@ parse_cli_args() {
         LOCAL_TEST_DIR="$2"
         DRY_RUN=1
         shift 2
-        ;;
+      ;;
       -h|--help)
         usage
         exit 0
@@ -100,28 +102,31 @@ parse_cli_args() {
   done
 }
 
+# Definisikan & kunci RSYNC_EXCLUDES agar tidak pernah bisa ditimpa oleh .env.deploy
+define_and_lock_rsync_excludes() {
+  RSYNC_EXCLUDES=(
+    --exclude 'node_modules'
+    --exclude '.git'
+    --exclude '.next'
+    --exclude 'tmp'
+    --exclude 'backups'
+    --exclude '*.log'
+    --exclude 'public/uploads'
+    --exclude 'public/uploads/'
+    --exclude '.env*'
+    --exclude '.env.deploy'
+    --exclude 'scripts/deploy.sh'
+    --exclude '.codex'
+    --exclude '.claude'
+    --exclude 'docs/DATABASE_ACCESS.md'
+  )
+  readonly RSYNC_EXCLUDES
+}
+
 parse_cli_args "$@"
 
-# Daftar pengecualian rsync agar data runtime & kredensial di server tidak pernah tertimpa/terhapus
-RSYNC_EXCLUDES=(
-  --exclude 'node_modules'
-  --exclude '.git'
-  --exclude '.next'
-  --exclude 'tmp'
-  --exclude 'backups'
-  --exclude '*.log'
-  --exclude 'public/uploads'
-  --exclude 'public/uploads/'
-  --exclude '.env*'
-  --exclude '.env.deploy'
-  --exclude 'scripts/deploy.sh'
-  --exclude '.codex'
-  --exclude '.claude'
-  --exclude 'docs/DATABASE_ACCESS.md'
-)
-
 # Hitung panjang nilai variabel di satu file .env* (-1 bila variabel tidak didefinisikan).
-# Tidak pernah mencetak nilai rahasia ke stdout/stderr.
+# Membuang komentar inline (` #...`) pada nilai tanpa kutip, dan tidak pernah mencetak secret.
 env_var_len_in_file() {
   local file_path="$1"
   local var_name="$2"
@@ -138,6 +143,8 @@ env_var_len_in_file() {
         sub(/[[:space:]]+$/, "", line)
         if ((line ~ /^".*"$/) || (line ~ /^'\''.*'\''$/)) {
           line = substr(line, 2, length(line) - 2)
+        } else {
+          sub(/[[:space:]]+#.*$/, "", line)
         }
         sub(/^[[:space:]]+/, "", line)
         sub(/[[:space:]]+$/, "", line)
@@ -231,17 +238,33 @@ validate_env_dir() {
   fi
 }
 
-# Helper penyiapan direktori upload persisten + symlink (dipakai di remote & uji lokal)
+# Helper penyiapan direktori upload persisten + symlink (dipakai di remote & uji lokal).
+# Semua validasi relasi path dan cek konflik symlink dijalankan SEBELUM mkdir/chmod (N6).
 prepare_uploads_symlink() {
   local app_dir="${1%/}"
   local uploads_dir="${2%/}"
 
-  mkdir -p "$uploads_dir"
-  chmod 755 "$uploads_dir"
-
-  local real_app real_uploads
+  local real_app
   real_app="$(cd "$app_dir" && pwd -P)"
-  real_uploads="$(cd "$uploads_dir" && pwd -P)"
+
+  local real_uploads
+  if [ -e "$uploads_dir" ] || [ -L "$uploads_dir" ]; then
+    if [ ! -d "$uploads_dir" ]; then
+      echo "❌ UPLOADS_DIR ('$uploads_dir') sudah ada tetapi bukan direktori." >&2
+      return 1
+    fi
+    real_uploads="$(cd "$uploads_dir" && pwd -P)"
+  else
+    local parent_dir base_name real_parent
+    parent_dir="$(dirname "$uploads_dir")"
+    base_name="$(basename "$uploads_dir")"
+    if [ -d "$parent_dir" ]; then
+      real_parent="$(cd "$parent_dir" && pwd -P)"
+      real_uploads="${real_parent%/}/$base_name"
+    else
+      real_uploads="$uploads_dir"
+    fi
+  fi
 
   if [ "$real_uploads" = "$real_app" ]; then
     echo "❌ UPLOADS_DIR ('$real_uploads') tidak boleh sama dengan REMOTE_PATH ('$real_app')." >&2
@@ -270,9 +293,15 @@ prepare_uploads_symlink() {
       echo "   Deploy dihentikan agar file upload lama tidak hilang dari akses publik. Lakukan migrasi manual terlebih dahulu." >&2
       return 1
     fi
+    mkdir -p "$uploads_dir"
+    chmod 755 "$uploads_dir"
     echo "-> Symlink upload sudah aktif & sesuai: public/uploads -> $current_target"
     return 0
   fi
+
+  # Semua cek keamanan & konflik lolos — aman membuat & mengatur izin direktori target
+  mkdir -p "$uploads_dir"
+  chmod 755 "$uploads_dir"
 
   if [ -e "$link_path" ]; then
     echo "-> Memindahkan isi public/uploads ke penyimpanan persisten ($uploads_dir)..."
@@ -332,8 +361,10 @@ validate_safe_abs_path_3levels() {
   esac
 }
 
-# Mode verifikasi lokal (murni lokal, tanpa koneksi SSH / VPS)
+# Mode verifikasi lokal (murni lokal, tanpa koneksi SSH / VPS, tidak membaca .env.deploy)
 if [ -n "$LOCAL_TEST_DIR" ]; then
+  define_and_lock_rsync_excludes
+  readonly DRY_RUN LOCAL_TEST_DIR VALIDATE_CONFIG_ONLY
   if [ ! -d "$LOCAL_TEST_DIR" ]; then
     echo "❌ Direktori lokal '$LOCAL_TEST_DIR' tidak ditemukan." >&2
     exit 1
@@ -355,10 +386,11 @@ fi
 
 # ------------------------------------------------------------------------------
 # Baca & validasi konfigurasi dari .env.deploy (tanpa `set -a` agar secret tidak
-# ter-export ke seluruh proses anak, lalu evaluasi ulang argumen CLI agar flag
-# mode tidak pernah bisa ditimpa oleh isi .env.deploy)
+# ter-export ke seluruh proses anak), lalu tetapkan & kunci (`readonly`) seluruh
+# daftar exclude dan variabel mode/keamanan SETELAH `source` (S4, N2).
 # ------------------------------------------------------------------------------
 ENV_DEPLOY_FILE="${ENV_DEPLOY_FILE:-$ROOT_DIR/.env.deploy}"
+readonly ENV_DEPLOY_FILE
 if [ ! -f "$ENV_DEPLOY_FILE" ]; then
   echo "❌ File konfigurasi deploy tidak ditemukan: $ENV_DEPLOY_FILE" >&2
   echo "   Salin '.env.deploy.example' menjadi '.env.deploy' lalu isi nilainya." >&2
@@ -371,8 +403,13 @@ source "$ENV_DEPLOY_FILE"
 # Pastikan variabel konfigurasi (terutama SSH_PASS) tidak di-export ke environment global proses anak
 export -n VPS_IP SSH_USER REMOTE_PATH APP_PORT APP_DOMAIN PM2_APP_NAME SSH_KEY_PATH UPLOADS_DIR SSH_PASS 2>/dev/null || true
 
-# Evaluasi ulang argumen CLI ("$@") setelah `source` agar DRY_RUN / flag mode tidak bisa ditimpa .env.deploy
+# Buang definisi RSYNC_EXCLUDES yang mungkin disuntikkan .env.deploy, lalu tetapkan daftar resmi & kunci readonly
+unset RSYNC_EXCLUDES 2>/dev/null || true
+define_and_lock_rsync_excludes
+
+# Evaluasi ulang argumen CLI ("$@") setelah `source` lalu kunci readonly agar tidak bisa diubah lagi
 parse_cli_args "$@"
+readonly DRY_RUN LOCAL_TEST_DIR VALIDATE_CONFIG_ONLY
 
 MISSING_VARS=()
 for required_var in VPS_IP SSH_USER REMOTE_PATH APP_PORT; do
@@ -419,6 +456,7 @@ fi
 
 APP_DOMAIN="${APP_DOMAIN:-hiaqli.pro}"
 PM2_APP_NAME="${PM2_APP_NAME:-hiaqli-app}"
+readonly VPS_IP SSH_USER REMOTE_PATH APP_PORT APP_DOMAIN PM2_APP_NAME
 
 # ------------------------------------------------------------------------------
 # Konfigurasi autentikasi SSH (Default: SSH key; Fallback: sshpass bila SSH_PASS diisi)
@@ -457,8 +495,10 @@ else
   RSYNC_SSH_CMD="$RSYNC_SSH_CMD -o BatchMode=yes"
 fi
 
+readonly USE_SSHPASS SSH_OPTS RSYNC_SSH_CMD
+
 if [ "$VALIDATE_CONFIG_ONLY" = "1" ]; then
-  echo "✅ Konfigurasi .env.deploy valid (mode auth: $([ "$USE_SSHPASS" -eq 1 ] && echo 'sshpass-fallback' || echo 'ssh-key'))."
+  echo "✅ Konfigurasi .env.deploy valid (mode auth: $([ "$USE_SSHPASS" -eq 1 ] && echo 'sshpass-fallback' || echo 'ssh-key'), rsync excludes: $((${#RSYNC_EXCLUDES[@]} / 2)) item)."
   exit 0
 fi
 
@@ -502,6 +542,7 @@ echo "🌐 Port Target   : ${APP_PORT}"
 echo "🔑 Autentikasi   : $([ "$USE_SSHPASS" -eq 1 ] && echo 'Fallback Password (sshpass)' || echo 'SSH Key')"
 
 REMOTE_HELPER_FUNCS="$(declare -f env_var_len_in_file validate_env_dir prepare_uploads_symlink)"
+readonly REMOTE_HELPER_FUNCS
 
 # 1. Pre-flight check di VPS sebelum menyentuh file apa pun
 echo ""
@@ -560,12 +601,12 @@ echo "-> Building Next.js application..."
 npm run build
 
 echo "-> Restarting Application with PM2 ($PM2_APP_NAME) on port $APP_PORT..."
-if npx pm2 describe "$PM2_APP_NAME" > /dev/null 2>&1; then
-  npx pm2 reload "$PM2_APP_NAME" --update-env
+if npx --yes pm2 describe "$PM2_APP_NAME" > /dev/null 2>&1; then
+  npx --yes pm2 reload "$PM2_APP_NAME" --update-env
 else
-  npx pm2 start npm --name "$PM2_APP_NAME" -- start -- -p "$APP_PORT"
+  npx --yes pm2 start npm --name "$PM2_APP_NAME" -- start -- -p "$APP_PORT"
 fi
-npx pm2 save
+npx --yes pm2 save
 EOF
 } | run_ssh "REMOTE_PATH=${REMOTE_PATH_ESCAPED} APP_PORT=${APP_PORT_ESCAPED} PM2_APP_NAME=${PM2_NAME_ESCAPED} UPLOADS_DIR=${UPLOADS_DIR_ESCAPED} bash -s"
 
