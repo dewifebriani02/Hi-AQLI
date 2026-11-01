@@ -1,12 +1,10 @@
-
 'use client';
 
-import {useUser, signOut, db } from '@/db';
+import { useUser, signOut, db } from '@/db';
 import { useDoc, useCollection, useCount } from '@/db';
-import { updateDocumentNonBlocking } from '@/db';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -35,7 +33,6 @@ import {
   BookOpen,
   Trophy,
   ChevronRight,
-  Clock,
   CheckCircle2,
   Medal,
   Star,
@@ -46,6 +43,7 @@ import {
   Copy,
   Fingerprint,
   Loader2,
+  Lock,
   User as UserIcon
 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
@@ -58,17 +56,25 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { cn, getCallSign } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { normalizeWhatsapp, whatsappErrorMessage } from '@/lib/whatsapp';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+
+const STATIC_HALAQAH_TITLES: Record<string, string> = {
+  'tikrar-j30-b1': 'Hi Tikrar (Tikrar Daily)',
+  'tikrar-premium': 'Hi Tikrar (Tikrar Daily)',
+  'mufradat-premium': 'Hi Mufradat',
+  'tafsir-j30': "Tafsir Juz' Amma",
+  'tajwid-adv': 'Tajwid Lanjutan: Sifaat Al-Huroof',
+  'sirah-nabi': 'Sirah Nabi (SAW)',
+};
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -78,9 +84,9 @@ export default function ProfilePage() {
   const [whatsapp, setWhatsapp] = useState("");
   const [salutation, setSalutation] = useState("Ukhti");
 
-  // Check Admin Roles
-  const { data: adminRole, isLoading: isAdminLoading } = useDoc("roles_admin", user?.id);
-  const { data: superAdminRole } = useDoc("roles_superadmin", user?.id);
+  // Check Admin Roles (guarded when user is not loaded)
+  const { data: adminRole } = useDoc(user ? "roles_admin" : null, user?.id);
+  const { data: superAdminRole } = useDoc(user ? "roles_superadmin" : null, user?.id);
 
   // Fetch real donation history
   const donationOptions = useMemo(() => ({
@@ -89,20 +95,40 @@ export default function ProfilePage() {
     limit: 20
   }), [user?.id]);
 
-  const { data: donations } = useCollection("donations", donationOptions);
+  const { data: donations } = useCollection(user ? "donations" : null, donationOptions);
+  const { data: halaqahs } = useCollection(user ? "halaqahs" : null);
 
   // Fetch user data for payment status and points
-  const { data: userData } = useDoc("users", user?.id);
+  const { data: userData } = useDoc(user ? "users" : null, user?.id);
   const fullSalutation = userData?.salutation || "Ukhti";
-  const callSign = getCallSign(fullSalutation);
   const isPaid = userData?.is_tikrar_paid;
   const paidJuz = userData?.paidJuz ?? userData?.paid_juz ?? 1;
   const points = userData?.points || 0;
-  const { count: higherPointsCount } = useCount("users", useMemo(() => ({
+  const { count: higherPointsCount } = useCount(user ? "users" : null, useMemo(() => ({
     filters: [{ column: 'points', operator: '>', value: points }]
   }), [points]));
   
   const rank = points > 0 ? (higherPointsCount !== null ? higherPointsCount + 1 : '-') : '-';
+
+  const validFollowedHalaqahs = useMemo(() => {
+    if (!Array.isArray(userData?.followed_halaqahs)) return [];
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const raw of userData.followed_halaqahs) {
+      if (typeof raw === 'string' && raw.trim().length > 0 && !seen.has(raw.trim())) {
+        seen.add(raw.trim());
+        list.push(raw.trim());
+      }
+    }
+    return list;
+  }, [userData?.followed_halaqahs]);
+
+  const resolveHalaqahTitle = (hid: string) => {
+    const dbMatch = halaqahs?.find((h: any) => h.id === hid);
+    if (dbMatch?.title) return dbMatch.title;
+    if (STATIC_HALAQAH_TITLES[hid]) return STATIC_HALAQAH_TITLES[hid];
+    return hid.replace(/-/g, ' ');
+  };
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -155,7 +181,6 @@ export default function ProfilePage() {
           has_chosen_salutation: true
         }
       };
-      // Reset auto-block ketika user mengubah nomor (kasih kesempatan ulang)
       if (normalizedWa !== userData?.whatsapp) {
         updatePayload.wa_failed_count = 0;
         updatePayload.wa_blocked_at = null;
@@ -174,10 +199,10 @@ export default function ProfilePage() {
       });
       setIsEditDialogOpen(false);
       
-      // Clear query param
       const params = new URLSearchParams(searchParams.toString());
       params.delete('edit');
-      router.replace(`/profile?${params.toString()}`);
+      const qs = params.toString();
+      router.replace(qs ? `/profile?${qs}` : '/profile');
 
     } catch (err: any) {
       toast({
@@ -249,7 +274,12 @@ export default function ProfilePage() {
                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-[#800000]" /> Sejak {user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : '-'}</span>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild className="font-bold border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5">
+                <Link href="/auth/reset-password">
+                  <Lock className="w-3.5 h-3.5 mr-1.5" /> Atur Sandi
+                </Link>
+              </Button>
               <Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive/10 font-bold" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" /> Keluar
               </Button>
@@ -333,7 +363,7 @@ export default function ProfilePage() {
                           whatsappErrorMessage(whatsapp) ? (
                             <p className="text-[11px] text-red-600 font-bold">⚠ {whatsappErrorMessage(whatsapp)}</p>
                           ) : (
-                            <p className="text-[11px] text-emerald-600 font-bold">✓ Format Fonnte: {normalizeWhatsapp(whatsapp)}</p>
+                            <p className="text-[11px] text-emerald-600 font-bold">✓ Format WhatsApp: {normalizeWhatsapp(whatsapp)}</p>
                           )
                         )}
                         <p className="text-[10px] text-amber-600 font-bold italic">*Wajib untuk koordinasi halaqah/program. Diterima: 0812..., +62812..., 62812...</p>
@@ -449,44 +479,53 @@ export default function ProfilePage() {
             <TabsContent value="halaqah" className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-bold text-sm uppercase tracking-widest text-[#800000]">Materi Diikuti</h3>
-                <Badge variant="outline" className="text-[10px] font-bold">{userData?.followed_halaqahs?.length || 0} Aktif</Badge>
+                <Badge variant="outline" className="text-[10px] font-bold">{validFollowedHalaqahs.length + (isPaid ? 1 : 0)} Aktif</Badge>
               </div>
               <div className="grid gap-3">
                 {isPaid && (
-                  <Card className="border-blue-200 bg-blue-50/20 shadow-none hover:bg-blue-50 transition-all cursor-pointer group">
-                    <CardContent className="p-4 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-md">
-                          <Zap className="w-5 h-5 fill-current" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold text-blue-900">Tikrar Daily Juz {paidJuz}</h4>
-                            <Badge className="bg-blue-600 text-[8px] h-4 px-1">PREMIUM</Badge>
+                  <Link href="/tikrar">
+                    <Card className="border-blue-200 bg-blue-50/20 shadow-none hover:bg-blue-50 transition-all cursor-pointer group">
+                      <CardContent className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-md">
+                            <Zap className="w-5 h-5 fill-current" />
                           </div>
-                          <p className="text-[10px] text-blue-700 font-medium">Metode 40x Repetisi</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold text-blue-900">Tikrar Daily Juz {paidJuz}</h4>
+                              <Badge className="bg-blue-600 text-[8px] h-4 px-1">PREMIUM</Badge>
+                            </div>
+                            <p className="text-[10px] text-blue-700 font-medium">Metode 40x Repetisi</p>
+                          </div>
                         </div>
-                      </div>
-                      <Link href="/tikrar"><ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600" /></Link>
-                    </CardContent>
-                  </Card>
+                        <ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600" />
+                      </CardContent>
+                    </Card>
+                  </Link>
                 )}
-                {userData?.followed_halaqahs?.map((hid: string) => (
-                  <Card key={hid} className="border shadow-none hover:bg-muted/30 transition-all cursor-pointer group">
-                    <CardContent className="p-4 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="p-2.5 rounded-xl bg-[#800000]/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white transition-colors">
-                          <BookOpen className="w-5 h-5" />
+                {validFollowedHalaqahs.map((hid: string) => (
+                  <Link key={hid} href={`/study-circles/${encodeURIComponent(hid)}`}>
+                    <Card className="border shadow-none hover:bg-muted/30 transition-all cursor-pointer group">
+                      <CardContent className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className="p-2.5 rounded-xl bg-[#800000]/10 text-[#800000] group-hover:bg-[#800000] group-hover:text-white transition-colors shrink-0">
+                            <BookOpen className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold uppercase truncate">{resolveHalaqahTitle(hid)}</h4>
+                            <p className="text-[10px] text-muted-foreground font-medium">Halaqah Aktif</p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="text-sm font-bold uppercase truncate">{hid?.replace(/-/g, ' ') || 'Halaqah'}</h4>
-                          <p className="text-[10px] text-muted-foreground font-medium">Halaqah Aktif</p>
-                        </div>
-                      </div>
-                      <Link href={`/study-circles/${hid}`}><ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-[#800000]" /></Link>
-                    </CardContent>
-                  </Card>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-[#800000] shrink-0" />
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
+                {!isPaid && validFollowedHalaqahs.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground text-xs italic border rounded-xl bg-white">
+                    Belum ada Halaqah yang diikuti. <Link href="/study-circles" className="text-[#800000] font-bold underline">Jelajahi Kelas</Link>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

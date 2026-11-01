@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
 import { isFullAdmin, isStaff } from '@/lib/db-policy';
+import { whatsappService } from '@/lib/services/whatsapp';
 
 // Actions restricted to full admins (admin / superadmin); musyrifah is denied.
 const FULL_ADMIN_ACTIONS = new Set(['delete_template', 'update_schedule', 'trigger_now']);
@@ -40,6 +41,11 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'Hanya admin yang diizinkan menjalankan aksi ini.' },
         { status: 403 }
       );
+    }
+
+    if (action === 'fetch_status') {
+      const status = await whatsappService.getStatus();
+      return NextResponse.json({ success: true, data: status });
     }
 
     if (action === 'fetch_settings') {
@@ -103,14 +109,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'fetch_groups') {
-      const response = await fetch('https://api.fonnte.com/get-groups', {
-        method: 'POST',
-        headers: {
-          Authorization: process.env.FONNTE_API_KEY || '',
-        },
-      });
-      const data = await response.json();
-      return NextResponse.json({ success: true, groups: data.data || [] });
+      const groups = await whatsappService.getGroups();
+      return NextResponse.json({ success: true, groups });
     }
 
     if (action === 'unblock') {
@@ -125,10 +125,36 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'trigger_now') {
-      return NextResponse.json(
-        { success: false, error: 'Pengiriman pengingat otomatis langsung dari server belum diaktifkan pasca-migrasi.' },
-        { status: 501 }
+      if (typeof userId !== 'string' || !userId.trim()) {
+        return NextResponse.json({ success: false, error: 'User ID wajib dipilih.' }, { status: 400 });
+      }
+      const { rows } = await query(
+        `SELECT id, username, full_name, whatsapp, phone FROM public.users WHERE id = $1`,
+        [userId]
       );
+      if (!rows || rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Peserta tidak ditemukan.' }, { status: 404 });
+      }
+      const targetUser = rows[0];
+      const targetPhone = targetUser.whatsapp || targetUser.phone;
+      if (!targetPhone) {
+        return NextResponse.json({ success: false, error: 'Nomor WhatsApp peserta belum terisi.' }, { status: 400 });
+      }
+      const message = typeof body?.customMessage === 'string' && body.customMessage.trim()
+        ? body.customMessage.trim()
+        : `Assalamu'alaikum ${targetUser.full_name || targetUser.username},\n\nIni adalah pesan pengingat resmi dari Hi-AQLI. Semangat terus belajar Al-Qur'an hari ini ya! ✨\n\n_Team Hi-AQLI_ 🌸`;
+
+      const sendRes = await whatsappService.sendTextMessage(targetPhone, message);
+      if (!sendRes.success) {
+        return NextResponse.json({
+          success: false,
+          error: sendRes.error || 'Gagal mengirim pesan WhatsApp.'
+        }, { status: 502 });
+      }
+      return NextResponse.json({
+        success: true,
+        message: `Pesan berhasil dikirim via ${sendRes.provider}! (ID: ${sendRes.messageId || 'OK'})`
+      });
     }
 
     return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });

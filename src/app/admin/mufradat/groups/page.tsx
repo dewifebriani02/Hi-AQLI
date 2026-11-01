@@ -108,7 +108,7 @@ export default function MufradatGroupsPage() {
   });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const [fonnteGroups, setFonnteGroups] = useState<any[]>([]);
+  const [fonnteGroups, setFonnteGroups] = useState<any[]>([]); // WatZap groups
   const [isFetchingFonnte, setIsFetchingFonnte] = useState(false);
 
   const { data: groups, isLoading, refresh } = useCollection("mufradat_groups", {
@@ -648,7 +648,7 @@ export default function MufradatGroupsPage() {
                             <div className="flex flex-col gap-2 w-full">
                               <div className="flex gap-2">
                                 <Input 
-                                  placeholder="Fonnte Group ID (e.g. 120363...@g.us)"
+                                  placeholder="WhatsApp Group ID (e.g. 120363...@g.us)"
                                   value={editValues.fonnte_group_id} 
                                   onChange={e => setEditValues(v => ({ ...v, fonnte_group_id: e.target.value }))}
                                   className="h-9 text-[10px] font-mono flex-1"
@@ -665,7 +665,7 @@ export default function MufradatGroupsPage() {
                               {fonnteGroups.length > 0 && (
                                 <Select onValueChange={(val) => setEditValues(v => ({ ...v, fonnte_group_id: val }))}>
                                   <SelectTrigger className="h-8 text-[9px]">
-                                    <SelectValue placeholder="Pilih dari daftar Fonnte..." />
+                                    <SelectValue placeholder="Pilih dari daftar grup WatZap..." />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {fonnteGroups.map(fg => (
@@ -775,7 +775,7 @@ export default function MufradatGroupsPage() {
               </div>
 
               <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Fonnte Group ID</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">WhatsApp Group ID (WatZap)</label>
                   <div className="flex gap-2">
                     <Input 
                       placeholder="Contoh: 1203630239485@g.us" 
@@ -795,7 +795,7 @@ export default function MufradatGroupsPage() {
                   {fonnteGroups.length > 0 && (
                     <Select onValueChange={(val) => setNewGroup(v => ({ ...v, fonnte_group_id: val }))}>
                       <SelectTrigger className="h-9 text-[10px] rounded-lg mt-1">
-                        <SelectValue placeholder="Pilih dari daftar grup Anda..." />
+                        <SelectValue placeholder="Pilih dari daftar grup WatZap..." />
                       </SelectTrigger>
                       <SelectContent>
                         {fonnteGroups.map(fg => (

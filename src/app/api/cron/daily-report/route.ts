@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { startOfDay, endOfDay } from 'date-fns';
+import { whatsappService } from '@/lib/services/whatsapp';
 
 function extractCronSecret(req: NextRequest): string | null {
   const authHeader = req.headers.get('authorization');
@@ -45,20 +46,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const fonnteApiKey = process.env.FONNTE_API_KEY;
-
   try {
     const today = new Date();
     const start = startOfDay(today).toISOString();
     const end = endOfDay(today).toISOString();
 
-    // 1. Get all groups that have Fonnte Group ID
+    // 1. Get all groups that have WhatsApp / Fonnte Group ID
     const { rows: groups } = await query(
       `SELECT * FROM public.mufradat_groups WHERE fonnte_group_id IS NOT NULL`
     );
 
     if (!groups || groups.length === 0) {
-      return NextResponse.json({ message: 'No groups with Fonnte ID found' });
+      return NextResponse.json({ message: 'No groups with WhatsApp Group ID found' });
     }
 
     const reportResults = [];
@@ -132,24 +131,20 @@ export async function GET(req: NextRequest) {
       }
 
       message += `\n\n_"Sedikit tapi istiqomah lebih dicintai Allah." Semangat ya Sahabat! ✨_\n`;
-      message += `\n— Team Hi AQLI 🌷`;
+      message += `\n— Team Hi AQLI 🌸`;
 
-      // 8. Send to Fonnte
-      if (fonnteApiKey && group.fonnte_group_id) {
-        const fonnteRes = await fetch('https://api.fonnte.com/send', {
-          method: 'POST',
-          headers: {
-            'Authorization': fonnteApiKey
-          },
-          body: new URLSearchParams({
-            target: group.fonnte_group_id,
-            message: message
-          })
+      // 8. Send to WhatsApp (WatZap Gateway with Fonnte fallback)
+      if (group.fonnte_group_id) {
+        const sendRes = await whatsappService.sendGroupMessage(group.fonnte_group_id, message);
+        reportResults.push({
+          group: group.name,
+          status: sendRes.success ? 'sent' : 'failed',
+          provider: sendRes.provider,
+          messageId: sendRes.messageId,
+          detail: sendRes.details || sendRes.error,
         });
-        const fonnteData = await fonnteRes.json();
-        reportResults.push({ group: group.name, status: fonnteData.status ? 'sent' : 'failed', detail: fonnteData });
       } else {
-        reportResults.push({ group: group.name, status: 'skipped', reason: 'Missing API Key or Group ID' });
+        reportResults.push({ group: group.name, status: 'skipped', reason: 'Missing WhatsApp Group ID' });
       }
     }
 

@@ -107,6 +107,7 @@ function MufradatMonitoringContent() {
   const [dbConfigs, setDbConfigs] = useState<any[]>([]);
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [activeTab, setActiveTab] = useState("manual");
+  const [waStatus, setWaStatus] = useState<any>(null);
 
   const generateCron = (day: string, hour: string, minute: string) => {
     return `${minute} ${hour} * * ${day}`;
@@ -315,6 +316,19 @@ function MufradatMonitoringContent() {
       if (data.success) {
         setDbTemplates(data.templates);
         setDbConfigs(data.configs);
+      }
+
+      try {
+        const sRes = await authFetch('/api/admin/reminders', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'fetch_status' })
+        });
+        const sData = await sRes.json();
+        if (sData.success) {
+          setWaStatus(sData.data);
+        }
+      } catch (err) {
+        console.warn('Gagal ambil status WhatsApp:', err);
       }
     } catch (e) {
       console.error(e);
@@ -689,7 +703,7 @@ function MufradatMonitoringContent() {
                   <TableCell className="text-xs">{log.recipient}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-[9px] uppercase">
-                      {log.metadata?.provider || 'fonnte'}
+                      {log.metadata?.provider || 'watzap'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -699,7 +713,7 @@ function MufradatMonitoringContent() {
                   </TableCell>
                   <TableCell className="text-xs">{log.type}</TableCell>
                   <TableCell className="text-xs max-w-xs truncate">
-                    {log.metadata?.fonnte_response?.reason || JSON.stringify(log.metadata).substring(0, 100)}
+                    {log.metadata?.watzap_response?.message || log.metadata?.fonnte_response?.reason || JSON.stringify(log.metadata).substring(0, 100)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -934,16 +948,29 @@ function MufradatMonitoringContent() {
               {/* Status Info */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                  <h3 className="font-black text-xs uppercase tracking-widest text-[#800000]">Status Device Fonnte</h3>
-                  <div className="bg-muted/50 p-4 rounded-xl space-y-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-xs uppercase tracking-widest text-[#800000]">Status WatZap Gateway</h3>
+                    <Badge variant={waStatus?.watzap?.isConnected ? "default" : "outline"} className={cn("text-[9px] font-black uppercase", waStatus?.watzap?.isConnected ? "bg-emerald-600" : "text-amber-600 border-amber-300")}>
+                      {waStatus?.watzap?.isConnected ? "TERHUBUNG (ONLINE)" : "OFFLINE / BELUM AKTIF"}
+                    </Badge>
+                  </div>
+                  <div className="bg-muted/50 p-4 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">Pengirim:</span>
+                      <span className="font-mono font-bold text-slate-800">{waStatus?.watzap?.displayPhoneNumber || waStatus?.watzap?.senderNumber || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">Akun / Paket:</span>
+                      <span className="font-bold text-slate-800">{waStatus?.watzap?.accountName || 'WatZap User'} ({waStatus?.watzap?.plan || 'WatZap Plus'})</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
                       <span className="text-muted-foreground font-medium">Dashboard Provider:</span>
-                      <a href="https://fonnte.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold text-xs">
-                        BUKA FONNTE →
+                      <a href="https://watzap.id" target="_blank" rel="noopener noreferrer" className="text-[#800000] hover:underline font-bold text-xs">
+                        BUKA WATZAP →
                       </a>
                     </div>
-                    <p className="text-[10px] leading-relaxed text-muted-foreground italic">
-                      💡 Periksa status "Connected" di dashboard provider. Jika terputus, silakan scan ulang QR Code di sana.
+                    <p className="text-[10px] leading-relaxed text-muted-foreground italic pt-1">
+                      💡 Pesan pengingat dan laporan dikirim otomatis melalui WatZap Gateway API.
                     </p>
                   </div>
                 </div>
