@@ -11,18 +11,23 @@ import {
   BarChart3,
   Trophy,
   CalendarDays,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { TikrarSystem } from "@/components/tikrar/tikrar-system";
 import { HifzProgressChart } from "@/components/progress/hifz-progress-chart";
 import { TikrarSchedule } from "@/components/tikrar/tikrar-schedule";
 import { TikrarActiveHalaqahBanner } from "@/components/tikrar/tikrar-active-halaqah-banner";
+import { TikrarDailyReportCard } from "@/components/tikrar/tikrar-daily-report-card";
+import { TikrarGroupHeatmap } from "@/components/tikrar/tikrar-group-heatmap";
 import { useUser, useDoc } from "@/db";
 
 export default function TikrarPage() {
   const { user } = useUser();
   const { data: userData } = useDoc(user?.id ? "users" : null, user?.id);
   const fullSalutation = userData?.salutation || "Ukhti";
+  const currentJuz = Number(userData?.paid_juz ?? userData?.paidJuz) || 30;
+  const currentPage = Number(userData?.tikrar_current_page) || 582;
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-32">
@@ -36,7 +41,7 @@ export default function TikrarPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight text-foreground">Metode Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Perkuat hafalan {fullSalutation} dengan metode repetisi 40x terstruktur, komitmen 5 hari/pekan, dan setoran tatap muka langsung via Live Zoom.
+          Perkuat hafalan {fullSalutation} dengan metode repetisi 40x terstruktur, komitmen 5 hari/pekan, pemantauan keaktifan grup, dan setoran tatap muka langsung via Live Zoom.
         </p>
       </div>
 
@@ -45,34 +50,51 @@ export default function TikrarPage() {
 
       {/* Tab Navigasi Utama */}
       <Tabs defaultValue="tikrar-daily" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-8 h-auto sm:h-12 bg-muted/50 p-1 rounded-xl gap-1">
           <TabsTrigger
             value="tikrar-daily"
-            className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
+            className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all py-2 sm:py-0"
           >
             <Layers className="w-4 h-4 hidden sm:block" /> Tikrar Daily
           </TabsTrigger>
           <TabsTrigger
+            value="group-activity"
+            className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all py-2 sm:py-0"
+          >
+            <Users className="w-4 h-4 hidden sm:block" /> Keaktifan Grup
+          </TabsTrigger>
+          <TabsTrigger
             value="schedule"
-            className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
+            className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all py-2 sm:py-0"
           >
             <CalendarDays className="w-4 h-4 hidden sm:block" /> Jadwal Saya
           </TabsTrigger>
           <TabsTrigger
             value="progress"
-            className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
+            className="font-bold gap-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all py-2 sm:py-0"
           >
             <BarChart3 className="w-4 h-4 hidden sm:block" /> Progres
           </TabsTrigger>
         </TabsList>
 
+        {/* Tab 1: Tikrar Daily + Laporan Harian Repetisi 40x */}
         <TabsContent
           value="tikrar-daily"
-          className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none"
+          className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none"
         >
+          <TikrarDailyReportCard currentPage={currentPage} currentJuz={currentJuz} />
           <TikrarSystem />
         </TabsContent>
 
+        {/* Tab 2: GitHub-Style Group Activity Heatmap */}
+        <TabsContent
+          value="group-activity"
+          className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none"
+        >
+          <TikrarGroupHeatmap />
+        </TabsContent>
+
+        {/* Tab 3: Jadwal Saya */}
         <TabsContent
           value="schedule"
           className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none"
@@ -80,6 +102,7 @@ export default function TikrarPage() {
           <TikrarSchedule />
         </TabsContent>
 
+        {/* Tab 4: Progres & Uji Tajwid */}
         <TabsContent
           value="progress"
           className="space-y-8 animate-in fade-in slide-in-from-bottom-2 outline-none"
