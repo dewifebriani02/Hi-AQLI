@@ -145,6 +145,30 @@ export async function POST(req: NextRequest) {
         : `Assalamu'alaikum ${targetUser.full_name || targetUser.username},\n\nIni adalah pesan pengingat resmi dari Hi-AQLI. Semangat terus belajar Al-Qur'an hari ini ya! ✨\n\n_Team Hi-AQLI_ 🌸`;
 
       const sendRes = await whatsappService.sendTextMessage(targetPhone, message);
+
+      // Record to whatsapp_logs for dashboard audit trail
+      try {
+        await query(
+          `INSERT INTO public.whatsapp_logs (id, user_id, recipient, message, status, type, metadata, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, now())`,
+          [
+            crypto.randomUUID(),
+            userId,
+            targetPhone,
+            message,
+            sendRes.success ? 'sent' : 'failed',
+            'test_reminder',
+            JSON.stringify({
+              provider: sendRes.provider,
+              messageId: sendRes.messageId,
+              watzap_response: sendRes.details
+            })
+          ]
+        );
+      } catch (logErr) {
+        console.warn('[WHATSAPP_LOG_WARN]: Failed to insert whatsapp_log:', logErr);
+      }
+
       if (!sendRes.success) {
         return NextResponse.json({
           success: false,
