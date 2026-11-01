@@ -88,9 +88,5 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // 4. Authorized Access
-  return (
-    <div className="animate-in fade-in duration-500">
-      {children}
-    </div>
-  );
+  return <div>{children}</div>;
 }

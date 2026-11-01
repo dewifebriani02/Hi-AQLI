@@ -29,6 +29,7 @@ export const OWNER_COLUMN: Record<string, string> = {
   mufradat_reactions: 'from_user_id',
   tikrar_daily_logs: 'user_id',
   tikrar_submissions: 'user_id',
+  tikrar_user_schedules: 'user_id',
 };
 
 // Tables learners can only read their own rows from.
@@ -59,6 +60,7 @@ const PUBLIC_READ = new Set([
   'tikrar_daily_logs',
   'tikrar_submissions',
   'tikrar_groups',
+  'tikrar_user_schedules',
 ]);
 
 const ROLE_TABLES = new Set(['roles_admin', 'roles_superadmin', 'roles_musyrifah']);

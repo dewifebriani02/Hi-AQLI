@@ -44,6 +44,7 @@ const ALLOWED_TABLES = new Set([
   'tikrar_daily_logs',
   'tikrar_submissions',
   'tikrar_groups',
+  'tikrar_user_schedules',
 ]);
 
 // Tables whose primary key is not a single generated `id` UUID column

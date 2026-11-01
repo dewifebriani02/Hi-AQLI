@@ -87,16 +87,21 @@ interface Verse {
   translations?: { text: string }[];
 }
 
-export function TikrarSystem() {
+export interface TikrarSystemProps {
+  targetPage?: number | null;
+  targetJuz?: number | null;
+}
+
+export function TikrarSystem({ targetPage, targetJuz }: TikrarSystemProps = {}) {
   const { user } = useUser();
   const { toast } = useToast();
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(user ? "users" : null, user?.id);
   // Semua juz terbuka (program gratis); paid_juz / "paidJuz" hanya menjadi juz awal.
-  const paidJuz = Number(userData?.paid_juz ?? userData?.paidJuz) || 1;
+  const paidJuz = Number(userData?.paid_juz ?? userData?.paidJuz) || 30;
 
-  const [juz, setJuz] = useState(1);
-  const [page, setPage] = useState(1);
+  const [juz, setJuz] = useState(targetJuz || 30);
+  const [page, setPage] = useState(targetPage || 582);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(18);
@@ -139,15 +144,23 @@ export function TikrarSystem() {
   });
 
   useEffect(() => {
+    if (targetPage && targetPage >= 1 && targetPage <= 604) {
+      if (targetJuz && targetJuz >= 1 && targetJuz <= 30) {
+        setJuz(targetJuz);
+      }
+      setPage(targetPage);
+      setHasInitializedPage(true);
+      return;
+    }
     if (!isUserDataLoading && userData && !hasInitializedPage) {
-      const startPage = JUZ_PAGES[paidJuz - 1] || 1;
+      const startPage = Number(userData?.tikrar_current_page) || JUZ_PAGES[paidJuz - 1] || 582;
       setJuz(paidJuz);
       setPage(startPage);
       setHasInitializedPage(true);
     }
     const savedReciter = localStorage.getItem('aqli_reciter_id');
     if (savedReciter) setSelectedReciterId(parseInt(savedReciter));
-  }, [userData, paidJuz, isUserDataLoading, hasInitializedPage]);
+  }, [userData, paidJuz, isUserDataLoading, hasInitializedPage, targetPage, targetJuz]);
 
   useEffect(() => {
     async function fetchVerses() {
