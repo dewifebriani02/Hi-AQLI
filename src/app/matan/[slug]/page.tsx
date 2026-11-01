@@ -34,7 +34,7 @@ export default function MatanQuestMap() {
 
   const chapterOptions = useMemo(() => ({
     filters: [{ column: 'matan_id', operator: '==', value: currentMatan?.id }],
-    orderBy: { column: 'order_index', ascending: true },
+    orderBy: { column: 'chapter_number', ascending: true },
   }), [currentMatan?.id]);
 
   const { data: chapters, isLoading: isChaptersLoading } = useCollection(
@@ -50,7 +50,7 @@ export default function MatanQuestMap() {
 
   const matanTitle = currentMatan?.title || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Matan');
   const completedCount = chapters?.filter(c => 
-    progress?.some(p => p.status_paham && p.item_id === c.id)
+    progress?.some(p => (p.memorized || p.status_paham) && (p.chapter_id === c.id || p.item_id === c.id))
   ).length || 0;
 
   if (isMatanLoading || (currentMatan?.id && isChaptersLoading)) {
@@ -64,7 +64,7 @@ export default function MatanQuestMap() {
 
   // Fallback map if chapters are empty (initial seed)
   const displayChapters = chapters?.length ? chapters : [
-    { id: 'initial', title: 'Bab Al-Kalam', description: 'Definisi Kalimat & Syarat Kalam dalam Ilmu Nahwu', order_index: 0 }
+    { id: 'initial', title: 'Bab Al-Kalam', description: 'Definisi Kalimat & Syarat Kalam dalam Ilmu Nahwu', chapter_number: 1 }
   ];
 
   return (
@@ -106,7 +106,9 @@ export default function MatanQuestMap() {
 
         {displayChapters.map((chapter: any, idx) => {
           const isEven = idx % 2 === 0;
-          const isCompleted = progress?.some(p => p.status_paham && p.item_id === chapter.id);
+          const isCompleted = progress?.some(
+            p => (p.memorized || p.status_paham) && (p.chapter_id === chapter.id || p.item_id === chapter.id)
+          );
           const isUnlocked = idx === 0 || (progress?.length ?? 0) > 0;
           
           return (
@@ -160,7 +162,7 @@ export default function MatanQuestMap() {
                            "text-[9px] font-black uppercase tracking-widest",
                            isCompleted ? "text-emerald-600" : isUnlocked ? "text-[#800000]" : "text-slate-400"
                          )}>
-                            Langkah {idx + 1} {isCompleted && '• Tuntas'}
+                            Langkah {chapter.chapter_number || idx + 1} {isCompleted && '\u2022 Tuntas'}
                          </div>
                          <h3 className="text-xl font-black text-slate-900 group-hover:text-[#800000] transition-colors">{chapter.title}</h3>
                          <p className="text-xs font-bold text-slate-400 normal-case italic">{chapter.description}</p>

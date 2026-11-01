@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -22,7 +21,6 @@ import {
   ShieldCheck,
   Lock,
   UserCog,
-  LayoutGrid,
   Library,
   ChevronDown,
   ChevronRight,
@@ -31,72 +29,77 @@ import {
   CheckCircle,
   BookOpen,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import dynamic from 'next/dynamic';
 const Logo = dynamic(() => import('./logo').then(mod => mod.Logo), { ssr: false });
 import { cn } from "@/lib/utils";
-import { useUser } from "@/db";
-import { useDoc } from "@/db";
+import { useUser, useDoc } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
 
-const adminItems = [
+interface AdminMenuItem {
+  href?: string;
+  label: string;
+  icon: LucideIcon;
+  subItems?: { href: string; label: string }[];
+}
+
+const adminItems: AdminMenuItem[] = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
   { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
   { href: "/admin/users", label: "Manajemen Users", icon: UserCog },
   { href: "/admin/thalibah", label: "Direktori Thalibah", icon: Users },
   { href: "/admin/finance", label: "Monitor Keuangan", icon: BarChart3 },
   { href: "/admin/vouchers", label: "Manajemen Voucher", icon: ShieldCheck },
-  { 
-    label: "Kelola Hi Mufradat", 
+  {
+    label: "Kelola Hi Mufradat",
     icon: GraduationCap,
     subItems: [
       { href: "/admin/mufradat/groups", label: "Kelola Group" },
       { href: "/admin/mufradat", label: "Monitor Peserta & Group" },
       { href: "/admin/mufradat/leave", label: "Kelola Permohonan Cuti" },
-      // { href: "/admin/mufradat/juz-access", label: "Hak Akses Juz" }, // Deprecated - replaced by auto-unlock
       { href: "/admin/registrations", label: "Verifikasi Pembayaran" },
       { href: "/admin/mufradat/reports", label: "Laporan Kinerja" },
       { href: "/admin/mufradat/mabar", label: "Kelola Mabar Terjadwal" },
     ]
   },
-  { 
-    label: "Kelola Hi Berbagi", 
+  {
+    label: "Kelola Hi Berbagi",
     icon: HeartHandshake,
     subItems: [
       { href: "/admin/donations", label: "Daftar Infaq" },
       { href: "/admin/campaigns", label: "Kelola Kampanye" },
     ]
   },
-  { 
-    label: "Kelola Hi Ngaji", 
+  {
+    label: "Kelola Hi Ngaji",
     icon: Library,
     subItems: [
       { href: "/admin/classes", label: "Manajemen Kelas" },
     ]
   },
-  { 
-    label: "Kelola Hi Tikrar", 
+  {
+    label: "Kelola Hi Tikrar",
     icon: BookOpen,
     subItems: [
       { href: "/admin/tikrar", label: "Peserta Tikrar" },
     ]
   },
-  { 
-    label: "Kelola Hi Mutabaah", 
+  {
+    label: "Kelola Hi Mutabaah",
     icon: CheckCircle,
     subItems: [
       { href: "/admin/mutabaah", label: "Laporan Mutabaah" },
     ]
   },
-  { 
-    label: "Kelola Hi Muhasabah", 
+  {
+    label: "Kelola Hi Muhasabah",
     icon: Search,
     subItems: [
       { href: "/admin/muhasabah", label: "Laporan Muhasabah" },
     ]
   },
 ];
-
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -128,27 +131,22 @@ export function AppSidebar() {
   };
 
   // Filter menu items based on user permissions
-  const filteredItems = adminItems.map(item => {
-    // For non-subItems (single level items), show for superusers only
-    if (!item.subItems) {
-      return isSuperUser ? item : null;
-    }
+  const filteredItems: AdminMenuItem[] = adminItems
+    .map((item): AdminMenuItem | null => {
+      if (!item.subItems) {
+        return isSuperUser ? item : null;
+      }
 
-    // For superusers, show all subItems
-    if (isSuperUser) return item;
+      if (isSuperUser) return item;
 
-    // For musyrifah, filter subItems based on assigned programs
-    const allowedSubItems = item.subItems.filter(sub => {
-      const program = Object.entries(programMenuMap).find(([_, paths]) => paths.includes(sub.href));
-      return program ? canAccessProgram(program[0] as any) : false;
-    });
+      const allowedSubItems = item.subItems.filter(sub => {
+        const program = Object.entries(programMenuMap).find(([_, paths]) => paths.includes(sub.href));
+        return program ? canAccessProgram(program[0] as any) : false;
+      });
 
-    // Return item with filtered subItems
-    return { ...item, subItems: allowedSubItems };
-  }).filter(item => {
-    // Remove null items and items with no subItems left
-    return item && (!item.subItems || item.subItems.length > 0);
-  });
+      return { ...item, subItems: allowedSubItems };
+    })
+    .filter((item): item is AdminMenuItem => Boolean(item && (!item.subItems || item.subItems.length > 0)));
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -184,7 +182,7 @@ export function AppSidebar() {
             if (item.subItems) {
               const isExpanded = expandedItems.includes(item.label);
               const isAnySubActive = item.subItems.some(sub => pathname === sub.href);
-              
+
               return (
                 <SidebarMenuItem key={item.label}>
                   <div className="flex flex-col gap-1">
@@ -202,14 +200,14 @@ export function AppSidebar() {
                         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </div>
                     </SidebarMenuButton>
-                    
+
                     {isExpanded && (
                       <div className="flex flex-col gap-1 ml-4 pl-4 border-l border-white/10 mt-1">
                         {item.subItems.map((sub) => {
                           const isSubActive = pathname === sub.href;
                           return (
                             <SidebarMenuButton
-                              key={sub.href}
+                              key={`${item.label}-${sub.href}`}
                               asChild
                               isActive={isSubActive}
                               className={cn(
@@ -250,18 +248,19 @@ export function AppSidebar() {
             );
           })}
         </SidebarMenu>
-
       </SidebarContent>
       <SidebarFooter className="p-2 border-t border-[#D4AF37]/30 bg-[#800000]">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
+              asChild
               tooltip="Pengaturan Admin"
               className="text-white hover:bg-white/10 h-11"
-              onClick={handleLinkClick}
             >
-              <Settings className="text-white size-5" />
-              <span className="font-bold group-data-[collapsible=icon]:hidden">Pengaturan</span>
+              <Link href="/admin" onClick={handleLinkClick}>
+                <Settings className="text-white size-5" />
+                <span className="font-bold group-data-[collapsible=icon]:hidden">Pengaturan</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -269,7 +268,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-const SidebarSeparator = () => (
-  <div className="mx-4 my-4 h-px bg-[#D4AF37]/20 group-data-[collapsible=icon]:hidden" />
-);

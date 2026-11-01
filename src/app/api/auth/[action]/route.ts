@@ -44,12 +44,12 @@ export async function POST(
         return NextResponse.json({ error: { message: 'Email atau password salah' } }, { status: 401 });
       }
 
-      // Format user object structure
       const user = {
         id: userRow.id,
         email: userRow.email,
         role: userRow.roleId || userRow.role_id || 'learner',
         roleId: userRow.roleId || userRow.role_id || 'learner',
+        has_password: true,
         user_metadata: {
           full_name: userRow.full_name || userRow.username || email.split('@')[0],
           username: userRow.username,
@@ -128,6 +128,7 @@ export async function POST(
         email,
         role: 'learner',
         roleId: 'learner',
+        has_password: true,
         user_metadata: {
           full_name: fullName,
           username,
@@ -165,7 +166,7 @@ export async function POST(
       return response;
     }
 
-    if (action === 'update-user' || action === 'update-password') {
+    if (action === 'set-password' || action === 'update-user' || action === 'update-password') {
       const token = getTokenFromRequest(req);
       if (!token) {
         return NextResponse.json({ error: { message: 'Sesi tidak ditemukan. Silakan masuk kembali.' } }, { status: 401 });
@@ -176,10 +177,34 @@ export async function POST(
       }
 
       const body = await req.json();
-      const { password } = body;
+      const { password, current_password } = body;
 
       if (!password || typeof password !== 'string' || password.length < 6) {
         return NextResponse.json({ error: { message: 'Kata sandi minimal 6 karakter.' } }, { status: 400 });
+      }
+
+      const existingRes = await query(
+        `SELECT * FROM public.users WHERE id = $1 LIMIT 1`,
+        [decoded.id]
+      );
+      if (existingRes.rows.length === 0) {
+        return NextResponse.json({ error: { message: 'Pengguna tidak ditemukan.' } }, { status: 404 });
+      }
+
+      const existingUser = existingRes.rows[0];
+      if (existingUser.encrypted_password) {
+        if (!current_password || typeof current_password !== 'string') {
+          return NextResponse.json(
+            { error: { message: 'Kata sandi saat ini wajib diisi untuk mengubah kata sandi.' } },
+            { status: 400 }
+          );
+        }
+        if (!verifyPassword(current_password, existingUser.encrypted_password)) {
+          return NextResponse.json(
+            { error: { message: 'Kata sandi saat ini tidak sesuai.' } },
+            { status: 401 }
+          );
+        }
       }
 
       const hashed = hashPassword(password);
@@ -188,16 +213,13 @@ export async function POST(
         [hashed, decoded.id]
       );
 
-      if (rows.length === 0) {
-        return NextResponse.json({ error: { message: 'Pengguna tidak ditemukan.' } }, { status: 404 });
-      }
-
       const u = rows[0];
       const user = {
         id: u.id,
         email: u.email,
         role: u.roleId || u.role_id || 'learner',
         roleId: u.roleId || u.role_id || 'learner',
+        has_password: true,
         user_metadata: {
           full_name: u.full_name || u.username || u.email?.split('@')[0],
           username: u.username,
@@ -267,6 +289,7 @@ export async function GET(
         email: u.email,
         role: u.roleId || u.role_id || 'learner',
         roleId: u.roleId || u.role_id || 'learner',
+        has_password: Boolean(u.encrypted_password),
         user_metadata: {
           full_name: u.full_name || u.username || u.email?.split('@')[0],
           username: u.username,

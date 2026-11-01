@@ -8,6 +8,7 @@ export interface User {
   email?: string;
   role?: string;
   roleId?: string;
+  has_password?: boolean;
   user_metadata?: any;
   app_metadata?: any;
   created_at?: string;
@@ -361,9 +362,13 @@ export function createLocalClient() {
         }
       },
 
-      async updateUser(attributes: { password?: string; data?: Record<string, any> }): Promise<{ data: { user: User | null }; error: any }> {
+      async updateUser(attributes: {
+        password?: string;
+        current_password?: string;
+        data?: Record<string, any>;
+      }): Promise<{ data: { user: User | null }; error: any }> {
         try {
-          const res = await authFetch(`${getBaseUrl()}/api/auth/update-user`, {
+          const res = await authFetch(`${getBaseUrl()}/api/auth/set-password`, {
             method: 'POST',
             body: JSON.stringify(attributes),
           });

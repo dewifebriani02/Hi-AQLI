@@ -1,17 +1,14 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/db";
-import { useDoc, useCollection } from "@/db";
-import { useMemo } from "react";
+import { useUser, useDoc, useCollection } from "@/db";
 
 const studyCircles = [
   {
@@ -74,7 +71,7 @@ export default function StudyCirclesPage() {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   }), [user?.id]);
 
-  const { data: allRegs } = useCollection("halaqah_registrations", regOptions);
+  const { data: allRegs } = useCollection(user ? "halaqah_registrations" : null, regOptions);
 
   const filteredCircles = studyCircles.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -84,15 +81,13 @@ export default function StudyCirclesPage() {
   const getHalaqahStatus = (id: string) => {
     const reg = allRegs?.find(r => r.halaqah_id === id);
     if (!reg) {
-      // Special check for migrated/legacy tikrar data in user profile
       if (id === 'tikrar-j30-b1' && userData?.is_tikrar_paid) return 'active';
       if (userData?.followed_halaqahs?.includes(id)) return 'active';
       return 'none';
     }
-    return reg.status; // 'active', 'pending_verification', 'rejected'
+    return reg.status;
   };
 
-  // 'verified' = disetujui admin atau langsung aktif (program gratis).
   const isHalaqahActive = (id: string) => ['active', 'verified'].includes(getHalaqahStatus(id));
   const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
 
@@ -100,22 +95,17 @@ export default function StudyCirclesPage() {
     return studyCircles.filter(c => isHalaqahActive(c.id) || isHalaqahPending(c.id)).length;
   };
 
-  const getCompletedCount = () => 0; // Simulated for now
+  const getCompletedCount = () => 0;
 
   const renderCircleCard = (circle: typeof studyCircles[0]) => {
     const status = getHalaqahStatus(circle.id);
     const isActive = isHalaqahActive(circle.id);
     const isPending = status === 'pending_verification';
 
-    let href = `/study-circles/registration?id=${circle.id}`;
-    if (isActive) {
-      if (circle.id === 'tikrar-j30-b1') href = '/tikrar';
-      else if (circle.id === 'mufradat-premium') href = '/mufradat';
-      else href = '/';
-    }
+    const href = `/study-circles/${circle.id}`;
 
     return (
-      <Link key={circle.id} href={isPending ? "#" : href}>
+      <Link key={circle.id} href={href}>
         <Card
           className={cn(
             "p-4 hover:bg-accent/50 transition-all cursor-pointer group border-none shadow-sm",
@@ -174,10 +164,10 @@ export default function StudyCirclesPage() {
                 </div>
               </div>
             </div>
-            {!isPending && <ChevronRight className={cn(
+            <ChevronRight className={cn(
               "w-5 h-5 transition-colors",
               isActive ? "text-emerald-400" : "text-muted-foreground/30 group-hover:text-[#800000]"
-            )} />}
+            )} />
           </div>
         </Card>
       </Link>

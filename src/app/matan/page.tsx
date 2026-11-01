@@ -28,7 +28,10 @@ export default function MatanDashboard() {
 
   const { data: progress } = useCollection(user ? "matan_user_progress" : null, progressOptions);
 
-  const totalXp = progress?.reduce((acc, p) => acc + (p.points_awarded || 0), 0) || 0;
+  const totalXp = progress?.reduce(
+    (acc, p) => acc + (p.points_awarded ?? ((p.memorized || p.status_paham) ? 40 : 0)),
+    0
+  ) || 0;
   const currentRank = totalXp > 5000 ? 'Ustadz Nahwu' : totalXp > 1000 ? 'An-Nahwi' : 'Thalibul Ilmi';
 
   if (isMatansLoading) {

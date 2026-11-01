@@ -43,16 +43,62 @@ const ALLOWED_TABLES = new Set([
   'mufradat_reminder_configs',
 ]);
 
-// Tables whose primary key is not a generated UUID
-const NON_UUID_PK_TABLES = new Set(['matans', 'mufradat_reminder_configs']);
+// Tables whose primary key is not a single generated `id` UUID column
+const NON_UUID_PK_TABLES = new Set([
+  'mufradat_reminder_configs',
+  'mufradat_mabar_participants',
+]);
 
 class BadRequest extends Error {}
 
-function normalizeUserPayload(record: Record<string, any>): Record<string, any> {
+function mapColumnName(table: string | undefined, col: string): string {
+  if (table === 'users' && col === 'paid_juz') return 'paidJuz';
+  if (table === 'page_exams' && col === 'page') return 'page_number';
+  if (table === 'matan_chapters' && col === 'order_index') return 'chapter_number';
+  if (table === 'matan_items') {
+    if (col === 'order_index') return 'item_number';
+    if (col === 'bait_arabic') return 'arabic';
+  }
+  if (table === 'matan_user_progress' && col === 'status_paham') return 'memorized';
+  return col;
+}
+
+function normalizeTablePayload(table: string, record: Record<string, any>): Record<string, any> {
   const out = { ...record };
-  if ('paid_juz' in out && !('paidJuz' in out)) {
-    out.paidJuz = out.paid_juz;
+  if (table === 'users') {
+    if ('paid_juz' in out && !('paidJuz' in out)) {
+      out.paidJuz = out.paid_juz;
+    }
     delete out.paid_juz;
+  } else if (table === 'page_exams') {
+    if ('page' in out && !('page_number' in out)) {
+      out.page_number = out.page;
+    }
+    delete out.page;
+    delete out.user_name;
+    delete out.juz;
+    delete out.status;
+    delete out.requested_at;
+  } else if (table === 'matan_chapters') {
+    if ('order_index' in out && !('chapter_number' in out)) {
+      out.chapter_number = out.order_index;
+    }
+    delete out.order_index;
+  } else if (table === 'matan_items') {
+    if ('order_index' in out && !('item_number' in out)) {
+      out.item_number = out.order_index;
+    }
+    if ('bait_arabic' in out && !('arabic' in out)) {
+      out.arabic = out.bait_arabic;
+    }
+    delete out.order_index;
+    delete out.bait_arabic;
+  } else if (table === 'matan_user_progress') {
+    if ('status_paham' in out && !('memorized' in out)) {
+      out.memorized = Boolean(out.status_paham);
+    }
+    delete out.status_paham;
+    delete out.points_awarded;
   }
   return out;
 }
@@ -90,7 +136,7 @@ function buildWhere(filters: Filter[], values: any[], strict: boolean, table?: s
       if (strict) throw new BadRequest(`Filter '${f.column}' tidak memiliki nilai`);
       continue;
     }
-    const colName = (table === 'users' && f.column === 'paid_juz') ? 'paidJuz' : f.column;
+    const colName = mapColumnName(table, f.column);
     const col = sanitizeIdentifier(colName);
     const op = (f.op || 'eq').toLowerCase();
     const param = (v: any) => {
@@ -176,7 +222,13 @@ function buildSelectList(select: string, ctx: AuthContext, table?: string): { sq
   const cols = splitTopLevel(select).map((token) => {
     if (token === '*') return 't.*';
     if (table === 'users' && token === 'paid_juz') return 't."paidJuz" AS paid_juz';
-    if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(token)) return `t.${sanitizeIdentifier(token)}`;
+    if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(token)) {
+      const mapped = mapColumnName(table, token);
+      if (mapped !== token) {
+        return `t.${sanitizeIdentifier(mapped)} AS ${sanitizeIdentifier(token)}`;
+      }
+      return `t.${sanitizeIdentifier(token)}`;
+    }
 
     const m = token.match(/^([a-z_]+)\s*\(([^()]*)\)$/);
     if (!m) throw new BadRequest(`Kolom select tidak valid: ${token}`);
@@ -189,7 +241,7 @@ function buildSelectList(select: string, ctx: AuthContext, table?: string): { sq
     let obj = 'to_jsonb(r)';
     if (inner !== '' && inner !== '*') {
       const innerCols = inner.split(',').map((c) => c.trim()).filter(Boolean);
-      obj = `jsonb_build_object(${innerCols.map((c) => `'${c}', r.${sanitizeIdentifier(c)}`).join(', ')})`;
+      obj = `jsonb_build_object(${innerCols.map((c) => `'${c}', r.${sanitizeIdentifier(mapColumnName(rel, c))}`).join(', ')})`;
     }
     embeds.push(rel);
     return `(SELECT ${obj} FROM public.${rel} r WHERE r.id = t.${fk} LIMIT 1) AS ${rel}`;
@@ -255,7 +307,7 @@ export async function POST(req: NextRequest) {
       let orderSql = '';
       if (Array.isArray(orderBy) && orderBy.length > 0) {
         const orderClauses = orderBy.map((o: any) => {
-          const colName = (table === 'users' && o.column === 'paid_juz') ? 'paidJuz' : o.column;
+          const colName = mapColumnName(table, o.column);
           const col = sanitizeIdentifier(colName);
           const dir = o.ascending === false ? 'DESC' : 'ASC';
           const nulls = o.nullsFirst ? 'NULLS FIRST' : 'NULLS LAST';
@@ -308,13 +360,15 @@ export async function POST(req: NextRequest) {
       }
 
       const conflictCols = action === 'upsert'
-        ? String(body.onConflict || 'id').split(',').map((c) => c.trim()).filter(Boolean)
+        ? String(body.onConflict || 'id')
+            .split(',')
+            .map((c) => mapColumnName(table, c.trim()))
+            .filter(Boolean)
         : [];
 
       const resultRows = [];
       for (const rawRecord of records) {
-        let record: Record<string, any> = { ...rawRecord };
-        if (table === 'users') record = normalizeUserPayload(record);
+        let record: Record<string, any> = normalizeTablePayload(table, rawRecord);
         if (ownerColumn) record = sanitizeOwnedRecord(table, record, ownerColumn, ctx, false);
 
         // Auto generate UUID for id if table uses UUID and id not provided
@@ -328,11 +382,10 @@ export async function POST(req: NextRequest) {
         const values = cols.map((c) => toDbValue(record[c]));
 
         let sql = `INSERT INTO ${safeTable} AS t (${colNames}) VALUES (${placeholders})`;
+        const createOnly = !staff && table === 'donations';
 
         if (action === 'upsert') {
           let conflictAction = 'DO NOTHING';
-          // Donations from non-staff are create-only.
-          const createOnly = !staff && table === 'donations';
           if (!body.ignoreDuplicates && !createOnly) {
             // Never rewrite the primary key of an existing row (id may be auto-generated above).
             const updateCols = cols.filter((c) => !conflictCols.includes(c) && c !== 'id');
@@ -351,8 +404,80 @@ export async function POST(req: NextRequest) {
         }
 
         if (returning) sql += ' RETURNING *';
-        const { rows } = await query(sql, values);
-        if (rows.length > 0) resultRows.push(rows[0]);
+
+        try {
+          const { rows } = await query(sql, values);
+          if (rows.length > 0) resultRows.push(rows[0]);
+        } catch (upsertErr: any) {
+          // Fallback if PostgreSQL table lacks a formal UNIQUE constraint on conflictCols (SQLSTATE 42P10)
+          if (action === 'upsert' && upsertErr?.code === '42P10' && conflictCols.length > 0) {
+            const matchValues: any[] = [];
+            const matchClauses: string[] = [];
+            for (const cc of conflictCols) {
+              const v = record[cc];
+              if (v === null || v === undefined) {
+                matchClauses.push(`t.${sanitizeIdentifier(cc)} IS NULL`);
+              } else {
+                matchValues.push(toDbValue(v));
+                matchClauses.push(`t.${sanitizeIdentifier(cc)} = $${matchValues.length}`);
+              }
+            }
+            if (ownerColumn) {
+              matchValues.push(ctx.userId);
+              matchClauses.push(`t.${sanitizeIdentifier(ownerColumn)} = $${matchValues.length}`);
+            }
+
+            const existingRes = await query(
+              `SELECT * FROM ${safeTable} AS t WHERE ${matchClauses.join(' AND ')} LIMIT 1`,
+              matchValues
+            );
+
+            if (existingRes.rows.length > 0) {
+              if (body.ignoreDuplicates || createOnly) {
+                if (returning) resultRows.push(existingRes.rows[0]);
+              } else {
+                const updateCols = cols.filter((c) => !conflictCols.includes(c) && c !== 'id');
+                if (updateCols.length === 0) {
+                  if (returning) resultRows.push(existingRes.rows[0]);
+                } else {
+                  const updValues: any[] = [];
+                  const updSet = updateCols.map((c) => {
+                    updValues.push(toDbValue(record[c]));
+                    return `${sanitizeIdentifier(c)} = $${updValues.length}`;
+                  });
+                  const updWhere: string[] = [];
+                  for (const cc of conflictCols) {
+                    const v = record[cc];
+                    if (v === null || v === undefined) {
+                      updWhere.push(`${sanitizeIdentifier(cc)} IS NULL`);
+                    } else {
+                      updValues.push(toDbValue(v));
+                      updWhere.push(`${sanitizeIdentifier(cc)} = $${updValues.length}`);
+                    }
+                  }
+                  if (ownerColumn) {
+                    updValues.push(ctx.userId);
+                    updWhere.push(`${sanitizeIdentifier(ownerColumn)} = $${updValues.length}`);
+                  }
+                  const updRes = await query(
+                    `UPDATE ${safeTable} SET ${updSet.join(', ')} WHERE ${updWhere.join(' AND ')} ${returning ? 'RETURNING *' : ''}`,
+                    updValues
+                  );
+                  if (updRes.rows.length > 0) resultRows.push(updRes.rows[0]);
+                }
+              }
+            } else {
+              const insValues = cols.map((c) => toDbValue(record[c]));
+              const insRes = await query(
+                `INSERT INTO ${safeTable} (${colNames}) VALUES (${placeholders}) ${returning ? 'RETURNING *' : ''}`,
+                insValues
+              );
+              if (insRes.rows.length > 0) resultRows.push(insRes.rows[0]);
+            }
+          } else {
+            throw upsertErr;
+          }
+        }
       }
 
       const redacted = redactRows(table, resultRows, [], ctx);
@@ -369,7 +494,7 @@ export async function POST(req: NextRequest) {
       if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
         return NextResponse.json({ error: { message: 'Data is required' } }, { status: 400 });
       }
-      if (table === 'users') data = normalizeUserPayload(data);
+      data = normalizeTablePayload(table, data);
       if (ownerColumn) data = sanitizeOwnedRecord(table, data, ownerColumn, ctx, true);
 
       const cols = Object.keys(data);

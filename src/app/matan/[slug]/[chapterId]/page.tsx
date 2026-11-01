@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 
 import { useUser, db, useCollection, useDoc } from '@/db';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface MatanQuiz {
   question: string;
   options: string[];
@@ -35,6 +37,7 @@ interface MatanQuiz {
 
 interface MatanItem {
   id?: string;
+  arabic?: string;
   bait_arabic: string;
   translation: string;
   syarah_text: string;
@@ -52,21 +55,21 @@ interface MatanItem {
 const FALLBACK_KALAM_ITEMS: MatanItem[] = [
   {
     id: 'initial-kalam-1',
-    bait_arabic: 'الكَلَامُ هُوَ اللَّفْظُ المُرَكَّبُ المُفِيدُ بِالوَضْعِ',
+    bait_arabic: '\u0627\u0644\u0643\u064e\u0644\u064e\u0627\u0645\u064f \u0647\u064f\u0648\u064e \u0627\u0644\u0644\u064e\u0651\u0641\u0652\u0638\u064f \u0627\u0644\u0645\u064f\u0631\u064e\u0643\u064e\u0651\u0628\u064f \u0627\u0644\u0645\u064f\u0641\u0650\u064a\u062f\u064f \u0628\u0650\u0627\u0644\u0648\u064e\u0636\u0652\u0639\u0650',
     translation: 'Kalam adalah lafazh yang tersusun, memberikan faedah (makna sempurna), dan diucapkan dengan sengaja dalam bahasa Arab.',
     syarah_text: `
       <p class="mb-4">Dalam ilmu Nahwu, suatu ucapan baru disebut <strong>Al-Kalam</strong> apabila memenuhi <strong>4 syarat utama</strong>:</p>
       <ul class="list-disc pl-6 space-y-2 mb-4">
-        <li><strong>Al-Lafzhu (اللَّفْظُ):</strong> Suara yang mengandung sebagian huruf hijaiyah (bukan isyarat atau tulisan semata).</li>
-        <li><strong>Al-Murakkabu (المُرَكَّبُ):</strong> Tersusun dari minimal dua kata atau lebih (misalnya <em>Zaidun Qa'imun</em>).</li>
-        <li><strong>Al-Mufidu (المُفِيدُ):</strong> Memberikan pengertian yang sempurna sehingga pendengar tidak menunggu kelanjutan kalimat.</li>
-        <li><strong>Bil-Wadh'i (بِالوَضْعِ):</strong> Disengaja dan menggunakan kaidah bahasa Arab.</li>
+        <li><strong>Al-Lafzhu (\u0627\u0644\u0644\u064e\u0651\u0641\u0652\u0638\u064f):</strong> Suara yang mengandung sebagian huruf hijaiyah (bukan isyarat atau tulisan semata).</li>
+        <li><strong>Al-Murakkabu (\u0627\u0644\u0645\u064f\u0631\u064e\u0643\u064e\u0651\u0628\u064f):</strong> Tersusun dari minimal dua kata atau lebih (misalnya <em>Zaidun Qa'imun</em>).</li>
+        <li><strong>Al-Mufidu (\u0627\u0644\u0645\u064f\u0641\u0650\u064a\u062f\u064f):</strong> Memberikan pengertian yang sempurna sehingga pendengar tidak menunggu kelanjutan kalimat.</li>
+        <li><strong>Bil-Wadh'i (\u0628\u0650\u0627\u0644\u0648\u064e\u0636\u0652\u0639\u0650):</strong> Disengaja dan menggunakan kaidah bahasa Arab.</li>
       </ul>
-      <p> Pembagian kata penyusun Kalam ada tiga: <strong>Isim</strong> (kata benda/sifat), <strong>Fi'il</strong> (kata kerja), dan <strong>Harf</strong> (kata tugas yang memiliki makna).</p>
+      <p>Pembagian kata penyusun Kalam ada tiga: <strong>Isim</strong> (kata benda/sifat), <strong>Fi'il</strong> (kata kerja), dan <strong>Harf</strong> (kata tugas yang memiliki makna).</p>
     `,
     audio_url: null,
     example_verse: {
-      text: 'ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ',
+      text: '\u0671\u0644\u0652\u062d\u064e\u0645\u0652\u062f\u064f \u0644\u0650\u0644\u064e\u0651\u0647\u0650 \u0631\u064e\u0628\u0650\u0651 \u0671\u0644\u0652\u0639\u064e\u0640\u0670\u0644\u064e\u0645\u0650\u064a\u0646\u064e',
       surah: 1,
       ayat: 2,
     },
@@ -77,7 +80,7 @@ const FALLBACK_KALAM_ITEMS: MatanItem[] = [
         correct: '4 Syarat',
       },
       {
-        question: 'Apa makna syarat "Al-Murakkabu" (المُرَكَّبُ) pada definisi Kalam?',
+        question: 'Apa makna syarat "Al-Murakkabu" (\u0627\u0644\u0645\u064f\u0631\u064e\u0643\u064e\u0651\u0628\u064f) pada definisi Kalam?',
         options: [
           'Tersusun dari dua kata atau lebih',
           'Berupa isyarat tangan',
@@ -87,7 +90,7 @@ const FALLBACK_KALAM_ITEMS: MatanItem[] = [
         correct: 'Tersusun dari dua kata atau lebih',
       },
       {
-        question: 'Apa arti dari syarat "Al-Mufidu" (المُفِيدُ)?',
+        question: 'Apa arti dari syarat "Al-Mufidu" (\u0627\u0644\u0645\u064f\u0641\u0650\u064a\u062f\u064f)?',
         options: [
           'Memberi faedah makna yang sempurna',
           'Bersuara keras',
@@ -116,20 +119,20 @@ export default function MatanChapterReader() {
   const slug = params.slug as string;
   const chapterId = params.chapterId as string;
 
-  const isSeedChapter = chapterId === 'initial';
+  const isUuidChapter = UUID_RE.test(chapterId || '');
 
   const { data: chapterDoc } = useDoc(
-    !isSeedChapter ? "matan_chapters" : null,
-    !isSeedChapter ? chapterId : null
+    isUuidChapter ? "matan_chapters" : null,
+    isUuidChapter ? chapterId : null
   );
 
   const itemsOptions = useMemo(() => ({
     filters: [{ column: 'chapter_id', operator: '==', value: chapterId }],
-    orderBy: { column: 'order_index', ascending: true },
+    orderBy: { column: 'item_number', ascending: true },
   }), [chapterId]);
 
-  const { data: dbItems, isLoading: isItemsLoading } = useCollection<MatanItem>(
-    !isSeedChapter ? "matan_items" : null,
+  const { data: dbItems, isLoading: isItemsLoading } = useCollection<any>(
+    isUuidChapter ? "matan_items" : null,
     itemsOptions
   );
 
@@ -137,7 +140,7 @@ export default function MatanChapterReader() {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }],
   }), [user?.id]);
 
-  const { data: currentProgress } = useCollection(user ? "matan_user_progress" : null, progressOptions);
+  const { data: currentProgress, refresh: refreshProgress } = useCollection(user ? "matan_user_progress" : null, progressOptions);
 
   const [activeItem, setActiveItem] = useState(0);
   const [showSyarah, setShowSyarah] = useState(false);
@@ -160,14 +163,34 @@ export default function MatanChapterReader() {
   const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const effectiveItems: MatanItem[] = useMemo(() => {
-    if (dbItems && dbItems.length > 0) return dbItems;
+    if (dbItems && dbItems.length > 0) {
+      return dbItems.map((raw: any) => {
+        const arabicText = raw.bait_arabic || raw.arabic || '';
+        const translationText = raw.translation || '';
+        const syarah = raw.syarah_text || `
+          <p class="mb-3">Perhatikan susunan lafazh matan berikut:</p>
+          <p class="font-bold text-slate-900 mb-3">${arabicText}</p>
+          <p>${translationText || 'Pelajari makna kaidah di atas dengan saksama sebelum melanjutkan ke latihan pemahaman.'}</p>
+        `;
+        const fallbackQuizzes: MatanQuiz[] = Array.isArray(raw.quizzes) && raw.quizzes.length > 0
+          ? raw.quizzes
+          : FALLBACK_KALAM_ITEMS[0].quizzes;
+        return {
+          ...raw,
+          bait_arabic: arabicText,
+          translation: translationText,
+          syarah_text: syarah,
+          quizzes: fallbackQuizzes,
+        };
+      });
+    }
     return FALLBACK_KALAM_ITEMS;
   }, [dbItems]);
 
   const item: MatanItem = effectiveItems[activeItem] || FALLBACK_KALAM_ITEMS[0];
   const quizzes = Array.isArray(item.quizzes) ? item.quizzes : [];
   const chapterTitle = chapterDoc?.title || 'Bab Al-Kalam';
-  const chapterStepLabel = chapterDoc?.order_index !== undefined ? Number(chapterDoc.order_index) + 1 : 1;
+  const chapterStepLabel = chapterDoc?.chapter_number ?? (chapterDoc?.order_index !== undefined ? Number(chapterDoc.order_index) + 1 : 1);
 
   const quizId = `matan_${slug}_${item.id || chapterId}`;
   const leaderboardOptions = useMemo(() => ({
@@ -223,7 +246,10 @@ export default function MatanChapterReader() {
     return Array.from(bestByUser.values()).slice(0, 5);
   }, [quizAttempts, leaderboardUsers, quizzes.length, formatTime]);
 
-  const totalXp = currentProgress?.reduce((acc, p) => acc + (p.points_awarded || 0), 0) || 0;
+  const totalXp = currentProgress?.reduce(
+    (acc, p) => acc + (p.points_awarded ?? ((p.memorized || p.status_paham) ? 40 : 0)),
+    0
+  ) || 0;
 
   // SFX Logic
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
@@ -343,13 +369,25 @@ export default function MatanChapterReader() {
             created_at: new Date().toISOString()
           });
 
-          if (isPassed && dbItems?.[activeItem]?.id) {
-            await db.from('matan_user_progress').upsert({
-              user_id: user.id,
-              item_id: dbItems[activeItem].id,
-              status_paham: true,
-              points_awarded: score * 10
-            });
+          const currentDbItem = dbItems?.[activeItem];
+          if (isPassed && currentDbItem?.id && UUID_RE.test(currentDbItem.id)) {
+            const existing = currentProgress?.find((p: any) => p.item_id === currentDbItem.id);
+            if (existing?.id) {
+              await db.from('matan_user_progress').update({
+                memorized: true,
+                updated_at: new Date().toISOString(),
+              }).eq('id', existing.id);
+            } else {
+              await db.from('matan_user_progress').insert({
+                user_id: user.id,
+                matan_id: chapterDoc?.matan_id || null,
+                chapter_id: isUuidChapter ? chapterId : null,
+                item_id: currentDbItem.id,
+                memorized: true,
+                updated_at: new Date().toISOString(),
+              });
+            }
+            refreshProgress();
           }
 
           refreshLeaderboard();
@@ -360,7 +398,7 @@ export default function MatanChapterReader() {
 
       saveProgress();
     }
-  }, [quizStage, score, quizzes.length, playSfx, user, dbItems, activeItem, quizId, totalTime, refreshLeaderboard]);
+  }, [quizStage, score, quizzes.length, playSfx, user, dbItems, activeItem, quizId, totalTime, refreshLeaderboard, refreshProgress, chapterDoc?.matan_id, isUuidChapter, chapterId, currentProgress]);
 
   const startQuiz = (mode: 'relax' | 'sprint') => {
     if (quizzes.length === 0) return;
@@ -402,7 +440,7 @@ export default function MatanChapterReader() {
     }
   };
 
-  if (isItemsLoading) {
+  if (isUuidChapter && isItemsLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />

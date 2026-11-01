@@ -109,7 +109,7 @@ export default function MutabaahPage() {
     { id: 'istighfar', label: 'Beristighfar (70-100x)', category: 'Umum', dalil: 'HR. Bukhari: Rasulullah >70x', icon: 'RotateCcw' },
   ], []);
 
-  const { data: userData } = useDoc("users", user?.id);
+  const { data: userData } = useDoc(user ? "users" : null, user?.id);
   const salutation = userData?.salutation || "Ukhti";
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -126,7 +126,7 @@ export default function MutabaahPage() {
     ]
   }), [user?.id, thirtyDaysAgoStr]);
 
-  const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection("mutabaah_logs", logsOptions);
+  const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection(user ? "mutabaah_logs" : null, logsOptions);
 
   const quizOptions = useMemo(() => (user?.id ? {
     filters: [
@@ -135,7 +135,7 @@ export default function MutabaahPage() {
     ]
   } : null), [user?.id, thirtyDaysAgoStr]);
 
-  const { data: quizAttempts } = useCollection("quiz_attempts", quizOptions);
+  const { data: quizAttempts } = useCollection(user ? "quiz_attempts" : null, quizOptions);
 
   const userWeeklyStats = useMemo(() => {
     if (!quizAttempts) return { weeklyPages: 0, activity7Days: [] };

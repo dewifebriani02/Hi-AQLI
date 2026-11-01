@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
-  RotateCcw,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -46,7 +45,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import {useUser, db } from "@/db";
+import { useUser } from "@/db";
 import { useDoc, useCollection } from "@/db";
 import { addDocumentNonBlocking } from "@/db";
 import Link from "next/link";
@@ -69,7 +68,6 @@ const RECITERS = [
   { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
 ];
 
-const TARGET_MAX = 40;
 const PASS_THRESHOLD = 40;
 const META_PASS_THRESHOLD = 10;
 const PREP_LISTEN_THRESHOLD = 5;
@@ -121,12 +119,13 @@ export function TikrarSystem() {
   const examOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'page', operator: '==', value: page }
-    ]
+      { column: 'page_number', operator: '==', value: page }
+    ],
+    orderBy: { column: 'created_at', ascending: false },
   }), [user?.id, page]);
 
-  const { data: examRequests } = useCollection("page_exams", examOptions);
-  const activeExam = examRequests?.find(r => r.status !== 'failed');
+  const { data: examRequests } = useCollection(user ? "page_exams" : null, examOptions);
+  const activeExam = examRequests?.[0];
 
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -167,7 +166,6 @@ export function TikrarSystem() {
         
         if (data && data.verses && data.verses.length > 0) {
           setVerses(data.verses);
-          // Point 4: Pre-fetch first audio URL instantly after loading verses
           if (selectedReciterId) {
             getAudioUrlByVerseKey(data.verses[0].verse_key, selectedReciterId).then(url => {
               nextAudioUrlRef.current = url;
@@ -214,7 +212,6 @@ export function TikrarSystem() {
   useEffect(() => {
     if (loading || typeof window === 'undefined') return;
 
-    // Debounce saving to localStorage to prevent lag during rapid increments
     const timer = setTimeout(() => {
       const existing = localStorage.getItem(`tikrar_progress_p${page}`);
       const parsed = existing ? JSON.parse(existing) : {};
@@ -225,7 +222,7 @@ export function TikrarSystem() {
         blocks,
         metaCounts
       }));
-    }, 500); // Wait 500ms after last change before writing to disk
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, loading]);
@@ -286,7 +283,7 @@ export function TikrarSystem() {
     }
 
     setPlayingVerseIndex(vIndex);
-    let fullUrl = nextAudioUrlRef.current || await getAudioUrl(vIndex);
+    const fullUrl = nextAudioUrlRef.current || await getAudioUrl(vIndex);
 
     if (!fullUrl) {
       stopAutoPlay();
@@ -324,13 +321,12 @@ export function TikrarSystem() {
     try {
       await addDocumentNonBlocking("page_exams", {
         user_id: user.id,
-        user_name: userData?.username || user.user_metadata?.full_name || "Thalibah",
-        page: page,
-        juz: juz,
-        status: "requested",
-        requested_at: new Date().toISOString()
+        page_number: page,
+        score: 0,
+        passed: false,
+        created_at: new Date().toISOString()
       });
-      const text = `Assalamu'alaikum Admin HI AQLI, saya ${userData?.username || user.user_metadata?.full_name} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
+      const text = `Assalamu'alaikum Admin HI AQLI, saya ${userData?.username || user.user_metadata?.full_name || "Thalibah"} telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
       window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(text)}`, '_blank');
       toast({ title: "Permohonan Dikirim", description: "Admin HI AQLI akan segera menjadwalkan ujian lisan Ukhti." });
     } catch (e) {
@@ -362,6 +358,10 @@ export function TikrarSystem() {
   }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
 
   if (isUserDataLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#800000]" /></div>;
+
+  const activeExamStatusLabel = activeExam
+    ? (activeExam.passed ? `LULUS (Skor ${activeExam.score || 100})` : "MENUNGGU JADWAL ADMIN")
+    : null;
 
   return (
     <div className="space-y-8 pb-32">
@@ -458,9 +458,9 @@ export function TikrarSystem() {
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Pilih Qari Al-Qur'an</DialogTitle>
+                          <DialogTitle>Pilih Qari Al-Qur&apos;an</DialogTitle>
                           <DialogDescription className="sr-only">
-                            Pilih qari favorit Ukhti untuk mendengarkan audio tilawah Al-Qur'an.
+                            Pilih qari favorit Ukhti untuk mendengarkan audio tilawah Al-Qur&apos;an.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-2 py-4">
@@ -505,7 +505,7 @@ export function TikrarSystem() {
                       </div>
                       <div className="bg-[#800000]/5 p-5 rounded-3xl border-l-4 border-[#800000]">
                         <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest mb-2"><BookOpen className="w-3 h-3" /> Terjemahan Kalimat</div>
-                        <p className="text-sm sm:text-base text-black leading-relaxed italic font-medium">"{verses[playingVerseIndex].translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || "Memuat terjemahan..."}"</p>
+                        <p className="text-sm sm:text-base text-black leading-relaxed italic font-medium">&ldquo;{verses[playingVerseIndex].translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || "Memuat terjemahan..."}&rdquo;</p>
                       </div>
                     </div>
                   </div>
@@ -591,8 +591,8 @@ export function TikrarSystem() {
                     <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                       <div className="space-y-2">
                         <div className="w-12 h-12 rounded-2xl bg-[#800000]/10 flex items-center justify-center mb-4">{activeExam ? <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" /> : <MessageSquare className="w-6 h-6 text-[#800000]" />}</div>
-                        <h5 className="text-lg font-black leading-tight uppercase">{activeExam ? "Ujian Diajukan" : "Ajukan Ujian Lisan"}</h5>
-                        <p className="text-[11px] opacity-80 leading-relaxed">{activeExam ? `Status: ${activeExam.status.toUpperCase()}. Tunggu instruksi Admin.` : "Dapatkan sertifikasi Itqan melalui ujian lisan resmi."}</p>
+                        <h5 className="text-lg font-black leading-tight uppercase">{activeExam ? (activeExam.passed ? "Ujian Lulus" : "Ujian Diajukan") : "Ajukan Ujian Lisan"}</h5>
+                        <p className="text-[11px] opacity-80 leading-relaxed">{activeExam ? `Status: ${activeExamStatusLabel}.` : "Dapatkan sertifikasi Itqan melalui ujian lisan resmi."}</p>
                       </div>
                       {!activeExam && (
                         <Button onClick={handleRequestExam} disabled={isRequestingExam} className="bg-[#800000] text-white font-black w-full rounded-xl hover:bg-[#800000]/90 h-12 shadow-lg">
@@ -638,7 +638,7 @@ function MaqtaCard({ id, page, state, verses, onIncrement, fontSize, isLocked, l
   return (
     <Card className={cn("border-2 transition-all shadow-md overflow-hidden flex flex-col h-full", isDoneG ? "border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10" : "border-[#800000]/20", isLocked && "opacity-50 grayscale select-none")}>
       <div className="bg-[#800000] py-2 px-4 border-b flex justify-between items-center shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-widest text-white truncate">BLOK {letter} ({page}{letter}) {isLocked && "• LOCK"}</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-white truncate">BLOK {letter} ({page}{letter}) {isLocked && "\u2022 LOCK"}</span>
         {isDoneG && <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4 shrink-0">TUNTAS</Badge>}
       </div>
       <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">

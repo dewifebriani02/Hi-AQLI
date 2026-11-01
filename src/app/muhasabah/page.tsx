@@ -80,7 +80,7 @@ export default function MuhasabahPage() {
     ]
   }), [user?.id, thirtyDaysAgoStr]);
 
-  const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection("mutabaah_logs", logsOptions);
+  const { data: mutabaahLogs, refresh: reloadMutabaah } = useCollection(user ? "mutabaah_logs" : null, logsOptions);
 
   const todayLogs = useMemo(() => {
     // Combine real logs with optimistic changes

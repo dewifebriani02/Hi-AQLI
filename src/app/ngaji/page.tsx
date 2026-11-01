@@ -1,17 +1,14 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Banknote, Calendar, GraduationCap, Award, Bot, Lock, Mic } from "lucide-react";
+import { Search, Users, Clock, User, ChevronRight, BookOpen, Zap, PlayCircle, Timer, CheckCircle2, Loader2, Library, Calendar, GraduationCap, Award, Bot, Lock } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/db";
-import { useDoc, useCollection, useCount } from "@/db";
-import { useMemo } from "react";
+import { useUser, useDoc, useCollection } from "@/db";
 import { isProgramFree } from "@/lib/program-settings";
 
 // Special ID for Tikrar Premium logic
@@ -21,7 +18,7 @@ export default function NgajiPage() {
   const [search, setSearch] = useState("");
   const { user } = useUser();
 
-  const { data: userData } = useDoc("users", user?.id);
+  const { data: userData } = useDoc(user ? "users" : null, user?.id);
   const salutation = userData?.salutation || "Ukhti";
 
   // Fetch all classes from database
@@ -31,11 +28,7 @@ export default function NgajiPage() {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   }), [user?.id]);
 
-  const { data: userRegs } = useCollection("halaqah_registrations", userRegOptions);
-
-  // Optimized Quota Calculation (Count-based)
-  // For now we'll just remove the expensive global fetch. 
-  // In a real prod app, we'd use a single RPC call for per-halaqah counts.
+  const { data: userRegs } = useCollection(user ? "halaqah_registrations" : null, userRegOptions);
 
   const filteredCircles = dbHalaqahs?.filter((c) => {
     const matchesSearch = (c.title || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -58,12 +51,7 @@ export default function NgajiPage() {
   const isHalaqahPending = (id: string) => getHalaqahStatus(id) === 'pending_verification';
 
   const getSisaKuota = (halaqah: any) => {
-    // Note: Since we can't efficiently count per-halaqah in a loop with hooks, 
-    // a better approach is a pre-calculated field in DB. 
-    // For now, we'll return a placeholder or use the global count if it was small, 
-    // but fetching all was definitely the wrong way.
-    // Optimization: In a real app, this should be its own API call or field.
-    return Math.max(0, (halaqah.quota || 40) - 0); 
+    return Math.max(0, (halaqah.quota || 40) - 0);
   };
 
   const renderCircleCard = (circle: any) => {
@@ -75,7 +63,7 @@ export default function NgajiPage() {
 
     let href = `/study-circles/registration?id=${circle.id}`;
     if (isActive) {
-      href = circle.id === TIKRAR_ID ? '/hafal' : `/study-circles/${circle.id}`;
+      href = circle.id === TIKRAR_ID ? '/tikrar' : `/study-circles/${circle.id}`;
     }
 
     return (
@@ -96,11 +84,11 @@ export default function NgajiPage() {
                   "flex items-center justify-center w-12 h-12 rounded-xl font-bold shrink-0",
                   isActive ? "bg-[#D4AF37] text-black" :
                     isPending ? "bg-amber-500 text-white" :
-                      circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+                      (circle.is_premium || circle.isPremium) ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
                 )}>
                   {isActive ? <PlayCircle className="w-6 h-6" /> :
                     isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
-                      (circle.is_premium || circle.is_premium) ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                      (circle.is_premium || circle.isPremium) ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                 </div>
                 <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -118,7 +106,7 @@ export default function NgajiPage() {
                   <div className="flex flex-col gap-0.5 mt-1">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
                       <User className="w-3 h-3 text-[#800000]" />
-                      <span>Mu'allimah: {circle.muallimah}</span>
+                      <span>Mu&apos;allimah: {circle.muallimah}</span>
                     </div>
                     {circle.musyrifah && (
                       <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
@@ -140,13 +128,13 @@ export default function NgajiPage() {
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Rentang</span>
                 <span className="text-[9px] font-bold flex flex-col leading-tight">
-                  <span className="flex items-center gap-1"><Calendar className="w-2.5 h-2.5 text-[#800000]" /> { (circle.start_date || circle.startDate) ? new Date(circle.start_date || circle.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
-                  <span className="flex items-center gap-1 ml-3.5 text-muted-foreground">s/d { (circle.end_date || circle.endDate) ? new Date(circle.end_date || circle.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+                  <span className="flex items-center gap-1"><Calendar className="w-2.5 h-2.5 text-[#800000]" /> {(circle.start_date || circle.startDate) ? new Date(circle.start_date || circle.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+                  <span className="flex items-center gap-1 ml-3.5 text-muted-foreground">s/d {(circle.end_date || circle.endDate) ? new Date(circle.end_date || circle.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
                 </span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Durasi</span>
-                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {Math.ceil(( (circle.duration_weeks || circle.durationWeeks) || 4) / 4)} Bulan</span>
+                <span className="text-[10px] font-bold flex items-center gap-1"><Timer className="w-2.5 h-2.5 text-[#800000]" /> {Math.ceil(((circle.duration_weeks || circle.durationWeeks) || 4) / 4)} Bulan</span>
               </div>
               <div className="flex flex-col items-end">
                 <span className="text-[8px] font-black text-muted-foreground uppercase">Sisa Kuota</span>
@@ -176,7 +164,7 @@ export default function NgajiPage() {
           <BookOpen className="w-5 h-5" />
           <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">Hi Ngaji • Pendaftaran Kelas</span>
         </div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Materi & Pendaftaran</h1>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Materi &amp; Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
           Pilih program sesuai level {salutation}. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
         </p>
