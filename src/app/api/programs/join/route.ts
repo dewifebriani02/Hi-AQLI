@@ -179,7 +179,15 @@ export async function POST(req: NextRequest) {
         push('mufradat_group_id = ?', groupId);
       }
       push('mufradat_status = ?', 'active');
-      if (typeof metadata.schedule === 'string') push('mufradat_schedule = ?', metadata.schedule);
+      if (typeof metadata.schedule === 'string') {
+        const { rows: schedCols } = await client.query(
+          `SELECT column_name FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'mufradat_schedule'`
+        );
+        if (schedCols.length > 0) {
+          push('mufradat_schedule = ?', metadata.schedule);
+        }
+      }
     }
 
     if (programKey === 'tikrar') {
