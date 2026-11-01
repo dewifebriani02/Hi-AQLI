@@ -566,8 +566,8 @@ export default function DashboardPage() {
         program: 'Hi Berbagi',
         status: d.status === 'verified' ? 'Berhasil' : 'Pending',
         title: d.campaign_title || 'Infaq Umum',
-        subtitle: `Rp ${d.amount.toLocaleString('id-ID')}`,
-        timestamp: d.created_at,
+        subtitle: `Rp ${(d.amount || 0).toLocaleString('id-ID')}`,
+        timestamp: d.created_at || d.createdAt || new Date().toISOString(),
         icon: HeartPulse,
         color: d.status === 'verified' ? 'text-blue-600' : 'text-amber-500'
       });
@@ -1125,10 +1125,10 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-4">
             {recentActivities.slice(historyPage * 5, (historyPage + 1) * 5).map((activity) => (
-              <div key={`${activity.type}-${activity.id}`} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-[#800000]/10 hover:bg-[#800000]/[0.02] transition-all group shadow-sm">
-                <div className="flex items-center gap-4 flex-1">
+              <div key={`${activity.type}-${activity.id}`} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-[#800000]/10 hover:bg-[#800000]/[0.02] transition-all group shadow-sm overflow-hidden">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110",
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shrink-0",
                     activity.type === 'quiz' && activity.is_passed ? "bg-emerald-50 text-emerald-600" :
                       activity.type === 'quiz' && !activity.is_passed ? "bg-rose-50 text-rose-600" :
                         activity.type === 'donation' ? "bg-blue-50 text-blue-600" :
@@ -1137,9 +1137,9 @@ export default function DashboardPage() {
                     <activity.icon className="w-6 h-6" />
                   </div>
                   <div className="flex flex-col min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="flex items-center gap-2 mb-0.5 min-w-0">
                       <span className={cn(
-                        "text-[9px] font-black uppercase tracking-[0.15em]",
+                        "text-[9px] font-black uppercase tracking-[0.15em] truncate",
                         activity.type === 'quiz' && activity.is_passed ? "text-emerald-600" :
                           activity.type === 'quiz' && !activity.is_passed ? "text-rose-600" :
                             activity.type === 'donation' ? "text-blue-600" :
@@ -1148,17 +1148,19 @@ export default function DashboardPage() {
                         {activity.status} • {activity.program}
                       </span>
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800 truncate uppercase mt-0.5">
+                    <h4 className="text-sm font-bold text-slate-800 truncate uppercase mt-0.5" title={activity.title}>
                       {activity.title}
                     </h4>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight opacity-70">
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight opacity-70 truncate">
                       {activity.subtitle}
                     </p>
                   </div>
                 </div>
                 <div className="text-right shrink-0 ml-4">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
-                    {new Date(activity.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none whitespace-nowrap">
+                    {activity.timestamp && !isNaN(new Date(activity.timestamp).getTime())
+                      ? new Date(activity.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+                      : '-'}
                   </p>
                 </div>
               </div>
