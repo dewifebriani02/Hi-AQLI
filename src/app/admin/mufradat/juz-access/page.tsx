@@ -1,21 +1,16 @@
-
 'use client';
 
-import {db } from "@/db";
-import { useCollection } from "@/db";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { db, useCollection } from "@/db";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { 
   Loader2, 
   Search, 
   ShieldCheck, 
   Settings2, 
   ChevronRight, 
-  Save,
   CheckCircle2,
-  XCircle,
   BookOpen,
   ArrowLeft
 } from "lucide-react";
@@ -32,7 +27,7 @@ export default function MufradatJuzAccessPage() {
 
   // 1. Fetch Users in Hi Mufradat
   const { data: users, isLoading, refresh } = useCollection("users", {
-    filters: [{ column: 'mufradat_group_id', operator: 'not_null', value: true }],
+    filters: [{ column: 'mufradat_group_id', operator: 'not_null', value: null }],
     orderBy: { column: 'username', ascending: true }
   });
 
@@ -87,7 +82,6 @@ export default function MufradatJuzAccessPage() {
   const handleSyncJuz1All = async () => {
     setIsSaving("bulk-sync");
     try {
-      // 1. Fetch all users who have registered (have mufradat_group_id)
       const { data: mufradatUsers, error: fetchError } = await db
         .from('users')
         .select('id, mufradat_accessible_juz, username')
@@ -96,8 +90,7 @@ export default function MufradatJuzAccessPage() {
       if (fetchError) throw fetchError;
       if (!mufradatUsers) return;
 
-      // 2. Identify users who DON'T have Juz 1 in their access list
-      const usersToUpdate = mufradatUsers.filter(u => {
+      const usersToUpdate = mufradatUsers.filter((u: any) => {
         const juzArray = Array.isArray(u.mufradat_accessible_juz) ? u.mufradat_accessible_juz : [];
         return !juzArray.includes(1);
       });
@@ -110,14 +103,13 @@ export default function MufradatJuzAccessPage() {
         return;
       }
 
-      // 3. Batch perform updates
       let successCount = 0;
       for (const u of usersToUpdate) {
         const current = Array.isArray(u.mufradat_accessible_juz) ? u.mufradat_accessible_juz : [];
         const { error: upError } = await db
           .from('users')
           .update({ 
-            mufradat_accessible_juz: [1, ...current].sort((a,b) => a-b),
+            mufradat_accessible_juz: [1, ...current].sort((a, b) => a - b),
             updated_at: new Date().toISOString()
           })
           .eq('id', u.id);
@@ -142,12 +134,45 @@ export default function MufradatJuzAccessPage() {
     }
   };
 
+  const grantAll = async (userId: string) => {
+    setIsSaving(userId);
+    try {
+      const allJuz = Array.from({ length: 30 }, (_, i) => i + 1);
+      const { error } = await db
+        .from('users')
+        .update({ mufradat_accessible_juz: allJuz, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+      if (error) throw error;
+      refresh();
+      toast({
+        title: "Semua Juz Dibuka",
+        description: "Seluruh Juz 1–30 telah diaktifkan untuk thalibah ini.",
+      });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal membuka semua Juz", description: err.message });
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
   const revokeAll = async (userId: string) => {
     setIsSaving(userId);
     try {
-      await db.from('users').update({ mufradat_accessible_juz: [] }).eq('id', userId);
+      const { error } = await db
+        .from('users')
+        .update({ mufradat_accessible_juz: [], updated_at: new Date().toISOString() })
+        .eq('id', userId);
+      if (error) throw error;
       refresh();
-    } finally { setIsSaving(null); }
+      toast({
+        title: "Akses Juz Ditutup",
+        description: "Seluruh akses Juz thalibah telah direset.",
+      });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal menutup akses Juz", description: err.message });
+    } finally {
+      setIsSaving(null);
+    }
   };
 
   if (isLoading) return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="animate-spin h-10 w-10 text-[#800000]" /></div>;
@@ -200,7 +225,7 @@ export default function MufradatJuzAccessPage() {
               >
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-bold text-slate-800">{u.username || u.full_name}</span>
-                  <span className="text-[10px] text-muted-foreground font-medium uppercase">{u.mufradat_status} • {u.mufradat_accessible_juz?.length || 0} Juz Unlocked</span>
+                  <span className="text-[10px] text-muted-foreground font-medium uppercase">{u.mufradat_status || 'active'} • {u.mufradat_accessible_juz?.length || 0} Juz Unlocked</span>
                 </div>
                 <ChevronRight className={cn("w-4 h-4 transition-transform", selectedUserId === u.id ? "translate-x-1 text-[#800000]" : "text-slate-300")} />
               </button>
@@ -220,7 +245,7 @@ export default function MufradatJuzAccessPage() {
                         <ShieldCheck className="w-8 h-8" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-black font-headline uppercase leading-none">{selectedUser.username}</h2>
+                        <h2 className="text-xl font-black font-headline uppercase leading-none">{selectedUser.username || selectedUser.full_name}</h2>
                         <p className="text-white/60 text-xs mt-1 font-medium">{selectedUser.email}</p>
                       </div>
                     </div>
@@ -301,4 +326,3 @@ export default function MufradatJuzAccessPage() {
     </div>
   );
 }
-

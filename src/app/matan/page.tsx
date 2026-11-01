@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { 
   Trophy, 
   Map as MapIcon, 
   ChevronRight, 
   Sparkles, 
   Lock, 
-  CheckCircle2, 
   Star,
   Gamepad2,
   BookOpen
@@ -17,15 +16,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import { useUser } from '@/db';
-import { useCollection } from '@/db';
+import { useUser, useCollection } from '@/db';
 
 export default function MatanDashboard() {
   const { user } = useUser();
   const { data: matans, isLoading: isMatansLoading } = useCollection("matans");
-  const { data: progress } = useCollection("matan_user_progress", { 
-    where: user ? ["user_id", "==", user.id] : undefined 
-  });
+
+  const progressOptions = useMemo(() => ({
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }],
+  }), [user?.id]);
+
+  const { data: progress } = useCollection(user ? "matan_user_progress" : null, progressOptions);
 
   const totalXp = progress?.reduce((acc, p) => acc + (p.points_awarded || 0), 0) || 0;
   const currentRank = totalXp > 5000 ? 'Ustadz Nahwu' : totalXp > 1000 ? 'An-Nahwi' : 'Thalibul Ilmi';
@@ -44,7 +45,7 @@ export default function MatanDashboard() {
       id: 'ajurumiyah',
       title: 'Al-Ajurumiyah',
       author: 'Ibnu Ajurrum',
-      level: 'Mubtadi\'',
+      level: "Mubtadi'",
       category: 'Nahwu',
       total_chapters: 26,
       color: 'maroon',
@@ -52,6 +53,8 @@ export default function MatanDashboard() {
       description: 'Gerbang utama mempelajari ilmu Nahwu Dasar.'
     }
   ];
+
+  const primarySlug = displayMatans[0]?.slug || 'ajurumiyah';
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 md:py-16 space-y-12 pb-32">
@@ -92,7 +95,7 @@ export default function MatanDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {displayMatans.map((matan: any) => {
-            const isUnlocked = matan.is_active || matan.slug === 'ajurumiyah'; // For now unlock ajurumiyah by default
+            const isUnlocked = matan.is_active || matan.slug === 'ajurumiyah';
             return (
               <div key={matan.id} className="relative group">
                 <Link 
@@ -149,15 +152,17 @@ export default function MatanDashboard() {
            <div className="relative z-10 space-y-5 max-w-lg text-center md:text-left">
               <div className="inline-flex items-center gap-2 bg-[#800000]/5 text-[#800000] px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#800000]/10">
                  <Star className="w-3 h-3 fill-current text-[#D4AF37]" />
-                 Misi Harian: Tantangan I'rab
+                 Misi Harian: Tantangan I&apos;rab
               </div>
               <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">Taklukkan 5 Bait Hari Ini</h2>
               <p className="text-slate-500 font-medium border-l-4 border-[#800000]/20 pl-4 py-1">
-                Selesaikan Bab Marfu'atul Asma dalam waktu kurang dari 5 menit untuk mendapatkan bonus <span className="text-[#800000] font-black">2x XP!</span>
+                Selesaikan Bab Al-Kalam dalam waktu singkat untuk mendapatkan bonus <span className="text-[#800000] font-black">2x XP!</span>
               </p>
-              <Button className="h-14 px-10 rounded-2xl bg-[#800000] hover:bg-[#660000] hover:scale-105 transition-all text-white font-black uppercase tracking-widest shadow-xl shadow-[#800000]/20 border-none group">
-                 Mulai Misi
-                 <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              <Button asChild className="h-14 px-10 rounded-2xl bg-[#800000] hover:bg-[#660000] hover:scale-105 transition-all text-white font-black uppercase tracking-widest shadow-xl shadow-[#800000]/20 border-none group">
+                 <Link href={`/matan/${primarySlug}`}>
+                   Mulai Misi
+                   <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                 </Link>
               </Button>
            </div>
 

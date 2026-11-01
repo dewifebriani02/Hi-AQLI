@@ -1,19 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { 
   ChevronLeft, 
-  Map as MapIcon, 
-  Star, 
   Lock, 
   CheckCircle2, 
   Play, 
   Trophy,
   Gamepad2,
   Sparkles,
-  Zap,
-  BookOpen
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
@@ -21,35 +17,43 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-import { useUser } from '@/db';
-import { useCollection } from '@/db';
+import { useUser, useCollection } from '@/db';
 
 export default function MatanQuestMap() {
   const params = useParams();
   const { user } = useUser();
   const slug = params.slug as string;
-  
-  const { data: currentMatans } = useCollection("matans", { 
-    where: ["slug", "==", slug],
-    limit: 1
-  });
+
+  const matanOptions = useMemo(() => ({
+    filters: [{ column: 'slug', operator: '==', value: slug }],
+    limit: 1,
+  }), [slug]);
+
+  const { data: currentMatans, isLoading: isMatanLoading } = useCollection("matans", matanOptions);
   const currentMatan = currentMatans?.[0];
 
-  const { data: chapters, isLoading: isChaptersLoading } = useCollection("matan_chapters", {
-    where: currentMatan ? ["matan_id", "==", currentMatan.id] : undefined,
-    order: { column: "order_index", ascending: true }
-  });
+  const chapterOptions = useMemo(() => ({
+    filters: [{ column: 'matan_id', operator: '==', value: currentMatan?.id }],
+    orderBy: { column: 'order_index', ascending: true },
+  }), [currentMatan?.id]);
 
-  const { data: progress } = useCollection("matan_user_progress", {
-    where: user ? ["user_id", "==", user.id] : undefined
-  });
+  const { data: chapters, isLoading: isChaptersLoading } = useCollection(
+    currentMatan?.id ? "matan_chapters" : null,
+    chapterOptions
+  );
 
-  const matanTitle = currentMatan?.title || (slug.charAt(0).toUpperCase() + slug.slice(1));
+  const progressOptions = useMemo(() => ({
+    filters: [{ column: 'user_id', operator: '==', value: user?.id }],
+  }), [user?.id]);
+
+  const { data: progress } = useCollection(user ? "matan_user_progress" : null, progressOptions);
+
+  const matanTitle = currentMatan?.title || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Matan');
   const completedCount = chapters?.filter(c => 
-    progress?.some(p => p.status_paham && p.item_id === c.id) // This is simplified, real logic needs mapping to items
+    progress?.some(p => p.status_paham && p.item_id === c.id)
   ).length || 0;
 
-  if (isChaptersLoading) {
+  if (isMatanLoading || (currentMatan?.id && isChaptersLoading)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Sparkles className="w-12 h-12 text-[#800000] animate-pulse" />
@@ -60,7 +64,7 @@ export default function MatanQuestMap() {
 
   // Fallback map if chapters are empty (initial seed)
   const displayChapters = chapters?.length ? chapters : [
-    { id: 'initial', title: 'Bab Al-Kalam', description: 'Definisi Kalimat', order_index: 0 }
+    { id: 'initial', title: 'Bab Al-Kalam', description: 'Definisi Kalimat & Syarat Kalam dalam Ilmu Nahwu', order_index: 0 }
   ];
 
   return (
@@ -102,10 +106,8 @@ export default function MatanQuestMap() {
 
         {displayChapters.map((chapter: any, idx) => {
           const isEven = idx % 2 === 0;
-          // Logic: First one is always unlocked, others if previous is completed
-          // Simplified: All unlocked if in dev or first one if no progress
           const isCompleted = progress?.some(p => p.status_paham && p.item_id === chapter.id);
-          const isUnlocked = idx === 0 || progress?.length > 0; // Simplified logic
+          const isUnlocked = idx === 0 || (progress?.length ?? 0) > 0;
           
           return (
             <div key={chapter.id} className={cn(
@@ -186,9 +188,11 @@ export default function MatanQuestMap() {
       <div className="pt-20 text-center space-y-6">
          <div className="w-24 h-[2px] bg-[#800000]/10 mx-auto" />
          <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px]">Petualangan Anda Terus Berlanjut</p>
-         <Button variant="ghost" className="rounded-2xl text-[#800000] font-black uppercase tracking-widest text-[11px] gap-2 hover:bg-[#800000]/5">
-            <Sparkles className="w-4 h-4 text-[#D4AF37]" />
-            Buka Wilayah Lainnya
+         <Button asChild variant="ghost" className="rounded-2xl text-[#800000] font-black uppercase tracking-widest text-[11px] gap-2 hover:bg-[#800000]/5">
+            <Link href="/matan">
+              <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+              Buka Wilayah Lainnya
+            </Link>
          </Button>
       </div>
     </div>

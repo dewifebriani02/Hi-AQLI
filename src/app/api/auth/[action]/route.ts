@@ -165,6 +165,58 @@ export async function POST(
       return response;
     }
 
+    if (action === 'update-user' || action === 'update-password') {
+      const token = getTokenFromRequest(req);
+      if (!token) {
+        return NextResponse.json({ error: { message: 'Sesi tidak ditemukan. Silakan masuk kembali.' } }, { status: 401 });
+      }
+      const decoded = verifyToken(token);
+      if (!decoded?.id) {
+        return NextResponse.json({ error: { message: 'Tautan atau sesi telah kedaluwarsa.' } }, { status: 401 });
+      }
+
+      const body = await req.json();
+      const { password } = body;
+
+      if (!password || typeof password !== 'string' || password.length < 6) {
+        return NextResponse.json({ error: { message: 'Kata sandi minimal 6 karakter.' } }, { status: 400 });
+      }
+
+      const hashed = hashPassword(password);
+      const { rows } = await query(
+        `UPDATE public.users SET encrypted_password = $1, updated_at = now() WHERE id = $2 RETURNING *`,
+        [hashed, decoded.id]
+      );
+
+      if (rows.length === 0) {
+        return NextResponse.json({ error: { message: 'Pengguna tidak ditemukan.' } }, { status: 404 });
+      }
+
+      const u = rows[0];
+      const user = {
+        id: u.id,
+        email: u.email,
+        role: u.roleId || u.role_id || 'learner',
+        roleId: u.roleId || u.role_id || 'learner',
+        user_metadata: {
+          full_name: u.full_name || u.username || u.email?.split('@')[0],
+          username: u.username,
+          ...(u.metadata || {}),
+        },
+        app_metadata: {},
+        created_at: u.created_at,
+      };
+
+      const session = {
+        access_token: token,
+        token_type: 'bearer',
+        expires_in: 3600 * 24 * 30,
+        user,
+      };
+
+      return NextResponse.json({ data: { user, session }, error: null });
+    }
+
     if (action === 'logout' || action === 'signout') {
       const response = NextResponse.json({ data: { success: true }, error: null });
       response.cookies.set('hiaqli_token', '', {

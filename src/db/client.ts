@@ -184,6 +184,18 @@ class QueryBuilder {
     return this;
   }
 
+  not(column: string, operator: string, value: any) {
+    const op = operator.toLowerCase();
+    if (op === 'is') {
+      this.filters.push({ column, op: 'not_is', value });
+    } else if (op === 'eq') {
+      this.filters.push({ column, op: 'neq', value });
+    } else {
+      this.filters.push({ column, op: `not_${op}`, value });
+    }
+    return this;
+  }
+
   order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }) {
     this.orderClauses.push({
       column,
@@ -346,6 +358,29 @@ export function createLocalClient() {
           return { data: json.data, error: null };
         } catch (err: any) {
           return { data: { user: null, session: null }, error: err };
+        }
+      },
+
+      async updateUser(attributes: { password?: string; data?: Record<string, any> }): Promise<{ data: { user: User | null }; error: any }> {
+        try {
+          const res = await authFetch(`${getBaseUrl()}/api/auth/update-user`, {
+            method: 'POST',
+            body: JSON.stringify(attributes),
+          });
+          const json = await res.json();
+          if (!res.ok || json.error) {
+            return { data: { user: null }, error: json.error || new Error('Gagal memperbarui kata sandi') };
+          }
+          if (typeof window !== 'undefined' && json.data?.session) {
+            try {
+              localStorage.setItem('hiaqli_session', JSON.stringify(json.data.session));
+              localStorage.setItem('hiaqli_token', json.data.session.access_token);
+            } catch (e) {}
+            notifyAuthChange('USER_UPDATED', json.data.session);
+          }
+          return { data: { user: json.data?.user || null }, error: null };
+        } catch (err: any) {
+          return { data: { user: null }, error: err };
         }
       },
 

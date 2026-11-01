@@ -128,6 +128,13 @@ function buildWhere(filters: Filter[], values: any[], strict: boolean, table?: s
         else if (f.value === false) clauses.push(`${col} IS FALSE`);
         else throw new BadRequest(`Nilai tidak valid untuk operator 'is'`);
         break;
+      case 'not_is':
+      case 'is_not':
+        if (f.value === null) clauses.push(`${col} IS NOT NULL`);
+        else if (f.value === true) clauses.push(`${col} IS NOT TRUE`);
+        else if (f.value === false) clauses.push(`${col} IS NOT FALSE`);
+        else throw new BadRequest(`Nilai tidak valid untuk operator 'not_is'`);
+        break;
       default:
         throw new BadRequest(`Operator '${op}' tidak didukung`);
     }

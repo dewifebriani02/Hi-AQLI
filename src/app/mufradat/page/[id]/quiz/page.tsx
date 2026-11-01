@@ -15,7 +15,8 @@ import {
   Timer,
   Target,
   Shuffle,
-  Layers
+  Layers,
+  Copy
 } from "lucide-react";
 import Link from "next/link";
 import { QuizModeSelector, QuizMode } from "@/components/mufradat/quiz-mode-selector";
@@ -219,7 +220,6 @@ function PageQuizContent() {
           const generated = selectedWords.map((w: any) => {
             let correct = w.translation?.text || "???";
 
-            // Log if translation appears invalid (helps identify API issues)
             if (correct === "???" || correct.trim().length === 0) {
               console.warn(`Invalid translation for word ${w.id} (${w.text_uthmani})`);
             }
@@ -232,7 +232,7 @@ function PageQuizContent() {
               options: [correct, ...filteredDecoys].sort(() => Math.random() - 0.5),
               type: 'mcq' as const
             };
-          }).filter((q: Question | null) => q !== null && q.correct !== "???") as Question[]; // Filter out words without valid translations
+          }).filter((q: Question | null) => q !== null && q.correct !== "???") as Question[];
 
           setQuestions(generated);
         }
@@ -263,9 +263,6 @@ function PageQuizContent() {
     setTimerActive(true);
     setTimeLeft(10);
     
-    // Process questions based on mode
-    const decoys = ["Maha Pengasih", "Maha Penyayang", "Segala Puji", "Tuhan", "Manusia", "Raja", "Sembahan", "Petunjuk", "Jalan", "Lurus", "Beriman", "Kafir", "Syurga", "Neraka", "Malaikat", "Kitab", "Rasul", "Hari Kiamat", "Takdir", "Sabar", "Syukur"];
-
     let selectedWords = [...allPageWords];
     if (mode === "acak") {
       selectedWords = selectedWords.sort(() => Math.random() - 0.5);
@@ -279,7 +276,6 @@ function PageQuizContent() {
       indonesian: w.translation?.text
     })).filter(t => !!t.indonesian && t.indonesian !== "???");
 
-    // Categorization Helpers
     const categorizeIndo = (text: string) => {
       text = text.toLowerCase();
       if (text.startsWith("maha") || text.startsWith("paling") || text.startsWith("sangat")) return "attribute";
@@ -369,39 +365,34 @@ function PageQuizContent() {
       });
     }
 
-      // Final validation: ensure all questions have valid options with correct answer
-      updated = updated.map(q => {
-        if (q.type === 'mcq' || q.type === 'tricky') {
-          const correct = q.correct;
-          if (!q.options.includes(correct)) {
-            console.error(`Question ${q.id}: Correct answer "${correct}" missing from options!`);
-            // Fix: ensure correct answer is included
-            const otherOptions = q.options.filter(o => o !== correct);
-            const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
-            return { ...q, options: [correct, ...decoysToUse] };
-          }
-        } else if (q.type === 'reverse') {
-          const correct = q.arabic;
-          if (!q.options.includes(correct)) {
-            console.error(`Question ${q.id}: Correct answer "${correct}" missing from options!`);
-            const otherOptions = q.options.filter(o => o !== correct);
-            const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
-            return { ...q, options: [correct, ...decoysToUse] };
-          }
-        } else if (q.type === 'scrambled') {
-          const correctWords = q.correct.split(' ');
-          const scrambledOptions = q.scrambledOptions || [];
-          if (!correctWords.every(w => scrambledOptions.includes(w))) {
-            console.error(`Question ${q.id}: Correct words missing from scrambled options!`);
-            const missingWords = correctWords.filter(w => !scrambledOptions.includes(w));
-            return { ...q, scrambledOptions: [...scrambledOptions, ...missingWords].sort(() => Math.random() - 0.5) };
-          }
+    updated = updated.map(q => {
+      if (q.type === 'mcq' || q.type === 'tricky') {
+        const correct = q.correct;
+        if (!q.options.includes(correct)) {
+          const otherOptions = q.options.filter(o => o !== correct);
+          const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
+          return { ...q, options: [correct, ...decoysToUse] };
         }
-        return q;
-      });
+      } else if (q.type === 'reverse') {
+        const correct = q.arabic;
+        if (!q.options.includes(correct)) {
+          const otherOptions = q.options.filter(o => o !== correct);
+          const decoysToUse = otherOptions.length > 3 ? otherOptions.slice(0, 3) : otherOptions;
+          return { ...q, options: [correct, ...decoysToUse] };
+        }
+      } else if (q.type === 'scrambled') {
+        const correctWords = q.correct.split(' ');
+        const scrambledOptions = q.scrambledOptions || [];
+        if (!correctWords.every(w => scrambledOptions.includes(w))) {
+          const missingWords = correctWords.filter(w => !scrambledOptions.includes(w));
+          return { ...q, scrambledOptions: [...scrambledOptions, ...missingWords].sort(() => Math.random() - 0.5) };
+        }
+      }
+      return q;
+    });
 
-      setQuestions(updated);
-    };
+    setQuestions(updated);
+  };
 
   const handleAnswer = (answer: string) => {
     if (selectedAnswer || isFinished) return;
@@ -481,7 +472,6 @@ function PageQuizContent() {
       if (insertError) throw insertError;
 
       if (isPassed) {
-        // 1. Calculate Streak & Points
         await userDataRefresh();
         const now = new Date();
         const lastQuizAt = userData?.last_mufradat_quiz_at ? new Date(userData.last_mufradat_quiz_at) : null;
@@ -498,7 +488,7 @@ function PageQuizContent() {
         }
 
         const pointsPerVerse = 10;
-        const totalVerses = questions.length; // usually 15
+        const totalVerses = questions.length;
         const pointsEarned = totalVerses * pointsPerVerse;
 
         const newWeeklyPoints = (userData?.mufradat_weekly_points || 0) + pointsEarned;
@@ -522,7 +512,6 @@ function PageQuizContent() {
 
         toast({ title: `Masyallah! +${pointsEarned} Poin`, description: "Halaman selesai & progres berhasil disimpan." });
         
-        // Force refresh all data
         await userDataRefresh();
         await refreshWeekly();
       }
@@ -677,7 +666,6 @@ function PageQuizContent() {
                   <Link href={from === 'surah' && surahId ? `/mufradat/${surahId}` : "/mufradat?tab=juz"}>KEMBALI KE {from === 'surah' ? 'DAFTAR AYAT' : 'DAFTAR HALAMAN'}</Link>
                 </Button>
 
-                {/* Automated WhatsApp Sharing Button - MOVED HERE & ONLY IF PERFECT */}
                 <div className="w-full space-y-4 pt-4 border-t border-slate-200">
                   <div className="text-center space-y-1">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sudah cukup lelah hari ini?</p>

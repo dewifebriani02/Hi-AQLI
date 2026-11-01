@@ -2,8 +2,8 @@
 
 import { parseISO, addMonths } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
-import {useUser, db } from "@/db";
-import { useCollection, useDoc } from "@/db";
+import { useRouter } from "next/navigation";
+import { useUser, db, useCollection, useDoc } from "@/db";
 import { 
   Card, 
   CardContent, 
@@ -21,7 +21,6 @@ import {
   ShieldCheck, 
   AlertCircle,
   CheckCircle2,
-  Upload,
   Image as ImageIcon,
   ArrowLeft,
   Coffee,
@@ -29,8 +28,6 @@ import {
   BookOpen,
   Info,
   Users,
-  Target,
-  ChevronRight
 } from "lucide-react";
 import { getMufradatStatus } from "@/lib/mufradat-access";
 import { isProgramFree } from "@/lib/program-settings";
@@ -42,33 +39,38 @@ import { Label } from "@/components/ui/label";
 
 export default function MufradatBillingPage() {
   const { user, isUserLoading } = useUser();
+  const router = useRouter();
   const { toast } = useToast();
+  const isFreeProgram = isProgramFree('mufradat');
   
-  const { data: userData, refresh: refreshUser } = useDoc("users", user?.id);
+  const { data: userData, isLoading: isUserDataLoading, refresh: refreshUser } = useDoc(
+    !isFreeProgram && user?.id ? "users" : null,
+    user?.id
+  );
   const fullSalutation = userData?.salutation || "Ukhti";
   const registrationsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   }), [user?.id]);
 
-  const { data: registrations, refresh: refreshRegs } = useCollection("halaqah_registrations", registrationsOptions);
+  const { data: registrations, refresh: refreshRegs } = useCollection(
+    !isFreeProgram && user ? "halaqah_registrations" : null,
+    registrationsOptions
+  );
 
   const redemptionsOptions = useMemo(() => ({
     filters: [{ column: 'user_id', operator: '==', value: user?.id }],
     select: "*, vouchers(*)"
   }), [user?.id]);
 
-  const { data: redemptions, refresh: refreshRedemptions } = useCollection("voucher_redemptions", redemptionsOptions);
+  const { data: redemptions, refresh: refreshRedemptions } = useCollection(
+    !isFreeProgram && user ? "voucher_redemptions" : null,
+    redemptionsOptions
+  );
 
-  const { data: groupData } = useDoc(userData?.mufradat_group_id ? "mufradat_groups" : null, userData?.mufradat_group_id);
-
-  const progressOptions = useMemo(() => ({
-    filters: [
-      { column: 'user_id', operator: '==', value: user?.id },
-      { column: 'is_passed', operator: '==', value: true }
-    ]
-  }), [user?.id]);
-
-  const { data: progress } = useCollection(user ? "quiz_attempts" : null, progressOptions);
+  const { data: groupData } = useDoc(
+    !isFreeProgram && userData?.mufradat_group_id ? "mufradat_groups" : null,
+    userData?.mufradat_group_id
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mode, setMode] = useState<'view' | 'pay' | 'leave'>('view');
@@ -83,6 +85,12 @@ export default function MufradatBillingPage() {
   // Leave Form States
   const [leaveStart, setLeaveStart] = useState("");
   const [leaveEnd, setLeaveEnd] = useState("");
+
+  useEffect(() => {
+    if (!isFreeProgram && !isUserLoading && !user) {
+      router.replace('/login');
+    }
+  }, [isFreeProgram, isUserLoading, user, router]);
 
   // Initialize unique code
   useEffect(() => {
@@ -110,7 +118,6 @@ export default function MufradatBillingPage() {
   const combinedHistory = useMemo(() => {
     const history: any[] = [];
     
-    // 1. Add Registrations (Payments, Cuti, Initial)
     registrations?.forEach(reg => {
       history.push({
         id: reg.id,
@@ -128,7 +135,6 @@ export default function MufradatBillingPage() {
       });
     });
 
-    // 2. Add Voucher Redemptions
     redemptions?.forEach(red => {
       history.push({
         id: red.id,
@@ -136,7 +142,7 @@ export default function MufradatBillingPage() {
         date: red.redeemed_at || red.created_at,
         title: `Aktivasi Voucher: ${red.vouchers?.code || 'Mufradat'}`,
         amount: 0,
-        status: 'verified', // Vouchers are instant
+        status: 'verified',
         paymentType: 'voucher',
         voucherCode: red.vouchers?.code,
         programId: red.vouchers?.program_id,
@@ -146,8 +152,6 @@ export default function MufradatBillingPage() {
 
     return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [registrations, redemptions]);
-
-
 
   const activeVoucher = useMemo(() => {
     return redemptions?.find(r => r.vouchers?.program_id === 'mufradat' || r.vouchers?.program_id === 'all');
@@ -190,7 +194,6 @@ export default function MufradatBillingPage() {
       finalDueDate = addMonths(baseDate, Math.max(1, verifiedRegsCount));
     }
 
-    // Fallback to mufradat_due_date ONLY if no registrations found
     if (!finalDueDate && userData?.mufradat_due_date) {
       finalDueDate = parseISO(userData.mufradat_due_date);
     }
@@ -198,13 +201,7 @@ export default function MufradatBillingPage() {
     return finalDueDate;
   }, [activationDate, verifiedRegsCount, userData?.mufradat_due_date]);
 
-  const dueDate = useMemo(() => {
-    return displayDueDate;
-  }, [displayDueDate]);
-
-
-  // Target Estimations removed per user request (discouraging dates)
-
+  const dueDate = displayDueDate;
 
   // Auto-set sender name from profile
   useEffect(() => {
@@ -215,6 +212,24 @@ export default function MufradatBillingPage() {
       setWhatsapp(userData.whatsapp || userData.phone || "");
     }
   }, [userData, senderName, whatsapp]);
+
+  const resolveMufradatHalaqahId = async (): Promise<string | null> => {
+    const { data: byProgramType } = await db
+      .from("halaqahs")
+      .select("id")
+      .eq("program_type", "hi_mufradat")
+      .limit(1)
+      .maybeSingle();
+    if (byProgramType?.id) return byProgramType.id;
+
+    const { data: byTitle } = await db
+      .from("halaqahs")
+      .select("id")
+      .ilike("title", "%mufradat%")
+      .limit(1)
+      .maybeSingle();
+    return byTitle?.id || null;
+  };
 
   const handleUploadProof = async () => {
     if (!senderName || !whatsapp || !proofFile) {
@@ -229,23 +244,14 @@ export default function MufradatBillingPage() {
 
     setIsSubmitting(true);
     try {
-      // 1. Get a valid halaqah_id for Hi Mufradat (Must be a UUID from halaqahs table)
-      const { data: halaqahData } = await db
-        .from("halaqahs")
-        .select("id")
-        .or("program_type.eq.hi_mufradat,programType.eq.hi_mufradat")
-        .limit(1)
-        .maybeSingle();
+      const hId = await resolveMufradatHalaqahId();
 
-      const hId = halaqahData?.id || null;
-
-      // 2. Insert into halaqah_registrations
       const { error } = await db.from("halaqah_registrations").insert({
         user_id: user.id,
         user_name: userData?.username || user?.user_metadata?.full_name,
         user_email: user?.email,
         whatsapp: whatsapp,
-        halaqah_id: hId, // Now sends a valid UUID or null
+        halaqah_id: hId,
         halaqah_title: 'Hi Mufradat (Infaq Bulanan)',
         is_paid: true,
         amount: parseInt(amount) + uniqueCode,
@@ -262,7 +268,6 @@ export default function MufradatBillingPage() {
 
       if (error) throw error;
 
-      // 3. Update User Profile (Sync WhatsApp)
       await db.from("users").update({ 
         whatsapp: whatsapp,
         phone: whatsapp 
@@ -274,6 +279,7 @@ export default function MufradatBillingPage() {
       });
       setMode('view');
       refreshRegs();
+      refreshUser();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal mengirim bukti", description: e.message });
     } finally {
@@ -282,7 +288,7 @@ export default function MufradatBillingPage() {
   };
 
   const handleRequestLeave = async () => {
-    if (userData?.mufradat_leave_balance <= 0) {
+    if ((userData?.mufradat_leave_balance ?? 3) <= 0) {
       toast({ variant: "destructive", title: "Kuota Cuti Habis", description: "Ukhti sudah menggunakan batas maksimal 3 bulan cuti." });
       return;
     }
@@ -299,19 +305,7 @@ export default function MufradatBillingPage() {
 
     setIsSubmitting(true);
     try {
-      // 1. Get a valid halaqah_id for Hi Mufradat (Must be a UUID)
-      const { data: halaqahData } = await db
-        .from("halaqahs")
-        .select("id")
-        .or("program_type.eq.hi_mufradat,programType.eq.hi_mufradat")
-        .limit(1)
-        .maybeSingle();
-
-      const hId = halaqahData?.id || null;
-
-      // 2. Insert into halaqah_registrations
-      // If access.nextBillingMonth is not set (e.g. status is already active),
-      // we assume the leave is for the NEXT period.
+      const hId = await resolveMufradatHalaqahId();
       const targetMonth = access.nextBillingMonth || new Date(today.getFullYear(), today.getMonth() + 1, 15).toISOString().slice(0, 7);
 
       const metadata: any = { 
@@ -359,7 +353,6 @@ export default function MufradatBillingPage() {
 
     setIsRedeeming(true);
     try {
-      // 1. Find the voucher
       const { data: voucher, error: vError } = await db
         .from("vouchers")
         .select("*")
@@ -371,17 +364,14 @@ export default function MufradatBillingPage() {
         throw new Error("Voucher tidak valid atau sudah tidak aktif.");
       }
 
-      // 2. Check Expiry
       if (voucher.expiry_date && new Date(voucher.expiry_date) < new Date()) {
         throw new Error("Voucher sudah kadaluarsa.");
       }
 
-      // 3. Check Program ID
       if (voucher.program_id !== 'all' && voucher.program_id !== 'mufradat') {
         throw new Error(`Voucher ini hanya berlaku untuk program ${voucher.program_id.toUpperCase()}.`);
       }
 
-      // 4. Check if already redeemed by this user
       const { data: existing } = await db
         .from("voucher_redemptions")
         .select("id")
@@ -393,19 +383,17 @@ export default function MufradatBillingPage() {
         throw new Error("Ukhti sudah pernah menggunakan voucher ini sebelumnya.");
       }
 
-      // 5. Check Usage Limit
       if (voucher.usage_limit) {
         const { count } = await db
           .from("voucher_redemptions")
-          .select("id", { count: 'exact', head: true })
+          .select("*", { count: 'exact', head: true })
           .eq("voucher_id", voucher.id);
         
-        if (count !== null && count >= voucher.usage_limit) {
+        if (count !== null && count !== undefined && count >= voucher.usage_limit) {
           throw new Error("Kuota penggunaan voucher ini sudah habis.");
         }
       }
 
-      // 6. Redeem
       const { error: rError } = await db
         .from("voucher_redemptions")
         .insert({
@@ -428,18 +416,18 @@ export default function MufradatBillingPage() {
     }
   };
 
-  if (isUserLoading || !userData) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
-        <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">Memuat Status Infaq...</p>
-      </div>
-    );
-  }
-
-  if (isProgramFree('mufradat')) {
+  if (isFreeProgram) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-2xl space-y-8 pb-32">
+        <div className="flex items-center gap-4">
+          <Button asChild variant="ghost" size="icon" className="rounded-full">
+            <Link href="/mufradat"><ArrowLeft className="w-5 h-5" /></Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-black font-headline tracking-tight text-[#800000]">STATUS PROGRAM</h1>
+            <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Hi Mufradat • Akses Gratis</p>
+          </div>
+        </div>
         <Card className="border-none shadow-xl text-center">
           <CardContent className="pt-10 pb-10 space-y-5">
             <div className="mx-auto bg-emerald-100 text-emerald-600 rounded-full p-4 w-fit">
@@ -462,6 +450,17 @@ export default function MufradatBillingPage() {
       </div>
     );
   }
+
+  if (isUserLoading || isUserDataLoading || !user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+        <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">Memuat Status Infaq...</p>
+      </div>
+    );
+  }
+
+  const leaveBalance = userData?.mufradat_leave_balance ?? 3;
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-2xl space-y-8 pb-32">
@@ -521,7 +520,6 @@ export default function MufradatBillingPage() {
                    </p>
                 </div>
              </div>
-
           </CardContent>
         </Card>
       )}
@@ -585,13 +583,13 @@ export default function MufradatBillingPage() {
                <div className="flex items-center justify-between">
                  <span className="text-sm font-bold flex items-center gap-2">
                     <Coffee className="w-4 h-4 text-emerald-600" />
-                    {userData.mufradat_leave_balance ?? 3} Bulan
+                    {leaveBalance} Bulan
                  </span>
                  <Button 
                     variant="link" 
                     className="h-6 text-[10px] font-black p-0 text-[#800000] hover:no-underline hover:scale-105 transition-all"
                     onClick={() => setMode('leave')}
-                    disabled={(userData.mufradat_leave_balance ?? 3) <= 0}
+                    disabled={leaveBalance <= 0}
                   >
                     AJUKAN
                  </Button>
@@ -652,7 +650,7 @@ export default function MufradatBillingPage() {
                     )}>
                       {access.status === 'active' ? "PERPANJANG PENDAFTARAN" : "INFAQ SEKARANG"}
                     </Button>
-                    {userData.mufradat_leave_balance > 0 && access.status !== 'blocked' && (
+                    {leaveBalance > 0 && access.status !== 'blocked' && (
                       <Button onClick={() => setMode('leave')} variant="outline" className="flex-1 border-slate-300 text-slate-700 font-black text-[10px] h-10 rounded-xl">
                         AJUKAN CUTI
                       </Button>
@@ -711,7 +709,7 @@ export default function MufradatBillingPage() {
                    <Badge className="bg-[#800000]">BSI (BANK SYARIAH INDONESIA)</Badge>
                 </div>
                   <div className="flex items-center justify-between text-2xl font-black text-[#800000]">
-                     <span>Rp {(parseInt(amount) + uniqueCode).toLocaleString('id-ID')}</span>
+                     <span>Rp {(parseInt(amount || "0") + uniqueCode).toLocaleString('id-ID')}</span>
                      <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. Dewi Febriani</span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold border-t border-dashed border-amber-200 pt-2 mt-2">
@@ -758,9 +756,6 @@ export default function MufradatBillingPage() {
                         <p className="text-[10px] text-muted-foreground font-bold italic flex items-center gap-1">
                           <Info className="w-3 h-3" /> Minimal infaq: Rp 20.000 (Mendukung Operasional)
                         </p>
-                       <p className="text-[9px] text-[#800000] font-medium opacity-70 italic leading-relaxed">
-                         Hi AQLI membutuhkan dana operasional untuk terus menyediakan layanan ini. Syukran atas dukungan Ukhti tepat waktu.
-                       </p>
                      </div>
                   </div>
                   <div className="space-y-2">
@@ -779,32 +774,6 @@ export default function MufradatBillingPage() {
                     </div>
                     <input type="file" id="billing-file" className="hidden" accept="image/*" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
                   </div>
-                </div>
-
-                {/* Voucher inside Payment Confirmation */}
-                <div className="p-5 bg-amber-50 rounded-2xl border-2 border-dashed border-amber-200 space-y-3 mt-4">
-                   <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-amber-600" />
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-700">Punya Kode Voucher?</h4>
-                   </div>
-                   <div className="flex gap-2">
-                      <Input 
-                         placeholder="KODE VOUCHER" 
-                         value={voucherCode}
-                         onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                         className="h-10 border-2 rounded-xl font-bold text-xs bg-white"
-                      />
-                      <Button 
-                         onClick={handleRedeemVoucher}
-                         disabled={isRedeeming || !voucherCode.trim()}
-                         className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-10 px-6 rounded-xl shadow-sm"
-                      >
-                         {isRedeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : "KLAIM"}
-                      </Button>
-                   </div>
-                   <p className="text-[9px] text-amber-800/60 font-bold italic">
-                     *Kode voucher minta ke admin atau hubungi admin untuk aktivasi manual.
-                   </p>
                 </div>
              </div>
           </CardContent>
@@ -828,7 +797,7 @@ export default function MufradatBillingPage() {
             <CardTitle className="text-lg font-black flex items-center gap-2">
               <Coffee className="w-5 h-5 text-amber-300" /> PENGAJUAN CUTI (LEAVE)
             </CardTitle>
-            <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Sisa Kuota: {userData.mufradat_leave_balance || 3} Bulan</p>
+            <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Sisa Kuota: {leaveBalance} Bulan</p>
           </CardHeader>
           <CardContent className="pt-6 space-y-4">
              <div className="p-5 bg-emerald-50 rounded-2xl border-2 border-emerald-100 space-y-3">
@@ -839,13 +808,6 @@ export default function MufradatBillingPage() {
              </div>
              
              <div className="space-y-6">
-                <div className="p-4 bg-[#800000]/5 rounded-2xl border border-[#800000]/10">
-                   <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                      Sesuai ketentuan, permohonan cuti akan memotong 1 bulan jatah cuti Ukhti (Jatah: 3 bulan per program).
-                      Akses ayat akan ditutup otomatis selama rentang tanggal yang Ukhti pilih di bawah ini.
-                   </p>
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">Mulai Cuti</Label>
@@ -873,7 +835,7 @@ export default function MufradatBillingPage() {
              <Button 
                 onClick={handleRequestLeave}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 rounded-xl shadow-lg"
-                disabled={isSubmitting || (userData.mufradat_leave_balance <= 0) || !leaveStart || !leaveEnd}
+                disabled={isSubmitting || leaveBalance <= 0 || !leaveStart || !leaveEnd}
              >
                 {isSubmitting ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle2 className="w-5 h-5 mr-2" />}
                 KONFIRMASI PENGAJUAN CUTI

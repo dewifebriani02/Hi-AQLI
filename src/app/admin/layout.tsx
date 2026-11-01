@@ -1,29 +1,34 @@
-
 'use client';
 
 import { useUser, signOut } from "@/db";
-import { useDoc } from "@/db";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ShieldAlert, Lock, Loader2, Home, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useUserPermissions, getProgramTypeFromPath } from "@/lib/permissions";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
   const [isAuthorizing, setIsAuthorizing] = useState(true);
 
-  const { data: isAdmin, isLoading: isAdminLoading } = useDoc(user ? "roles_admin" : null, user?.id);
-  const { data: isSuperAdmin, isLoading: isSuperAdminLoading } = useDoc(user ? "roles_superadmin" : null, user?.id);
+  const {
+    isSuperUser,
+    isMusyrifah,
+    canAccessProgram,
+    isLoading: isPermissionsLoading,
+  } = useUserPermissions(user?.id);
 
-  const hasAccess = !!isAdmin?.id || !!isSuperAdmin?.id;
+  const programForPath = getProgramTypeFromPath(pathname || "");
+  const hasAccess = isSuperUser || (isMusyrifah && !!programForPath && canAccessProgram(programForPath));
 
   useEffect(() => {
-    if (!isUserLoading && !isAdminLoading && !isSuperAdminLoading) {
+    if (!isUserLoading && !isPermissionsLoading) {
       setIsAuthorizing(false);
     }
-  }, [isUserLoading, isAdminLoading, isSuperAdminLoading]);
+  }, [isUserLoading, isPermissionsLoading]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -46,7 +51,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null;
   }
 
-  // 3. Access Denied (Not an Admin)
+  // 3. Access Denied (Not an Admin / Musyrifah for this program)
   if (!hasAccess) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
@@ -58,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <h1 className="text-3xl font-black text-slate-900 mb-4 uppercase tracking-tighter">AKSES DITOLAK</h1>
         
         <p className="text-slate-500 max-w-md mb-10 font-medium leading-relaxed">
-          Maaf Ukhti/Akhi, halaman ini hanya dapat diakses oleh Administrator Hi AQLI. 
+          Maaf Ukhti/Akhi, halaman ini hanya dapat diakses oleh Administrator atau Musyrifah program terkait di Hi AQLI. 
           Akun Anda tidak memiliki hak akses yang diperlukan.
         </p>
 
