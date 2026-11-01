@@ -14,7 +14,7 @@ export function HifzProgressChart() {
   const { data: userData } = useDoc(user ? "users" : null, user?.id);
 
   // Consider juz strictly less than paidJuz as fully completed.
-  const paidJuz = userData?.paidJuz || 1;
+  const paidJuz = Number(userData?.paidJuz ?? userData?.paid_juz) || 1;
   const completedJuzList = Array.from({ length: Math.max(0, paidJuz - 1) }, (_, i) => i + 1);
 
   const juzStatus = Array.from({ length: 30 }, (_, i) => ({

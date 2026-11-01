@@ -96,7 +96,7 @@ export default function ProfilePage() {
   const fullSalutation = userData?.salutation || "Ukhti";
   const callSign = getCallSign(fullSalutation);
   const isPaid = userData?.is_tikrar_paid;
-  const paidJuz = userData?.paid_juz;
+  const paidJuz = userData?.paidJuz ?? userData?.paid_juz ?? 1;
   const points = userData?.points || 0;
   const { count: higherPointsCount } = useCount("users", useMemo(() => ({
     filters: [{ column: 'points', operator: '>', value: points }]

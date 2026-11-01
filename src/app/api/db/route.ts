@@ -48,6 +48,15 @@ const NON_UUID_PK_TABLES = new Set(['matans', 'mufradat_reminder_configs']);
 
 class BadRequest extends Error {}
 
+function normalizeUserPayload(record: Record<string, any>): Record<string, any> {
+  const out = { ...record };
+  if ('paid_juz' in out && !('paidJuz' in out)) {
+    out.paidJuz = out.paid_juz;
+    delete out.paid_juz;
+  }
+  return out;
+}
+
 function sanitizeIdentifier(name: string): string {
   // Only allow alphanumeric and underscores
   if (typeof name !== 'string' || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
@@ -71,7 +80,7 @@ type Filter = { column: string; op?: string; value: any };
  * value is rejected instead of silently dropped, so a lost filter can never widen an
  * UPDATE or DELETE.
  */
-function buildWhere(filters: Filter[], values: any[], strict: boolean): string[] {
+function buildWhere(filters: Filter[], values: any[], strict: boolean, table?: string): string[] {
   const clauses: string[] = [];
   if (!Array.isArray(filters)) return clauses;
 
@@ -81,7 +90,8 @@ function buildWhere(filters: Filter[], values: any[], strict: boolean): string[]
       if (strict) throw new BadRequest(`Filter '${f.column}' tidak memiliki nilai`);
       continue;
     }
-    const col = sanitizeIdentifier(f.column);
+    const colName = (table === 'users' && f.column === 'paid_juz') ? 'paidJuz' : f.column;
+    const col = sanitizeIdentifier(colName);
     const op = (f.op || 'eq').toLowerCase();
     const param = (v: any) => {
       values.push(v);
@@ -150,7 +160,7 @@ function splitTopLevel(input: string): string[] {
  * embeds like `vouchers(*)` or `users(username, email)` (joined via `<singular>_id`).
  * Anything else is rejected, so no client text is ever spliced into SQL.
  */
-function buildSelectList(select: string, ctx: AuthContext): { sql: string; embeds: string[] } {
+function buildSelectList(select: string, ctx: AuthContext, table?: string): { sql: string; embeds: string[] } {
   if (typeof select !== 'string' || select.trim() === '' || select.trim() === '*') {
     return { sql: 't.*', embeds: [] };
   }
@@ -158,6 +168,7 @@ function buildSelectList(select: string, ctx: AuthContext): { sql: string; embed
   const embeds: string[] = [];
   const cols = splitTopLevel(select).map((token) => {
     if (token === '*') return 't.*';
+    if (table === 'users' && token === 'paid_juz') return 't."paidJuz" AS paid_juz';
     if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(token)) return `t.${sanitizeIdentifier(token)}`;
 
     const m = token.match(/^([a-z_]+)\s*\(([^()]*)\)$/);
@@ -218,7 +229,7 @@ export async function POST(req: NextRequest) {
 
       const policy = checkRead(table, ctx);
       const values: any[] = [];
-      const whereClauses = buildWhere(filters, values, false);
+      const whereClauses = buildWhere(filters, values, false, table);
       if (policy.ownerFilter) {
         values.push(policy.ownerFilter.value);
         whereClauses.push(`t.${sanitizeIdentifier(policy.ownerFilter.column)} = $${values.length}`);
@@ -237,7 +248,8 @@ export async function POST(req: NextRequest) {
       let orderSql = '';
       if (Array.isArray(orderBy) && orderBy.length > 0) {
         const orderClauses = orderBy.map((o: any) => {
-          const col = sanitizeIdentifier(o.column);
+          const colName = (table === 'users' && o.column === 'paid_juz') ? 'paidJuz' : o.column;
+          const col = sanitizeIdentifier(colName);
           const dir = o.ascending === false ? 'DESC' : 'ASC';
           const nulls = o.nullsFirst ? 'NULLS FIRST' : 'NULLS LAST';
           return `t.${col} ${dir} ${nulls}`;
@@ -249,7 +261,7 @@ export async function POST(req: NextRequest) {
       const limitSql = Number.isFinite(limit) ? `LIMIT ${Math.max(0, Math.floor(limit))}` : '';
       const offsetSql = Number.isFinite(offset) ? `OFFSET ${Math.max(0, Math.floor(offset))}` : '';
 
-      const { sql: selectCols, embeds } = buildSelectList(select, ctx);
+      const { sql: selectCols, embeds } = buildSelectList(select, ctx, table);
 
       const sql = `SELECT ${selectCols} FROM ${safeTable} t ${whereSql} ${orderSql} ${limitSql} ${offsetSql}`;
       const { rows: rawRows } = await query(sql, values);
@@ -295,6 +307,7 @@ export async function POST(req: NextRequest) {
       const resultRows = [];
       for (const rawRecord of records) {
         let record: Record<string, any> = { ...rawRecord };
+        if (table === 'users') record = normalizeUserPayload(record);
         if (ownerColumn) record = sanitizeOwnedRecord(table, record, ownerColumn, ctx, false);
 
         // Auto generate UUID for id if table uses UUID and id not provided
@@ -349,6 +362,7 @@ export async function POST(req: NextRequest) {
       if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
         return NextResponse.json({ error: { message: 'Data is required' } }, { status: 400 });
       }
+      if (table === 'users') data = normalizeUserPayload(data);
       if (ownerColumn) data = sanitizeOwnedRecord(table, data, ownerColumn, ctx, true);
 
       const cols = Object.keys(data);
@@ -361,7 +375,7 @@ export async function POST(req: NextRequest) {
         return `${sanitizeIdentifier(col)} = $${values.length}`;
       });
 
-      const whereClauses = buildWhere(filters, values, true);
+      const whereClauses = buildWhere(filters, values, true, table);
       if (whereClauses.length === 0) {
         return NextResponse.json({ error: { message: 'Refusing update without WHERE clause' } }, { status: 400 });
       }
@@ -379,7 +393,7 @@ export async function POST(req: NextRequest) {
     // 5. DELETE (admin only, enforced by checkWrite)
     const { filters = [], returning = true } = body;
     const values: any[] = [];
-    const whereClauses = buildWhere(filters, values, true);
+    const whereClauses = buildWhere(filters, values, true, table);
 
     if (whereClauses.length === 0) {
       return NextResponse.json({ error: { message: 'Refusing delete without WHERE clause' } }, { status: 400 });

@@ -157,7 +157,7 @@ export default function AdminRegistrationsPage() {
       const isTikrarReg = reg.halaqah_id === 'tikrar-j30-b1' || reg.halaqah_id === 'tikrar-premium' || reg.halaqah_title?.toLowerCase().includes('tikrar');
       if (isTikrarReg) {
         updateData.is_tikrar_paid = true;
-        updateData.paid_juz = reg.target_juz || 30;
+        updateData.paidJuz = reg.target_juz || reg.targetJuz || 30;
         updateData.tikrar_level = reg.level || 3;
         updateData.tikrar_start_date = new Date().toISOString();
       }

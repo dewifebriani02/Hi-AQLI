@@ -190,6 +190,11 @@ export function redactUserRow(row: any, ctx: AuthContext): any {
   if (!row || typeof row !== 'object') return row;
   const copy = { ...row };
   delete copy.encrypted_password;
+  if (copy.paidJuz !== undefined && copy.paid_juz === undefined) {
+    copy.paid_juz = copy.paidJuz;
+  } else if (copy.paid_juz !== undefined && copy.paidJuz === undefined) {
+    copy.paidJuz = copy.paid_juz;
+  }
   if (isStaff(ctx) || (ctx.userId && copy.id === ctx.userId)) return copy;
   for (const col of USER_PRIVATE_COLUMNS) delete copy[col];
   return copy;
