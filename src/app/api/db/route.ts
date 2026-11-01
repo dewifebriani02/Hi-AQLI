@@ -41,6 +41,9 @@ const ALLOWED_TABLES = new Set([
   'matan_user_progress',
   'mufradat_reminder_templates',
   'mufradat_reminder_configs',
+  'tikrar_daily_logs',
+  'tikrar_submissions',
+  'tikrar_groups',
 ]);
 
 // Tables whose primary key is not a single generated `id` UUID column
@@ -272,7 +275,6 @@ export async function POST(req: NextRequest) {
 
     const ctx = await getAuthContext(req);
     const safeTable = `public.${table}`;
-
     // 1. SELECT
     if (action === 'select') {
       const {

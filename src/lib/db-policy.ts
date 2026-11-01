@@ -27,6 +27,8 @@ export const OWNER_COLUMN: Record<string, string> = {
   page_exams: 'user_id',
   donations: 'user_id',
   mufradat_reactions: 'from_user_id',
+  tikrar_daily_logs: 'user_id',
+  tikrar_submissions: 'user_id',
 };
 
 // Tables learners can only read their own rows from.
@@ -54,6 +56,9 @@ const PUBLIC_READ = new Set([
   'mufradat_motivations',
   'quiz_attempts',
   'best_quiz_attempts',
+  'tikrar_daily_logs',
+  'tikrar_submissions',
+  'tikrar_groups',
 ]);
 
 const ROLE_TABLES = new Set(['roles_admin', 'roles_superadmin', 'roles_musyrifah']);
@@ -180,6 +185,22 @@ export function sanitizeOwnedRecord(
 
   if (table === 'donations' && !isUpdate) {
     out.status = 'pending_verification';
+  }
+
+  if (table === 'tikrar_submissions' && !isStaff(ctx)) {
+    if (!isUpdate) {
+      out.status = 'pending';
+      delete out.grade;
+      delete out.verified_at;
+      delete out.musyrifah_id;
+      delete out.musyrifah_name;
+    } else {
+      delete out.status;
+      delete out.grade;
+      delete out.verified_at;
+      delete out.musyrifah_id;
+      delete out.musyrifah_name;
+    }
   }
 
   return out;
