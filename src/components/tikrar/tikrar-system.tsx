@@ -530,6 +530,24 @@ export function TikrarSystem({
     };
   }, [page, completedBlocksKey, isSelectedPageCleared, user?.id]);
 
+  const totalProgress = useMemo(() => {
+    let totalDone = 0;
+    if (prepListenCount >= PREP_LISTEN_THRESHOLD) totalDone += 5;
+    if (prepTranslationDone) totalDone += 5;
+    [1, 2, 3, 4].forEach((id) => {
+      totalDone += (Math.min(blocks[id].a.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+      totalDone += (Math.min(blocks[id].b.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+      totalDone += (Math.min(blocks[id].combined.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+    });
+    const metaWeight = 5;
+    Object.keys(metaCounts).forEach((k) => {
+      totalDone +=
+        (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * metaWeight;
+    });
+    const totalWeight = 10 + 4 * 30 + 6 * metaWeight;
+    return Math.min(100, (totalDone / totalWeight) * 100);
+  }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
+
   // Simpan progres ke localStorage dan database setiap user klik angka setiap tahapan
   const isHydratedRef = useRef(false);
   useEffect(() => {
@@ -890,23 +908,7 @@ export function TikrarSystem({
     }
   };
 
-  const totalProgress = useMemo(() => {
-    let totalDone = 0;
-    if (prepListenCount >= PREP_LISTEN_THRESHOLD) totalDone += 5;
-    if (prepTranslationDone) totalDone += 5;
-    [1, 2, 3, 4].forEach((id) => {
-      totalDone += (Math.min(blocks[id].a.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
-      totalDone += (Math.min(blocks[id].b.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
-      totalDone += (Math.min(blocks[id].combined.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
-    });
-    const metaWeight = 5;
-    Object.keys(metaCounts).forEach((k) => {
-      totalDone +=
-        (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * metaWeight;
-    });
-    const totalWeight = 10 + 4 * 30 + 6 * metaWeight;
-    return Math.min(100, (totalDone / totalWeight) * 100);
-  }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
+
 
   if (isUserDataLoading) {
     return (
