@@ -26,8 +26,15 @@ CREATE INDEX IF NOT EXISTS idx_tikrar_user_schedules_user_juz
 
 GRANT ALL PRIVILEGES ON TABLE public.tikrar_user_schedules TO hiaqli;
 
--- Ensure roles_musyrifah includes assigned_programs TEXT[] for program-scoped RBAC
-ALTER TABLE public.roles_musyrifah
-  ADD COLUMN IF NOT EXISTS assigned_programs TEXT[] NOT NULL DEFAULT '{}';
-
-GRANT ALL PRIVILEGES ON TABLE public.roles_musyrifah TO hiaqli;
+-- Ensure roles_musyrifah includes assigned_programs TEXT[] when run as owner/superuser;
+-- gracefully skip if current DB user is not owner of legacy roles_musyrifah table.
+DO $$
+BEGIN
+  ALTER TABLE public.roles_musyrifah
+    ADD COLUMN IF NOT EXISTS assigned_programs TEXT[] NOT NULL DEFAULT '{}';
+  GRANT ALL PRIVILEGES ON TABLE public.roles_musyrifah TO hiaqli;
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'Skipping ALTER TABLE public.roles_musyrifah (current user is not table owner).';
+END
+$$;
