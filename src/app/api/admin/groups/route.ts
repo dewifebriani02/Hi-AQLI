@@ -15,24 +15,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Akses ditolak.' }, { status: 403 });
     }
 
-    // 1. Fetch halaqahs (Tikrar, Ngaji, etc.) with dynamic member count
+    // 1. Fetch halaqahs (Tikrar, Ngaji, etc.) with dynamic member count & whatsapp config mapping
     const { rows: halaqahRows } = await query(`
       SELECT 
         h.id,
         h.title as name,
         h.program_type,
         h.whatsapp_group_link,
-        h.whatsapp_group_id,
+        COALESCE(hwc.whatsapp_group_id, '') as whatsapp_group_id,
         h.musyrifah,
         h.schedule,
         h.zoom_link,
         COUNT(DISTINCT u.id)::int as member_count
       FROM public.halaqahs h
+      LEFT JOIN public.halaqah_whatsapp_configs hwc ON hwc.halaqah_id = h.id
       LEFT JOIN public.users u ON (
         u.tikrar_halaqah_id = h.id 
         OR (u.followed_halaqahs IS NOT NULL AND u.followed_halaqahs::jsonb @> to_jsonb(h.id::text))
       )
-      GROUP BY h.id
+      GROUP BY h.id, hwc.whatsapp_group_id
       ORDER BY 
         CASE 
           WHEN h.program_type = 'tikrar_daily' THEN 1
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
         mg.name,
         'hi_mufradat' as program_type,
         mg.whatsapp_link as whatsapp_group_link,
-        mg.fonnte_group_id as whatsapp_group_id,
+        COALESCE(mg.fonnte_group_id, '') as whatsapp_group_id,
         mg.musyrifah_name as musyrifah,
         'Harian' as schedule,
         COUNT(DISTINCT u.id)::int as member_count
@@ -67,7 +68,7 @@ export async function GET(req: NextRequest) {
         program_type: h.program_type,
         program_category: h.program_type === 'tikrar_daily' ? 'tikrar' : (h.program_type === 'hi_mufradat' ? 'mufradat' : 'ngaji'),
         whatsapp_group_link: h.whatsapp_group_link,
-        whatsapp_group_id: h.whatsapp_group_id,
+        whatsapp_group_id: h.whatsapp_group_id || null,
         musyrifah: h.musyrifah,
         schedule: h.schedule,
         zoom_link: h.zoom_link,
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
         program_type: 'hi_mufradat',
         program_category: 'mufradat',
         whatsapp_group_link: m.whatsapp_group_link,
-        whatsapp_group_id: m.whatsapp_group_id,
+        whatsapp_group_id: m.whatsapp_group_id || null,
         musyrifah: m.musyrifah,
         schedule: m.schedule,
         zoom_link: null,
@@ -344,11 +345,18 @@ export async function POST(req: NextRequest) {
           SET 
             title = COALESCE($1, title),
             whatsapp_group_link = $2,
-            whatsapp_group_id = $3,
-            musyrifah = $4,
-            schedule = COALESCE($5, schedule)
-          WHERE id = $6
-        `, [name || null, whatsapp_group_link || null, whatsapp_group_id || null, musyrifah || null, schedule || null, id]);
+            musyrifah = $3,
+            schedule = COALESCE($4, schedule)
+          WHERE id = $5
+        `, [name || null, whatsapp_group_link || null, musyrifah || null, schedule || null, id]);
+
+        if (whatsapp_group_id !== undefined) {
+          await query(`
+            INSERT INTO public.halaqah_whatsapp_configs (halaqah_id, whatsapp_group_id, updated_at)
+            VALUES ($1, $2, now())
+            ON CONFLICT (halaqah_id) DO UPDATE SET whatsapp_group_id = EXCLUDED.whatsapp_group_id, updated_at = now()
+          `, [id, whatsapp_group_id || null]);
+        }
       }
 
       return NextResponse.json({ success: true, message: 'Data grup berhasil diperbarui!' });
