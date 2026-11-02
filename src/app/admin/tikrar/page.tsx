@@ -2,11 +2,12 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useUser, useCollection, db } from '@/db';
+import { useUser, useDoc, useCollection, db } from '@/db';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,11 @@ import {
   Bell,
   Send,
   Calendar,
+  Video,
+  ExternalLink,
+  ShieldAlert,
+  AlertCircle,
+  FileCheck2,
 } from 'lucide-react';
 
 function normalizePhone(raw?: string | null): string {
@@ -40,10 +46,14 @@ function normalizePhone(raw?: string | null): string {
 export default function AdminTikrarPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { data: userData } = useDoc(user?.id ? 'users' : null, user?.id);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [examFilter, setExamFilter] = useState<'all' | 'pending' | 'passed'>('all');
+  const [submissionFilter, setSubmissionFilter] = useState<'all' | 'pending' | 'passed' | 'needs_revision'>('pending');
   const [scoreInputs, setScoreInputs] = useState<Record<string, string>>({});
+  const [submissionFeedback, setSubmissionFeedback] = useState<Record<string, string>>({});
+  const [submissionGrades, setSubmissionGrades] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // State untuk Cron & Pengingat WhatsApp Tikrar
@@ -53,6 +63,13 @@ export default function AdminTikrarPage() {
   const examOptions = useMemo(
     () => ({
       orderBy: { column: 'created_at', ascending: false },
+    }),
+    []
+  );
+
+  const submissionOptions = useMemo(
+    () => ({
+      orderBy: { column: 'submitted_at', ascending: false },
     }),
     []
   );
@@ -70,6 +87,10 @@ export default function AdminTikrarPage() {
   const { data: pageExams, isLoading: loadingExams, refresh: refreshExams } = useCollection<any>(
     user ? 'page_exams' : null,
     examOptions
+  );
+  const { data: rawSubmissions, isLoading: loadingSubmissions, refresh: refreshSubmissions } = useCollection<any>(
+    user ? 'tikrar_submissions' : null,
+    submissionOptions
   );
   const { data: registrations } = useCollection<any>(user ? 'halaqah_registrations' : null);
   const { data: halaqahs } = useCollection<any>(user ? 'halaqahs' : null);
@@ -92,6 +113,14 @@ export default function AdminTikrarPage() {
     });
     return map;
   }, [users]);
+
+  const halaqahMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (halaqahs || []).forEach((h: any) => {
+      if (h?.id) map.set(h.id, h);
+    });
+    return map;
+  }, [halaqahs]);
 
   const tikrarHalaqahIds = useMemo(() => {
     const ids = new Set<string>();
@@ -194,17 +223,34 @@ export default function AdminTikrarPage() {
     });
   }, [pageExams, examFilter, searchTerm, userMap]);
 
+  const filteredSubmissions = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return (rawSubmissions || []).filter((sub: any) => {
+      if (submissionFilter === 'pending' && sub.status !== 'pending') return false;
+      if (submissionFilter === 'passed' && sub.status !== 'passed') return false;
+      if (submissionFilter === 'needs_revision' && sub.status !== 'needs_revision') return false;
+      if (!q) return true;
+      const u = userMap.get(sub.user_id);
+      const name = String(sub.user_name || u?.full_name || u?.username || '').toLowerCase();
+      const email = String(u?.email || '').toLowerCase();
+      const pageStr = String(sub.page_number || '');
+      return name.includes(q) || email.includes(q) || pageStr.includes(q);
+    });
+  }, [rawSubmissions, submissionFilter, searchTerm, userMap]);
+
   const kpis = useMemo(() => {
     const activeCount = tikrarParticipants.filter((u: any) => u.isParticipant).length;
-    const pendingCount = (pageExams || []).filter((e: any) => !e.passed).length;
-    const passedCount = (pageExams || []).filter((e: any) => Boolean(e.passed)).length;
+    const pendingSubmissions = (rawSubmissions || []).filter((s: any) => s.status === 'pending').length;
+    const passedSubmissions = (rawSubmissions || []).filter((s: any) => s.status === 'passed').length;
+    const passedExams = (pageExams || []).filter((e: any) => Boolean(e.passed)).length;
     return {
       activeCount,
-      pendingCount,
-      passedCount,
+      pendingSubmissions,
+      passedSubmissions,
+      passedExams,
       tajwidCount: passedTajwidUsers.size,
     };
-  }, [tikrarParticipants, pageExams, passedTajwidUsers]);
+  }, [tikrarParticipants, rawSubmissions, pageExams, passedTajwidUsers]);
 
   const handleToggleTikrarPaid = async (participant: any) => {
     setUpdatingId(participant.id);
@@ -288,6 +334,65 @@ export default function AdminTikrarPage() {
     refreshExams();
   };
 
+  // Handler Verifikasi Setoran Live Zoom Musyrifah
+  const handleVerifySubmission = async (sub: any, passStatus: boolean) => {
+    setUpdatingId(sub.id);
+    const grade = submissionGrades[sub.id] || (passStatus ? 'mumtaz' : null);
+    const feedback = submissionFeedback[sub.id] || (passStatus ? 'Masyallah, bacaan lancar dan itqan.' : 'Perlu perbaikan kelancaran tajwid di beberapa baris.');
+
+    try {
+      const updatePayload: Record<string, any> = {
+        status: passStatus ? 'passed' : 'needs_revision',
+        grade: passStatus ? grade : null,
+        feedback: feedback.trim(),
+        verified_at: new Date().toISOString(),
+        musyrifah_id: user?.id || null,
+        musyrifah_name: userData?.full_name || userData?.username || 'Musyrifah Tikrar',
+      };
+
+      const { error: subErr } = await db
+        .from('tikrar_submissions')
+        .update(updatePayload)
+        .eq('id', sub.id);
+
+      if (subErr) throw subErr;
+
+      // Jika lulus, berikan reward poin dan buka kunci halaman berikutnya
+      if (passStatus && sub.user_id) {
+        const targetUser = userMap.get(sub.user_id);
+        const rewardPoints = sub.blocks_range === 'blok_1_4' ? 250 : 100;
+        const currentPoints = Number(targetUser?.points || 0);
+        const currentPage = Number(targetUser?.tikrar_current_page || 582);
+        const nextUnlockPage = Math.max(currentPage, Number(sub.page_number) + 1);
+
+        await db
+          .from('users')
+          .update({
+            points: currentPoints + rewardPoints,
+            tikrar_current_page: nextUnlockPage,
+          })
+          .eq('id', sub.user_id);
+      }
+
+      toast({
+        title: passStatus ? 'Setoran Live Zoom Lulus! 🎉' : 'Status Revisi Tersimpan',
+        description: `Setoran Halaman ${sub.page_number} (${sub.user_name || 'Thalibah'}) berhasil diverifikasi. ${passStatus ? 'Kunci halaman berikutnya dibuka!' : ''}`,
+      });
+
+      refreshSubmissions();
+      refreshUsers();
+    } catch (err: any) {
+      console.error('Gagal memverifikasi setoran:', err);
+      toast({
+        title: 'Gagal Memproses Setoran',
+        description: err.message || 'Terjadi kesalahan teknis saat menyimpan verifikasi setoran.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   // Trigger Tikrar Reminder Cron Manual
   const handleTriggerReminder = async (type: 'morning' | 'evening', dryRun = false) => {
     setIsTriggeringReminder(true);
@@ -326,14 +431,14 @@ export default function AdminTikrarPage() {
           <div className="flex items-center gap-2 text-[#800000]">
             <Repeat className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
-              Monitoring Tahfidz & Ujian Halaman
+              Monitoring Tahfidz, Setoran Live Zoom & Ujian Halaman
             </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
             Manajemen HI Tikrar
           </h1>
           <p className="text-sm text-muted-foreground">
-            Kelola akses Juz peserta, validasi antrean ujian halaman Mushaf, pantau kelulusan teori Tajwid, dan otomasi pengingat WhatsApp.
+            Portal Musyrifah untuk verifikasi Setoran Live Zoom (1/2 s/d 1 Halaman), buka kunci halaman, dan otomasi pengingat WhatsApp.
           </p>
         </div>
 
@@ -364,12 +469,12 @@ export default function AdminTikrarPage() {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Ujian Menunggu
+                Antrean Setoran Zoom
               </p>
-              <p className="text-3xl font-black text-amber-600 mt-1">{kpis.pendingCount}</p>
+              <p className="text-3xl font-black text-amber-600 mt-1">{kpis.pendingSubmissions}</p>
             </div>
             <div className="p-3 rounded-2xl bg-amber-50 text-amber-600">
-              <Clock className="w-5 h-5" />
+              <Video className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
@@ -378,9 +483,9 @@ export default function AdminTikrarPage() {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Halaman Lulus
+                Setoran Zoom Lulus
               </p>
-              <p className="text-3xl font-black text-emerald-600 mt-1">{kpis.passedCount}</p>
+              <p className="text-3xl font-black text-emerald-600 mt-1">{kpis.passedSubmissions}</p>
             </div>
             <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="w-5 h-5" />
@@ -392,9 +497,9 @@ export default function AdminTikrarPage() {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Lulus Kuis Tajwid
+                Halaman Ujian Lulus
               </p>
-              <p className="text-3xl font-black text-[#800000] mt-1">{kpis.tajwidCount}</p>
+              <p className="text-3xl font-black text-[#800000] mt-1">{kpis.passedExams}</p>
             </div>
             <div className="p-3 rounded-2xl bg-amber-50 text-[#D4AF37]">
               <Award className="w-5 h-5" />
@@ -423,8 +528,14 @@ export default function AdminTikrarPage() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="exams" className="w-full space-y-4">
+      <Tabs defaultValue="submissions" className="w-full space-y-4">
         <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-auto flex flex-wrap gap-1 w-fit">
+          <TabsTrigger
+            value="submissions"
+            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
+          >
+            Setoran Live Zoom ({kpis.pendingSubmissions})
+          </TabsTrigger>
           <TabsTrigger
             value="exams"
             className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
@@ -445,7 +556,234 @@ export default function AdminTikrarPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Ujian Halaman */}
+        {/* Tab 1: Setoran Live Zoom (Portal Musyrifah) */}
+        <TabsContent value="submissions" className="space-y-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            {(['pending', 'all', 'passed', 'needs_revision'] as const).map((statusKey) => (
+              <Button
+                key={statusKey}
+                size="sm"
+                variant={submissionFilter === statusKey ? 'default' : 'outline'}
+                onClick={() => setSubmissionFilter(statusKey)}
+                className={cn(
+                  'text-[11px] font-black uppercase tracking-wider rounded-full h-8',
+                  submissionFilter === statusKey && 'bg-[#800000] hover:bg-[#800000]/90 text-white'
+                )}
+              >
+                {statusKey === 'pending'
+                  ? 'Menunggu Setoran (Pending)'
+                  : statusKey === 'all'
+                  ? 'Semua Setoran'
+                  : statusKey === 'passed'
+                  ? 'Lulus'
+                  : 'Perlu Revisi'}
+              </Button>
+            ))}
+          </div>
+
+          {loadingSubmissions ? (
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin text-[#800000]" />
+                <p className="text-xs font-bold uppercase tracking-wider">Memuat antrean setoran Live Zoom...</p>
+              </CardContent>
+            </Card>
+          ) : filteredSubmissions.length === 0 ? (
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-12 text-center text-muted-foreground text-sm">
+                Tidak ada data setoran Live Zoom yang sesuai filter.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredSubmissions.map((sub: any) => {
+                const u = userMap.get(sub.user_id);
+                const h = halaqahMap.get(sub.halaqah_id);
+                const name = sub.user_name || u?.full_name || u?.username || 'Thalibah';
+                const waNumber = normalizePhone(u?.whatsapp || u?.phone);
+                const isPassed = sub.status === 'passed';
+                const isRevision = sub.status === 'needs_revision';
+                const busy = updatingId === sub.id;
+
+                const rangeLabel =
+                  sub.blocks_range === 'blok_1_4'
+                    ? '1 Halaman Penuh (Blok A-D)'
+                    : sub.blocks_range === 'blok_3_4'
+                    ? '1/2 Halaman (Blok C & D)'
+                    : '1/2 Halaman (Blok A & B)';
+
+                const zoomLink = sub.zoom_meeting_url || h?.zoom_link;
+
+                return (
+                  <Card
+                    key={sub.id}
+                    className={cn(
+                      'border-none shadow-sm bg-white overflow-hidden',
+                      isPassed
+                        ? 'border-l-4 border-l-emerald-500'
+                        : isRevision
+                        ? 'border-l-4 border-l-rose-500'
+                        : 'border-l-4 border-l-amber-500'
+                    )}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-bold text-sm text-slate-900">{name}</h3>
+                            <Badge
+                              className={cn(
+                                'text-[9px] font-black uppercase tracking-wider',
+                                isPassed
+                                  ? 'bg-emerald-500 text-white'
+                                  : isRevision
+                                  ? 'bg-rose-500 text-white'
+                                  : 'bg-amber-500 text-white'
+                              )}
+                            >
+                              {isPassed
+                                ? `LULUS (${sub.grade?.toUpperCase() || 'MUMTAZ'})`
+                                : isRevision
+                                ? 'PERLU REVISI'
+                                : 'MENUNGGU SETORAN'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {h?.schedule || h?.title || 'Sesi Live Zoom'} • Diajukan:{' '}
+                            {sub.submitted_at
+                              ? new Date(sub.submitted_at).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '-'}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                            Halaman
+                          </span>
+                          <p className="text-2xl font-black text-[#800000] leading-none">
+                            {sub.page_number}
+                          </p>
+                          <span className="text-[9px] font-bold text-muted-foreground">
+                            Juz {sub.juz}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Satuan Materi & Catatan Thalibah */}
+                      <div className="pt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                          🎯 {rangeLabel}
+                        </span>
+                        {sub.notes && (
+                          <span className="text-slate-600 italic text-[11px]">
+                            &ldquo;{sub.notes}&rdquo;
+                          </span>
+                        )}
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-0 space-y-3">
+                      {/* Form Penilaian & Feedback Musyrifah */}
+                      <div className="p-3 rounded-xl bg-slate-50 border space-y-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-slate-700">Predikat:</span>
+                          <select
+                            value={submissionGrades[sub.id] ?? (sub.grade || 'mumtaz')}
+                            onChange={(e) =>
+                              setSubmissionGrades((prev) => ({ ...prev, [sub.id]: e.target.value }))
+                            }
+                            disabled={busy}
+                            className="text-xs font-bold h-8 rounded-lg border border-slate-200 bg-white px-2 text-slate-800"
+                          >
+                            <option value="mumtaz">Mumtaz (Istimewa - 100)</option>
+                            <option value="jayyid_jiddan">Jayyid Jiddan (Sangat Baik - 90)</option>
+                            <option value="jayyid">Jayyid (Baik - 80)</option>
+                          </select>
+
+                          {zoomLink && (
+                            <Button
+                              asChild
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-8 ml-auto gap-1"
+                            >
+                              <a href={zoomLink} target="_blank" rel="noopener noreferrer">
+                                <Video className="w-3.5 h-3.5" /> Buka Zoom
+                                <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+
+                        <Input
+                          placeholder="Catatan feedback Musyrifah (tajwid, makhraj, kelancaran)..."
+                          value={submissionFeedback[sub.id] ?? (sub.feedback || '')}
+                          onChange={(e) =>
+                            setSubmissionFeedback((prev) => ({ ...prev, [sub.id]: e.target.value }))
+                          }
+                          disabled={busy}
+                          className="h-8 text-xs bg-white"
+                        />
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => handleVerifySubmission(sub, true)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-8 flex-1 gap-1"
+                          >
+                            {busy ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            )}
+                            Luluskan ({sub.blocks_range === 'blok_1_4' ? '+250 Poin' : '+100 Poin'})
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => handleVerifySubmission(sub, false)}
+                            className="border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-bold h-8 gap-1"
+                          >
+                            <AlertCircle className="w-3.5 h-3.5" /> Minta Revisi
+                          </Button>
+
+                          {waNumber && (
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs font-bold text-emerald-700 px-2"
+                              title="Chat WhatsApp Thalibah"
+                            >
+                              <a
+                                href={`https://wa.me/${waNumber}?text=${encodeURIComponent(
+                                  `Assalamu'alaikum ${name}, terkait setoran Tikrar Halaman ${sub.page_number} (${rangeLabel})...`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Tab 2: Ujian Halaman */}
         <TabsContent value="exams" className="space-y-4">
           <div className="flex items-center gap-2 flex-wrap">
             {(['all', 'pending', 'passed'] as const).map((statusKey) => (
@@ -596,7 +934,7 @@ export default function AdminTikrarPage() {
           )}
         </TabsContent>
 
-        {/* Tab 2: Peserta & Akses Juz */}
+        {/* Tab 3: Peserta & Akses Juz */}
         <TabsContent value="participants" className="space-y-4">
           {loadingUsers ? (
             <Card className="border-none shadow-sm">
@@ -727,7 +1065,7 @@ export default function AdminTikrarPage() {
           )}
         </TabsContent>
 
-        {/* Tab 3: Otomasi Pengingat WhatsApp Tikrar */}
+        {/* Tab 4: Otomasi Pengingat WhatsApp Tikrar */}
         <TabsContent value="reminders" className="space-y-6">
           {/* Panel Info Jadwal Cron */}
           <Card className="border-none shadow-sm bg-white">

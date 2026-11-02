@@ -53,6 +53,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { SURAH_START_PAGES } from "@/lib/quran-mapping";
+import { TikrarSetoranGatekeeper } from "./tikrar-setoran-gatekeeper";
+
 
 const JUZ_PAGES = [
   1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282,
@@ -126,6 +128,37 @@ export function TikrarSystem() {
 
   const { data: examRequests } = useCollection(user ? "page_exams" : null, examOptions);
   const activeExam = examRequests?.[0];
+
+  // Cek kelulusan setoran Live Zoom untuk halaman ini
+  const { data: pagePassedSubmissions, mutate: refreshPassedSubmissions } = useCollection(
+    user ? "tikrar_submissions" : null,
+    useMemo(() => ({
+      filters: [
+        { column: "user_id", operator: "==", value: user?.id },
+        { column: "page_number", operator: "==", value: page },
+        { column: "status", operator: "==", value: "passed" }
+      ]
+    }), [user?.id, page])
+  );
+
+  const unlockedUntilPage = Number(userData?.tikrar_current_page) || 582;
+  const isPagePassedSetoran = (pagePassedSubmissions && pagePassedSubmissions.length > 0) || page < unlockedUntilPage;
+
+  const handleNextPage = () => {
+    const maxPage = juz < 30 ? (JUZ_PAGES[juz] || 605) - 1 : 604;
+    if (page >= maxPage) return;
+
+    if (!isPagePassedSetoran && page >= unlockedUntilPage) {
+      toast({
+        title: "Halaman Berikutnya Terkunci 🔒",
+        description: `Selesaikan dan luluskan setoran Live Zoom minimal 1/2 Halaman (2 Blok) pada Halaman ${page} bersama Musyrifah untuk membuka Halaman ${page + 1}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setPage((p) => p + 1);
+  };
+
 
   const [blocks, setBlocks] = useState<any>({
     1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
@@ -418,7 +451,7 @@ export function TikrarSystem() {
             <ChevronLeft className="h-5 w-5 text-[#800000]" />
           </Button>
           <span className="text-xl font-black text-[#800000] w-12 text-center">{page}</span>
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(juz < 30 ? (JUZ_PAGES[juz] || 605) - 1 : 604, p + 1))} disabled={loading || page >= (juz < 30 ? (JUZ_PAGES[juz] || 605) - 1 : 604)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
+          <Button variant="outline" size="icon" onClick={handleNextPage} disabled={loading || page >= (juz < 30 ? (JUZ_PAGES[juz] || 605) - 1 : 604)} className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5">
             <ChevronRight className="h-5 w-5 text-[#800000]" />
           </Button>
         </div>
@@ -428,6 +461,23 @@ export function TikrarSystem() {
           <Button variant="ghost" size="icon" className="h-8 w-8 text-[#800000]" onClick={() => setFontSize(f => Math.min(64, f + 4))}><Plus className="h-4 w-4" /></Button>
         </div>
       </div>
+
+      {/* Gerbang Setoran Live Zoom & Ambang Batas 1/2 Halaman */}
+      <TikrarSetoranGatekeeper
+        page={page}
+        juz={juz}
+        blocksProgress={{
+          A: (blocks[1]?.combined?.count || 0) >= PASS_THRESHOLD,
+          B: (blocks[2]?.combined?.count || 0) >= PASS_THRESHOLD,
+          C: (blocks[3]?.combined?.count || 0) >= PASS_THRESHOLD,
+          D: (blocks[4]?.combined?.count || 0) >= PASS_THRESHOLD,
+        }}
+        isGabungABDone={Boolean((metaCounts['1_2'] || 0) >= META_PASS_THRESHOLD)}
+        isGabungAllDone={Boolean((metaCounts['1_2_3_4'] || 0) >= META_PASS_THRESHOLD)}
+        onSubmissionSuccess={() => {
+          refreshPassedSubmissions();
+        }}
+      />
 
       <TooltipProvider delayDuration={0}>
         <Card className={cn("border-2 transition-all shadow-md overflow-hidden", isPrepTuntas ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-[#800000]/30 bg-white")}>
