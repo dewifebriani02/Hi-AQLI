@@ -63,20 +63,6 @@ export default function TikrarPage() {
     return false;
   }, [user?.id, userSchedules, userData]);
 
-  // Alur Wajib Isi Jadwal: Jika thalibah belum memiliki jadwal, otomatis arahkan langsung ke tab schedule
-  const [hasInitializedTab, setHasInitializedTab] = useState(false);
-  useEffect(() => {
-    if (isUserLoading) return;
-    if (user && isSchedulesLoading) return;
-
-    if (!hasInitializedTab) {
-      if (user && !hasExistingSchedule) {
-        setActiveTab('schedule');
-      }
-      setHasInitializedTab(true);
-    }
-  }, [user, isUserLoading, isSchedulesLoading, hasExistingSchedule, hasInitializedTab]);
-
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-32">
       <div className="flex flex-col gap-2 mt-4 px-1">
@@ -114,7 +100,7 @@ export default function TikrarPage() {
             <CalendarDays className="w-4 h-4 shrink-0" /> Target &amp; Jadwal
             {user && !hasExistingSchedule && !isSchedulesLoading && (
               <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black bg-amber-400 text-stone-950 rounded-full animate-pulse">
-                Wajib Diisi
+                Pengaturan
               </span>
             )}
           </TabsTrigger>
@@ -127,72 +113,77 @@ export default function TikrarPage() {
         </TabsList>
 
         {/* Tab 1: Mushaf Per Kata, Audio 5x Simak, Gabungan Sub-Repetisi & Panel Kirim Laporan Harian */}
-        <TabsContent value="mushaf" className="outline-none">
-          {user && !hasExistingSchedule && !isSchedulesLoading ? (
-            <Card className="border-2 border-[#800000] bg-[#fdfbf7] p-8 sm:p-12 text-center rounded-3xl shadow-lg my-2 max-w-2xl mx-auto">
-              <div className="w-16 h-16 rounded-2xl bg-[#800000]/10 text-[#800000] mx-auto flex items-center justify-center mb-4">
-                <CalendarDays className="w-8 h-8 text-[#800000]" />
+        <TabsContent value="mushaf" className="outline-none space-y-4">
+          {user && !hasExistingSchedule && !isSchedulesLoading && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-200/80 text-amber-900 flex items-center justify-center shrink-0">
+                  <CalendarDays className="w-5 h-5 text-amber-900" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-black uppercase text-amber-950 tracking-wider">
+                    Jadwal Belajar Belum Disimpan
+                  </h4>
+                  <p className="text-xs text-amber-900 leading-relaxed">
+                    Afwan {fullSalutation}, tentukan target Juz &amp; hari aktif di tab <strong>Target &amp; Jadwal</strong> agar hafalan terjadwal rapi, atau Ukhti tetap dapat langsung berlatih dan mengirim laporan di bawah.
+                  </p>
+                </div>
               </div>
-              <Badge className="bg-[#D4AF37] text-stone-950 font-black text-[11px] px-3.5 py-1 mb-3 uppercase tracking-wider">
-                Langkah Wajib Pertama
-              </Badge>
-              <h3 className="text-2xl font-headline font-black text-stone-900 mb-2">
-                Tentukan Target &amp; Jadwal Belajar Terlebih Dahulu
-              </h3>
-              <p className="text-sm text-stone-600 max-w-lg mx-auto mb-6 leading-relaxed">
-                Afwan {fullSalutation}, seluruh thalibah yang mengambil program Tikrar diwajibkan menentukan <strong>Target Juz</strong>, <strong>Hari Aktif per Pekan</strong>, dan <strong>Kecepatan Belajar</strong> di tab <strong>Target &amp; Jadwal</strong> terlebih dahulu agar hafalan terjadwal secara terstruktur.
-              </p>
               <Button
+                size="sm"
                 onClick={() => setActiveTab('schedule')}
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-sm h-12 px-8 rounded-xl shadow-md transition-all hover:scale-105"
+                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0 shadow-sm"
               >
-                <CalendarDays className="w-4 h-4 mr-2" /> Buka Tab Target &amp; Jadwal Sekarang
+                <CalendarDays className="w-3.5 h-3.5 mr-1.5" /> Atur Jadwal
               </Button>
-            </Card>
-          ) : (
-            <TikrarSystem
-              targetPage={mushafTarget.page}
-              targetJuz={mushafTarget.juz}
-              refreshSignal={refreshSignal}
-              onDataChanged={triggerGlobalRefresh}
-              onOpenScheduleTab={() => setActiveTab('schedule')}
-              onOpenGroupRecapTab={() => setActiveTab('daily-report')}
-            />
+            </div>
           )}
+          <TikrarSystem
+            targetPage={mushafTarget.page}
+            targetJuz={mushafTarget.juz}
+            refreshSignal={refreshSignal}
+            onDataChanged={triggerGlobalRefresh}
+            onOpenScheduleTab={() => setActiveTab('schedule')}
+            onOpenGroupRecapTab={() => setActiveTab('daily-report')}
+          />
         </TabsContent>
 
         {/* Tab 2: Rekap Pribadi Ringkas & Leaderboard/Heatmap Grup 30 Hari */}
         <TabsContent value="daily-report" className="space-y-6 outline-none">
-          {user && !hasExistingSchedule && !isSchedulesLoading ? (
-            <Card className="border-2 border-stone-200 bg-white p-8 text-center rounded-3xl shadow-sm max-w-xl mx-auto">
-              <Users className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-              <h3 className="text-xl font-headline font-black text-stone-800 mb-1">
-                Rekap &amp; Heatmap Belum Aktif
-              </h3>
-              <p className="text-xs text-stone-500 max-w-md mx-auto mb-5 leading-relaxed">
-                Rekap kemajuan hafalan dan keaktifan grup akan aktif secara otomatis setelah {fullSalutation} menentukan jadwal belajar.
-              </p>
+          {user && !hasExistingSchedule && !isSchedulesLoading && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-200/80 text-amber-900 flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5 text-amber-900" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-black uppercase text-amber-950 tracking-wider">
+                    Target Jadwal Belum Ditetapkan
+                  </h4>
+                  <p className="text-xs text-amber-900 leading-relaxed">
+                    Simpan jadwal harian di tab Target &amp; Jadwal untuk menghubungkan target pekanan dengan kalender.
+                  </p>
+                </div>
+              </div>
               <Button
+                size="sm"
                 onClick={() => setActiveTab('schedule')}
-                className="bg-[#800000] text-white font-bold text-xs h-10 px-6 rounded-xl"
+                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
               >
                 <CalendarDays className="w-3.5 h-3.5 mr-1.5" /> Atur Jadwal Sekarang
               </Button>
-            </Card>
-          ) : (
-            <>
-              <TikrarDailyReport
-                refreshSignal={refreshSignal}
-                onDataChanged={triggerGlobalRefresh}
-                onOpenScheduleTab={() => setActiveTab('schedule')}
-                onOpenMushafTab={(page, juz) => {
-                  setMushafTarget({ page, juz });
-                  setActiveTab('mushaf');
-                }}
-              />
-              <TikrarGroupHeatmap refreshSignal={refreshSignal} />
-            </>
+            </div>
           )}
+          <TikrarDailyReport
+            refreshSignal={refreshSignal}
+            onDataChanged={triggerGlobalRefresh}
+            onOpenScheduleTab={() => setActiveTab('schedule')}
+            onOpenMushafTab={(page, juz) => {
+              setMushafTarget({ page, juz });
+              setActiveTab('mushaf');
+            }}
+          />
+          <TikrarGroupHeatmap refreshSignal={refreshSignal} />
         </TabsContent>
 
         {/* Tab 3: Pemilihan Target Mandiri & Generator Jadwal 5 Hari/Pekan (Fase 2) */}
@@ -207,7 +198,7 @@ export default function TikrarPage() {
                   Langkah Awal: Buat Jadwal Belajar {fullSalutation}
                 </h4>
                 <p className="text-xs font-semibold text-stone-900 leading-relaxed">
-                  Silakan tentukan 1 Juz target hafalan dan kecepatan belajar di bawah, lalu klik tombol <strong>&quot;Buat &amp; Simpan Jadwal Harian&quot;</strong> untuk membuka mushaf dan memulai latihan.
+                  Silakan tentukan 1 Juz target hafalan dan kecepatan belajar di bawah, lalu klik tombol <strong>&quot;Simpan Target &amp; Generate Jadwal&quot;</strong> untuk membuka mushaf dan memulai latihan.
                 </p>
               </div>
             </div>

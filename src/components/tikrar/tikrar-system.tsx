@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import {
+  AlertCircle,
   ArrowRight,
   BookOpen,
   CalendarDays,
@@ -56,6 +57,7 @@ import { useUser, useDoc, useCollection, addDocumentNonBlocking, db } from '@/db
 import { authFetch } from '@/db/client';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import { QURAN_CHAPTERS } from '@/lib/quran-data';
 import { SURAH_START_PAGES } from '@/lib/quran-mapping';
 import {
@@ -161,6 +163,14 @@ export function TikrarSystem({
   const [isRequestingExam, setIsRequestingExam] = useState(false);
 
   const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
+
+  // State Formulir Laporan Harian Tikrar & Setoran Tasmi'
+  const [logBlocks, setLogBlocks] = useState<number[]>([]);
+  const [logDuration, setLogDuration] = useState<number>(30);
+  const [logRepetitions, setLogRepetitions] = useState<number>(40);
+  const [logNotes, setLogNotes] = useState<string>('');
+  const [isSubmittingLog, setIsSubmittingLog] = useState<boolean>(false);
+  const [isRegisteringSubmission, setIsRegisteringSubmission] = useState<boolean>(false);
 
   // Tahap 0 & Sub-repetisi state
   const [prepListenCount, setPrepListenCount] = useState(0);
@@ -683,6 +693,170 @@ export function TikrarSystem({
     () => tuntasBlockNumbers.filter((b) => !completedBlocksToday.has(b)),
     [tuntasBlockNumbers, completedBlocksToday]
   );
+
+  // Sinkronisasi otomatis blok yang dipilih untuk pelaporan hari ini
+  useEffect(() => {
+    setLogBlocks((prev) => {
+      const set = new Set<number>(prev);
+      completedBlocksToday.forEach((b) => set.add(b));
+      tuntasBlockNumbers.forEach((b) => set.add(b));
+      if (set.size === 0 && completedBlocksAllTime.size > 0) {
+        completedBlocksAllTime.forEach((b) => set.add(b));
+      }
+      if (set.size === 0) {
+        set.add(1);
+      }
+      return Array.from(set).sort((a, b) => a - b);
+    });
+  }, [page, completedBlocksToday, tuntasBlockNumbers, completedBlocksAllTime]);
+
+  const toggleLogBlock = (bNum: number) => {
+    setLogBlocks((prev) =>
+      prev.includes(bNum)
+        ? prev.filter((b) => b !== bNum)
+        : [...prev, bNum].sort((a, b) => a - b)
+    );
+  };
+
+  // Milestone evaluasi setoran tasmi' (1/2 halaman pertama A&B, 1/2 halaman kedua C&D, atau 1 halaman penuh A-D)
+  const milestoneInfo = useMemo(() => {
+    const has1_2 = completedBlocksAllTime.has(1) && completedBlocksAllTime.has(2);
+    const has3_4 = completedBlocksAllTime.has(3) && completedBlocksAllTime.has(4);
+    const hasAll = has1_2 && has3_4;
+
+    if (!has1_2 && !has3_4) return null;
+
+    const targetRange = hasAll ? 'blok_1_4' : has1_2 && !has3_4 ? 'blok_1_2' : 'blok_3_4';
+    const label =
+      targetRange === 'blok_1_4'
+        ? '1 Halaman Penuh Selesai (Blok A–D)'
+        : targetRange === 'blok_1_2'
+        ? '1/2 Halaman Pertama Selesai (Blok A & B)'
+        : '1/2 Halaman Kedua Selesai (Blok C & D)';
+
+    const activeOrPassed = (userSubmissions || []).find(
+      (s: any) =>
+        Number(s.page_number) === page &&
+        (s.blocks_range === targetRange || s.blocks_range === 'blok_1_4') &&
+        (s.status === 'pending' || s.status === 'passed')
+    );
+
+    const latestRevision = !activeOrPassed
+      ? (userSubmissions || []).find(
+          (s: any) =>
+            Number(s.page_number) === page &&
+            (s.blocks_range === targetRange || s.blocks_range === 'blok_1_4') &&
+            s.status === 'needs_revision'
+        )
+      : null;
+
+    return {
+      targetRange,
+      label,
+      existing: activeOrPassed || null,
+      revision: latestRevision || null,
+    };
+  }, [completedBlocksAllTime, userSubmissions, page]);
+
+  const handleSubmitDailyLog = async (overrideBlocks?: number[]) => {
+    if (!user) {
+      toast({
+        title: 'Silakan Masuk Terlebih Dahulu',
+        description: 'Masuk ke akun Ukhti agar laporan harian & poin keaktifan tercatat di sistem.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const blocksToSubmit = (overrideBlocks || logBlocks).filter((b) => b >= 1 && b <= 4);
+    if (blocksToSubmit.length === 0) {
+      toast({
+        title: 'Pilih Minimal 1 Blok',
+        description: 'Centang minimal satu blok (A, B, C, atau D) yang telah Ukhti selesaikan repetisinya hari ini.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmittingLog(true);
+    try {
+      const res = await authFetch('/api/tikrar/daily-log', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'submit_daily_log',
+          juz,
+          page_number: page,
+          blocks_completed: blocksToSubmit,
+          repetition_count: Math.max(40, logRepetitions),
+          duration_minutes: Math.max(5, logDuration),
+          notes: logNotes.trim() || null,
+          log_date: todayKey,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error?.message || 'Gagal menyimpan laporan harian.');
+      }
+
+      const awarded = Number(json.data?.pointsAwarded) || 0;
+      const breakdown = json.data?.pointBreakdown || [];
+
+      toast({
+        title: 'Alhamdulillah, Laporan Tikrar Tercatat!',
+        description:
+          awarded > 0
+            ? `Halaman ${page} (${blocksToSubmit.map((b) => `Blok ${BLOCK_LETTERS[b]}`).join(', ')}) berhasil disimpan! • ${breakdown.join(' • ')}`
+            : `Laporan Halaman ${page} (${blocksToSubmit.map((b) => `Blok ${BLOCK_LETTERS[b]}`).join(', ')}) berhasil diperbarui hari ini.`,
+      });
+
+      setLogNotes('');
+      await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
+      onDataChanged?.();
+    } catch (err: any) {
+      toast({
+        title: 'Gagal Menyimpan Laporan',
+        description: err?.message || 'Terjadi kendala saat menyimpan laporan harian.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingLog(false);
+    }
+  };
+
+  const handleRegisterSubmission = async () => {
+    if (!user || !milestoneInfo) return;
+    setIsRegisteringSubmission(true);
+    try {
+      const res = await authFetch('/api/tikrar/daily-log', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'register_submission',
+          juz,
+          page_number: page,
+          blocks_range: milestoneInfo.targetRange,
+          notes: logNotes.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error?.message || 'Gagal mendaftar antrean setoran.');
+      }
+      toast({
+        title: 'Antrean Setoran Berhasil Didaftarkan!',
+        description: `Setoran Live Zoom untuk Halaman ${page} (${milestoneInfo.label}) telah diajukan ke Musyrifah.`,
+      });
+      await Promise.all([refreshSubmissions(), refreshUser()]);
+      onDataChanged?.();
+    } catch (err: any) {
+      toast({
+        title: 'Gagal Mendaftar Setoran',
+        description: err?.message || 'Terjadi kendala saat mendaftar setoran.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRegisteringSubmission(false);
+    }
+  };
 
   const handleSetAsActiveTarget = async () => {
     if (!user || isUpdatingTarget) return;
@@ -1494,6 +1668,33 @@ export function TikrarSystem({
                 className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
               >
                 Lanjut ke Halaman {page + 1} <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          )}
+          {/* Mobile Floating Quick-Submit Bar */}
+          {user && logBlocks.length > 0 && (
+            <div className="sm:hidden fixed bottom-16 left-0 right-0 z-30 p-2.5 bg-[#800000] text-white border-t-2 border-[#D4AF37] shadow-2xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
+              <div className="min-w-0 flex-1 pl-1">
+                <p className="text-[10px] font-black uppercase text-[#D4AF37] leading-tight">
+                  Laporan Tikrar Hal. {page}
+                </p>
+                <p className="text-xs font-bold text-white truncate leading-tight">
+                  {logBlocks.map((b) => `Blok ${BLOCK_LETTERS[b]}`).join(', ')} Siap Dikirim
+                </p>
+              </div>
+              <Button
+                size="sm"
+                disabled={isSubmittingLog}
+                onClick={() => handleSubmitDailyLog()}
+                className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-stone-950 font-black text-xs h-9 px-4 rounded-xl shrink-0 shadow-md"
+              >
+                {isSubmittingLog ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5 mr-1 fill-stone-950" /> Kirim (+20)
+                  </>
+                )}
               </Button>
             </div>
           )}

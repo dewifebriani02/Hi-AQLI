@@ -343,11 +343,32 @@ export function TikrarSchedule({
                 Tentukan 1 Juz pilihan dan kecepatan belajar ({activeDaysPerWeek} hari aktif/pekan).
               </CardDescription>
             </div>
-            {isDisplayingSavedDbSchedule && (
-              <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37] font-black text-[10px] self-start sm:self-center">
-                ✓ Jadwal Aktif Tersimpan
-              </Badge>
-            )}
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              {isDisplayingSavedDbSchedule && (
+                <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37] font-black text-[10px]">
+                  ✓ Jadwal Aktif
+                </Badge>
+              )}
+              {user && (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isSaving}
+                  onClick={handleSaveAndGenerate}
+                  className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-stone-950 font-black text-xs h-9 px-4 rounded-xl shadow-md border border-amber-300"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Simpan Jadwal
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -703,6 +724,33 @@ export function TikrarSchedule({
           </div>
         )}
       </div>
+      {/* Mobile Sticky Save Button jika jadwal belum tersimpan di DB */}
+      {user && !isDisplayingSavedDbSchedule && (
+        <div className="sm:hidden fixed bottom-16 left-0 right-0 z-30 p-2.5 bg-[#800000] text-white border-t-2 border-[#D4AF37] shadow-2xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
+          <div className="min-w-0 flex-1 pl-1">
+            <p className="text-[10px] font-black uppercase text-[#D4AF37] leading-tight">
+              Target Juz {selectedJuz}
+            </p>
+            <p className="text-xs font-bold text-white truncate leading-tight">
+              {previewSchedule.totalBlocks} Blok • {previewSchedule.totalActiveDays} Hari Aktif
+            </p>
+          </div>
+          <Button
+            size="sm"
+            disabled={isSaving}
+            onClick={handleSaveAndGenerate}
+            className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-stone-950 font-black text-xs h-9 px-4 rounded-xl shrink-0 shadow-md"
+          >
+            {isSaving ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 mr-1" /> Simpan Jadwal
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
