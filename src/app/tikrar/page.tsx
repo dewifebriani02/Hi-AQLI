@@ -23,7 +23,7 @@ import { HifzProgressChart } from '@/components/progress/hifz-progress-chart';
 import { useDoc, useUser, useCollection } from '@/db';
 
 export default function TikrarPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { data: userData, refresh: refreshUser } = useDoc<any>(user?.id ? 'users' : null, user?.id);
   const fullSalutation = userData?.salutation || 'Ukhti';
 
@@ -63,16 +63,19 @@ export default function TikrarPage() {
     return false;
   }, [user?.id, userSchedules, userData]);
 
-  // Alur Wajib Isi Jadwal: Jika thalibah belum memiliki jadwal, otomatis arahkan ke tab schedule
+  // Alur Wajib Isi Jadwal: Jika thalibah belum memiliki jadwal, otomatis arahkan langsung ke tab schedule
   const [hasInitializedTab, setHasInitializedTab] = useState(false);
   useEffect(() => {
-    if (!isSchedulesLoading && !hasInitializedTab) {
+    if (isUserLoading) return;
+    if (user && isSchedulesLoading) return;
+
+    if (!hasInitializedTab) {
       if (user && !hasExistingSchedule) {
         setActiveTab('schedule');
       }
       setHasInitializedTab(true);
     }
-  }, [user, isSchedulesLoading, hasExistingSchedule, hasInitializedTab]);
+  }, [user, isUserLoading, isSchedulesLoading, hasExistingSchedule, hasInitializedTab]);
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-32">
@@ -111,7 +114,7 @@ export default function TikrarPage() {
             <CalendarDays className="w-4 h-4 shrink-0" /> Target &amp; Jadwal
             {user && !hasExistingSchedule && !isSchedulesLoading && (
               <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black bg-amber-400 text-stone-950 rounded-full animate-pulse">
-                Wajib
+                Wajib Diisi
               </span>
             )}
           </TabsTrigger>
