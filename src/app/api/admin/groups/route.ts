@@ -324,7 +324,7 @@ export async function POST(req: NextRequest) {
 
     // ACTION: update_group
     if (action === 'update_group') {
-      const { id, sourceTable, whatsapp_group_link, whatsapp_group_id, musyrifah, schedule, name } = body;
+      const { id, sourceTable, whatsapp_group_link, whatsapp_group_id, musyrifah, schedule, name, zoom_link } = body;
       if (!id) {
         return NextResponse.json({ success: false, error: 'ID grup wajib disertakan.' }, { status: 400 });
       }
@@ -346,9 +346,10 @@ export async function POST(req: NextRequest) {
             title = COALESCE($1, title),
             whatsapp_group_link = $2,
             musyrifah = $3,
-            schedule = COALESCE($4, schedule)
-          WHERE id = $5
-        `, [name || null, whatsapp_group_link || null, musyrifah || null, schedule || null, id]);
+            schedule = COALESCE($4, schedule),
+            zoom_link = CASE WHEN $5::text IS NOT NULL THEN $5::text ELSE zoom_link END
+          WHERE id = $6
+        `, [name || null, whatsapp_group_link || null, musyrifah || null, schedule || null, zoom_link !== undefined ? zoom_link : null, id]);
 
         if (whatsapp_group_id !== undefined) {
           await query(`

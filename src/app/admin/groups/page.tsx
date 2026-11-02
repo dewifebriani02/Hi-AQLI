@@ -43,6 +43,7 @@ import {
   Filter,
   Layers,
   ArrowLeft,
+  Video,
   Sparkles,
   BookOpen
 } from 'lucide-react';
@@ -175,6 +176,7 @@ export default function AdminGroupsPage() {
     whatsapp_group_id: string;
     musyrifah: string;
     schedule: string;
+    zoom_link: string;
   }>({
     id: '',
     sourceTable: 'halaqahs',
@@ -182,7 +184,8 @@ export default function AdminGroupsPage() {
     whatsapp_group_link: '',
     whatsapp_group_id: '',
     musyrifah: '',
-    schedule: ''
+    schedule: '',
+    zoom_link: ''
   });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
@@ -403,7 +406,8 @@ export default function AdminGroupsPage() {
       whatsapp_group_link: group.whatsapp_group_link || '',
       whatsapp_group_id: group.whatsapp_group_id || '',
       musyrifah: group.musyrifah || '',
-      schedule: group.schedule || ''
+      schedule: group.schedule || '',
+      zoom_link: group.zoom_link || ''
     });
     setEditModalOpen(true);
   };
@@ -663,13 +667,14 @@ export default function AdminGroupsPage() {
                         </div>
 
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleOpenEdit(group)}
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-slate-700 rounded-lg"
-                          title="Edit Pengaturan Grup"
+                          className="h-8 px-2.5 text-xs font-bold text-slate-700 hover:text-slate-900 border-slate-300 rounded-xl gap-1.5 shrink-0 bg-white shadow-xs"
+                          title="Edit Pengaturan & Jadwal Grup"
                         >
-                          <Edit3 className="w-4 h-4" />
+                          <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Edit Jadwal</span>
                         </Button>
                       </div>
 
@@ -1204,6 +1209,45 @@ export default function AdminGroupsPage() {
             </div>
 
             <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-slate-700">Jadwal Sesi (Ditentukan Admin)</Label>
+                <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50">
+                  Setting Jadwal
+                </Badge>
+              </div>
+              <Input
+                placeholder="Contoh: Senin - Jumat (Ditentukan Admin) atau 05:30 - 06:30 WIB"
+                value={editingGroupValues.schedule}
+                onChange={(e) => setEditingGroupValues(prev => ({ ...prev, schedule: e.target.value }))}
+                className="text-xs rounded-xl font-bold text-slate-900"
+              />
+              <p className="text-[11px] text-slate-500">
+                Jadwal yang diatur di sini akan otomatis tampil pada jadwal belajar peserta dan kartu informasi grup.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-700">Musyrifah Pengampu</Label>
+              <Input
+                value={editingGroupValues.musyrifah}
+                onChange={(e) => setEditingGroupValues(prev => ({ ...prev, musyrifah: e.target.value }))}
+                className="text-xs rounded-xl"
+              />
+            </div>
+
+            {editingGroupValues.sourceTable === 'halaqahs' && (
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Link Zoom Live Meeting (Opsional)</Label>
+                <Input
+                  placeholder="https://zoom.us/j/..."
+                  value={editingGroupValues.zoom_link}
+                  onChange={(e) => setEditingGroupValues(prev => ({ ...prev, zoom_link: e.target.value }))}
+                  className="text-xs rounded-xl"
+                />
+              </div>
+            )}
+
+            <div className="space-y-1">
               <Label className="text-xs font-bold text-slate-700">Link Grup WhatsApp</Label>
               <Input
                 placeholder="https://chat.whatsapp.com/..."
@@ -1221,26 +1265,6 @@ export default function AdminGroupsPage() {
                 onChange={(e) => setEditingGroupValues(prev => ({ ...prev, whatsapp_group_id: e.target.value }))}
                 className="text-xs font-mono rounded-xl"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-700">Musyrifah</Label>
-                <Input
-                  value={editingGroupValues.musyrifah}
-                  onChange={(e) => setEditingGroupValues(prev => ({ ...prev, musyrifah: e.target.value }))}
-                  className="text-xs rounded-xl"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-700">Jadwal Sesi</Label>
-                <Input
-                  value={editingGroupValues.schedule}
-                  onChange={(e) => setEditingGroupValues(prev => ({ ...prev, schedule: e.target.value }))}
-                  className="text-xs rounded-xl"
-                />
-              </div>
             </div>
           </div>
 

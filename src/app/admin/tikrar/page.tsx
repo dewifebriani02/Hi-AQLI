@@ -707,7 +707,7 @@ export default function AdminTikrarPage() {
                     {placeholderZoomCount} Sesi Halaqah Masih Menggunakan Tautan Zoom Placeholder
                   </p>
                   <p className="text-amber-800">
-                    Perbarui tautan Zoom asli untuk Sesi Fajar, Dhuha, dan Malam agar tombol Ruang
+                    Perbarui tautan Zoom asli dan jadwal resmi Hi Tikrar agar tombol Ruang
                     Zoom peserta &amp; Musyrifah mengarah ke ruang meeting resmi HI AQLI.
                   </p>
                 </div>
