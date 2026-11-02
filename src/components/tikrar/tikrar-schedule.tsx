@@ -30,7 +30,6 @@ import {
   Lock,
   Sparkles,
   Target,
-  Video,
 } from 'lucide-react';
 
 export interface TikrarScheduleProps {
@@ -338,11 +337,10 @@ export function TikrarSchedule({
                 <Target className="w-3.5 h-3.5" /> Fase Perencanaan Mandiri
               </div>
               <CardTitle className="text-xl font-headline font-black">
-                Target Juz, Sesi Zoom &amp; Generator Jadwal
+                Target Juz &amp; Generator Jadwal
               </CardTitle>
               <CardDescription className="text-white/80 text-xs mt-1">
-                Pilih sesi Halaqah Live Zoom, tentukan 1 Juz pilihan dan kecepatan belajar (5 hari
-                aktif/pekan).
+                Tentukan 1 Juz pilihan dan kecepatan belajar ({activeDaysPerWeek} hari aktif/pekan).
               </CardDescription>
             </div>
             {isDisplayingSavedDbSchedule && (
@@ -354,49 +352,11 @@ export function TikrarSchedule({
         </CardHeader>
 
         <CardContent className="p-5 sm:p-6 space-y-6">
-          {/* 1. Pilihan Sesi Halaqah Live Zoom */}
-          <div className="space-y-2.5">
-            <label className="text-xs font-black uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
-              <Video className="w-4 h-4 text-[#800000]" /> 1. Pilih Jadwal Kelas Halaqah Live Zoom
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {(tikrarHalaqahs || []).map((h: any) => {
-                const isSelected = selectedHalaqahId === h.id;
-                return (
-                  <button
-                    key={h.id}
-                    type="button"
-                    onClick={() => setSelectedHalaqahId(h.id)}
-                    className={cn(
-                      'text-left p-3.5 rounded-xl border-2 transition-all flex flex-col justify-between gap-2',
-                      isSelected
-                        ? 'border-[#800000] bg-red-50/40 shadow-sm'
-                        : 'border-stone-200 bg-stone-50/50 hover:border-stone-300'
-                    )}
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-black text-[#800000]">
-                          {String(h.title || '').replace('Hi Tikrar - ', '')}
-                        </span>
-                        {isSelected && <CheckCircle2 className="w-4 h-4 text-[#800000] shrink-0" />}
-                      </div>
-                      <p className="text-[11px] font-bold text-stone-700">{h.schedule}</p>
-                    </div>
-                    <div className="text-[10px] text-stone-500 font-semibold">
-                      Pengampu: {h.musyrifah || 'Musyrifah Tikrar'} • Kuota {h.quota || 30}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* 2. Pilihan Juz, Hari Aktif & Tanggal Mulai */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                2. Target Juz Pilihan
+                1. Target Juz Pilihan
               </label>
               <select
                 aria-label="Pilih Target Juz"
@@ -418,7 +378,7 @@ export function TikrarSchedule({
 
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                3. Hari Aktif / Pekan
+                2. Hari Aktif / Pekan
               </label>
               <select
                 aria-label="Pilih Hari Aktif per Pekan"
@@ -435,7 +395,7 @@ export function TikrarSchedule({
 
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                4. Tanggal Mulai
+                3. Tanggal Mulai
               </label>
               <Input
                 type="date"
@@ -449,7 +409,7 @@ export function TikrarSchedule({
           {/* 3. Pilihan Pace / Target Durasi 1 Juz */}
           <div className="space-y-2.5">
             <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-              5. Pilih Kecepatan Hafalan (Pace 1 Juz)
+              4. Pilih Kecepatan Hafalan (Pace 1 Juz)
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {TIKRAR_PACE_OPTIONS.map((opt) => {
