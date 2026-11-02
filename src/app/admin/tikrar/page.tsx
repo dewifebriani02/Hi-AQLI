@@ -25,18 +25,28 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
-  Flame,
+  Link2,
   Loader2,
   MessageCircle,
   Play,
   Repeat,
+  Save,
   Search,
   Send,
+  Settings2,
   ShieldCheck,
   Sparkles,
   Users,
   Video,
 } from 'lucide-react';
+
+interface HalaqahEditDraft {
+  zoom_link: string;
+  zoom_passcode: string;
+  musyrifah: string;
+  schedule: string;
+  whatsapp_group_link: string;
+}
 
 function normalizePhone(raw?: string | null): string {
   if (!raw) return '';
@@ -51,6 +61,12 @@ function formatBlocksRangeBadge(range?: string | null): string {
   if (range === 'blok_1_4') return '1 Halaman Penuh (Blok A–D)';
   if (range === 'blok_3_4') return '1/2 Halaman (Blok C & D)';
   return '1/2 Halaman (Blok A & B)';
+}
+
+function isPlaceholderZoomLink(url?: string | null): boolean {
+  const trimmed = String(url || '').trim();
+  if (!trimmed) return true;
+  return trimmed.includes('hiaqli-tikrar-');
 }
 
 export default function AdminTikrarPage() {
@@ -80,6 +96,10 @@ export default function AdminTikrarPage() {
   const [reminderLoading, setReminderLoading] = useState(false);
   const [reminderResult, setReminderResult] = useState<any | null>(null);
 
+  // Halaqah Tikrar Session & Zoom Link editor state
+  const [sessionEdits, setSessionEdits] = useState<Record<string, HalaqahEditDraft>>({});
+  const [savingSessionId, setSavingSessionId] = useState<string | null>(null);
+
   const submissionsOptions = useMemo(
     () => ({
       orderBy: { column: 'submitted_at', ascending: false },
@@ -105,7 +125,9 @@ export default function AdminTikrarPage() {
     user ? 'page_exams' : null,
     examOptions
   );
-  const { data: halaqahs } = useCollection<any>(user ? 'halaqahs' : null);
+  const { data: halaqahs, refresh: refreshHalaqahs } = useCollection<any>(
+    user ? 'halaqahs' : null
+  );
   const waLogsOptions = useMemo(
     () => ({
       orderBy: { column: 'created_at', ascending: false },
@@ -132,12 +154,28 @@ export default function AdminTikrarPage() {
 
   const tikrarHalaqahs = useMemo(
     () =>
-      (halaqahs || []).filter((h: any) => {
-        const prog = String(h?.program_type || '').toLowerCase();
-        return prog === 'tikrar_daily' || prog.includes('tikrar');
-      }),
+      (halaqahs || [])
+        .filter((h: any) => {
+          const prog = String(h?.program_type || '').toLowerCase();
+          return prog === 'tikrar_daily' || prog.includes('tikrar');
+        })
+        .sort((a: any, b: any) => String(a.id || '').localeCompare(String(b.id || ''))),
     [halaqahs]
   );
+
+  const placeholderZoomCount = useMemo(
+    () => tikrarHalaqahs.filter((h: any) => isPlaceholderZoomLink(h.zoom_link)).length,
+    [tikrarHalaqahs]
+  );
+
+  const halaqahParticipantCountMap = useMemo(() => {
+    const counts = new Map<string, number>();
+    (users || []).forEach((u: any) => {
+      const hid = u?.tikrar_halaqah_id;
+      if (hid) counts.set(hid, (counts.get(hid) || 0) + 1);
+    });
+    return counts;
+  }, [users]);
 
   const halaqahMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -238,6 +276,102 @@ export default function AdminTikrarPage() {
       return name.includes(q) || pageStr.includes(q);
     });
   }, [pageExams, examFilter, searchTerm, userMap]);
+
+  const getSessionDraft = (h: any): HalaqahEditDraft => {
+    if (sessionEdits[h.id]) return sessionEdits[h.id];
+    return {
+      zoom_link: String(h.zoom_link || ''),
+      zoom_passcode: String(h.zoom_passcode || ''),
+      musyrifah: String(h.musyrifah || ''),
+      schedule: String(h.schedule || ''),
+      whatsapp_group_link: String(h.whatsapp_group_link || ''),
+    };
+  };
+
+  const updateSessionDraftField = (
+    h: any,
+    field: keyof HalaqahEditDraft,
+    value: string
+  ) => {
+    setSessionEdits((prev) => {
+      const current = prev[h.id] || {
+        zoom_link: String(h.zoom_link || ''),
+        zoom_passcode: String(h.zoom_passcode || ''),
+        musyrifah: String(h.musyrifah || ''),
+        schedule: String(h.schedule || ''),
+        whatsapp_group_link: String(h.whatsapp_group_link || ''),
+      };
+      return {
+        ...prev,
+        [h.id]: {
+          ...current,
+          [field]: value,
+        },
+      };
+    });
+  };
+
+  const handleSaveHalaqahSession = async (h: any) => {
+    const draft = getSessionDraft(h);
+    const zoomLink = draft.zoom_link.trim();
+    const waLink = draft.whatsapp_group_link.trim();
+
+    if (zoomLink && !/^https?:\/\//i.test(zoomLink)) {
+      toast({
+        variant: 'destructive',
+        title: 'Format Tautan Zoom Belum Valid',
+        description: 'Gunakan URL lengkap yang diawali https:// (mis. https://us06web.zoom.us/j/...).',
+      });
+      return;
+    }
+
+    if (waLink && !/^https?:\/\//i.test(waLink)) {
+      toast({
+        variant: 'destructive',
+        title: 'Format Tautan Grup WA Belum Valid',
+        description: 'Gunakan URL lengkap yang diawali https:// (mis. https://chat.whatsapp.com/...).',
+      });
+      return;
+    }
+
+    setSavingSessionId(h.id);
+    try {
+      const { error } = await db
+        .from('halaqahs')
+        .update({
+          zoom_link: zoomLink || null,
+          zoom_passcode: draft.zoom_passcode.trim() || null,
+          musyrifah: draft.musyrifah.trim() || 'Musyrifah Tikrar',
+          schedule: draft.schedule.trim() || h.schedule,
+          whatsapp_group_link: waLink || null,
+        })
+        .eq('id', h.id);
+
+      if (error) {
+        throw new Error(error.message || 'Gagal memperbarui sesi Halaqah Tikrar.');
+      }
+
+      toast({
+        title: 'Tautan Zoom & Sesi Tersimpan!',
+        description: `${h.title} berhasil diperbarui dan langsung aktif untuk seluruh peserta.`,
+      });
+
+      await refreshHalaqahs();
+      setSessionEdits((prev) => {
+        const next = { ...prev };
+        delete next[h.id];
+        return next;
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Menyimpan Sesi Halaqah',
+        description: err?.message || 'Pastikan akun memiliki akses Musyrifah/Admin.',
+      });
+    } finally {
+      setSavingSessionId(null);
+    }
+  };
 
   const handleVerifySubmission = async (
     sub: any,
@@ -421,11 +555,11 @@ export default function AdminTikrarPage() {
           </h1>
           <p className="text-sm text-muted-foreground">
             Simak antrean setoran 1/2 halaman &amp; 1 halaman via Live Zoom, buka kunci halaman
-            berikutnya, pantau heatmap grup, dan kelola pengingat WhatsApp.
+            berikutnya, pantau heatmap grup, dan kelola tautan Zoom serta pengingat WhatsApp.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start">
+        <div className="flex items-center gap-2 self-start flex-wrap">
           <Button asChild variant="outline" className="font-bold border-slate-200">
             <Link href="/tikrar">
               <BookOpen className="w-4 h-4 mr-2 text-[#800000]" /> Halaman Peserta
@@ -532,6 +666,17 @@ export default function AdminTikrarPage() {
             Antrean Tasmi&apos; Live Zoom ({kpis.pendingSubCount})
           </TabsTrigger>
           <TabsTrigger
+            value="sessions"
+            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2 gap-1.5"
+          >
+            Sesi &amp; Link Zoom ({tikrarHalaqahs.length})
+            {placeholderZoomCount > 0 && (
+              <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-black">
+                {placeholderZoomCount} Placeholder
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
             value="heatmap"
             className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
           >
@@ -553,6 +698,32 @@ export default function AdminTikrarPage() {
 
         {/* TAB 1: Verifikasi Kelas Setoran Live Zoom (Fase 5) */}
         <TabsContent value="submissions" className="space-y-4 outline-none">
+          {placeholderZoomCount > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="flex items-start gap-2.5 text-amber-950">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-0.5">
+                  <p className="font-black uppercase tracking-wider text-amber-900">
+                    {placeholderZoomCount} Sesi Halaqah Masih Menggunakan Tautan Zoom Placeholder
+                  </p>
+                  <p className="text-amber-800">
+                    Perbarui tautan Zoom asli untuk Sesi Fajar, Dhuha, dan Malam agar tombol Ruang
+                    Zoom peserta &amp; Musyrifah mengarah ke ruang meeting resmi HI AQLI.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setActiveTab('sessions')}
+                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs shrink-0"
+              >
+                <Settings2 className="w-3.5 h-3.5 mr-1.5" />
+                Perbarui Link Zoom
+              </Button>
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200">
             <div className="space-y-2">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
@@ -589,18 +760,31 @@ export default function AdminTikrarPage() {
               </div>
             </div>
 
-            {selectedHalaqahObj?.zoom_link && (
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
               <Button
-                asChild
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 shrink-0"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab('sessions')}
+                className="font-bold text-xs h-10 border-slate-200"
               >
-                <a href={selectedHalaqahObj.zoom_link} target="_blank" rel="noopener noreferrer">
-                  <Video className="w-4 h-4 mr-2 text-[#D4AF37]" />
-                  Buka Ruang Zoom Sesi Ini
-                  <ExternalLink className="w-3 h-3 ml-1.5" />
-                </a>
+                <Link2 className="w-3.5 h-3.5 mr-1.5 text-[#800000]" />
+                Kelola Link Zoom
               </Button>
-            )}
+
+              {selectedHalaqahObj?.zoom_link && (
+                <Button
+                  asChild
+                  className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 shrink-0"
+                >
+                  <a href={selectedHalaqahObj.zoom_link} target="_blank" rel="noopener noreferrer">
+                    <Video className="w-4 h-4 mr-2 text-[#D4AF37]" />
+                    Buka Ruang Zoom Sesi Ini
+                    <ExternalLink className="w-3 h-3 ml-1.5" />
+                  </a>
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -864,12 +1048,229 @@ export default function AdminTikrarPage() {
           )}
         </TabsContent>
 
-        {/* TAB 2: Heatmap Keaktifan Grup 30 Hari */}
+        {/* TAB 2: Pengaturan Sesi Halaqah & Tautan Zoom Asli */}
+        <TabsContent value="sessions" className="space-y-4 outline-none">
+          <Card className="border border-slate-200 shadow-sm bg-white rounded-2xl">
+            <CardHeader>
+              <div className="flex items-center gap-2 text-[#800000] text-xs font-black uppercase tracking-wider">
+                <Video className="w-4 h-4" /> Manajemen Ruang Live Zoom &amp; Grup WhatsApp Halaqah
+              </div>
+              <CardTitle className="text-lg font-black">
+                Pengaturan 3 Sesi Halaqah HI Tikrar
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Perbarui tautan Zoom Meeting asli, passcode, Musyrifah pengampu, jadwal sesi, dan
+                tautan Grup WhatsApp. Perubahan langsung tampil pada halaman peserta{' '}
+                <code>/tikrar</code> dan panel verifikasi tasmi&apos;.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {tikrarHalaqahs.length === 0 ? (
+                <p className="text-xs text-slate-500 italic py-6 text-center">
+                  Belum ada sesi Halaqah Tikrar terdaftar pada tabel <code>halaqahs</code>.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {tikrarHalaqahs.map((h: any) => {
+                    const draft = getSessionDraft(h);
+                    const isPlaceholder = isPlaceholderZoomLink(draft.zoom_link);
+                    const assignedCount = halaqahParticipantCountMap.get(h.id) || 0;
+                    const isSavingRow = savingSessionId === h.id;
+                    const hasChanges =
+                      draft.zoom_link !== String(h.zoom_link || '') ||
+                      draft.zoom_passcode !== String(h.zoom_passcode || '') ||
+                      draft.musyrifah !== String(h.musyrifah || '') ||
+                      draft.schedule !== String(h.schedule || '') ||
+                      draft.whatsapp_group_link !== String(h.whatsapp_group_link || '');
+
+                    return (
+                      <div
+                        key={h.id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-4"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-base font-black text-slate-900">{h.title}</h3>
+                              {isPlaceholder ? (
+                                <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 text-[10px] font-black uppercase">
+                                  Tautan Placeholder
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 text-[10px] font-black uppercase">
+                                  Link Zoom Aktif
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="text-[10px] font-bold">
+                                {assignedCount} Thalibah Terdaftar
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-500">
+                              ID Sesi: <code>{h.id}</code>
+                            </p>
+                          </div>
+
+                          {draft.zoom_link.trim() && (
+                            <Button
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-bold border-[#800000]/30 text-[#800000] self-start"
+                            >
+                              <a
+                                href={draft.zoom_link.trim()}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                                Uji Buka Link Zoom
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label
+                              htmlFor={`zoom-link-${h.id}`}
+                              className="text-[11px] font-black uppercase tracking-wider text-slate-700"
+                            >
+                              Tautan Zoom Meeting Resmi (zoom_link)
+                            </label>
+                            <Input
+                              id={`zoom-link-${h.id}`}
+                              value={draft.zoom_link}
+                              onChange={(e) =>
+                                updateSessionDraftField(h, 'zoom_link', e.target.value)
+                              }
+                              placeholder="https://us06web.zoom.us/j/81234567890?pwd=..."
+                              className="bg-white font-medium text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`zoom-pass-${h.id}`}
+                              className="text-[11px] font-black uppercase tracking-wider text-slate-700"
+                            >
+                              Passcode Zoom (Opsional)
+                            </label>
+                            <Input
+                              id={`zoom-pass-${h.id}`}
+                              value={draft.zoom_passcode}
+                              onChange={(e) =>
+                                updateSessionDraftField(h, 'zoom_passcode', e.target.value)
+                              }
+                              placeholder="Contoh: HIAQLI2026"
+                              className="bg-white text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`musyrifah-${h.id}`}
+                              className="text-[11px] font-black uppercase tracking-wider text-slate-700"
+                            >
+                              Nama Musyrifah Pengampu
+                            </label>
+                            <Input
+                              id={`musyrifah-${h.id}`}
+                              value={draft.musyrifah}
+                              onChange={(e) =>
+                                updateSessionDraftField(h, 'musyrifah', e.target.value)
+                              }
+                              placeholder="Contoh: Ustadzah Musyrifah Tikrar"
+                              className="bg-white text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`schedule-${h.id}`}
+                              className="text-[11px] font-black uppercase tracking-wider text-slate-700"
+                            >
+                              Jadwal Sesi Live Zoom
+                            </label>
+                            <Input
+                              id={`schedule-${h.id}`}
+                              value={draft.schedule}
+                              onChange={(e) =>
+                                updateSessionDraftField(h, 'schedule', e.target.value)
+                              }
+                              placeholder="Senin - Jumat, 05:30 - 06:30 WIB"
+                              className="bg-white text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`wa-group-${h.id}`}
+                              className="text-[11px] font-black uppercase tracking-wider text-slate-700"
+                            >
+                              Tautan Grup WhatsApp Sesi
+                            </label>
+                            <Input
+                              id={`wa-group-${h.id}`}
+                              value={draft.whatsapp_group_link}
+                              onChange={(e) =>
+                                updateSessionDraftField(h, 'whatsapp_group_link', e.target.value)
+                              }
+                              placeholder="https://chat.whatsapp.com/..."
+                              className="bg-white text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          {hasChanges && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={isSavingRow}
+                              onClick={() =>
+                                setSessionEdits((prev) => {
+                                  const next = { ...prev };
+                                  delete next[h.id];
+                                  return next;
+                                })
+                              }
+                              className="text-xs font-bold h-9"
+                            >
+                              Batal Ubah
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={isSavingRow}
+                            onClick={() => handleSaveHalaqahSession(h)}
+                            className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4"
+                          >
+                            {isSavingRow ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                            ) : (
+                              <Save className="w-3.5 h-3.5 mr-1.5" />
+                            )}
+                            Simpan Pengaturan Sesi
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB 3: Heatmap Keaktifan Grup 30 Hari */}
         <TabsContent value="heatmap" className="outline-none">
           <TikrarGroupHeatmap />
         </TabsContent>
 
-        {/* TAB 3: Pengingat Otomatis WhatsApp (Fase 4 Cron) */}
+        {/* TAB 4: Pengingat Otomatis WhatsApp (Fase 4 Cron) */}
         <TabsContent value="reminders" className="space-y-4 outline-none">
           <Card className="border border-slate-200 shadow-sm bg-white rounded-2xl">
             <CardHeader>
@@ -1024,7 +1425,8 @@ export default function AdminTikrarPage() {
                     Audit Trail Pengiriman WhatsApp Tikrar ({tikrarWaLogs.length})
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Log otomatis pengingat harian, evaluasi pekanan, dan notifikasi hasil setoran tasmi&apos;.
+                    Log otomatis pengingat harian, evaluasi pekanan, dan notifikasi hasil setoran
+                    tasmi&apos;.
                   </CardDescription>
                 </div>
                 <Button
@@ -1055,7 +1457,8 @@ export default function AdminTikrarPage() {
                       >
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <span className="font-bold text-slate-900">
-                            {name} <span className="text-slate-500 font-normal">({log.recipient})</span>
+                            {name}{' '}
+                            <span className="text-slate-500 font-normal">({log.recipient})</span>
                           </span>
                           <div className="flex items-center gap-1.5">
                             <Badge variant="outline" className="text-[10px] font-bold">
@@ -1084,7 +1487,9 @@ export default function AdminTikrarPage() {
                           </div>
                         </div>
                         {log.message && (
-                          <p className="text-slate-600 line-clamp-2 leading-relaxed">{log.message}</p>
+                          <p className="text-slate-600 line-clamp-2 leading-relaxed">
+                            {log.message}
+                          </p>
                         )}
                       </div>
                     );
@@ -1095,7 +1500,7 @@ export default function AdminTikrarPage() {
           </Card>
         </TabsContent>
 
-        {/* TAB 4: Peserta, Target Juz & Ujian Halaman */}
+        {/* TAB 5: Peserta, Target Juz & Ujian Halaman */}
         <TabsContent value="participants" className="space-y-6 outline-none">
           {loadingUsers ? (
             <Card className="border-none shadow-sm">
@@ -1186,7 +1591,11 @@ export default function AdminTikrarPage() {
                             variant="outline"
                             className="h-8 text-xs font-bold border-emerald-200 text-emerald-700"
                           >
-                            <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer">
+                            <a
+                              href={`https://wa.me/${waNumber}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
                               <MessageCircle className="w-3.5 h-3.5 mr-1.5" /> WA
                             </a>
                           </Button>

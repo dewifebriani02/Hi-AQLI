@@ -58,7 +58,13 @@ export async function POST(req: NextRequest) {
       [ctx.userId, startPage, endPage]
     );
     const passedExamSet = new Set<number>(juzExamRows.map((e) => Number(e.page_number)));
-    const maxUnlockedPage = computeMaxUnlockedPageInJuz(juz, juzSubRows, passedExamSet);
+    const userCurrPage = Number(userRow.tikrar_current_page);
+    const maxUnlockedPage = computeMaxUnlockedPageInJuz(
+      juz,
+      juzSubRows,
+      passedExamSet,
+      userCurrPage >= startPage && userCurrPage <= endPage ? userCurrPage : startPage
+    );
 
     if (pageNumber > maxUnlockedPage) {
       await client.query('ROLLBACK');

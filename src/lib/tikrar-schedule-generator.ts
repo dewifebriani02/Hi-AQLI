@@ -372,10 +372,15 @@ export function isPageSubmissionCleared(
 export function computeMaxUnlockedPageInJuz(
   juzInput: number,
   submissions: SubmissionGateRecord[] = [],
-  passedExamPages?: Set<number>
+  passedExamPages?: Set<number>,
+  startFromPage?: number
 ): number {
   const { startPage, endPage } = getJuzPageRange(juzInput);
-  for (let p = startPage; p <= endPage; p++) {
+  const baseStart =
+    startFromPage && startFromPage >= startPage && startFromPage <= endPage
+      ? startFromPage
+      : startPage;
+  for (let p = baseStart; p <= endPage; p++) {
     if (!isPageSubmissionCleared(p, submissions, passedExamPages)) {
       return p;
     }

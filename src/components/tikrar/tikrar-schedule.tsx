@@ -729,7 +729,7 @@ export function TikrarSchedule({
                                 onClick={onJumpToDailyReport}
                                 className="h-7 w-full bg-[#800000] hover:bg-[#800000]/90 text-white text-[10px] font-black rounded-lg"
                               >
-                                Isi Laporan
+                                Buka Mushaf &amp; Lapor
                               </Button>
                             )}
                           </div>

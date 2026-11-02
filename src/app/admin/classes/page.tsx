@@ -1,11 +1,9 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
-import {useUser, db } from "@/db";
-import { useCollection, useDoc } from "@/db";
+import { useUser, db } from "@/db";
+import { useCollection } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, User, Calendar, Clock, Users, Timer, GraduationCap, Award, UserPlus, X, Info, ArrowRightLeft } from "lucide-react";
+import { Plus, Library, Edit, Trash2, ArrowLeft, Loader2, CheckCircle2, Calendar, Clock, Users, Timer, GraduationCap, Award, UserPlus, X, Info, ArrowRightLeft, Video } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -41,6 +39,10 @@ const INITIAL_FORM = {
   musyrifah: "",
   day: "Senin",
   time: "19:00",
+  customSchedule: "Senin - Jumat, 05:30 - 06:30 WIB",
+  zoomLink: "",
+  zoomPasscode: "",
+  whatsappGroupLink: "",
   startDate: "",
   durationWeeks: 4,
   juz: "1",
@@ -77,9 +79,8 @@ export default function AdminClassesPage() {
   const [transferDestinationHalaqahId, setTransferDestinationHalaqahId] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
 
-
   // Fetch Classes
-  const { data: halaqahs, isLoading } = useCollection("halaqahs");
+  const { data: halaqahs, isLoading, refresh: refreshHalaqahs } = useCollection("halaqahs");
 
   // Fetch ALL registrations to calculate remaining quota for each card
   const allRegOptions = useMemo(() => ({
@@ -160,9 +161,13 @@ export default function AdminClassesPage() {
       musyrifah: h.musyrifah || "",
       day: day || "Senin",
       time: time || "19:00",
-      startDate: h.start_date || h.startDate || "",
+      customSchedule: h.schedule || "Senin - Jumat, 05:30 - 06:30 WIB",
+      zoomLink: h.zoom_link || "",
+      zoomPasscode: h.zoom_passcode || "",
+      whatsappGroupLink: h.whatsapp_group_link || "",
+      startDate: h.start_date ? String(h.start_date).slice(0, 10) : (h.startDate || ""),
       durationWeeks: h.duration_weeks || h.durationWeeks || 4,
-      juz: h.juz || "1",
+      juz: h.juz ? String(h.juz) : "1",
       level: h.level || "Semua Level",
       isPremium: h.is_premium || h.isPremium || false,
       paymentType: h.payment_type || "fixed",
@@ -182,8 +187,10 @@ export default function AdminClassesPage() {
     }
 
     let finalSchedule = `${form.day}, ${form.time}`;
-    if (form.programType === 'hi_mufradat' || form.programType === 'tikrar_daily') {
+    if (form.programType === 'hi_mufradat') {
       finalSchedule = "Senin - Jumat (Toleransi sd Ahad)";
+    } else if (form.programType === 'tikrar_daily') {
+      finalSchedule = form.customSchedule.trim() || "Senin - Jumat (Toleransi sd Ahad)";
     }
 
     const finalData = {
@@ -193,6 +200,9 @@ export default function AdminClassesPage() {
       musyrifah: form.musyrifah,
       description: form.description,
       schedule: finalSchedule,
+      zoom_link: form.zoomLink.trim() || null,
+      zoom_passcode: form.zoomPasscode.trim() || null,
+      whatsapp_group_link: form.whatsappGroupLink.trim() || null,
       start_date: form.startDate,
       end_date: calculatedEndDate,
       duration_weeks: form.durationWeeks,
@@ -220,6 +230,7 @@ export default function AdminClassesPage() {
         if (error) throw error;
         toast({ title: "Kelas Berhasil Ditambahkan" });
       }
+      await refreshHalaqahs();
       setIsDialogOpen(false);
     } catch (e: any) {
       console.error(e);
@@ -334,7 +345,6 @@ export default function AdminClassesPage() {
 
       if (userToUpdate) {
         const currentFollowed = userToUpdate.followed_halaqahs || [];
-        // Remove old ID, add new ID
         const updatedFollowed = currentFollowed.filter((id: string) => id !== selectedHalaqah.id);
         if (!updatedFollowed.includes(destHalaqah.id)) {
           updatedFollowed.push(destHalaqah.id);
@@ -366,12 +376,12 @@ export default function AdminClassesPage() {
     }
   };
 
-
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus kelas ini? Tindakan ini tidak dapat dibatalkan.")) return;
     try {
       const { error } = await db.from("halaqahs").delete().eq('id', id);
       if (error) throw error;
+      await refreshHalaqahs();
       toast({ title: "Kelas Dihapus" });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal menghapus kelas." });
@@ -408,7 +418,7 @@ export default function AdminClassesPage() {
             const sisa = getSisaKuota(h);
             const total = h.quota || 0;
             return (
-              <Card key={h.id} className={cn("border-none shadow-sm group overflow-hidden border-l-4", h.isPremium ? "border-l-[#800000]" : "border-l-blue-500")}>
+              <Card key={h.id} className={cn("border-none shadow-sm group overflow-hidden border-l-4", (h.is_premium || h.isPremium) ? "border-l-[#800000]" : "border-l-blue-500")}>
                 <CardContent className="p-5">
                   <div className="flex justify-between items-start mb-2">
                     <div className="space-y-1">
@@ -430,7 +440,7 @@ export default function AdminClassesPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -442,13 +452,18 @@ export default function AdminClassesPage() {
                     <Badge variant="secondary" className={cn("text-[8px] font-black h-4 border uppercase gap-1", sisa === 0 ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
                       <Info className="w-2.5 h-2.5" /> Sisa Kuota: {sisa} / {total}
                     </Badge>
-                    {h.hasExam && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4">UJIAN</Badge>}
+                    {(h.has_exam ?? h.hasExam) && <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4">UJIAN</Badge>}
+                    {h.zoom_link && (
+                      <Badge variant="outline" className="text-[8px] border-blue-200 text-blue-700 bg-blue-50 h-4 gap-1">
+                        <Video className="w-2.5 h-2.5" /> ZOOM
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between border-t pt-3 mt-auto">
                     <div className="flex flex-col gap-1">
                       <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{h.level}</span>
-                      <span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Timer className="w-2.5 h-2.5" /> {h.durationWeeks || '-'} Pekan</span>
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Timer className="w-2.5 h-2.5" /> {h.duration_weeks || h.durationWeeks || '-'} Pekan</span>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
@@ -520,28 +535,28 @@ export default function AdminClassesPage() {
                           <span className="text-[9px] text-muted-foreground">{p.user_email}</span>
                         </div>
                       </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-amber-600 hover:bg-amber-50"
-                            onClick={() => {
-                              setTransferTargetParticipant(p);
-                              setIsTransferOpen(true);
-                            }}
-                            title="Pindah Kelas"
-                          >
-                            <ArrowRightLeft className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive"
-                            onClick={() => handleRemoveParticipant(p.id, p.user_id)}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-amber-600 hover:bg-amber-50"
+                          onClick={() => {
+                            setTransferTargetParticipant(p);
+                            setIsTransferOpen(true);
+                          }}
+                          title="Pindah Kelas"
+                        >
+                          <ArrowRightLeft className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() => handleRemoveParticipant(p.id, p.user_id)}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -576,8 +591,8 @@ export default function AdminClassesPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase">Mu'allimah</Label>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase">Mu&apos;allimah</Label>
                 <Select
                   value={form.muallimah}
                   onValueChange={(value) => setForm({ ...form, muallimah: value })}
@@ -602,22 +617,12 @@ export default function AdminClassesPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase">Musyrifah</Label>
-                <Select
+                <Input
                   value={form.musyrifah}
-                  onValueChange={(value) => setForm({ ...form, musyrifah: value })}
-                >
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Pilih Musyrifah (Opsional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Tidak Ada</SelectItem>
-                    {musyrifahList.map((musyrifah) => (
-                      <SelectItem key={musyrifah.id} value={musyrifah.displayName}>
-                        {musyrifah.displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => setForm({ ...form, musyrifah: e.target.value })}
+                  placeholder={musyrifahList[0]?.displayName || "Nama Musyrifah (Opsional)"}
+                  className="bg-white"
+                />
               </div>
             </div>
 
@@ -677,12 +682,24 @@ export default function AdminClassesPage() {
               </div>
             ) : (
               <div className="space-y-4 p-4 rounded-xl bg-[#800000]/5 border-2 border-dashed border-[#800000]/20">
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-[#800000]/70 flex items-center gap-2 mb-1">
-                    <Clock className="w-3 h-3" /> Jadwal Pengerjaan Fleksibel (Target Based)
-                  </Label>
-                  <p className="text-sm font-black text-[#800000]">Senin - Jumat <span className="text-[10px] font-bold text-muted-foreground ml-1">(Toleransi & Murojaah s/d Ahad)</span></p>
-                </div>
+                {form.programType === 'tikrar_daily' ? (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase text-[#800000]">Jadwal Sesi Live Zoom</Label>
+                    <Input
+                      value={form.customSchedule}
+                      onChange={(e) => setForm({ ...form, customSchedule: e.target.value })}
+                      placeholder="Contoh: Senin - Jumat, 05:30 - 06:30 WIB"
+                      className="bg-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase text-[#800000]/70 flex items-center gap-2 mb-1">
+                      <Clock className="w-3 h-3" /> Jadwal Pengerjaan Fleksibel (Target Based)
+                    </Label>
+                    <p className="text-sm font-black text-[#800000]">Senin - Jumat <span className="text-[10px] font-bold text-muted-foreground ml-1">(Toleransi &amp; Murojaah s/d Ahad)</span></p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase">Target Juz</Label>
                   <Select value={form.juz} onValueChange={(v) => setForm({ ...form, juz: v })}>
@@ -696,6 +713,39 @@ export default function AdminClassesPage() {
                 </div>
               </div>
             )}
+
+            {/* Tautan Ruang Zoom & Grup WhatsApp */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-muted/30 border">
+              <div className="space-y-2 sm:col-span-2">
+                <Label className="text-xs font-black uppercase flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5 text-[#800000]" /> Tautan Ruang Zoom (Opsional)
+                </Label>
+                <Input
+                  value={form.zoomLink}
+                  onChange={(e) => setForm({ ...form, zoomLink: e.target.value })}
+                  placeholder="https://us06web.zoom.us/j/..."
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase">Passcode Zoom (Opsional)</Label>
+                <Input
+                  value={form.zoomPasscode}
+                  onChange={(e) => setForm({ ...form, zoomPasscode: e.target.value })}
+                  placeholder="Contoh: HIAQLI2026"
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase">Link Grup WhatsApp (Opsional)</Label>
+                <Input
+                  value={form.whatsappGroupLink}
+                  onChange={(e) => setForm({ ...form, whatsappGroupLink: e.target.value })}
+                  placeholder="https://chat.whatsapp.com/..."
+                  className="bg-white"
+                />
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">

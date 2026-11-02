@@ -9,9 +9,9 @@ import {
   BarChart3,
   BookOpen,
   CalendarDays,
-  ClipboardCheck,
   RotateCcw,
   Trophy,
+  Users,
 } from 'lucide-react';
 import { TikrarSystem } from '@/components/tikrar/tikrar-system';
 import { TikrarDailyReport } from '@/components/tikrar/tikrar-daily-report';
@@ -25,7 +25,7 @@ export default function TikrarPage() {
   const { data: userData } = useDoc<any>(user?.id ? 'users' : null, user?.id);
   const fullSalutation = userData?.salutation || 'Ukhti';
 
-  const [activeTab, setActiveTab] = useState<string>('daily-report');
+  const [activeTab, setActiveTab] = useState<string>('mushaf');
   const [mushafTarget, setMushafTarget] = useState<{ page: number | null; juz: number | null }>({
     page: null,
     juz: null,
@@ -45,30 +45,30 @@ export default function TikrarPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Metode Tikrar</h1>
         <p className="text-muted-foreground text-sm">
-          Perkuat hafalan {fullSalutation} dengan target 1 Juz terukur, laporan repetisi 40x per
-          blok, dan pemantauan keaktifan grup.
+          Perkuat hafalan {fullSalutation} dengan mushaf sub-blok berurutan, penggabungan antar
+          blok, laporan harian terpadu, dan pemantauan keaktifan grup.
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-6 h-auto sm:h-12 bg-muted/50 p-1 rounded-xl gap-1">
           <TabsTrigger
+            value="mushaf"
+            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
+          >
+            <BookOpen className="w-4 h-4 shrink-0" /> Mushaf &amp; Audio
+          </TabsTrigger>
+          <TabsTrigger
             value="daily-report"
             className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
           >
-            <ClipboardCheck className="w-4 h-4 shrink-0" /> Laporan &amp; Grup
+            <Users className="w-4 h-4 shrink-0" /> Rekap &amp; Grup
           </TabsTrigger>
           <TabsTrigger
             value="schedule"
             className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
           >
             <CalendarDays className="w-4 h-4 shrink-0" /> Target &amp; Jadwal
-          </TabsTrigger>
-          <TabsTrigger
-            value="mushaf"
-            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
-          >
-            <BookOpen className="w-4 h-4 shrink-0" /> Mushaf &amp; Audio
           </TabsTrigger>
           <TabsTrigger
             value="progress"
@@ -78,7 +78,19 @@ export default function TikrarPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Laporan Harian 40x & Heatmap Grup (Fase 3) */}
+        {/* Tab 1: Mushaf Per Kata, Audio 5x Simak, Gabungan Sub-Repetisi & Panel Kirim Laporan Harian */}
+        <TabsContent value="mushaf" className="outline-none">
+          <TikrarSystem
+            targetPage={mushafTarget.page}
+            targetJuz={mushafTarget.juz}
+            refreshSignal={refreshSignal}
+            onDataChanged={triggerGlobalRefresh}
+            onOpenScheduleTab={() => setActiveTab('schedule')}
+            onOpenGroupRecapTab={() => setActiveTab('daily-report')}
+          />
+        </TabsContent>
+
+        {/* Tab 2: Rekap Pribadi Ringkas & Leaderboard/Heatmap Grup 30 Hari */}
         <TabsContent value="daily-report" className="space-y-6 outline-none">
           <TikrarDailyReport
             refreshSignal={refreshSignal}
@@ -92,21 +104,16 @@ export default function TikrarPage() {
           <TikrarGroupHeatmap refreshSignal={refreshSignal} />
         </TabsContent>
 
-        {/* Tab 2: Pemilihan Target Mandiri & Generator Jadwal 5 Hari/Pekan (Fase 2) */}
+        {/* Tab 3: Pemilihan Target Mandiri & Generator Jadwal 5 Hari/Pekan (Fase 2) */}
         <TabsContent value="schedule" className="outline-none">
           <TikrarSchedule
             refreshSignal={refreshSignal}
             onScheduleSaved={() => {
               triggerGlobalRefresh();
-              setActiveTab('daily-report');
+              setActiveTab('mushaf');
             }}
-            onJumpToDailyReport={() => setActiveTab('daily-report')}
+            onJumpToDailyReport={() => setActiveTab('mushaf')}
           />
-        </TabsContent>
-
-        {/* Tab 3: Mushaf Per Kata, Audio 5x Simak & Gabungan Sub-Repetisi */}
-        <TabsContent value="mushaf" className="outline-none">
-          <TikrarSystem targetPage={mushafTarget.page} targetJuz={mushafTarget.juz} />
         </TabsContent>
 
         {/* Tab 4: Progres 30 Juz & Kuis Teori Tajwid */}
