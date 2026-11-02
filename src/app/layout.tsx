@@ -164,22 +164,22 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <SidebarInset className="w-full flex flex-col">
           {/* Padding bottom untuk BottomNav (selalu ada) */}
           <div className="flex flex-col flex-1 w-full pb-20">
-            <header className="sticky top-0 z-40 flex h-24 items-center justify-between px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
-              <div className="flex items-center gap-4">
+            <header className="sticky top-0 z-40 flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
+              <div className="flex items-center gap-3 sm:gap-4">
                 {showAdminUI && <SidebarTrigger className="md:hidden text-slate-400" />}
                 <Link href="/" className="transition-transform hover:scale-105 active:scale-95">
-                  <Logo variant="default" showText={true} className="scale-110 md:scale-125 origin-left" textClassName="text-2xl md:text-3xl font-black tracking-tight" imageSize={48} />
+                  <Logo variant="default" showText={true} className="scale-95 sm:scale-110 md:scale-125 origin-left" textClassName="text-xl sm:text-2xl md:text-3xl font-black tracking-tight" imageSize={40} />
                 </Link>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 {/* PWA Install Button */}
                 {isInstallable && (
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => setIsPWAOpen(true)}
-                    className="flex border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-tight gap-1.5 rounded-xl hover:bg-slate-50 transition-all border-2"
+                    className="flex border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-tight gap-1.5 rounded-xl hover:bg-slate-50 transition-all border-2 h-8 sm:h-9 px-2 sm:px-3"
                   >
                     <Smartphone className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">UNDUH APP</span>
@@ -198,22 +198,22 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 {showUserUI && (
                   user ? (
                     <Link href="/profile">
-                      <Avatar className="h-10 w-10 border-2 border-slate-100 shadow-sm transform hover:scale-105 transition-transform">
+                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-slate-100 shadow-sm transform hover:scale-105 transition-transform">
                         <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
                         <AvatarFallback className="bg-slate-100 text-[#800000] text-xs font-black uppercase">
-                          {user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U'}
+                          {user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U'}\
                         </AvatarFallback>
                       </Avatar>
                     </Link>
                   ) : (
-                    <Button asChild size="sm" className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase rounded-xl px-6 shadow-md transition-all active:scale-95 text-[10px]">
+                    <Button asChild size="sm" className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase rounded-xl px-4 sm:px-6 shadow-md transition-all active:scale-95 text-[10px] h-8 sm:h-9">
                       <Link href="/login">Masuk</Link>
                     </Button>
                   )
                 )}
               </div>
             </header>
-            <main className="p-4 sm:p-6 lg:p-8 flex-1">
+            <main className="p-3 sm:p-6 lg:p-8 flex-1">
               {children}
             </main>
           </div>

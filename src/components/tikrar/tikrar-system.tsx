@@ -164,13 +164,7 @@ export function TikrarSystem({
 
   const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
 
-  // State Formulir Laporan Harian Tikrar & Setoran Tasmi'
-  const [logBlocks, setLogBlocks] = useState<number[]>([]);
-  const [logDuration, setLogDuration] = useState<number>(30);
-  const [logRepetitions, setLogRepetitions] = useState<number>(40);
-  const [logNotes, setLogNotes] = useState<string>('');
-  const [isSubmittingLog, setIsSubmittingLog] = useState<boolean>(false);
-  const [isRegisteringSubmission, setIsRegisteringSubmission] = useState<boolean>(false);
+  // State & audio ref
 
   // Tahap 0 & Sub-repetisi state
   const [prepListenCount, setPrepListenCount] = useState(0);
@@ -409,92 +403,148 @@ export function TikrarSystem({
     fetchVerses();
   }, [page]);
 
-  // Hydrate progress from localStorage + merge DB completed blocks so sequential locks stay consistent
+  // Hydrate progress from DB + localStorage + merge DB completed blocks
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    let nextPrepListen = 0;
-    let nextPrepTrans = false;
-    const nextBlocks: any = {
-      1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-    };
-    const nextMeta: Record<string, number> = {
-      '1_2': 0,
-      '2_3': 0,
-      '1_2_3': 0,
-      '3_4': 0,
-      '2_3_4': 0,
-      '1_2_3_4': 0,
-    };
+    let isCancelled = false;
 
-    const savedProgressStr = localStorage.getItem(`tikrar_progress_p${page}`);
-    if (savedProgressStr) {
-      try {
-        const saved = JSON.parse(savedProgressStr);
-        nextPrepListen = Number(saved.prepListenCount) || 0;
-        nextPrepTrans = Boolean(saved.prepTranslationDone);
+    async function loadProgress() {
+      if (typeof window === 'undefined') return;
+
+      let nextPrepListen = 0;
+      let nextPrepTrans = false;
+      const nextBlocks: any = {
+        1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+      };
+      const nextMeta: Record<string, number> = {
+        '1_2': 0,
+        '2_3': 0,
+        '1_2_3': 0,
+        '3_4': 0,
+        '2_3_4': 0,
+        '1_2_3_4': 0,
+      };
+
+      // 1. Ambil dari localStorage terlebih dahulu untuk respon instan
+      const savedProgressStr = localStorage.getItem(`tikrar_progress_p${page}`);
+      if (savedProgressStr) {
+        try {
+          const saved = JSON.parse(savedProgressStr);
+          nextPrepListen = Number(saved.prepListenCount) || 0;
+          nextPrepTrans = Boolean(saved.prepTranslationDone);
+          for (const b of [1, 2, 3, 4] as const) {
+            if (saved.blocks?.[b]) {
+              nextBlocks[b] = {
+                a: { count: Number(saved.blocks[b]?.a?.count) || 0 },
+                b: { count: Number(saved.blocks[b]?.b?.count) || 0 },
+                combined: { count: Number(saved.blocks[b]?.combined?.count) || 0 },
+              };
+            }
+          }
+          if (saved.metaCounts) {
+            Object.keys(nextMeta).forEach((k) => {
+              nextMeta[k] = Number(saved.metaCounts[k]) || 0;
+            });
+          }
+        } catch {}
+      }
+
+      // 2. Ambil dari Database jika user sudah login
+      if (user?.id) {
+        try {
+          const res = await authFetch(`/api/tikrar/progress?page=${page}`);
+          if (res.ok) {
+            const json = await res.json();
+            const dbProg = json.data;
+            if (dbProg) {
+              nextPrepListen = Math.max(nextPrepListen, Number(dbProg.prep_listen_count) || 0);
+              nextPrepTrans = nextPrepTrans || Boolean(dbProg.prep_translation_done);
+              if (dbProg.blocks) {
+                for (const b of [1, 2, 3, 4] as const) {
+                  if (dbProg.blocks[b]) {
+                    nextBlocks[b] = {
+                      a: { count: Math.max(nextBlocks[b].a.count, Number(dbProg.blocks[b]?.a?.count) || 0) },
+                      b: { count: Math.max(nextBlocks[b].b.count, Number(dbProg.blocks[b]?.b?.count) || 0) },
+                      combined: { count: Math.max(nextBlocks[b].combined.count, Number(dbProg.blocks[b]?.combined?.count) || 0) },
+                    };
+                  }
+                }
+              }
+              if (dbProg.meta_counts) {
+                Object.keys(nextMeta).forEach((k) => {
+                  nextMeta[k] = Math.max(nextMeta[k], Number(dbProg.meta_counts[k]) || 0);
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Gagal memuat progres dari database:', e);
+        }
+      }
+
+      // 3. Gabungkan DB completed blocks agar kunci berurutan konsisten
+      if (completedBlocksAllTime.size > 0) {
+        nextPrepListen = Math.max(nextPrepListen, PREP_LISTEN_THRESHOLD);
+        nextPrepTrans = true;
         for (const b of [1, 2, 3, 4] as const) {
-          if (saved.blocks?.[b]) {
+          if (completedBlocksAllTime.has(b)) {
             nextBlocks[b] = {
-              a: { count: Number(saved.blocks[b]?.a?.count) || 0 },
-              b: { count: Number(saved.blocks[b]?.b?.count) || 0 },
-              combined: { count: Number(saved.blocks[b]?.combined?.count) || 0 },
+              a: { count: Math.max(nextBlocks[b].a.count, PASS_THRESHOLD) },
+              b: { count: Math.max(nextBlocks[b].b.count, PASS_THRESHOLD) },
+              combined: { count: Math.max(nextBlocks[b].combined.count, PASS_THRESHOLD) },
             };
           }
         }
-        if (saved.metaCounts) {
+        if (
+          completedBlocksAllTime.has(3) ||
+          completedBlocksAllTime.has(4) ||
+          (completedBlocksAllTime.has(1) && completedBlocksAllTime.has(2))
+        ) {
+          nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
+        }
+        if (completedBlocksAllTime.has(4)) {
+          nextMeta['2_3'] = Math.max(nextMeta['2_3'], META_PASS_THRESHOLD);
+          nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], META_PASS_THRESHOLD);
+        }
+        if (isSelectedPageCleared) {
           Object.keys(nextMeta).forEach((k) => {
-            nextMeta[k] = Number(saved.metaCounts[k]) || 0;
+            nextMeta[k] = Math.max(nextMeta[k], META_PASS_THRESHOLD);
           });
         }
-      } catch {}
-    }
+      }
 
-    // Merge DB completed blocks so previously reported blocks remain unlocked & tuntas across devices
-    if (completedBlocksAllTime.size > 0) {
-      nextPrepListen = Math.max(nextPrepListen, PREP_LISTEN_THRESHOLD);
-      nextPrepTrans = true;
-      for (const b of [1, 2, 3, 4] as const) {
-        if (completedBlocksAllTime.has(b)) {
-          nextBlocks[b] = {
-            a: { count: Math.max(nextBlocks[b].a.count, PASS_THRESHOLD) },
-            b: { count: Math.max(nextBlocks[b].b.count, PASS_THRESHOLD) },
-            combined: { count: Math.max(nextBlocks[b].combined.count, PASS_THRESHOLD) },
-          };
-        }
-      }
-      // Ensure intermediate meta steps needed to reach higher DB-saved blocks are also unlocked
-      if (
-        completedBlocksAllTime.has(3) ||
-        completedBlocksAllTime.has(4) ||
-        (completedBlocksAllTime.has(1) && completedBlocksAllTime.has(2))
-      ) {
-        nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
-      }
-      if (completedBlocksAllTime.has(4)) {
-        nextMeta['2_3'] = Math.max(nextMeta['2_3'], META_PASS_THRESHOLD);
-        nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], META_PASS_THRESHOLD);
-      }
-      if (isSelectedPageCleared) {
-        Object.keys(nextMeta).forEach((k) => {
-          nextMeta[k] = Math.max(nextMeta[k], META_PASS_THRESHOLD);
-        });
+      if (!isCancelled) {
+        setPrepListenCount(nextPrepListen);
+        setPrepTranslationDone(nextPrepTrans);
+        setBlocks(nextBlocks);
+        setMetaCounts(nextMeta);
       }
     }
 
-    setPrepListenCount(nextPrepListen);
-    setPrepTranslationDone(nextPrepTrans);
-    setBlocks(nextBlocks);
-    setMetaCounts(nextMeta);
-  }, [page, completedBlocksKey, isSelectedPageCleared]);
+    loadProgress();
 
-  // Save progress to localStorage on change
+    return () => {
+      isCancelled = true;
+    };
+  }, [page, completedBlocksKey, isSelectedPageCleared, user?.id]);
+
+  // Simpan progres ke localStorage dan database setiap user klik angka setiap tahapan
+  const isHydratedRef = useRef(false);
+  useEffect(() => {
+    isHydratedRef.current = false;
+    const t = setTimeout(() => {
+      isHydratedRef.current = true;
+    }, 500);
+    return () => clearTimeout(t);
+  }, [page]);
+
   useEffect(() => {
     if (loading || typeof window === 'undefined') return;
 
-    const timer = setTimeout(() => {
+    // 1. Simpan ke localStorage instan
+    const timerLocal = setTimeout(() => {
       const existing = localStorage.getItem(`tikrar_progress_p${page}`);
       const parsed = existing ? JSON.parse(existing) : {};
       localStorage.setItem(
@@ -507,10 +557,48 @@ export function TikrarSystem({
           metaCounts,
         })
       );
-    }, 350);
+    }, 200);
 
-    return () => clearTimeout(timer);
-  }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, loading]);
+    // 2. Simpan ke database jika sudah melewati inisialisasi awal
+    let timerDb: NodeJS.Timeout | null = null;
+    if (user?.id && isHydratedRef.current) {
+      timerDb = setTimeout(async () => {
+        try {
+          const res = await authFetch('/api/tikrar/progress', {
+            method: 'POST',
+            body: JSON.stringify({
+              page_number: page,
+              juz,
+              prep_listen_count: prepListenCount,
+              prep_translation_done: prepTranslationDone,
+              blocks,
+              meta_counts: metaCounts,
+              total_progress: Math.round(totalProgress),
+            }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            const awarded = Number(json.data?.pointsAwarded) || 0;
+            if (awarded > 0) {
+              toast({
+                title: 'Alhamdulillah, Poin Bertambah!',
+                description: `+${awarded} Poin telah ditambahkan ke akun Ukhti atas ketuntasan blok hafalan.`,
+              });
+              await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
+              onDataChanged?.();
+            }
+          }
+        } catch (e) {
+          console.error('Gagal sync progres ke database:', e);
+        }
+      }, 400);
+    }
+
+    return () => {
+      clearTimeout(timerLocal);
+      if (timerDb) clearTimeout(timerDb);
+    };
+  }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, juz, loading, user?.id, totalProgress]);
 
   const blockVerses = useMemo<Record<1 | 2 | 3 | 4, Verse[]>>(() => {
     if (verses.length === 0) return { 1: [], 2: [], 3: [], 4: [] };
@@ -694,29 +782,7 @@ export function TikrarSystem({
     [tuntasBlockNumbers, completedBlocksToday]
   );
 
-  // Sinkronisasi otomatis blok yang dipilih untuk pelaporan hari ini
-  useEffect(() => {
-    setLogBlocks((prev) => {
-      const set = new Set<number>(prev);
-      completedBlocksToday.forEach((b) => set.add(b));
-      tuntasBlockNumbers.forEach((b) => set.add(b));
-      if (set.size === 0 && completedBlocksAllTime.size > 0) {
-        completedBlocksAllTime.forEach((b) => set.add(b));
-      }
-      if (set.size === 0) {
-        set.add(1);
-      }
-      return Array.from(set).sort((a, b) => a - b);
-    });
-  }, [page, completedBlocksToday, tuntasBlockNumbers, completedBlocksAllTime]);
 
-  const toggleLogBlock = (bNum: number) => {
-    setLogBlocks((prev) =>
-      prev.includes(bNum)
-        ? prev.filter((b) => b !== bNum)
-        : [...prev, bNum].sort((a, b) => a - b)
-    );
-  };
 
   // Milestone evaluasi setoran tasmi' (1/2 halaman pertama A&B, 1/2 halaman kedua C&D, atau 1 halaman penuh A-D)
   const milestoneInfo = useMemo(() => {
@@ -757,71 +823,6 @@ export function TikrarSystem({
       revision: latestRevision || null,
     };
   }, [completedBlocksAllTime, userSubmissions, page]);
-
-  const handleSubmitDailyLog = async (overrideBlocks?: number[]) => {
-    if (!user) {
-      toast({
-        title: 'Silakan Masuk Terlebih Dahulu',
-        description: 'Masuk ke akun Ukhti agar laporan harian & poin keaktifan tercatat di sistem.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const blocksToSubmit = (overrideBlocks || logBlocks).filter((b) => b >= 1 && b <= 4);
-    if (blocksToSubmit.length === 0) {
-      toast({
-        title: 'Pilih Minimal 1 Blok',
-        description: 'Centang minimal satu blok (A, B, C, atau D) yang telah Ukhti selesaikan repetisinya hari ini.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmittingLog(true);
-    try {
-      const res = await authFetch('/api/tikrar/daily-log', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'submit_daily_log',
-          juz,
-          page_number: page,
-          blocks_completed: blocksToSubmit,
-          repetition_count: Math.max(40, logRepetitions),
-          duration_minutes: Math.max(5, logDuration),
-          notes: logNotes.trim() || null,
-          log_date: todayKey,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error?.message || 'Gagal menyimpan laporan harian.');
-      }
-
-      const awarded = Number(json.data?.pointsAwarded) || 0;
-      const breakdown = json.data?.pointBreakdown || [];
-
-      toast({
-        title: 'Alhamdulillah, Laporan Tikrar Tercatat!',
-        description:
-          awarded > 0
-            ? `Halaman ${page} (${blocksToSubmit.map((b) => `Blok ${BLOCK_LETTERS[b]}`).join(', ')}) berhasil disimpan! • ${breakdown.join(' • ')}`
-            : `Laporan Halaman ${page} (${blocksToSubmit.map((b) => `Blok ${BLOCK_LETTERS[b]}`).join(', ')}) berhasil diperbarui hari ini.`,
-      });
-
-      setLogNotes('');
-      await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
-      onDataChanged?.();
-    } catch (err: any) {
-      toast({
-        title: 'Gagal Menyimpan Laporan',
-        description: err?.message || 'Terjadi kendala saat menyimpan laporan harian.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmittingLog(false);
-    }
-  };
 
   const handleRegisterSubmission = async () => {
     if (!user || !milestoneInfo) return;
@@ -1034,7 +1035,7 @@ export function TikrarSystem({
       </Card>
 
       {/* Bar Navigasi Juz, Halaman & Font Size */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md border-[#800000]/10">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-2xl border shadow-sm sticky top-16 sm:top-20 z-20 backdrop-blur-md border-[#800000]/10">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <select
             aria-label="Pilih Juz"
@@ -1671,33 +1672,7 @@ export function TikrarSystem({
               </Button>
             </div>
           )}
-          {/* Mobile Floating Quick-Submit Bar */}
-          {user && logBlocks.length > 0 && (
-            <div className="sm:hidden fixed bottom-16 left-0 right-0 z-30 p-2.5 bg-[#800000] text-white border-t-2 border-[#D4AF37] shadow-2xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
-              <div className="min-w-0 flex-1 pl-1">
-                <p className="text-[10px] font-black uppercase text-[#D4AF37] leading-tight">
-                  Laporan Tikrar Hal. {page}
-                </p>
-                <p className="text-xs font-bold text-white truncate leading-tight">
-                  {logBlocks.map((b) => `Blok ${BLOCK_LETTERS[b]}`).join(', ')} Siap Dikirim
-                </p>
-              </div>
-              <Button
-                size="sm"
-                disabled={isSubmittingLog}
-                onClick={() => handleSubmitDailyLog()}
-                className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-stone-950 font-black text-xs h-9 px-4 rounded-xl shrink-0 shadow-md"
-              >
-                {isSubmittingLog ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5 mr-1 fill-stone-950" /> Kirim (+20)
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+
         </div>
       </TooltipProvider>
     </div>
