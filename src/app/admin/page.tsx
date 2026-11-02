@@ -1,10 +1,9 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser } from "@/db";
 import { useCollection } from "@/db";
-import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog, Library, HeartHandshake } from "lucide-react";
+import { Users, CheckCircle2, Clock, ArrowUpRight, ShieldCheck, BookOpen, UserCog, Library, HeartHandshake, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -62,6 +61,33 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-none shadow-md overflow-hidden flex flex-col">
+          <CardHeader className="bg-emerald-50/60 border-b border-emerald-100/60">
+            <CardTitle className="text-lg font-headline flex items-center justify-between text-emerald-950">
+              <span className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-emerald-600" />
+                Daftar Grup & Monitor Pesan
+              </span>
+              <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px]">
+                TIKRAR & MUFRADAT
+              </Badge>
+            </CardTitle>
+            <CardDescription className="text-emerald-800/80">
+              Pemisahan ketat grup Tikrar & Mufradat, broadcast aman, monitor pesan, dan japri thalibah.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 flex-1 flex flex-col justify-between">
+            <p className="text-sm text-muted-foreground mb-4">
+              Cegah salah kirim broadcast, pantau riwayat pesan terkirim ke WhatsApp group, dan kirim pesan japri ke nomor peserta.
+            </p>
+            <Link href="/admin/groups" className="w-full">
+              <Button className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 shadow-sm">
+                Buka Manajemen Grup <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
         <Card className="border-none shadow-md overflow-hidden flex flex-col">
           <CardHeader className="bg-muted/30">
             <CardTitle className="text-lg font-headline flex items-center justify-between">

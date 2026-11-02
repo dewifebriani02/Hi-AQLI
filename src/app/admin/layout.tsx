@@ -22,7 +22,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   } = useUserPermissions(user?.id);
 
   const programForPath = getProgramTypeFromPath(pathname || "");
-  const hasAccess = isSuperUser || (isMusyrifah && !!programForPath && canAccessProgram(programForPath));
+  const isGeneralAdminPage = pathname === '/admin' || pathname?.startsWith('/admin/groups');
+  const hasAccess = isSuperUser || (isMusyrifah && (isGeneralAdminPage || (!!programForPath && canAccessProgram(programForPath))));
 
   useEffect(() => {
     if (!isUserLoading && !isPermissionsLoading) {
