@@ -1422,14 +1422,14 @@ export function TikrarSystem({
             <Info className="w-5 h-5 shrink-0 mt-0.5 text-[#D4AF37]" />
             <div className="text-[11px] leading-relaxed font-bold">
               <span className="uppercase tracking-wider text-[#D4AF37] block mb-0.5">
-                Alur Kunci Berurutan (Metode Itqan HI Tikrar)
+                Metode Itqan HI Tikrar (Otomatis Tersimpan)
               </span>
               Setiap Blok dibagi menjadi 2 bagian teks berwarna:{' '}
               <strong>Bagian 1 (Maroon) 40x</strong> → <strong>Bagian 2 (Hitam) 40x</strong>{' '}
               → <strong>Gabung Blok 40x</strong>, lalu dilanjutkan{' '}
-              <strong>Sub-Repetisi Gabungan Antar Blok (10x)</strong> secara berurutan. Setiap blok
-              yang sudah <strong>TUNTAS</strong> dapat langsung dikirim sebagai{' '}
-              <strong>Laporan Harian</strong> di panel bawah!
+              <strong>Sub-Repetisi Gabungan Antar Blok (10x)</strong> secara berurutan. Setiap klik
+              hitungan repetisi <strong>otomatis tersimpan ke sistem</strong> &amp; langsung
+              memperbarui keaktifan harian serta heatmap grup!
             </div>
           </div>
 
