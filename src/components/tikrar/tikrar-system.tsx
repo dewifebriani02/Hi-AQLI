@@ -103,6 +103,7 @@ interface Verse {
 export interface TikrarSystemProps {
   targetPage?: number | null;
   targetJuz?: number | null;
+  targetTimestamp?: number;
   refreshSignal?: number;
   onDataChanged?: () => void;
   onOpenScheduleTab?: () => void;
@@ -134,6 +135,7 @@ function formatBlockRangeLabel(verses: Verse[]): string {
 export function TikrarSystem({
   targetPage,
   targetJuz,
+  targetTimestamp,
   refreshSignal = 0,
   onDataChanged,
   onOpenScheduleTab,
@@ -344,7 +346,7 @@ export function TikrarSystem({
     [completedBlocksAllTime]
   );
 
-  // Initialize targetPage/targetJuz or user's active schedule page
+  // Listen for targetPage & targetJuz updates (e.g. from saving schedule or clicking Open Target Page)
   useEffect(() => {
     if (targetPage && targetPage >= 1 && targetPage <= 604) {
       const derivedJuz =
@@ -352,9 +354,12 @@ export function TikrarSystem({
       setJuz(derivedJuz);
       setPage(targetPage);
       setHasInitializedPage(true);
-      return;
     }
-    if (!isUserDataLoading && (userData || !user) && !hasInitializedPage) {
+  }, [targetPage, targetJuz, targetTimestamp]);
+
+  // Initialize initial page for current user if no explicit targetPage is specified
+  useEffect(() => {
+    if (!isUserDataLoading && (userData || !user) && !hasInitializedPage && !targetPage) {
       setJuz(paidJuz);
       const range = getJuzPageRange(paidJuz);
       const userCurr = Number(userData?.tikrar_current_page);
@@ -367,7 +372,7 @@ export function TikrarSystem({
       const savedReciter = localStorage.getItem('aqli_reciter_id');
       if (savedReciter) setSelectedReciterId(parseInt(savedReciter, 10));
     }
-  }, [userData, user, paidJuz, isUserDataLoading, hasInitializedPage, targetPage, targetJuz]);
+  }, [userData, user, paidJuz, isUserDataLoading, hasInitializedPage, targetPage]);
 
   // Fetch verses for `page`
   useEffect(() => {

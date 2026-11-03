@@ -20,20 +20,24 @@ import {
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
 import {
+  ArrowRight,
   BookOpen,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
+  Edit3,
   Loader2,
   Lock,
+  Pencil,
   Sparkles,
   Target,
 } from 'lucide-react';
 
 export interface TikrarScheduleProps {
-  onScheduleSaved?: () => void;
+  onScheduleSaved?: (target?: { page: number; juz: number }) => void;
+  onOpenMushafTarget?: (target: { page: number; juz: number }) => void;
   onJumpToDailyReport?: () => void;
   refreshSignal?: number;
 }
@@ -42,6 +46,7 @@ const DAY_NAMES_ID = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabt
 
 export function TikrarSchedule({
   onScheduleSaved,
+  onOpenMushafTarget,
   onJumpToDailyReport,
   refreshSignal = 0,
 }: TikrarScheduleProps) {
@@ -101,6 +106,10 @@ export function TikrarSchedule({
   const [hasInitializedForm, setHasInitializedForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState<number>(1);
+
+  // Status edit: default tertutup (false) jika jadwal sudah ada di DB, terbuka (true) jika baru pertama kali
+  const [isEditingSchedule, setIsEditingSchedule] = useState<boolean>(false);
+  const [hasCheckedInitialEditState, setHasCheckedInitialEditState] = useState(false);
 
   useEffect(() => {
     if (userData && !hasInitializedForm) {
@@ -165,6 +174,27 @@ export function TikrarSchedule({
   );
 
   const isDisplayingSavedDbSchedule = savedForSelectedJuz.length > 0;
+
+  useEffect(() => {
+    if (!loadingSchedules && !hasCheckedInitialEditState) {
+      if (!isDisplayingSavedDbSchedule) {
+        setIsEditingSchedule(true);
+      } else {
+        setIsEditingSchedule(false);
+      }
+      setHasCheckedInitialEditState(true);
+    }
+  }, [loadingSchedules, isDisplayingSavedDbSchedule, hasCheckedInitialEditState]);
+
+  // Current pace meta information
+  const currentPaceOption = useMemo(
+    () =>
+      TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) ||
+      TIKRAR_PACE_OPTIONS[1],
+    [durationMonths]
+  );
+
+  const juzRange = useMemo(() => getJuzPageRange(selectedJuz), [selectedJuz]);
 
   // Group schedule slots into Daily Cards -> Weekly Accordions (5 active days/week)
   const weeklyGroups = useMemo(() => {
@@ -275,6 +305,43 @@ export function TikrarSchedule({
     if (firstIncomplete) setExpandedWeek(firstIncomplete.weekNumber);
   }, [weeklyGroups.length]);
 
+  const totalCompletedBlocksInJuz = useMemo(
+    () =>
+      weeklyGroups.reduce((acc, w) => acc + w.completedBlocks, 0),
+    [weeklyGroups]
+  );
+
+  // Active target page to jump to
+  const activeTargetPage = useMemo(() => {
+    const firstPending = savedForSelectedJuz.find((r: any) => {
+      const isDone =
+        r.status === 'completed' ||
+        completedBlockKeys.has(`${Number(r.page_number)}:${Number(r.block_number)}`);
+      return !isDone;
+    });
+    if (firstPending) {
+      return Number(firstPending.page_number);
+    }
+    const userCurr = Number(userData?.tikrar_current_page);
+    if (userCurr >= juzRange.startPage && userCurr <= juzRange.endPage) {
+      return userCurr;
+    }
+    return juzRange.startPage;
+  }, [savedForSelectedJuz, completedBlockKeys, userData?.tikrar_current_page, juzRange]);
+
+  const handleCancelEdit = () => {
+    if (userData) {
+      const savedJuz = Number(userData.paidJuz ?? userData.paid_juz);
+      if (savedJuz >= 1 && savedJuz <= 30) setSelectedJuz(savedJuz);
+      const savedDur = Number(userData.tikrar_target_duration_months);
+      if (savedDur >= 1 && savedDur <= 4) setDurationMonths(savedDur as 1 | 2 | 3 | 4);
+      const savedDays = Number(userData.tikrar_active_days_per_week);
+      if (savedDays >= 1 && savedDays <= 7) setActiveDaysPerWeek(savedDays);
+      if (userData.tikrar_start_date) setStartDateKey(toDateKeyWIB(userData.tikrar_start_date));
+    }
+    setIsEditingSchedule(false);
+  };
+
   const handleSaveAndGenerate = async () => {
     if (!user) {
       toast({
@@ -302,12 +369,17 @@ export function TikrarSchedule({
         throw new Error(json.error?.message || 'Gagal menyimpan jadwal Tikrar.');
       }
 
+      const summary = json.data?.summary;
+      const targetPage = Number(summary?.currentPage || summary?.startPage || previewSchedule.startPage);
+      const targetJuz = Number(summary?.juz || selectedJuz);
+
       toast({
-        title: 'Jadwal Harian Berhasil Dibuat!',
-        description: `Juz ${selectedJuz} (${json.data?.summary?.totalBlocks || previewSchedule.totalBlocks} Blok dalam ${json.data?.summary?.totalActiveDays || previewSchedule.totalActiveDays} hari aktif) telah disimpan.`,
+        title: 'Target & Jadwal Berhasil Disimpan!',
+        description: `Target Juz ${selectedJuz} (${summary?.totalBlocks || previewSchedule.totalBlocks} Blok) telah aktif. Membuka Mushaf Hal. ${targetPage}...`,
       });
+      setIsEditingSchedule(false);
       await Promise.all([refreshUser(), refreshSchedules()]);
-      onScheduleSaved?.();
+      onScheduleSaved?.({ page: targetPage, juz: targetJuz });
     } catch (err: any) {
       toast({
         title: 'Gagal Menyimpan Jadwal',
@@ -319,179 +391,64 @@ export function TikrarSchedule({
     }
   };
 
-  const juzRange = useMemo(() => getJuzPageRange(selectedJuz), [selectedJuz]);
-  const totalCompletedBlocksInJuz = useMemo(
-    () =>
-      weeklyGroups.reduce((acc, w) => acc + w.completedBlocks, 0),
-    [weeklyGroups]
-  );
-
   return (
     <div className="space-y-8 pb-20">
-      {/* Form Target Mandiri & Sesi Halaqah Live Zoom (Fase 2) */}
-      <Card className="border border-stone-200 shadow-md rounded-2xl overflow-hidden bg-white">
-        <CardHeader className="bg-[#800000] text-white border-b-4 border-[#D4AF37]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest mb-1">
-                <Target className="w-3.5 h-3.5" /> Fase Perencanaan Mandiri
+      {/* 1. Tampilan Saat Jadwal Sudah Dipilih & Tidak Sedang Diedit (Tampilan Tertutup / Ringkasan Aktif) */}
+      {!isEditingSchedule && isDisplayingSavedDbSchedule ? (
+        <Card className="border border-stone-200 shadow-md rounded-2xl overflow-hidden bg-white">
+          <CardHeader className="bg-[#800000] text-white border-b-4 border-[#D4AF37] p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest mb-1">
+                  <Target className="w-3.5 h-3.5" /> Target &amp; Jadwal Berjalan
+                </div>
+                <CardTitle className="text-xl font-headline font-black flex items-center gap-2">
+                  <span>Juz {selectedJuz}</span>
+                  <span className="text-xs font-normal text-white/80">
+                    (Hal. {juzRange.startPage}–{juzRange.endPage} • {juzRange.totalPages} Hal)
+                  </span>
+                </CardTitle>
+                <CardDescription className="text-white/80 text-xs mt-0.5">
+                  Ritme {currentPaceOption.name} • {activeDaysPerWeek} Hari Aktif/Pekan
+                </CardDescription>
               </div>
-              <CardTitle className="text-xl font-headline font-black">
-                Target Juz &amp; Generator Jadwal
-              </CardTitle>
-              <CardDescription className="text-white/80 text-xs mt-1">
-                Tentukan 1 Juz pilihan dan kecepatan belajar ({activeDaysPerWeek} hari aktif/pekan).
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2 self-start sm:self-center">
-              {isDisplayingSavedDbSchedule && (
-                <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37] font-black text-[10px]">
+
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <Badge className="bg-[#D4AF37] text-stone-950 hover:bg-[#D4AF37] font-black text-[10px] shadow-sm">
                   ✓ Jadwal Aktif
                 </Badge>
-              )}
-              {user && (
                 <Button
                   type="button"
                   size="sm"
-                  disabled={isSaving}
-                  onClick={handleSaveAndGenerate}
-                  className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-stone-950 font-black text-xs h-9 px-4 rounded-xl shadow-md border border-amber-300"
+                  variant="outline"
+                  onClick={() => setIsEditingSchedule(true)}
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-black text-xs h-9 px-3.5 rounded-xl shadow-sm transition-all"
                 >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Menyimpan...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Simpan Jadwal
-                    </>
-                  )}
+                  <Pencil className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" />
+                  Ubah / Edit Jadwal
                 </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-5 sm:p-6 space-y-6">
-          {/* 2. Pilihan Juz, Hari Aktif & Tanggal Mulai */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                1. Target Juz Pilihan
-              </label>
-              <select
-                aria-label="Pilih Target Juz"
-                value={selectedJuz}
-                onChange={(e) => setSelectedJuz(Number(e.target.value))}
-                className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-black text-[#800000]"
-              >
-                {Array.from({ length: 30 }, (_, idx) => {
-                  const j = idx + 1;
-                  const r = getJuzPageRange(j);
-                  return (
-                    <option key={j} value={j}>
-                      Juz {j} (Hal. {r.startPage}–{r.endPage} • {r.totalPages} Hal)
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                2. Hari Aktif / Pekan
-              </label>
-              <select
-                aria-label="Pilih Hari Aktif per Pekan"
-                value={activeDaysPerWeek}
-                onChange={(e) => setActiveDaysPerWeek(Number(e.target.value))}
-                className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800"
-              >
-                <option value={5}>5 Hari Kerja (Senin – Jumat) • Standar</option>
-                <option value={4}>4 Hari / Pekan (Senin – Kamis)</option>
-                <option value={6}>6 Hari / Pekan (Senin – Sabtu)</option>
-                <option value={3}>3 Hari / Pekan (Ringan)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                3. Tanggal Mulai
-              </label>
-              <Input
-                type="date"
-                value={startDateKey}
-                onChange={(e) => setStartDateKey(e.target.value || todayKey)}
-                className="h-10 rounded-xl border-stone-300 font-bold text-sm"
-              />
-            </div>
-          </div>
-
-          {/* 3. Pilihan Pace / Target Durasi 1 Juz */}
-          <div className="space-y-2.5">
-            <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-              4. Pilih Kecepatan Hafalan (Pace 1 Juz)
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {TIKRAR_PACE_OPTIONS.map((opt) => {
-                const active = durationMonths === opt.durationMonths;
-                return (
-                  <button
-                    key={opt.durationMonths}
-                    type="button"
-                    onClick={() => setDurationMonths(opt.durationMonths)}
-                    className={cn(
-                      'text-left p-4 rounded-xl border-2 transition-all space-y-1.5',
-                      active
-                        ? 'border-[#800000] bg-red-50/40 shadow-sm'
-                        : 'border-stone-200 bg-white hover:border-stone-300'
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-black text-stone-900">{opt.name}</span>
-                      <Badge
-                        className={cn(
-                          'text-[10px] font-black',
-                          active
-                            ? 'bg-[#800000] text-white hover:bg-[#800000]'
-                            : 'bg-stone-100 text-stone-700 hover:bg-stone-100'
-                        )}
-                      >
-                        {opt.badge}
-                      </Badge>
-                    </div>
-                    <p className="text-xs font-bold text-[#800000]">{opt.targetLabel}</p>
-                    <p className="text-[11px] text-stone-500 leading-relaxed">{opt.description}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Ringkasan Kalkulasi Otomatis & Tombol Generate */}
-          <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
-              <div>
-                <p className="text-[10px] font-black uppercase text-stone-500">Rentang Mushaf</p>
-                <p className="text-sm font-black text-[#800000]">
-                  Hal. {juzRange.startPage}–{juzRange.endPage}
-                </p>
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-stone-500">Total Target</p>
-                <p className="text-sm font-black text-stone-900">
-                  {previewSchedule.totalPages} Hal ({previewSchedule.totalBlocks} Blok)
-                </p>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-5 sm:p-6 space-y-5">
+            {/* 4 Kartu Metrik Ringkasan Target */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-3.5 space-y-1">
+                <p className="text-[10px] font-black uppercase text-stone-500">Kecepatan (Pace)</p>
+                <p className="text-sm font-black text-stone-900">{currentPaceOption.name}</p>
+                <p className="text-[11px] font-bold text-[#800000]">{currentPaceOption.targetLabel}</p>
               </div>
-              <div>
+
+              <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-3.5 space-y-1">
                 <p className="text-[10px] font-black uppercase text-stone-500">Hari Belajar</p>
-                <p className="text-sm font-black text-stone-900">
-                  {previewSchedule.totalActiveDays} Hari Aktif
-                </p>
+                <p className="text-sm font-black text-stone-900">{activeDaysPerWeek} Hari / Pekan</p>
+                <p className="text-[11px] text-stone-500">Sabtu &amp; Ahad toleransi</p>
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-stone-500">Estimasi Khatam</p>
-                <p className="text-sm font-black text-emerald-700">
+
+              <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-3.5 space-y-1">
+                <p className="text-[10px] font-black uppercase text-stone-500">Periode Belajar</p>
+                <p className="text-sm font-black text-emerald-800">
                   {parseDateKeyUTC(previewSchedule.estimatedEndDate).toLocaleDateString('id-ID', {
                     day: 'numeric',
                     month: 'short',
@@ -499,40 +456,277 @@ export function TikrarSchedule({
                     timeZone: 'UTC',
                   })}
                 </p>
+                <p className="text-[11px] text-stone-500">
+                  Mulai:{' '}
+                  {parseDateKeyUTC(startDateKey).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    timeZone: 'UTC',
+                  })}
+                </p>
+              </div>
+
+              <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-3.5 space-y-1">
+                <p className="text-[10px] font-black uppercase text-stone-500">Progres Blok</p>
+                <p className="text-sm font-black text-[#800000]">
+                  {totalCompletedBlocksInJuz} / {previewSchedule.totalBlocks} Blok
+                </p>
+                <p className="text-[11px] font-bold text-stone-600">
+                  Target Saat Ini: Hal. {activeTargetPage}
+                </p>
               </div>
             </div>
 
-            {user ? (
-              <Button
-                type="button"
-                disabled={isSaving}
-                onClick={handleSaveAndGenerate}
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-11 px-6 rounded-xl shadow-md shrink-0"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menyimpan Jadwal...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2 text-[#D4AF37]" />
-                    Simpan Target &amp; Generate Jadwal
-                  </>
+            {/* Quick Action Bar Menuju Mushaf Target */}
+            <div className="bg-amber-50/70 border border-amber-200/90 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#800000] text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <BookOpen className="w-5 h-5 text-[#D4AF37]" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-stone-900">
+                    Lanjutkan Latihan Tikrar Halaman {activeTargetPage}
+                  </h4>
+                  <p className="text-xs text-stone-600">
+                    Buka mushaf sub-blok, simak murattal 5x, dan lakukan repetisi hafalan.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={() =>
+                    onOpenMushafTarget
+                      ? onOpenMushafTarget({ page: activeTargetPage, juz: selectedJuz })
+                      : onScheduleSaved?.({ page: activeTargetPage, juz: selectedJuz })
+                  }
+                  className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 px-5 rounded-xl shadow-md gap-2 shrink-0"
+                >
+                  <BookOpen className="w-4 h-4 text-[#D4AF37]" />
+                  Buka Mushaf Target (Hal. {activeTargetPage})
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        /* Form Konfigurasi Target & Generator Jadwal (Saat Baru Pertama Kali atau Sedang Klik Edit) */
+        <Card className="border border-stone-200 shadow-md rounded-2xl overflow-hidden bg-white">
+          <CardHeader className="bg-[#800000] text-white border-b-4 border-[#D4AF37]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest mb-1">
+                  <Target className="w-3.5 h-3.5" />{' '}
+                  {isDisplayingSavedDbSchedule ? 'Pengaturan Target' : 'Fase Perencanaan Mandiri'}
+                </div>
+                <CardTitle className="text-xl font-headline font-black">
+                  {isDisplayingSavedDbSchedule
+                    ? 'Ubah Target & Ritme Belajar'
+                    : 'Target Juz & Generator Jadwal'}
+                </CardTitle>
+                <CardDescription className="text-white/80 text-xs mt-1">
+                  Tentukan 1 Juz pilihan dan kecepatan belajar ({activeDaysPerWeek} hari aktif/pekan).
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                {isDisplayingSavedDbSchedule && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold text-xs h-9 px-3 rounded-xl"
+                  >
+                    Batal
+                  </Button>
                 )}
-              </Button>
-            ) : (
-              <Button
-                asChild
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-11 px-6 rounded-xl shrink-0"
-              >
-                <Link href="/login">
-                  <Lock className="w-3.5 h-3.5 mr-2" /> Masuk untuk Simpan Jadwal
-                </Link>
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                {user && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isSaving}
+                    onClick={handleSaveAndGenerate}
+                    className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-stone-950 font-black text-xs h-9 px-4 rounded-xl shadow-md border border-amber-300"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Menyimpan...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Simpan Jadwal
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-5 sm:p-6 space-y-6">
+            {/* 2. Pilihan Juz, Hari Aktif & Tanggal Mulai */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-wider text-stone-700">
+                  1. Target Juz Pilihan
+                </label>
+                <select
+                  aria-label="Pilih Target Juz"
+                  value={selectedJuz}
+                  onChange={(e) => setSelectedJuz(Number(e.target.value))}
+                  className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-black text-[#800000]"
+                >
+                  {Array.from({ length: 30 }, (_, idx) => {
+                    const j = idx + 1;
+                    const r = getJuzPageRange(j);
+                    return (
+                      <option key={j} value={j}>
+                        Juz {j} (Hal. {r.startPage}–{r.endPage} • {r.totalPages} Hal)
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-wider text-stone-700">
+                  2. Hari Aktif / Pekan
+                </label>
+                <select
+                  aria-label="Pilih Hari Aktif per Pekan"
+                  value={activeDaysPerWeek}
+                  onChange={(e) => setActiveDaysPerWeek(Number(e.target.value))}
+                  className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800"
+                >
+                  <option value={5}>5 Hari Kerja (Senin – Jumat) • Standar</option>
+                  <option value={4}>4 Hari / Pekan (Senin – Kamis)</option>
+                  <option value={6}>6 Hari / Pekan (Senin – Sabtu)</option>
+                  <option value={3}>3 Hari / Pekan (Ringan)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-wider text-stone-700">
+                  3. Tanggal Mulai
+                </label>
+                <Input
+                  type="date"
+                  value={startDateKey}
+                  onChange={(e) => setStartDateKey(e.target.value || todayKey)}
+                  className="h-10 rounded-xl border-stone-300 font-bold text-sm"
+                />
+              </div>
+            </div>
+
+            {/* 3. Pilihan Pace / Target Durasi 1 Juz */}
+            <div className="space-y-2.5">
+              <label className="text-xs font-black uppercase tracking-wider text-stone-700">
+                4. Pilih Kecepatan Hafalan (Pace 1 Juz)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {TIKRAR_PACE_OPTIONS.map((opt) => {
+                  const active = durationMonths === opt.durationMonths;
+                  return (
+                    <button
+                      key={opt.durationMonths}
+                      type="button"
+                      onClick={() => setDurationMonths(opt.durationMonths)}
+                      className={cn(
+                        'text-left p-4 rounded-xl border-2 transition-all space-y-1.5',
+                        active
+                          ? 'border-[#800000] bg-red-50/40 shadow-sm'
+                          : 'border-stone-200 bg-white hover:border-stone-300'
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-black text-stone-900">{opt.name}</span>
+                        <Badge
+                          className={cn(
+                            'text-[10px] font-black',
+                            active
+                              ? 'bg-[#800000] text-white hover:bg-[#800000]'
+                              : 'bg-stone-100 text-stone-700 hover:bg-stone-100'
+                          )}
+                        >
+                          {opt.badge}
+                        </Badge>
+                      </div>
+                      <p className="text-xs font-bold text-[#800000]">{opt.targetLabel}</p>
+                      <p className="text-[11px] text-stone-500 leading-relaxed">{opt.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Ringkasan Kalkulasi Otomatis & Tombol Generate */}
+            <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-stone-500">Rentang Mushaf</p>
+                  <p className="text-sm font-black text-[#800000]">
+                    Hal. {juzRange.startPage}–{juzRange.endPage}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-stone-500">Total Target</p>
+                  <p className="text-sm font-black text-stone-900">
+                    {previewSchedule.totalPages} Hal ({previewSchedule.totalBlocks} Blok)
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-stone-500">Hari Belajar</p>
+                  <p className="text-sm font-black text-stone-900">
+                    {previewSchedule.totalActiveDays} Hari Aktif
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-stone-500">Estimasi Khatam</p>
+                  <p className="text-sm font-black text-emerald-700">
+                    {parseDateKeyUTC(previewSchedule.estimatedEndDate).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      timeZone: 'UTC',
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {user ? (
+                <Button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={handleSaveAndGenerate}
+                  className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-11 px-6 rounded-xl shadow-md shrink-0"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menyimpan Jadwal...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2 text-[#D4AF37]" />
+                      Simpan Target &amp; Generate Jadwal
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  asChild
+                  className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-11 px-6 rounded-xl shrink-0"
+                >
+                  <Link href="/login">
+                    <Lock className="w-3.5 h-3.5 mr-2" /> Masuk untuk Simpan Jadwal
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Timeline Rencana Harian per Pekan */}
       <div className="space-y-4">
@@ -724,8 +918,9 @@ export function TikrarSchedule({
           </div>
         )}
       </div>
-      {/* Mobile Sticky Save Button jika jadwal belum tersimpan di DB */}
-      {user && !isDisplayingSavedDbSchedule && (
+
+      {/* Mobile Sticky Save Button jika sedang dalam mode edit dan jadwal belum tersimpan */}
+      {user && isEditingSchedule && !isDisplayingSavedDbSchedule && (
         <div className="sm:hidden fixed bottom-16 left-0 right-0 z-30 p-2.5 bg-[#800000] text-white border-t-2 border-[#D4AF37] shadow-2xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
           <div className="min-w-0 flex-1 pl-1">
             <p className="text-[10px] font-black uppercase text-[#D4AF37] leading-tight">

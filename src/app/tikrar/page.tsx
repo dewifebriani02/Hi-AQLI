@@ -28,7 +28,11 @@ export default function TikrarPage() {
   const fullSalutation = userData?.salutation || 'Ukhti';
 
   const [activeTab, setActiveTab] = useState<string>('mushaf');
-  const [mushafTarget, setMushafTarget] = useState<{ page: number | null; juz: number | null }>({
+  const [mushafTarget, setMushafTarget] = useState<{
+    page: number | null;
+    juz: number | null;
+    timestamp?: number;
+  }>({
     page: null,
     juz: null,
   });
@@ -112,7 +116,7 @@ export default function TikrarPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Mushaf Per Kata, Audio 5x Simak, Gabungan Sub-Repetisi & Panel Kirim Laporan Harian */}
+        {/* Tab 1: Mushaf Per Kata, Audio 5x Simak, Gabungan Sub-Repetisi & Auto-Sync Laporan */}
         <TabsContent value="mushaf" className="outline-none space-y-4">
           {user && !hasExistingSchedule && !isSchedulesLoading && (
             <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
@@ -125,7 +129,7 @@ export default function TikrarPage() {
                     Jadwal Belajar Belum Disimpan
                   </h4>
                   <p className="text-xs text-amber-900 leading-relaxed">
-                    Afwan {fullSalutation}, tentukan target Juz &amp; hari aktif di tab <strong>Target &amp; Jadwal</strong> agar hafalan terjadwal rapi, atau Ukhti tetap dapat langsung berlatih dan mengirim laporan di bawah.
+                    Afwan {fullSalutation}, tentukan target Juz &amp; hari aktif di tab <strong>Target &amp; Jadwal</strong> agar hafalan terjadwal rapi, atau Ukhti tetap dapat langsung berlatih di bawah.
                   </p>
                 </div>
               </div>
@@ -141,6 +145,7 @@ export default function TikrarPage() {
           <TikrarSystem
             targetPage={mushafTarget.page}
             targetJuz={mushafTarget.juz}
+            targetTimestamp={mushafTarget.timestamp}
             refreshSignal={refreshSignal}
             onDataChanged={triggerGlobalRefresh}
             onOpenScheduleTab={() => setActiveTab('schedule')}
@@ -179,14 +184,14 @@ export default function TikrarPage() {
             onDataChanged={triggerGlobalRefresh}
             onOpenScheduleTab={() => setActiveTab('schedule')}
             onOpenMushafTab={(page, juz) => {
-              setMushafTarget({ page, juz });
+              setMushafTarget({ page, juz, timestamp: Date.now() });
               setActiveTab('mushaf');
             }}
           />
           <TikrarGroupHeatmap refreshSignal={refreshSignal} />
         </TabsContent>
 
-        {/* Tab 3: Pemilihan Target Mandiri & Generator Jadwal 5 Hari/Pekan (Fase 2) */}
+        {/* Tab 3: Pemilihan Target Mandiri & Generator Jadwal (Fase 2) */}
         <TabsContent value="schedule" className="outline-none">
           {user && !hasExistingSchedule && !isSchedulesLoading && (
             <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 p-4 sm:p-5 rounded-2xl shadow-md flex items-center gap-3.5 mb-6">
@@ -205,10 +210,19 @@ export default function TikrarPage() {
           )}
           <TikrarSchedule
             refreshSignal={refreshSignal}
-            onScheduleSaved={() => {
+            onScheduleSaved={(target) => {
               triggerGlobalRefresh();
               refreshSchedules();
               refreshUser();
+              if (target?.page) {
+                setMushafTarget({ page: target.page, juz: target.juz || null, timestamp: Date.now() });
+              }
+              setActiveTab('mushaf');
+            }}
+            onOpenMushafTarget={(target) => {
+              if (target?.page) {
+                setMushafTarget({ page: target.page, juz: target.juz || null, timestamp: Date.now() });
+              }
               setActiveTab('mushaf');
             }}
             onJumpToDailyReport={() => setActiveTab('mushaf')}
