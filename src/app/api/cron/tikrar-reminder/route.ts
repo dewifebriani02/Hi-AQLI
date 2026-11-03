@@ -105,11 +105,8 @@ async function runTikrarReminderJob(opts: {
        AND COALESCE(u.wa_opt_out, false) = false
        AND COALESCE(NULLIF(TRIM(u.whatsapp), ''), NULLIF(TRIM(u.phone), '')) IS NOT NULL
        AND (
-         u.is_tikrar_paid = true
-         OR u.tikrar_halaqah_id IS NOT NULL
-         OR u.tikrar_level IS NOT NULL
+         (u.is_tikrar_paid = true AND u.tikrar_halaqah_id IS NOT NULL)
          OR EXISTS (SELECT 1 FROM public.tikrar_user_schedules s WHERE s.user_id = u.id)
-         OR EXISTS (SELECT 1 FROM public.tikrar_daily_logs l WHERE l.user_id = u.id)
        )
        ${targetFilterSql}
      ORDER BY COALESCE(u.full_name, u.username) ASC`,

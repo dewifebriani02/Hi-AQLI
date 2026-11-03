@@ -36,6 +36,7 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
+  UserPlus,
   Users,
   Video,
 } from 'lucide-react';
@@ -88,6 +89,7 @@ export default function AdminTikrarPage() {
   const [examFilter, setExamFilter] = useState<'all' | 'pending' | 'passed'>('all');
   const [scoreInputs, setScoreInputs] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [participantScope, setParticipantScope] = useState<'registered' | 'all'>('registered');
 
   // Fase 4 Cron Reminder Preview & Dispatch state
   const [reminderMode, setReminderMode] = useState<'morning' | 'evening' | 'friday_weekly'>(
@@ -203,10 +205,8 @@ export default function AdminTikrarPage() {
         const activeJuz = Number(u.paidJuz ?? u.paid_juz) || 0;
         const st = subStats.get(u.id) || { passed: 0, pending: 0, revision: 0 };
         const isParticipant =
+          (Boolean(u.is_tikrar_paid) && Boolean(u.tikrar_halaqah_id)) ||
           Boolean(u.is_tikrar_paid) ||
-          Boolean(u.tikrar_halaqah_id) ||
-          Boolean(u.tikrar_level) ||
-          activeJuz > 0 ||
           st.passed + st.pending + st.revision > 0;
 
         return {
@@ -256,13 +256,14 @@ export default function AdminTikrarPage() {
   const filteredParticipants = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return tikrarParticipants.filter((u: any) => {
+      if (participantScope === 'registered' && !u.isParticipant) return false;
       if (!q) return true;
       const name = String(u.full_name || u.username || '').toLowerCase();
       const email = String(u.email || '').toLowerCase();
       const phone = String(u.whatsapp || u.phone || '').toLowerCase();
       return name.includes(q) || email.includes(q) || phone.includes(q);
     });
-  }, [tikrarParticipants, searchTerm]);
+  }, [tikrarParticipants, participantScope, searchTerm]);
 
   const filteredExams = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -464,9 +465,20 @@ export default function AdminTikrarPage() {
   const handleToggleTikrarPaid = async (participant: any) => {
     setUpdatingId(participant.id);
     const nextVal = !participant.is_tikrar_paid;
+    const updatePayload: any = { is_tikrar_paid: nextVal };
+    if (nextVal) {
+      if (!participant.tikrar_halaqah_id) {
+        updatePayload.tikrar_halaqah_id = 'a1111111-1111-4000-8000-000000000001';
+      }
+      if (!participant.tikrar_start_date) {
+        updatePayload.tikrar_start_date = new Date().toISOString();
+      }
+    } else {
+      updatePayload.tikrar_halaqah_id = null;
+    }
     const { error } = await db
       .from('users')
-      .update({ is_tikrar_paid: nextVal })
+      .update(updatePayload)
       .eq('id', participant.id);
     setUpdatingId(null);
 
@@ -1502,6 +1514,42 @@ export default function AdminTikrarPage() {
 
         {/* TAB 5: Peserta, Target Juz & Ujian Halaman */}
         <TabsContent value="participants" className="space-y-6 outline-none">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-black text-slate-900">
+                Penyaringan Peserta Hi Tikrar vs Akun Lain
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Secara default hanya menampilkan peserta resmi Hi Tikrar agar tidak bercampur dengan pendaftar Hi Mufradat / akun umum.
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+              <Button
+                type="button"
+                size="sm"
+                variant={participantScope === 'registered' ? 'default' : 'ghost'}
+                onClick={() => setParticipantScope('registered')}
+                className={cn(
+                  'text-xs font-bold h-8 rounded-lg',
+                  participantScope === 'registered' && 'bg-[#800000] text-white shadow-sm hover:bg-[#800000]/90'
+                )}
+              >
+                Hanya Peserta Tikrar ({kpis.activeCount})
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={participantScope === 'all' ? 'default' : 'ghost'}
+                onClick={() => setParticipantScope('all')}
+                className={cn(
+                  'text-xs font-bold h-8 rounded-lg',
+                  participantScope === 'all' && 'bg-[#800000] text-white shadow-sm hover:bg-[#800000]/90'
+                )}
+              >
+                Semua Akun Sistem ({(users || []).length})
+              </Button>
+            </div>
+          </div>
           {loadingUsers ? (
             <Card className="border-none shadow-sm">
               <CardContent className="p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -1533,9 +1581,13 @@ export default function AdminTikrarPage() {
                           <CardTitle className="text-base font-black text-slate-900">
                             {fullName}
                           </CardTitle>
-                          {p.is_tikrar_paid && (
+                          {p.isParticipant ? (
                             <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37] text-[9px] font-black uppercase">
                               <Sparkles className="w-2.5 h-2.5 mr-1" /> Tikrar Aktif
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 text-[9px] font-bold">
+                              Non-Tikrar (Hi Mufradat / Umum)
                             </Badge>
                           )}
                           <Badge variant="outline" className="text-[10px] font-bold">
@@ -1572,16 +1624,25 @@ export default function AdminTikrarPage() {
 
                         <Button
                           size="sm"
-                          variant={p.is_tikrar_paid ? 'outline' : 'default'}
+                          variant={p.isParticipant ? 'outline' : 'default'}
                           disabled={updatingId === p.id}
                           onClick={() => handleToggleTikrarPaid(p)}
                           className={cn(
                             'text-xs font-bold h-8',
-                            !p.is_tikrar_paid && 'bg-[#800000] hover:bg-[#800000]/90 text-white'
+                            !p.isParticipant && 'bg-[#800000] hover:bg-[#800000]/90 text-white'
                           )}
                         >
-                          <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
-                          {p.is_tikrar_paid ? 'Nonaktifkan Akses' : 'Aktifkan Akses'}
+                          {p.isParticipant ? (
+                            <>
+                              <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+                              Nonaktifkan Akses
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                              Daftarkan ke Tikrar
+                            </>
+                          )}
                         </Button>
 
                         {waNumber && (
