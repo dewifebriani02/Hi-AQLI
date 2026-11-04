@@ -92,7 +92,7 @@ export default function AdminTikrarPage() {
   const [participantScope, setParticipantScope] = useState<'registered' | 'all'>('registered');
 
   // Fase 4 Cron Reminder Preview & Dispatch state
-  const [reminderMode, setReminderMode] = useState<'morning' | 'evening' | 'friday_weekly'>(
+  const [reminderMode, setReminderMode] = useState<'morning' | 'sunday_closing' | 'evening' | 'friday_weekly'>(
     'morning'
   );
   const [reminderLoading, setReminderLoading] = useState(false);
@@ -1293,29 +1293,23 @@ export default function AdminTikrarPage() {
                 Cron Pengingat Harian &amp; Evaluasi Pekanan HI Tikrar
               </CardTitle>
               <CardDescription className="text-xs">
-                Sistem mengirim pengingat otomatis pukul 06.00 WIB (target harian), pukul 20.00 WIB
-                (khusus yang belum lapor hari ini), dan Jumat sore (peringatan kuota 5 hari/pekan).
+                Sistem mengirim pengingat otomatis 1x sehari pukul 05.00 WIB (ba&apos;da Shubuh untuk target harian) dan akhir pekan Ahad pukul 20.00 WIB (closing &amp; evaluasi pekanan).
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {(
                   [
                     {
                       id: 'morning',
-                      title: '06.00 WIB • Morning Briefing',
-                      desc: 'Mengirim target Halaman, Blok & Surah hari ini (Senin–Jumat).',
+                      title: '05.00 WIB • Morning Briefing (Habis Shubuh)',
+                      desc: 'Mengirim target Halaman, Blok & Surah hari ini (Senin–Jumat) 1x sehari.',
                     },
                     {
-                      id: 'evening',
-                      title: '20.00 WIB • Evening Reminder',
-                      desc: 'Kondisional: hanya untuk peserta yang belum mengisi laporan hari ini.',
-                    },
-                    {
-                      id: 'friday_weekly',
-                      title: 'Jumat 16.00 WIB • Batas Pekanan',
-                      desc: 'Mengingatkan peserta yang belum mencapai 5 hari aktif agar memanfaatkan akhir pekan.',
+                      id: 'sunday_closing',
+                      title: 'Ahad 20.00 WIB • Closing & Evaluasi Pekanan',
+                      desc: 'Rekap capaian pekanan peserta (Tuntas/Kurang) dan persiapan menyambut pekan baru.',
                     },
                   ] as const
                 ).map((m) => (

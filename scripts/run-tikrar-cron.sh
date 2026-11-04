@@ -18,9 +18,9 @@ MODE="${1:-}"
 EXTRA_FLAG="${2:-}"
 
 case "$MODE" in
-  morning|evening|friday_weekly) ;;
+  morning|evening|friday_weekly|sunday_closing) ;;
   *)
-    echo "Usage: $0 <morning|evening|friday_weekly> [--dry-run]" >&2
+    echo "Usage: $0 <morning|sunday_closing|evening|friday_weekly> [--dry-run]" >&2
     exit 1
     ;;
 esac
