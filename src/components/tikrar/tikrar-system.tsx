@@ -31,6 +31,9 @@ import {
   Pause,
   Play,
   Plus,
+  Radio,
+  RotateCcw,
+  RotateCw,
   Send,
   Settings2,
   Sparkles,
@@ -72,13 +75,28 @@ import {
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
 
-const RECITERS = [
-  { id: 7, name: 'Mishary Rashid Alafasy' },
-  { id: 2, name: 'AbdulBaset AbdulSamad (Murattal)' },
-  { id: 3, name: 'Abdur-Rahman as-Sudais' },
-  { id: 6, name: 'Mahmoud Khalil Al-Husary' },
-  { id: 12, name: 'Saud al-Shuraim' },
-  { id: 1, name: 'AbdulBaset AbdulSamad (Mujawwad)' },
+interface ReciterOption {
+  id: number;
+  name: string;
+  provider: 'mp3quran' | 'quran_api';
+  serverUrl?: string;
+  description?: string;
+}
+
+const RECITERS: ReciterOption[] = [
+  {
+    id: 21136,
+    name: 'Syaikh Abdullah Al-Qarafi',
+    provider: 'mp3quran',
+    serverUrl: 'https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/',
+    description: "Streaming CDN Resmi MP3Quran (Hafs 'an 'Asim)",
+  },
+  { id: 7, name: 'Mishary Rashid Alafasy', provider: 'quran_api' },
+  { id: 2, name: 'AbdulBaset AbdulSamad (Murattal)', provider: 'quran_api' },
+  { id: 3, name: 'Abdur-Rahman as-Sudais', provider: 'quran_api' },
+  { id: 6, name: 'Mahmoud Khalil Al-Husary', provider: 'quran_api' },
+  { id: 12, name: 'Saud al-Shuraim', provider: 'quran_api' },
+  { id: 1, name: 'AbdulBaset AbdulSamad (Mujawwad)', provider: 'quran_api' },
 ];
 
 const PASS_THRESHOLD = 40;
@@ -172,15 +190,29 @@ export function TikrarSystem({
   const [prepListenCount, setPrepListenCount] = useState(0);
   const [prepTranslationDone, setPrepTranslationDone] = useState(false);
 
-  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
+  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(21136);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const isAutoPlayingRef = useRef(false);
   const [playingVerseIndex, setPlayingVerseIndex] = useState<number | null>(null);
+  const [currentSurahPlaying, setCurrentSurahPlaying] = useState<number | null>(null);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const [currentLoop, setCurrentLoop] = useState(0);
   const [showReciterDialog, setShowReciterDialog] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioUrlRef = useRef<string | null>(null);
+
+  // Cleanup audio saat unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // Collections for Halaqah, Logs, Schedules, Submissions & Page Exams
   const halaqahOptions = useMemo(
@@ -411,7 +443,12 @@ export function TikrarSystem({
 
     if (typeof window !== 'undefined') {
       const savedReciter = localStorage.getItem('aqli_reciter_id');
-      if (savedReciter) setSelectedReciterId(parseInt(savedReciter, 10));
+      if (savedReciter) {
+        const parsed = parseInt(savedReciter, 10);
+        if (!isNaN(parsed) && RECITERS.some((r) => r.id === parsed)) {
+          setSelectedReciterId(parsed);
+        }
+      }
     }
   }, [
     userData,
@@ -452,7 +489,7 @@ export function TikrarSystem({
 
         if (data && data.verses && data.verses.length > 0) {
           setVerses(data.verses);
-          if (selectedReciterId) {
+          if (selectedReciterId && selectedReciterId !== 21136) {
             getAudioUrlByVerseKey(data.verses[0].verse_key, selectedReciterId).then((url) => {
               nextAudioUrlRef.current = url;
             });
@@ -732,8 +769,43 @@ export function TikrarSystem({
     return s;
   }, [todayScheduledItems, page]);
 
+  const surahsOnPage = useMemo(() => {
+    if (verses.length === 0) return [];
+    return Array.from(new Set(verses.map((v) => parseInt(v.verse_key.split(':')[0], 10))));
+  }, [verses]);
+
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds <= 0) return '00:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const skipAudio = (seconds: number) => {
+    if (audioRef.current) {
+      const cur = audioRef.current.currentTime || 0;
+      const dur = audioRef.current.duration || 0;
+      const target = Math.max(0, Math.min(dur, cur + seconds));
+      audioRef.current.currentTime = target;
+      setAudioCurrentTime(target);
+    }
+  };
+
+  const handleSeekAudio = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = val;
+      setAudioCurrentTime(val);
+    }
+  };
+
   const getAudioUrlByVerseKey = async (verseKey: string, reciterId: number) => {
     try {
+      if (reciterId === 21136) {
+        const surahId = parseInt(verseKey.split(':')[0], 10);
+        return `https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/${String(surahId).padStart(3, '0')}.mp3`;
+      }
+
       const res = await fetch(
         `https://api.quran.com/api/v4/recitations/${reciterId}/by_ayah/${verseKey}`
       );
@@ -759,12 +831,61 @@ export function TikrarSystem({
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.onended = null;
+      audioRef.current.ontimeupdate = null;
     }
     setIsAutoPlaying(false);
     isAutoPlayingRef.current = false;
     setPlayingVerseIndex(null);
+    setCurrentSurahPlaying(null);
     nextAudioUrlRef.current = null;
   };
+
+  const playMp3QuranSurah = useCallback(
+    (surahIndex: number, loopNum: number) => {
+      if (!isAutoPlayingRef.current || surahsOnPage.length === 0) return;
+
+      if (surahIndex >= surahsOnPage.length) {
+        if (loopNum < 4) {
+          setPrepListenCount((p) => Math.min(5, p + 1));
+          setCurrentLoop(loopNum + 1);
+          playMp3QuranSurah(0, loopNum + 1);
+        } else {
+          setPrepListenCount(5);
+          stopAutoPlay();
+          toast({
+            title: 'Simak Tuntas',
+            description: 'Alhamdulillah, persiapan 5x simak bersama Syaikh Abdullah Al-Qarafi selesai!',
+          });
+        }
+        return;
+      }
+
+      const surahId = surahsOnPage[surahIndex];
+      setCurrentSurahPlaying(surahId);
+      const audioUrl = `https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/${String(surahId).padStart(3, '0')}.mp3`;
+
+      if (!audioRef.current) audioRef.current = new Audio();
+      const audio = audioRef.current;
+      audio.src = audioUrl;
+
+      audio.ontimeupdate = () => {
+        setAudioCurrentTime(audio.currentTime);
+        setAudioDuration(audio.duration || 0);
+      };
+      audio.onloadedmetadata = () => {
+        setAudioDuration(audio.duration || 0);
+      };
+      audio.onended = () => {
+        playMp3QuranSurah(surahIndex + 1, loopNum);
+      };
+
+      audio.play().catch((err) => {
+        console.error('MP3Quran audio play error:', err);
+        stopAutoPlay();
+      });
+    },
+    [surahsOnPage, toast]
+  );
 
   const playVerse = useCallback(
     async (vIndex: number, loopNum: number) => {
@@ -821,7 +942,12 @@ export function TikrarSystem({
     isAutoPlayingRef.current = true;
     setCurrentLoop(0);
     nextAudioUrlRef.current = null;
-    playVerse(0, 0);
+
+    if (selectedReciterId === 21136) {
+      playMp3QuranSurah(0, 0);
+    } else {
+      playVerse(0, 0);
+    }
   };
 
   const handleRequestExam = async () => {
@@ -1314,35 +1440,87 @@ export function TikrarSystem({
                           size="sm"
                           className="rounded-xl h-9 gap-2 font-bold border-[#800000]/20 text-[#800000]"
                         >
-                          <Mic2 className="w-4 h-4" /> Pilih Qari
+                          <Mic2 className="w-4 h-4" />
+                          <span className="max-w-[140px] truncate text-xs">
+                            {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
+                          </span>
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Pilih Qari Al-Qur&apos;an</DialogTitle>
-                          <DialogDescription className="sr-only">
-                            Pilih qari favorit Ukhti untuk mendengarkan audio tilawah Al-Qur&apos;an.
+                          <DialogTitle className="text-[#800000] font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
+                          <DialogDescription className="text-xs text-muted-foreground">
+                            Pilih qari favorit Ukhti untuk mendengarkan audio persiapan simak Tikrar.
                           </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-2 py-4">
-                          {RECITERS.map((r) => (
-                            <Button
-                              key={r.id}
-                              variant={selectedReciterId === r.id ? 'default' : 'outline'}
-                              onClick={() => {
-                                setSelectedReciterId(r.id);
-                                localStorage.setItem('aqli_reciter_id', r.id.toString());
-                                setShowReciterDialog(false);
-                              }}
-                              className={cn(
-                                'justify-start gap-3 font-bold',
-                                selectedReciterId === r.id && 'bg-[#800000] text-white'
-                              )}
-                            >
-                              {selectedReciterId === r.id && <Check className="w-4 h-4" />}{' '}
-                              {r.name}
-                            </Button>
-                          ))}
+                        <div className="grid gap-2 py-3 max-h-[60vh] overflow-y-auto pr-1">
+                          {RECITERS.map((r) => {
+                            const isSelected = selectedReciterId === r.id;
+                            return (
+                              <Button
+                                key={r.id}
+                                variant={isSelected ? 'default' : 'outline'}
+                                onClick={() => {
+                                  if (isAutoPlaying) stopAutoPlay();
+                                  setSelectedReciterId(r.id);
+                                  localStorage.setItem('aqli_reciter_id', r.id.toString());
+                                  setShowReciterDialog(false);
+                                }}
+                                className={cn(
+                                  'justify-between items-center p-3 h-auto font-bold rounded-2xl text-left transition-all',
+                                  isSelected
+                                    ? 'bg-[#800000] text-white hover:bg-[#6b0000] hover:text-white border-[#800000]'
+                                    : 'border-muted-foreground/20 hover:border-[#800000]/30 hover:bg-[#800000]/5'
+                                )}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={cn(
+                                      'w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
+                                      isSelected
+                                        ? 'bg-white text-[#800000]'
+                                        : 'bg-[#800000]/10 text-[#800000]'
+                                    )}
+                                  >
+                                    {isSelected ? <Check className="w-4 h-4" /> : <Mic2 className="w-3.5 h-3.5" />}
+                                  </div>
+                                  <div>
+                                    <div className="font-bold leading-tight text-sm">{r.name}</div>
+                                    {r.provider === 'mp3quran' ? (
+                                      <div
+                                        className={cn(
+                                          'text-[10px] font-normal mt-0.5',
+                                          isSelected ? 'text-amber-200' : 'text-amber-800'
+                                        )}
+                                      >
+                                        Streaming CDN Resmi MP3Quran • Hafs &apos;an &apos;Asim
+                                      </div>
+                                    ) : (
+                                      <div
+                                        className={cn(
+                                          'text-[10px] font-normal mt-0.5',
+                                          isSelected ? 'text-white/80' : 'text-muted-foreground'
+                                        )}
+                                      >
+                                        Audio Per Ayat (Quran.com)
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {r.provider === 'mp3quran' && (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'text-[9px] uppercase px-2 py-0.5 font-bold',
+                                      isSelected ? 'border-white/40 text-white' : 'border-amber-500/50 text-amber-800'
+                                    )}
+                                  >
+                                    CDN Resmi
+                                  </Badge>
+                                )}
+                              </Button>
+                            );
+                          })}
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -1372,7 +1550,123 @@ export function TikrarSystem({
                   )}
                 </Button>
 
-                {playingVerseIndex !== null && verses[playingVerseIndex] && (
+                {/* Card Player Khusus Syaikh Abdullah Al-Qarafi (MP3Quran CDN) */}
+                {isAutoPlaying && selectedReciterId === 21136 && (
+                  <div className="mt-6 p-6 sm:p-8 bg-gradient-to-br from-white via-[#800000]/5 to-amber-50/40 rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D4AF37]/20 pb-4">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-[#800000] text-white text-[9px] font-black uppercase tracking-[0.2em]">
+                            Siklus {currentLoop + 1} / 5
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-black border-amber-600/30 text-amber-900 bg-amber-500/10 flex items-center gap-1"
+                          >
+                            <Radio className="w-3 h-3 text-amber-700 animate-pulse" /> MP3Quran CDN Resmi
+                          </Badge>
+                        </div>
+                        <span className="text-[11px] font-bold text-[#800000]">
+                          Halaman {page} • Juz {juz}
+                        </span>
+                      </div>
+
+                      <div className="text-center space-y-1">
+                        <h3 className="text-lg sm:text-xl font-black text-[#800000]">
+                          Syaikh Abdullah Al-Qarafi
+                        </h3>
+                        <p className="text-xs sm:text-sm font-semibold text-black/70">
+                          {currentSurahPlaying ? (
+                            <>
+                              Surah {QURAN_CHAPTERS.find((c) => c.id === currentSurahPlaying)?.name_simple || `Surah ${currentSurahPlaying}`}
+                              {' '}
+                              <span className="font-arabic font-bold text-[#800000]">
+                                ({QURAN_CHAPTERS.find((c) => c.id === currentSurahPlaying)?.name_arabic})
+                              </span>
+                            </>
+                          ) : (
+                            'Memuat tilawah surah...'
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Seekbar and Timeline */}
+                      <div className="space-y-2 bg-white/80 p-4 rounded-2xl border border-amber-200/50 shadow-inner">
+                        <input
+                          type="range"
+                          min={0}
+                          max={audioDuration || 100}
+                          step={1}
+                          value={audioCurrentTime}
+                          onChange={handleSeekAudio}
+                          className="w-full accent-[#800000] cursor-pointer"
+                        />
+                        <div className="flex justify-between items-center text-[10px] sm:text-xs font-mono font-bold text-black/60">
+                          <span>{formatTime(audioCurrentTime)}</span>
+                          <span className="text-[#800000] font-sans font-bold text-[9px] uppercase tracking-wider">
+                            Streaming Hafs &apos;an &apos;Asim
+                          </span>
+                          <span>{formatTime(audioDuration)}</span>
+                        </div>
+                      </div>
+
+                      {/* Control buttons */}
+                      <div className="flex flex-wrap items-center justify-center gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => skipAudio(-10)}
+                          className="rounded-xl h-10 px-3 gap-1.5 font-bold border-[#800000]/20 text-[#800000]"
+                          title="Mundur 10 detik"
+                        >
+                          <RotateCcw className="w-4 h-4" /> -10s
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={stopAutoPlay}
+                          className="rounded-xl h-10 px-5 gap-2 font-bold bg-[#800000] text-white hover:bg-[#6b0000]"
+                        >
+                          <Pause className="w-4 h-4" /> Pause Audio
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => skipAudio(10)}
+                          className="rounded-xl h-10 px-3 gap-1.5 font-bold border-[#800000]/20 text-[#800000]"
+                          title="Maju 10 detik"
+                        >
+                          +10s <RotateCw className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            if (currentLoop < 4) {
+                              setPrepListenCount((p) => Math.min(5, p + 1));
+                              setCurrentLoop((l) => l + 1);
+                              playMp3QuranSurah(0, currentLoop + 1);
+                            } else {
+                              setPrepListenCount(5);
+                              stopAutoPlay();
+                              toast({
+                                title: 'Simak Tuntas',
+                                description: 'Persiapan 5x simak selesai!',
+                              });
+                            }
+                          }}
+                          className="rounded-xl h-10 px-4 font-bold bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300"
+                        >
+                          Selesai Siklus Ini (+1)
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedReciterId !== 21136 && playingVerseIndex !== null && verses[playingVerseIndex] && (
                   <div className="mt-6 p-6 sm:p-8 bg-white rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
                     <div className="flex flex-col gap-8">
                       <div className="flex items-center justify-center gap-2">
