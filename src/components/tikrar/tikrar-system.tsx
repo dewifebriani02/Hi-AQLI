@@ -141,7 +141,7 @@ export function TikrarSystem({
   onOpenScheduleTab,
   onOpenGroupRecapTab,
 }: TikrarSystemProps = {}) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
   const {
@@ -156,22 +156,8 @@ export function TikrarSystem({
     return raw >= 1 && raw <= 30 ? raw : 30;
   }, [userData]);
 
-  const [juz, setJuz] = useState<number>(() => {
-    if (targetJuz && targetJuz >= 1 && targetJuz <= 30) return targetJuz;
-    if (typeof window !== "undefined") {
-      const savedJuz = Number(localStorage.getItem("aqli_tikrar_last_juz"));
-      if (savedJuz >= 1 && savedJuz <= 30) return savedJuz;
-    }
-    return 30;
-  });
-  const [page, setPage] = useState<number>(() => {
-    if (targetPage && targetPage >= 1 && targetPage <= 604) return targetPage;
-    if (typeof window !== "undefined") {
-      const savedPage = Number(localStorage.getItem("aqli_tikrar_last_page"));
-      if (savedPage >= 1 && savedPage <= 604) return savedPage;
-    }
-    return 582;
-  });
+  const [juz, setJuz] = useState<number>(targetJuz || 30);
+  const [page, setPage] = useState<number>(targetPage || 582);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(18);
