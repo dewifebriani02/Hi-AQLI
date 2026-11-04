@@ -211,37 +211,50 @@ async function runTikrarReminderJob(opts: {
     const loggedToday = userDates.has(dateKey);
     const metrics = computeTikrarStreakAndWeekly(userDates, dateKey);
 
-    const userSchedules = schedulesByUser.get(u.id) || [];
-    const exactTodayBlocks = userSchedules.filter((s) => s.scheduled_date === dateKey);
+    // Filter schedules specifically for user's active Juz page range
+    const userSchedules = (schedulesByUser.get(u.id) || []).filter(
+      (s) => Number(s.page_number) >= startPage && Number(s.page_number) <= endPage
+    );
     const pendingBlocks = userSchedules.filter((s) => s.status !== 'completed');
+    const exactTodayBlocks = userSchedules.filter((s) => s.scheduled_date === dateKey);
 
-    let targetPage =
-      Number(exactTodayBlocks[0]?.page_number) ||
-      Number(pendingBlocks[0]?.page_number) ||
-      Number(u.tikrar_current_page) ||
-      startPage;
+    // Adaptive target determination:
+    // 1. If participant has uncompleted (pending) blocks, remind the EARLIEST uncompleted block so they don't skip ahead!
+    // 2. If on-track (no overdue pending blocks), use today's scheduled block.
+    // 3. Fallback to user's saved current_page & current_block.
+    let targetPage = startPage;
+    let targetBlockNumbers: number[] = [1];
+
+    if (pendingBlocks.length > 0) {
+      const earliestPending = pendingBlocks[0];
+      targetPage = Number(earliestPending.page_number) || startPage;
+      // Get all pending blocks on that same page scheduled for that session
+      const sameSessionPending = pendingBlocks.filter(
+        (s) =>
+          Number(s.page_number) === targetPage &&
+          s.scheduled_date === earliestPending.scheduled_date
+      );
+      targetBlockNumbers =
+        sameSessionPending.length > 0
+          ? sameSessionPending.map((s) => Number(s.block_number))
+          : [Number(earliestPending.block_number) || 1];
+    } else if (exactTodayBlocks.length > 0) {
+      targetPage = Number(exactTodayBlocks[0].page_number) || startPage;
+      targetBlockNumbers = exactTodayBlocks
+        .filter((s) => Number(s.page_number) === targetPage)
+        .map((s) => Number(s.block_number));
+    } else {
+      targetPage = Number(u.tikrar_current_page) || startPage;
+      targetBlockNumbers = [Math.max(1, Math.min(4, Number(u.tikrar_current_block) || 1))];
+    }
+
     if (targetPage < startPage || targetPage > endPage) targetPage = startPage;
 
-    const blocksForTargetPage =
-      exactTodayBlocks.length > 0
-        ? exactTodayBlocks
-            .filter((s) => Number(s.page_number) === targetPage)
-            .map((s) => Number(s.block_number))
-        : pendingBlocks.length > 0
-        ? pendingBlocks
-            .filter(
-              (s) =>
-                s.scheduled_date === pendingBlocks[0].scheduled_date &&
-                Number(s.page_number) === targetPage
-            )
-            .map((s) => Number(s.block_number))
-        : [Math.max(1, Math.min(4, Number(u.tikrar_current_block) || 1))];
-
     const blockLetters =
-      Array.from(new Set<number>(blocksForTargetPage))
+      Array.from(new Set<number>(targetBlockNumbers))
         .sort((a, b) => a - b)
         .map((b) => BLOCK_LETTERS[b] || 'A')
-        .join(' & ') || 'A & B';
+        .join(' & ') || 'A';
 
     const surahLabel = getSurahLabelForPage(targetPage);
 
