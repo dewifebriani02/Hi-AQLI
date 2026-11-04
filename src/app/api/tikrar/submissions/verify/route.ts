@@ -11,6 +11,9 @@ import {
   TIKRAR_GRADE_LABELS,
 } from '@/lib/tikrar-schedule-generator';
 
+const NO_REPLY_FOOTER =
+  '\n\n━━━━━━━━━━━━━━━━━━━━\n📌 _Pesan ini dikirim secara otomatis oleh sistem HI AQLI. Mohon untuk tidak membalas pesan ini._';
+
 function calcPageSetoranPoints(passedRanges: Set<string>): number {
   if (passedRanges.has('blok_1_4')) return 250;
   let total = 0;
@@ -225,29 +228,33 @@ export async function POST(req: NextRequest) {
       if (phone) {
         const salutation = learner.salutation || 'Ukhti';
         const learnerName = learner.full_name || learner.username || 'Thalibah';
+        const isAkhi = salutation.trim().toLowerCase() === 'akhi';
+        const doaBarakah = isAkhi ? 'Barakallahu fika' : 'Barakallahu fiki';
         const gradeLabel = TIKRAR_GRADE_LABELS[grade] || grade;
         const rangeHuman = formatRangeHuman(sub.blocks_range);
 
         let waMsg = '';
         if (nextStatus === 'passed') {
           waMsg =
-            `Alhamdulillah Barakallahu fiik ${salutation} ${learnerName}! ✨\n\n` +
-            `Setoran Tasmi' Live Zoom *Halaman ${pageNumber} (${rangeHuman})* telah diverifikasi oleh *${musyrifahName}* dengan predikat *${gradeLabel}*` +
+            `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${learnerName} 🌸\n\n` +
+            `Alhamdulillah, ${doaBarakah}! Setoran Tasmi' Live Zoom *Halaman ${pageNumber} (${rangeHuman})* telah selesai disimak dan disetujui oleh *${musyrifahName}* dengan predikat *${gradeLabel}*` +
             (pointsAwarded > 0 ? ` (+${pointsAwarded} Poin)` : '') +
-            `.\n` +
+            `.\n\n` +
             (pageCleared && pageNumber < endPage
               ? `🔓 Kunci *Halaman ${pageNumber + 1}* kini telah terbuka!`
-              : `Silakan lanjutkan blok berikutnya di Halaman ${pageNumber}.`) +
-            (feedback ? `\n\n📝 Catatan Musyrifah: _"${feedback}"_` : '') +
-            `\n\nBuka aplikasi: https://hiaqli.pro/tikrar`;
+              : `Silakan lanjutkan repetisi pada blok berikutnya di Halaman ${pageNumber}.`) +
+            (feedback ? `\n\n📝 *Catatan Musyrifah:* _"${feedback}"_` : '') +
+            `\n\nBuka aplikasi HI Tikrar:\n🔗 https://hiaqli.pro/tikrar` +
+            NO_REPLY_FOOTER;
         } else {
           waMsg =
-            `Assalamu'alaikum ${salutation} ${learnerName},\n\n` +
-            `Hasil evaluasi Tasmi' Live Zoom *Halaman ${pageNumber} (${rangeHuman})* bersama *${musyrifahName}*: *${gradeLabel}*.\n` +
+            `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${learnerName} 💐\n\n` +
+            `Hasil evaluasi Tasmi' Live Zoom *Halaman ${pageNumber} (${rangeHuman})* bersama *${musyrifahName}*: *${gradeLabel}*.\n\n` +
             (feedback
-              ? `📝 Catatan perbaikan: _"${feedback}"_\n`
-              : `Yuk kuatkan kembali tajwid & kelancaran hafalan pada blok ini sebelum menyetor ulang.\n`) +
-            `\nSemangat murajaah ya! Buka aplikasi: https://hiaqli.pro/tikrar`;
+              ? `📝 *Catatan Evaluasi Musyrifah:* _"${feedback}"_\n\n`
+              : `Yuk luangkan waktu untuk memantapkan kembali tajwid & kelancaran hafalan pada bagian ini sebelum mengajukan tasmi' ulang.\n\n`) +
+            `Tetap semangat dan istiqamah dalam menjaga kalam Allah! Buka aplikasi HI Tikrar:\n🔗 https://hiaqli.pro/tikrar` +
+            NO_REPLY_FOOTER;
         }
 
         const sendRes = await whatsappService.sendTextMessage(phone, waMsg);

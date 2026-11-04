@@ -18,6 +18,9 @@ import {
 
 export type TikrarReminderMode = 'morning' | 'evening' | 'friday_weekly' | 'sunday_closing';
 
+const NO_REPLY_FOOTER =
+  '\n\n━━━━━━━━━━━━━━━━━━━━\n📌 _Pesan ini dikirim secara otomatis oleh sistem HI AQLI. Mohon untuk tidak membalas pesan ini._';
+
 function extractCronSecret(req: NextRequest): string | null {
   const authHeader = req.headers.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -196,6 +199,10 @@ async function runTikrarReminderJob(opts: {
 
     const salutation = u.salutation || 'Ukhti';
     const displayName = u.full_name || u.username || 'Sahabat Quran';
+    const isAkhi = salutation.trim().toLowerCase() === 'akhi';
+    const doaBarakah = isAkhi ? 'Barakallahu fika' : 'Barakallahu fiki';
+    const doaJazak = isAkhi ? 'Jazakallahu khairan' : 'Jazakillahu khairan';
+
     const activeJuz = Math.max(1, Math.min(30, Number(u.paidJuz) || 30));
     const { startPage, endPage } = getJuzPageRange(activeJuz);
     const targetDaysPerWeek = Math.max(1, Math.min(7, Number(u.tikrar_active_days_per_week) || 5));
@@ -240,7 +247,7 @@ async function runTikrarReminderJob(opts: {
 
     let message = '';
 
-    if (mode === "morning") {
+    if (mode === 'morning') {
       if (!force && !isActiveStudyDay(dateKey, targetDaysPerWeek) && exactTodayBlocks.length === 0) {
         continue;
       }
@@ -248,36 +255,41 @@ async function runTikrarReminderJob(opts: {
         continue;
       }
       message =
-        "Assalamu'alaikum warahmatullah wabarakatuh, " + salutation + " " + displayName + " 🌸\n\n" +
-        "Semangat pagi ba'da Shubuh! Target Hi Tikrar " + salutation + " hari ini:\n" +
-        "📖 Halaman: " + targetPage + " | Blok: " + blockLetters + " (" + surahLabel + ")\n" +
-        "🎯 Metode Itqan: Repetisi 40x per bagian teks & gabung blok.\n\n" +
-        "Setiap klik hitungan repetisi otomatis tersimpan ke sistem & langsung memperbarui keaktifan serta heatmap grup " + salutation + ".\n\n" +
-        "Yuk mulai buka mushaf dan aplikasi Tikrar pagi ini:\n" +
-        "🔗 https://hiaqli.pro/tikrar\n\n" +
-        "Semoga Allah mudahkan dan berkahi setiap ayat yang diulang hari ini ✨";
-    } else if (mode === "sunday_closing" || mode === "friday_weekly") {
+        `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${displayName} 🌸\n\n` +
+        `Semangat pagi! Mengawali hari penuh berkah ba'da Shubuh, berikut target Hi Tikrar ${salutation} hari ini:\n` +
+        `📖 *Target:* Halaman ${targetPage} | Blok ${blockLetters} (${surahLabel})\n` +
+        `🎯 *Metode Itqan:* Repetisi 40x per bagian teks & penggabungan blok\n\n` +
+        `Setiap ketukan hitungan repetisi otomatis tersimpan ke sistem serta memperbarui keaktifan dan heatmap halaqah ${salutation}.\n\n` +
+        `Mari luangkan waktu sejenak membuka mushaf dan aplikasi Tikrar pagi ini:\n` +
+        `🔗 https://hiaqli.pro/tikrar\n\n` +
+        `Semoga Allah senantiasa memudahkan, mengokohkan hafalan, dan memberkahi setiap ayat yang ${salutation} lantunkan hari ini. Aamiin ya Rabbal 'alamin 🤲✨` +
+        NO_REPLY_FOOTER;
+    } else if (mode === 'sunday_closing' || mode === 'friday_weekly') {
       const isComplete = metrics.weeklyActiveDays >= targetDaysPerWeek;
       const deficit = Math.max(0, targetDaysPerWeek - metrics.weeklyActiveDays);
 
       if (isComplete) {
         message =
-          "Assalamu'alaikum warahmatullah wabarakatuh, " + salutation + " " + displayName + " 🌸\n\n" +
-          "Alhamdulillah, closing pekan ini telah tiba! Capaian Hi Tikrar " + salutation + " pekan ini: " + metrics.weeklyActiveDays + "/" + targetDaysPerWeek + " hari aktif (TUNTAS) 🎉\n" +
-          "🔥 Streak istiqamah: " + metrics.streak + " hari berturut-turut.\n\n" +
-          "Barakallahu fiki atas keistiqamahan " + salutation + " membersamai Al-Qur'an pekan ini. Selamat beristirahat malam ini, dan bismillah besok kita sambut pekan baru dengan penuh semangat! ✨\n\n" +
-          "Pantau rekap & heatmap grup:\n" +
-          "🔗 https://hiaqli.pro/tikrar";
+          `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${displayName} 🌸\n\n` +
+          `Alhamdulillah, evaluasi penutupan pekan ini telah tiba! Berikut capaian Hi Tikrar ${salutation} pekan ini:\n` +
+          `🎯 *Capaian Pekan Ini:* ${metrics.weeklyActiveDays}/${targetDaysPerWeek} Hari Aktif *(TUNTAS)* 🎉\n` +
+          `🔥 *Keistiqamahan (Streak):* ${metrics.streak} hari berturut-turut\n\n` +
+          `${doaBarakah} atas keistiqamahan ${salutation} dalam membersamai Al-Qur'an sepanjang pekan ini. Selamat beristirahat malam ini, dan bismillah esok hari kita sambut pekan baru dengan semangat yang lebih segar! ✨\n\n` +
+          `Pantau rekapitulasi & heatmap halaqah ${salutation}:\n` +
+          `🔗 https://hiaqli.pro/tikrar` +
+          NO_REPLY_FOOTER;
       } else {
         message =
-          "Assalamu'alaikum warahmatullah wabarakatuh, " + salutation + " " + displayName + " 💐\n\n" +
-          "Alhamdulillah, closing pekan ini telah tiba. Capaian Hi Tikrar " + salutation + " pekan ini: " + metrics.weeklyActiveDays + "/" + targetDaysPerWeek + " hari aktif (kurang " + deficit + " hari).\n\n" +
-          "Jazakillahu khairan atas setiap ikhtiar dan tilawah yang telah " + salutation + " perjuangkan pekan ini. Jangan berkecil hati, jadikan evaluasi pekan ini sebagai pemicu semangat baru untuk lebih konsisten di pekan depan, insya Allah!\n\n" +
-          "Bismillah, mari kita bersiap mulai dari esok hari (Senin):\n" +
-          "🔗 https://hiaqli.pro/tikrar\n\n" +
-          "Semoga Allah senantiasa memudahkan langkah " + salutation + " dalam menjaga hafalan Al-Qur'an 🤲🌸";
+          `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${displayName} 💐\n\n` +
+          `Alhamdulillah, evaluasi penutupan pekan ini telah tiba. Berikut capaian Hi Tikrar ${salutation} pekan ini:\n` +
+          `🎯 *Capaian Pekan Ini:* ${metrics.weeklyActiveDays}/${targetDaysPerWeek} Hari Aktif (selisih ${deficit} hari)\n\n` +
+          `${doaJazak} atas setiap ikhtiar, waktu, dan lantunan tilawah yang telah ${salutation} perjuangkan pekan ini. Jangan berkecil hati, jadikan evaluasi ini sebagai pemicu semangat baru untuk lebih konsisten dan istiqamah di pekan depan, insya Allah.\n\n` +
+          `Bismillah, mari perbaharui tekad dan bersiap kembali mulai esok hari (Senin):\n` +
+          `🔗 https://hiaqli.pro/tikrar\n\n` +
+          `Semoga Allah senantiasa meneguhkan niat dan memudahkan langkah ${salutation} dalam menjaga kalam-Nya 🤲🌸` +
+          NO_REPLY_FOOTER;
       }
-    } else if (mode === "evening") {
+    } else if (mode === 'evening') {
       if (loggedToday) continue;
       if (
         !force &&
@@ -288,13 +300,14 @@ async function runTikrarReminderJob(opts: {
       }
       const remainingDays = Math.max(1, targetDaysPerWeek - metrics.weeklyActiveDays);
       message =
-        "Assalamu'alaikum " + salutation + " " + displayName + " 🌙\n\n" +
-        "Alhamdulillah hari sudah menjelang malam. Sistem mencatat " + salutation + " belum menjalankan repetisi Hi Tikrar hari ini:\n" +
-        "📖 Target: Halaman " + targetPage + ", Blok " + blockLetters + " (" + surahLabel + ")\n" +
-        "🔥 Streak saat ini: " + metrics.streak + " hari berturut-turut\n\n" +
-        "Luangkan 15–20 menit sejenak sebelum hari berganti untuk menjaga hafalan tetap mutqin dan menjaga streak keaktifan " + salutation + ":\n" +
-        "🔗 https://hiaqli.pro/tikrar\n\n" +
-        "(Catatan: Cukup tekan tombol hitungan di web, progres repetisi otomatis tersimpan) 🤲";
+        `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${displayName} 🌙\n\n` +
+        `Alhamdulillah hari sudah menjelang malam. Sistem mencatat ${salutation} belum menyelesaikan repetisi Hi Tikrar hari ini:\n` +
+        `📖 *Target:* Halaman ${targetPage} | Blok ${blockLetters} (${surahLabel})\n` +
+        `🔥 *Keistiqamahan (Streak):* ${metrics.streak} hari berturut-turut\n\n` +
+        `Mari luangkan waktu sejenak (15–20 menit) sebelum hari berganti untuk menjaga hafalan tetap mutqin dan menjaga kesinambungan keaktifan ${salutation}:\n` +
+        `🔗 https://hiaqli.pro/tikrar\n\n` +
+        `_(Cukup tekan tombol hitungan di aplikasi web, progres repetisi otomatis tersimpan)_ 🤲✨` +
+        NO_REPLY_FOOTER;
     }
 
     if (!message) continue;
