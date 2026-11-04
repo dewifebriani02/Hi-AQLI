@@ -21,6 +21,7 @@ import { TikrarGroupHeatmap } from '@/components/tikrar/tikrar-group-heatmap';
 import { TikrarSchedule } from '@/components/tikrar/tikrar-schedule';
 import { HifzProgressChart } from '@/components/progress/hifz-progress-chart';
 import { useDoc, useUser, useCollection } from '@/db';
+import { getJuzPageRange } from '@/lib/tikrar-schedule-generator';
 
 export default function TikrarPage() {
   const { user, isUserLoading } = useUser();
@@ -39,6 +40,30 @@ export default function TikrarPage() {
   const [refreshSignal, setRefreshSignal] = useState<number>(0);
 
   const triggerGlobalRefresh = () => setRefreshSignal((n) => n + 1);
+
+  // Target aktif default dari user data / jadwal
+  const userActiveJuz = useMemo(() => {
+    const raw = Number(userData?.paidJuz ?? userData?.paid_juz);
+    return raw >= 1 && raw <= 30 ? raw : 30;
+  }, [userData]);
+
+  const userActivePage = useMemo(() => {
+    const range = getJuzPageRange(userActiveJuz);
+    if (typeof window !== "undefined") {
+      const localPage = Number(localStorage.getItem("aqli_tikrar_last_page"));
+      const localJuz = Number(localStorage.getItem("aqli_tikrar_last_juz"));
+      if (
+        localPage >= range.startPage &&
+        localPage <= range.endPage &&
+        (!localJuz || localJuz === userActiveJuz)
+      ) {
+        return localPage;
+      }
+    }
+    const curr = Number(userData?.tikrar_current_page);
+    if (curr >= range.startPage && curr <= range.endPage) return curr;
+    return range.startPage;
+  }, [userActiveJuz, userData?.tikrar_current_page]);
 
   // Periksa apakah peserta sudah memiliki jadwal belajar Tikrar tersimpan di database
   const schedulesOptions = useMemo(
@@ -87,6 +112,15 @@ export default function TikrarPage() {
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-6 h-auto sm:h-12 bg-muted/50 p-1 rounded-xl gap-1">
           <TabsTrigger
             value="mushaf"
+            onClick={() => {
+              if (userActivePage && userActiveJuz) {
+                setMushafTarget({
+                  page: userActivePage,
+                  juz: userActiveJuz,
+                  timestamp: Date.now(),
+                });
+              }
+            }}
             className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
           >
             <BookOpen className="w-4 h-4 shrink-0" /> Mushaf &amp; Audio
@@ -225,7 +259,12 @@ export default function TikrarPage() {
               }
               setActiveTab('mushaf');
             }}
-            onJumpToDailyReport={() => setActiveTab('mushaf')}
+            onJumpToDailyReport={() => {
+              if (userActivePage && userActiveJuz) {
+                setMushafTarget({ page: userActivePage, juz: userActiveJuz, timestamp: Date.now() });
+              }
+              setActiveTab('mushaf');
+            }}
           />
         </TabsContent>
 

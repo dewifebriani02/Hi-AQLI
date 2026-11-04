@@ -886,22 +886,31 @@ export function TikrarSchedule({
 
                               <div className="space-y-1 pt-0.5">
                                 {Array.from(pageGroups.entries()).map(([pNum, letters]) => (
-                                  <div
+                                  <button
                                     key={pNum}
-                                    className="text-xs font-black text-[#800000] flex items-center gap-1"
+                                    type="button"
+                                    onClick={() => onOpenMushafTarget?.({ page: pNum, juz: selectedJuz })}
+                                    className="text-xs font-black text-[#800000] hover:underline flex items-center gap-1 text-left"
                                   >
                                     <BookOpen className="w-3 h-3 shrink-0" />
                                     Hal. {pNum} • Blok {letters.join(', ')}
-                                  </div>
+                                  </button>
                                 ))}
                               </div>
                             </div>
 
-                            {onJumpToDailyReport && day.isToday && !day.allCompleted && (
+                            {day.isToday && !day.allCompleted && (
                               <Button
                                 type="button"
                                 size="sm"
-                                onClick={onJumpToDailyReport}
+                                onClick={() => {
+                                  const firstDayPage = Array.from(pageGroups.keys())[0] || activeTargetPage;
+                                  if (onOpenMushafTarget) {
+                                    onOpenMushafTarget({ page: firstDayPage, juz: selectedJuz });
+                                  } else {
+                                    onJumpToDailyReport?.();
+                                  }
+                                }}
                                 className="h-7 w-full bg-[#800000] hover:bg-[#800000]/90 text-white text-[10px] font-black rounded-lg"
                               >
                                 Buka Mushaf &amp; Lapor

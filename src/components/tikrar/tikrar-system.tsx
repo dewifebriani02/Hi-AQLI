@@ -156,8 +156,22 @@ export function TikrarSystem({
     return raw >= 1 && raw <= 30 ? raw : 30;
   }, [userData]);
 
-  const [juz, setJuz] = useState<number>(targetJuz || 30);
-  const [page, setPage] = useState<number>(targetPage || 582);
+  const [juz, setJuz] = useState<number>(() => {
+    if (targetJuz && targetJuz >= 1 && targetJuz <= 30) return targetJuz;
+    if (typeof window !== "undefined") {
+      const savedJuz = Number(localStorage.getItem("aqli_tikrar_last_juz"));
+      if (savedJuz >= 1 && savedJuz <= 30) return savedJuz;
+    }
+    return 30;
+  });
+  const [page, setPage] = useState<number>(() => {
+    if (targetPage && targetPage >= 1 && targetPage <= 604) return targetPage;
+    if (typeof window !== "undefined") {
+      const savedPage = Number(localStorage.getItem("aqli_tikrar_last_page"));
+      if (savedPage >= 1 && savedPage <= 604) return savedPage;
+    }
+    return 582;
+  });
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(18);
@@ -357,22 +371,82 @@ export function TikrarSystem({
     }
   }, [targetPage, targetJuz, targetTimestamp]);
 
-  // Initialize initial page for current user if no explicit targetPage is specified
+  // Inisialisasi halaman & juz awal untuk pengguna (atau pemulihan dari target / sesi terakhir)
   useEffect(() => {
-    if (!isUserDataLoading && (userData || !user) && !hasInitializedPage && !targetPage) {
-      setJuz(paidJuz);
-      const range = getJuzPageRange(paidJuz);
-      const userCurr = Number(userData?.tikrar_current_page);
-      const initialPage =
-        userCurr >= range.startPage && userCurr <= range.endPage ? userCurr : range.startPage;
+    // 1. Tunggu status login selesai diperiksa
+    if (isUserLoading) return;
+    // 2. Jika user login, tunggu sampai data profil & target selesai dimuat
+    if (user && (isUserDataLoading || !userData)) return;
+
+    if (!hasInitializedPage && !targetPage) {
+      const activeJuz = paidJuz;
+      const range = getJuzPageRange(activeJuz);
+
+      let initialPage: number | null = null;
+
+      // Prioritas 1: Tempat terakhir di localStorage (jika berada dalam range juz target aktif)
+      if (typeof window !== 'undefined') {
+        const savedPage = Number(localStorage.getItem('aqli_tikrar_last_page'));
+        const savedJuz = Number(localStorage.getItem('aqli_tikrar_last_juz'));
+        if (
+          savedPage >= range.startPage &&
+          savedPage <= range.endPage &&
+          (!savedJuz || savedJuz === activeJuz)
+        ) {
+          initialPage = savedPage;
+        }
+      }
+
+      // Prioritas 2: Terakhir berhenti di database pengguna (tikrar_current_page)
+      if (!initialPage) {
+        const dbCurrPage = Number(userData?.tikrar_current_page);
+        if (dbCurrPage >= range.startPage && dbCurrPage <= range.endPage) {
+          initialPage = dbCurrPage;
+        }
+      }
+
+      // Prioritas 3: Target schedule pending hari ini / schedule terdekat berikutnya di Juz ini
+      if (!initialPage && todayScheduledItems.length > 0) {
+        const schedPage = Number(todayScheduledItems[0].page_number);
+        if (schedPage >= range.startPage && schedPage <= range.endPage) {
+          initialPage = schedPage;
+        }
+      }
+
+      // Prioritas 4: Halaman awal juz aktif
+      if (!initialPage || initialPage < range.startPage || initialPage > range.endPage) {
+        initialPage = range.startPage;
+      }
+
+      setJuz(activeJuz);
       setPage(initialPage);
       setHasInitializedPage(true);
     }
+
     if (typeof window !== 'undefined') {
       const savedReciter = localStorage.getItem('aqli_reciter_id');
       if (savedReciter) setSelectedReciterId(parseInt(savedReciter, 10));
     }
-  }, [userData, user, paidJuz, isUserDataLoading, hasInitializedPage, targetPage]);
+  }, [
+    userData,
+    user,
+    paidJuz,
+    isUserLoading,
+    isUserDataLoading,
+    hasInitializedPage,
+    targetPage,
+    todayScheduledItems,
+  ]);
+
+  // Simpan posisi halaman & juz terakhir ke localStorage setiap kali berganti halaman
+  useEffect(() => {
+    if (typeof window !== 'undefined' && page >= 1 && page <= 604) {
+      localStorage.setItem('aqli_tikrar_last_page', String(page));
+      if (juz >= 1 && juz <= 30) {
+        localStorage.setItem('aqli_tikrar_last_juz', String(juz));
+      }
+    }
+  }, [page, juz]);
 
   // Fetch verses for `page`
   useEffect(() => {

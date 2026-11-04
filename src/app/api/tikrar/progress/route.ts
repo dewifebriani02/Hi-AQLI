@@ -105,6 +105,15 @@ export async function POST(req: NextRequest) {
       ]
     );
 
+    // Perbarui posisi halaman terakhir aktif peserta di public.users agar selalu sinkron
+    await client.query(
+      `UPDATE public.users
+       SET tikrar_current_page = $1,
+           updated_at = now()
+       WHERE id = $2`,
+      [pageNumber, ctx.userId]
+    );
+
     // 2. Jika ada blok yang tuntas, otomatis rekam ke public.tikrar_daily_logs & schedule tanpa tombol manual
     let dailyLogSaved = null;
     let pointsAwarded = 0;
