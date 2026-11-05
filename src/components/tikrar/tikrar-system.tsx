@@ -91,7 +91,20 @@ const RECITERS: ReciterOption[] = [
     serverUrl: 'https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/',
     description: "Streaming CDN Resmi MP3Quran (Hafs 'an 'Asim)",
   },
-  { id: 7, name: 'Mishary Rashid Alafasy', provider: 'quran_api' },
+  {
+    id: 21203,
+    name: 'Dr. Syaikh Ayman Rusydi Suwaid',
+    provider: 'mp3quran',
+    serverUrl: 'https://server15.mp3quran.net/a-rushdi/Almusshaf-Al-Mo-lim/',
+    description: "Al-Mushaf Al-Mu'allim (MP3Quran)",
+  },
+  {
+    id: 21001,
+    name: 'Syaikh Ibrahim Al-Akhdar',
+    provider: 'mp3quran',
+    serverUrl: 'https://cdn.mp3quran.net/audio/ibrahim-akhdar/r1/',
+    description: "Imam Masjid Nabawi (Murattal MP3Quran)",
+  },
   { id: 2, name: 'AbdulBaset AbdulSamad (Murattal)', provider: 'quran_api' },
   { id: 3, name: 'Abdur-Rahman as-Sudais', provider: 'quran_api' },
   { id: 6, name: 'Mahmoud Khalil Al-Husary', provider: 'quran_api' },
@@ -202,6 +215,12 @@ export function TikrarSystem({
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioUrlRef = useRef<string | null>(null);
+
+  const currentReciter = useMemo(
+    () => RECITERS.find((r) => r.id === selectedReciterId) || RECITERS[0],
+    [selectedReciterId]
+  );
+  const isMp3Quran = currentReciter.provider === "mp3quran";
 
   // Cleanup audio saat unmount
   useEffect(() => {
@@ -447,6 +466,9 @@ export function TikrarSystem({
         const parsed = parseInt(savedReciter, 10);
         if (!isNaN(parsed) && RECITERS.some((r) => r.id === parsed)) {
           setSelectedReciterId(parsed);
+        } else {
+          setSelectedReciterId(RECITERS[0].id);
+          localStorage.setItem('aqli_reciter_id', RECITERS[0].id.toString());
         }
       }
     }
@@ -489,8 +511,9 @@ export function TikrarSystem({
 
         if (data && data.verses && data.verses.length > 0) {
           setVerses(data.verses);
-          if (selectedReciterId && selectedReciterId !== 21136) {
-            getAudioUrlByVerseKey(data.verses[0].verse_key, selectedReciterId).then((url) => {
+          const rec = RECITERS.find((r) => r.id === selectedReciterId);
+          if (rec && rec.provider !== "mp3quran") {
+            getAudioUrlByVerseKey(data.verses[0].verse_key, rec.id).then((url) => {
               nextAudioUrlRef.current = url;
             });
           }
@@ -801,9 +824,10 @@ export function TikrarSystem({
 
   const getAudioUrlByVerseKey = async (verseKey: string, reciterId: number) => {
     try {
-      if (reciterId === 21136) {
+      const rec = RECITERS.find((r) => r.id === reciterId);
+      if (rec?.provider === "mp3quran" && rec.serverUrl) {
         const surahId = parseInt(verseKey.split(':')[0], 10);
-        return `https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/${String(surahId).padStart(3, '0')}.mp3`;
+        return `${rec.serverUrl}${String(surahId).padStart(3, '0')}.mp3`;
       }
 
       const res = await fetch(
@@ -854,7 +878,7 @@ export function TikrarSystem({
           stopAutoPlay();
           toast({
             title: 'Simak Tuntas',
-            description: 'Alhamdulillah, persiapan 5x simak bersama Syaikh Abdullah Al-Qarafi selesai!',
+            description: `Alhamdulillah, persiapan 5x simak bersama ${currentReciter.name} selesai!`,
           });
         }
         return;
@@ -862,7 +886,8 @@ export function TikrarSystem({
 
       const surahId = surahsOnPage[surahIndex];
       setCurrentSurahPlaying(surahId);
-      const audioUrl = `https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/${String(surahId).padStart(3, '0')}.mp3`;
+      const serverBase = currentReciter.serverUrl || "https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/";
+      const audioUrl = `${serverBase}${String(surahId).padStart(3, '0')}.mp3`;
 
       if (!audioRef.current) audioRef.current = new Audio();
       const audio = audioRef.current;
@@ -884,7 +909,7 @@ export function TikrarSystem({
         stopAutoPlay();
       });
     },
-    [surahsOnPage, toast]
+    [surahsOnPage, currentReciter, toast]
   );
 
   const playVerse = useCallback(
@@ -943,7 +968,7 @@ export function TikrarSystem({
     setCurrentLoop(0);
     nextAudioUrlRef.current = null;
 
-    if (selectedReciterId === 21136) {
+    if (isMp3Quran) {
       playMp3QuranSurah(0, 0);
     } else {
       playVerse(0, 0);
@@ -1493,7 +1518,7 @@ export function TikrarSystem({
                                           isSelected ? 'text-amber-200' : 'text-amber-800'
                                         )}
                                       >
-                                        Streaming CDN Resmi MP3Quran • Hafs &apos;an &apos;Asim
+                                        {r.description || "Streaming CDN Resmi MP3Quran"}
                                       </div>
                                     ) : (
                                       <div
@@ -1550,8 +1575,8 @@ export function TikrarSystem({
                   )}
                 </Button>
 
-                {/* Card Player Khusus Syaikh Abdullah Al-Qarafi (MP3Quran CDN) */}
-                {isAutoPlaying && selectedReciterId === 21136 && (
+                {/* Card Player Khusus Qari MP3Quran CDN (Al-Qarafi, Ayman Suwaid, Ibrahim Al-Akhdar) */}
+                {isAutoPlaying && isMp3Quran && (
                   <div className="mt-6 p-6 sm:p-8 bg-gradient-to-br from-white via-[#800000]/5 to-amber-50/40 rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
                     <div className="flex flex-col gap-6">
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D4AF37]/20 pb-4">
@@ -1573,7 +1598,7 @@ export function TikrarSystem({
 
                       <div className="text-center space-y-1">
                         <h3 className="text-lg sm:text-xl font-black text-[#800000]">
-                          Syaikh Abdullah Al-Qarafi
+                          {currentReciter.name}
                         </h3>
                         <p className="text-xs sm:text-sm font-semibold text-black/70">
                           {currentSurahPlaying ? (
@@ -1604,7 +1629,7 @@ export function TikrarSystem({
                         <div className="flex justify-between items-center text-[10px] sm:text-xs font-mono font-bold text-black/60">
                           <span>{formatTime(audioCurrentTime)}</span>
                           <span className="text-[#800000] font-sans font-bold text-[9px] uppercase tracking-wider">
-                            Streaming Hafs &apos;an &apos;Asim
+                            {currentReciter.description || "Streaming CDN Resmi MP3Quran"}
                           </span>
                           <span>{formatTime(audioDuration)}</span>
                         </div>
@@ -1666,7 +1691,7 @@ export function TikrarSystem({
                   </div>
                 )}
 
-                {selectedReciterId !== 21136 && playingVerseIndex !== null && verses[playingVerseIndex] && (
+                {!isMp3Quran && playingVerseIndex !== null && verses[playingVerseIndex] && (
                   <div className="mt-6 p-6 sm:p-8 bg-white rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
                     <div className="flex flex-col gap-8">
                       <div className="flex items-center justify-center gap-2">
