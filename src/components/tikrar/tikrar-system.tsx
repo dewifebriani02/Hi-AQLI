@@ -32,8 +32,6 @@ import {
   Play,
   Plus,
   Radio,
-  RotateCcw,
-  RotateCw,
   Send,
   Settings2,
   Sparkles,
@@ -80,6 +78,7 @@ interface ReciterOption {
   name: string;
   provider: 'mp3quran' | 'quran_api';
   serverUrl?: string;
+  timingReadId?: number;
   description?: string;
 }
 
@@ -103,6 +102,7 @@ const RECITERS: ReciterOption[] = [
     name: 'Syaikh Ibrahim Al-Akhdar',
     provider: 'mp3quran',
     serverUrl: 'https://cdn.mp3quran.net/audio/ibrahim-akhdar/r1/',
+    timingReadId: 1,
     description: "Imam Masjid Nabawi (Murattal MP3Quran)",
   },
   { id: 2, name: 'AbdulBaset AbdulSamad (Murattal)', provider: 'quran_api' },
@@ -211,9 +211,18 @@ export function TikrarSystem({
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [currentLoop, setCurrentLoop] = useState(0);
+  const [activeVerseKey, setActiveVerseKey] = useState<string | null>(null);
+  const ayahTimingRef = useRef<Record<number, { ayah: number; start_time: number }[]>>({});
   const [showReciterDialog, setShowReciterDialog] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!activeVerseKey) return;
+    document
+      .getElementById(`verse-card-${activeVerseKey.replace(':', '-')}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [activeVerseKey]);
   const nextAudioUrlRef = useRef<string | null>(null);
 
   const currentReciter = useMemo(
@@ -804,24 +813,6 @@ export function TikrarSystem({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const skipAudio = (seconds: number) => {
-    if (audioRef.current) {
-      const cur = audioRef.current.currentTime || 0;
-      const dur = audioRef.current.duration || 0;
-      const target = Math.max(0, Math.min(dur, cur + seconds));
-      audioRef.current.currentTime = target;
-      setAudioCurrentTime(target);
-    }
-  };
-
-  const handleSeekAudio = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
-    if (audioRef.current) {
-      audioRef.current.currentTime = val;
-      setAudioCurrentTime(val);
-    }
-  };
-
   const getAudioUrlByVerseKey = async (verseKey: string, reciterId: number) => {
     try {
       const rec = RECITERS.find((r) => r.id === reciterId);
@@ -861,6 +852,7 @@ export function TikrarSystem({
     isAutoPlayingRef.current = false;
     setPlayingVerseIndex(null);
     setCurrentSurahPlaying(null);
+    setActiveVerseKey(null);
     nextAudioUrlRef.current = null;
   };
 
@@ -893,9 +885,29 @@ export function TikrarSystem({
       const audio = audioRef.current;
       audio.src = audioUrl;
 
+      const timingReadId = currentReciter.timingReadId;
+      if (timingReadId && !ayahTimingRef.current[surahId]) {
+        fetch(`https://www.mp3quran.net/api/v3/ayat_timing?surah=${surahId}&read=${timingReadId}`)
+          .then((r) => (r.ok ? r.json() : []))
+          .then((rows) => {
+            if (Array.isArray(rows)) ayahTimingRef.current[surahId] = rows;
+          })
+          .catch(() => {});
+      }
+
       audio.ontimeupdate = () => {
         setAudioCurrentTime(audio.currentTime);
         setAudioDuration(audio.duration || 0);
+        const rows = ayahTimingRef.current[surahId];
+        if (!timingReadId || !rows?.length) return;
+        const ms = audio.currentTime * 1000;
+        let cur = 0;
+        for (const row of rows) {
+          if (row.start_time <= ms) cur = row.ayah;
+          else break;
+        }
+        const key = cur > 0 ? `${surahId}:${cur}` : null;
+        setActiveVerseKey((prev) => (prev === key ? prev : key));
       };
       audio.onloadedmetadata = () => {
         setAudioDuration(audio.duration || 0);
@@ -1617,15 +1629,12 @@ export function TikrarSystem({
 
                       {/* Seekbar and Timeline */}
                       <div className="space-y-2 bg-white/80 p-4 rounded-2xl border border-amber-200/50 shadow-inner">
-                        <input
-                          type="range"
-                          min={0}
-                          max={audioDuration || 100}
-                          step={1}
-                          value={audioCurrentTime}
-                          onChange={handleSeekAudio}
-                          className="w-full accent-[#800000] cursor-pointer"
-                        />
+                        <div className="w-full h-2 rounded-full bg-amber-100 overflow-hidden">
+                          <div
+                            className="h-full bg-[#800000] transition-all"
+                            style={{ width: `${audioDuration ? Math.min(100, (audioCurrentTime / audioDuration) * 100) : 0}%` }}
+                          />
+                        </div>
                         <div className="flex justify-between items-center text-[10px] sm:text-xs font-mono font-bold text-black/60">
                           <span>{formatTime(audioCurrentTime)}</span>
                           <span className="text-[#800000] font-sans font-bold text-[9px] uppercase tracking-wider">
@@ -1639,55 +1648,60 @@ export function TikrarSystem({
                       <div className="flex flex-wrap items-center justify-center gap-3">
                         <Button
                           type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => skipAudio(-10)}
-                          className="rounded-xl h-10 px-3 gap-1.5 font-bold border-[#800000]/20 text-[#800000]"
-                          title="Mundur 10 detik"
-                        >
-                          <RotateCcw className="w-4 h-4" /> -10s
-                        </Button>
-                        <Button
-                          type="button"
                           onClick={stopAutoPlay}
                           className="rounded-xl h-10 px-5 gap-2 font-bold bg-[#800000] text-white hover:bg-[#6b0000]"
                         >
                           <Pause className="w-4 h-4" /> Pause Audio
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => skipAudio(10)}
-                          className="rounded-xl h-10 px-3 gap-1.5 font-bold border-[#800000]/20 text-[#800000]"
-                          title="Maju 10 detik"
-                        >
-                          +10s <RotateCw className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            if (currentLoop < 4) {
-                              setPrepListenCount((p) => Math.min(5, p + 1));
-                              setCurrentLoop((l) => l + 1);
-                              playMp3QuranSurah(0, currentLoop + 1);
-                            } else {
-                              setPrepListenCount(5);
-                              stopAutoPlay();
-                              toast({
-                                title: 'Simak Tuntas',
-                                description: 'Persiapan 5x simak selesai!',
-                              });
-                            }
-                          }}
-                          className="rounded-xl h-10 px-4 font-bold bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300"
-                        >
-                          Selesai Siklus Ini (+1)
-                        </Button>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {isAutoPlaying && isMp3Quran && verses.length > 0 && (
+                  <div className="mt-4 p-5 sm:p-6 bg-white rounded-[2rem] border-2 border-[#D4AF37]/60 shadow-md space-y-5">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest">
+                      <Languages className="w-3.5 h-3.5" /> Arti Per Kata &amp; Terjemahan Halaman {page}
+                    </div>
+                    {verses.map((verse) => (
+                      <div
+                        key={verse.verse_key}
+                        id={`verse-card-${verse.verse_key.replace(':', '-')}`}
+                        className={cn(
+                          'space-y-3 border-t border-muted-foreground/10 pt-4 first:border-t-0 first:pt-0 rounded-2xl transition-colors',
+                          activeVerseKey === verse.verse_key && 'bg-amber-100/70 ring-2 ring-[#D4AF37] p-3'
+                        )}
+                      >
+                        <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">
+                          Ayat {verse.verse_key}
+                        </Badge>
+                        <div className="flex flex-wrap justify-center gap-2" dir="rtl">
+                          {verse.words
+                            .filter((w) => w.text_uthmani)
+                            .map((word, wIdx) => (
+                              <div
+                                key={wIdx}
+                                dir="ltr"
+                                className="bg-muted border-2 border-muted-foreground/10 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]"
+                              >
+                                <span className="font-arabic text-black text-sm font-bold leading-none">
+                                  {word.text_uthmani}
+                                </span>
+                                <span className="text-[9px] font-medium text-[#800000] leading-none">
+                                  {word.translation?.text || '-'}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                        <div className="bg-[#800000]/5 p-4 rounded-2xl border-l-4 border-[#800000]">
+                          <p className="text-sm text-black leading-relaxed italic font-medium">
+                            &ldquo;
+                            {verse.translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...'}
+                            &rdquo;
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
