@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import {
+  AlertCircle,
   ArrowRight,
   BookOpen,
   CalendarDays,
@@ -30,6 +31,7 @@ import {
   Pause,
   Play,
   Plus,
+  Radio,
   Send,
   Settings2,
   Sparkles,
@@ -56,6 +58,7 @@ import { useUser, useDoc, useCollection, addDocumentNonBlocking, db } from '@/db
 import { authFetch } from '@/db/client';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import { QURAN_CHAPTERS } from '@/lib/quran-data';
 import { SURAH_START_PAGES } from '@/lib/quran-mapping';
 import {
@@ -70,13 +73,43 @@ import {
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
 
-const RECITERS = [
-  { id: 7, name: 'Mishary Rashid Alafasy' },
-  { id: 2, name: 'AbdulBaset AbdulSamad (Murattal)' },
-  { id: 3, name: 'Abdur-Rahman as-Sudais' },
-  { id: 6, name: 'Mahmoud Khalil Al-Husary' },
-  { id: 12, name: 'Saud al-Shuraim' },
-  { id: 1, name: 'AbdulBaset AbdulSamad (Mujawwad)' },
+interface ReciterOption {
+  id: number;
+  name: string;
+  provider: 'mp3quran' | 'quran_api';
+  serverUrl?: string;
+  timingReadId?: number;
+  description?: string;
+}
+
+const RECITERS: ReciterOption[] = [
+  {
+    id: 21136,
+    name: 'Syaikh Abdullah Al-Qarafi',
+    provider: 'mp3quran',
+    serverUrl: 'https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/',
+    description: "Streaming CDN Resmi MP3Quran (Hafs 'an 'Asim)",
+  },
+  {
+    id: 21203,
+    name: 'Dr. Syaikh Ayman Rusydi Suwaid',
+    provider: 'mp3quran',
+    serverUrl: 'https://server15.mp3quran.net/a-rushdi/Almusshaf-Al-Mo-lim/',
+    description: "Al-Mushaf Al-Mu'allim (MP3Quran)",
+  },
+  {
+    id: 21001,
+    name: 'Syaikh Ibrahim Al-Akhdar',
+    provider: 'mp3quran',
+    serverUrl: 'https://cdn.mp3quran.net/audio/ibrahim-akhdar/r1/',
+    timingReadId: 1,
+    description: "Imam Masjid Nabawi (Murattal MP3Quran)",
+  },
+  { id: 2, name: 'AbdulBaset AbdulSamad (Murattal)', provider: 'quran_api' },
+  { id: 3, name: 'Abdur-Rahman as-Sudais', provider: 'quran_api' },
+  { id: 6, name: 'Mahmoud Khalil Al-Husary', provider: 'quran_api' },
+  { id: 12, name: 'Saud al-Shuraim', provider: 'quran_api' },
+  { id: 1, name: 'AbdulBaset AbdulSamad (Mujawwad)', provider: 'quran_api' },
 ];
 
 const PASS_THRESHOLD = 40;
@@ -101,6 +134,7 @@ interface Verse {
 export interface TikrarSystemProps {
   targetPage?: number | null;
   targetJuz?: number | null;
+  targetTimestamp?: number;
   refreshSignal?: number;
   onDataChanged?: () => void;
   onOpenScheduleTab?: () => void;
@@ -132,12 +166,13 @@ function formatBlockRangeLabel(verses: Verse[]): string {
 export function TikrarSystem({
   targetPage,
   targetJuz,
+  targetTimestamp,
   refreshSignal = 0,
   onDataChanged,
   onOpenScheduleTab,
   onOpenGroupRecapTab,
 }: TikrarSystemProps = {}) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
   const {
@@ -162,19 +197,50 @@ export function TikrarSystem({
 
   const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
 
+  // State & audio ref
+
   // Tahap 0 & Sub-repetisi state
   const [prepListenCount, setPrepListenCount] = useState(0);
   const [prepTranslationDone, setPrepTranslationDone] = useState(false);
 
-  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
+  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(21136);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const isAutoPlayingRef = useRef(false);
   const [playingVerseIndex, setPlayingVerseIndex] = useState<number | null>(null);
+  const [currentSurahPlaying, setCurrentSurahPlaying] = useState<number | null>(null);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const [currentLoop, setCurrentLoop] = useState(0);
+  const [activeVerseKey, setActiveVerseKey] = useState<string | null>(null);
+  const ayahTimingRef = useRef<Record<number, { ayah: number; start_time: number }[]>>({});
   const [showReciterDialog, setShowReciterDialog] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!activeVerseKey) return;
+    document
+      .getElementById(`verse-card-${activeVerseKey.replace(':', '-')}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [activeVerseKey]);
   const nextAudioUrlRef = useRef<string | null>(null);
+
+  const currentReciter = useMemo(
+    () => RECITERS.find((r) => r.id === selectedReciterId) || RECITERS[0],
+    [selectedReciterId]
+  );
+  const isMp3Quran = currentReciter.provider === "mp3quran";
+
+  // Cleanup audio saat unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // Collections for Halaqah, Logs, Schedules, Submissions & Page Exams
   const halaqahOptions = useMemo(
@@ -340,7 +406,7 @@ export function TikrarSystem({
     [completedBlocksAllTime]
   );
 
-  // Initialize targetPage/targetJuz or user's active schedule page
+  // Listen for targetPage & targetJuz updates (e.g. from saving schedule or clicking Open Target Page)
   useEffect(() => {
     if (targetPage && targetPage >= 1 && targetPage <= 604) {
       const derivedJuz =
@@ -348,22 +414,93 @@ export function TikrarSystem({
       setJuz(derivedJuz);
       setPage(targetPage);
       setHasInitializedPage(true);
-      return;
     }
-    if (!isUserDataLoading && (userData || !user) && !hasInitializedPage) {
-      setJuz(paidJuz);
-      const range = getJuzPageRange(paidJuz);
-      const userCurr = Number(userData?.tikrar_current_page);
-      const initialPage =
-        userCurr >= range.startPage && userCurr <= range.endPage ? userCurr : range.startPage;
+  }, [targetPage, targetJuz, targetTimestamp]);
+
+  // Inisialisasi halaman & juz awal untuk pengguna (atau pemulihan dari target / sesi terakhir)
+  useEffect(() => {
+    // 1. Tunggu status login selesai diperiksa
+    if (isUserLoading) return;
+    // 2. Jika user login, tunggu sampai data profil & target selesai dimuat
+    if (user && (isUserDataLoading || !userData)) return;
+
+    if (!hasInitializedPage && !targetPage) {
+      const activeJuz = paidJuz;
+      const range = getJuzPageRange(activeJuz);
+
+      let initialPage: number | null = null;
+
+      // Prioritas 1: Tempat terakhir di localStorage (jika berada dalam range juz target aktif)
+      if (typeof window !== 'undefined') {
+        const savedPage = Number(localStorage.getItem('aqli_tikrar_last_page'));
+        const savedJuz = Number(localStorage.getItem('aqli_tikrar_last_juz'));
+        if (
+          savedPage >= range.startPage &&
+          savedPage <= range.endPage &&
+          (!savedJuz || savedJuz === activeJuz)
+        ) {
+          initialPage = savedPage;
+        }
+      }
+
+      // Prioritas 2: Terakhir berhenti di database pengguna (tikrar_current_page)
+      if (!initialPage) {
+        const dbCurrPage = Number(userData?.tikrar_current_page);
+        if (dbCurrPage >= range.startPage && dbCurrPage <= range.endPage) {
+          initialPage = dbCurrPage;
+        }
+      }
+
+      // Prioritas 3: Target schedule pending hari ini / schedule terdekat berikutnya di Juz ini
+      if (!initialPage && todayScheduledItems.length > 0) {
+        const schedPage = Number(todayScheduledItems[0].page_number);
+        if (schedPage >= range.startPage && schedPage <= range.endPage) {
+          initialPage = schedPage;
+        }
+      }
+
+      // Prioritas 4: Halaman awal juz aktif
+      if (!initialPage || initialPage < range.startPage || initialPage > range.endPage) {
+        initialPage = range.startPage;
+      }
+
+      setJuz(activeJuz);
       setPage(initialPage);
       setHasInitializedPage(true);
     }
+
     if (typeof window !== 'undefined') {
       const savedReciter = localStorage.getItem('aqli_reciter_id');
-      if (savedReciter) setSelectedReciterId(parseInt(savedReciter, 10));
+      if (savedReciter) {
+        const parsed = parseInt(savedReciter, 10);
+        if (!isNaN(parsed) && RECITERS.some((r) => r.id === parsed)) {
+          setSelectedReciterId(parsed);
+        } else {
+          setSelectedReciterId(RECITERS[0].id);
+          localStorage.setItem('aqli_reciter_id', RECITERS[0].id.toString());
+        }
+      }
     }
-  }, [userData, user, paidJuz, isUserDataLoading, hasInitializedPage, targetPage, targetJuz]);
+  }, [
+    userData,
+    user,
+    paidJuz,
+    isUserLoading,
+    isUserDataLoading,
+    hasInitializedPage,
+    targetPage,
+    todayScheduledItems,
+  ]);
+
+  // Simpan posisi halaman & juz terakhir ke localStorage setiap kali berganti halaman
+  useEffect(() => {
+    if (typeof window !== 'undefined' && page >= 1 && page <= 604) {
+      localStorage.setItem('aqli_tikrar_last_page', String(page));
+      if (juz >= 1 && juz <= 30) {
+        localStorage.setItem('aqli_tikrar_last_juz', String(juz));
+      }
+    }
+  }, [page, juz]);
 
   // Fetch verses for `page`
   useEffect(() => {
@@ -383,8 +520,9 @@ export function TikrarSystem({
 
         if (data && data.verses && data.verses.length > 0) {
           setVerses(data.verses);
-          if (selectedReciterId) {
-            getAudioUrlByVerseKey(data.verses[0].verse_key, selectedReciterId).then((url) => {
+          const rec = RECITERS.find((r) => r.id === selectedReciterId);
+          if (rec && rec.provider !== "mp3quran") {
+            getAudioUrlByVerseKey(data.verses[0].verse_key, rec.id).then((url) => {
               nextAudioUrlRef.current = url;
             });
           }
@@ -399,92 +537,166 @@ export function TikrarSystem({
     fetchVerses();
   }, [page]);
 
-  // Hydrate progress from localStorage + merge DB completed blocks so sequential locks stay consistent
+  // Hydrate progress from DB + localStorage + merge DB completed blocks
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    let nextPrepListen = 0;
-    let nextPrepTrans = false;
-    const nextBlocks: any = {
-      1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-      4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-    };
-    const nextMeta: Record<string, number> = {
-      '1_2': 0,
-      '2_3': 0,
-      '1_2_3': 0,
-      '3_4': 0,
-      '2_3_4': 0,
-      '1_2_3_4': 0,
-    };
+    let isCancelled = false;
 
-    const savedProgressStr = localStorage.getItem(`tikrar_progress_p${page}`);
-    if (savedProgressStr) {
-      try {
-        const saved = JSON.parse(savedProgressStr);
-        nextPrepListen = Number(saved.prepListenCount) || 0;
-        nextPrepTrans = Boolean(saved.prepTranslationDone);
+    async function loadProgress() {
+      if (typeof window === 'undefined') return;
+
+      let nextPrepListen = 0;
+      let nextPrepTrans = false;
+      const nextBlocks: any = {
+        1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+      };
+      const nextMeta: Record<string, number> = {
+        '1_2': 0,
+        '2_3': 0,
+        '1_2_3': 0,
+        '3_4': 0,
+        '2_3_4': 0,
+        '1_2_3_4': 0,
+      };
+
+      // 1. Ambil dari localStorage terlebih dahulu untuk respon instan
+      const savedProgressStr = localStorage.getItem(`tikrar_progress_p${page}`);
+      if (savedProgressStr) {
+        try {
+          const saved = JSON.parse(savedProgressStr);
+          nextPrepListen = Number(saved.prepListenCount) || 0;
+          nextPrepTrans = Boolean(saved.prepTranslationDone);
+          for (const b of [1, 2, 3, 4] as const) {
+            if (saved.blocks?.[b]) {
+              nextBlocks[b] = {
+                a: { count: Number(saved.blocks[b]?.a?.count) || 0 },
+                b: { count: Number(saved.blocks[b]?.b?.count) || 0 },
+                combined: { count: Number(saved.blocks[b]?.combined?.count) || 0 },
+              };
+            }
+          }
+          if (saved.metaCounts) {
+            Object.keys(nextMeta).forEach((k) => {
+              nextMeta[k] = Number(saved.metaCounts[k]) || 0;
+            });
+          }
+        } catch {}
+      }
+
+      // 2. Ambil dari Database jika user sudah login
+      if (user?.id) {
+        try {
+          const res = await authFetch(`/api/tikrar/progress?page=${page}`);
+          if (res.ok) {
+            const json = await res.json();
+            const dbProg = json.data;
+            if (dbProg) {
+              nextPrepListen = Math.max(nextPrepListen, Number(dbProg.prep_listen_count) || 0);
+              nextPrepTrans = nextPrepTrans || Boolean(dbProg.prep_translation_done);
+              if (dbProg.blocks) {
+                for (const b of [1, 2, 3, 4] as const) {
+                  if (dbProg.blocks[b]) {
+                    nextBlocks[b] = {
+                      a: { count: Math.max(nextBlocks[b].a.count, Number(dbProg.blocks[b]?.a?.count) || 0) },
+                      b: { count: Math.max(nextBlocks[b].b.count, Number(dbProg.blocks[b]?.b?.count) || 0) },
+                      combined: { count: Math.max(nextBlocks[b].combined.count, Number(dbProg.blocks[b]?.combined?.count) || 0) },
+                    };
+                  }
+                }
+              }
+              if (dbProg.meta_counts) {
+                Object.keys(nextMeta).forEach((k) => {
+                  nextMeta[k] = Math.max(nextMeta[k], Number(dbProg.meta_counts[k]) || 0);
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Gagal memuat progres dari database:', e);
+        }
+      }
+
+      // 3. Gabungkan DB completed blocks agar kunci berurutan konsisten
+      if (completedBlocksAllTime.size > 0) {
+        nextPrepListen = Math.max(nextPrepListen, PREP_LISTEN_THRESHOLD);
+        nextPrepTrans = true;
         for (const b of [1, 2, 3, 4] as const) {
-          if (saved.blocks?.[b]) {
+          if (completedBlocksAllTime.has(b)) {
             nextBlocks[b] = {
-              a: { count: Number(saved.blocks[b]?.a?.count) || 0 },
-              b: { count: Number(saved.blocks[b]?.b?.count) || 0 },
-              combined: { count: Number(saved.blocks[b]?.combined?.count) || 0 },
+              a: { count: Math.max(nextBlocks[b].a.count, PASS_THRESHOLD) },
+              b: { count: Math.max(nextBlocks[b].b.count, PASS_THRESHOLD) },
+              combined: { count: Math.max(nextBlocks[b].combined.count, PASS_THRESHOLD) },
             };
           }
         }
-        if (saved.metaCounts) {
+        if (
+          completedBlocksAllTime.has(3) ||
+          completedBlocksAllTime.has(4) ||
+          (completedBlocksAllTime.has(1) && completedBlocksAllTime.has(2))
+        ) {
+          nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
+        }
+        if (completedBlocksAllTime.has(4)) {
+          nextMeta['2_3'] = Math.max(nextMeta['2_3'], META_PASS_THRESHOLD);
+          nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], META_PASS_THRESHOLD);
+        }
+        if (isSelectedPageCleared) {
           Object.keys(nextMeta).forEach((k) => {
-            nextMeta[k] = Number(saved.metaCounts[k]) || 0;
+            nextMeta[k] = Math.max(nextMeta[k], META_PASS_THRESHOLD);
           });
         }
-      } catch {}
-    }
+      }
 
-    // Merge DB completed blocks so previously reported blocks remain unlocked & tuntas across devices
-    if (completedBlocksAllTime.size > 0) {
-      nextPrepListen = Math.max(nextPrepListen, PREP_LISTEN_THRESHOLD);
-      nextPrepTrans = true;
-      for (const b of [1, 2, 3, 4] as const) {
-        if (completedBlocksAllTime.has(b)) {
-          nextBlocks[b] = {
-            a: { count: Math.max(nextBlocks[b].a.count, PASS_THRESHOLD) },
-            b: { count: Math.max(nextBlocks[b].b.count, PASS_THRESHOLD) },
-            combined: { count: Math.max(nextBlocks[b].combined.count, PASS_THRESHOLD) },
-          };
-        }
-      }
-      // Ensure intermediate meta steps needed to reach higher DB-saved blocks are also unlocked
-      if (
-        completedBlocksAllTime.has(3) ||
-        completedBlocksAllTime.has(4) ||
-        (completedBlocksAllTime.has(1) && completedBlocksAllTime.has(2))
-      ) {
-        nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
-      }
-      if (completedBlocksAllTime.has(4)) {
-        nextMeta['2_3'] = Math.max(nextMeta['2_3'], META_PASS_THRESHOLD);
-        nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], META_PASS_THRESHOLD);
-      }
-      if (isSelectedPageCleared) {
-        Object.keys(nextMeta).forEach((k) => {
-          nextMeta[k] = Math.max(nextMeta[k], META_PASS_THRESHOLD);
-        });
+      if (!isCancelled) {
+        setPrepListenCount(nextPrepListen);
+        setPrepTranslationDone(nextPrepTrans);
+        setBlocks(nextBlocks);
+        setMetaCounts(nextMeta);
       }
     }
 
-    setPrepListenCount(nextPrepListen);
-    setPrepTranslationDone(nextPrepTrans);
-    setBlocks(nextBlocks);
-    setMetaCounts(nextMeta);
-  }, [page, completedBlocksKey, isSelectedPageCleared]);
+    loadProgress();
 
-  // Save progress to localStorage on change
+    return () => {
+      isCancelled = true;
+    };
+  }, [page, completedBlocksKey, isSelectedPageCleared, user?.id]);
+
+  const totalProgress = useMemo(() => {
+    let totalDone = 0;
+    if (prepListenCount >= PREP_LISTEN_THRESHOLD) totalDone += 5;
+    if (prepTranslationDone) totalDone += 5;
+    [1, 2, 3, 4].forEach((id) => {
+      totalDone += (Math.min(blocks[id].a.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+      totalDone += (Math.min(blocks[id].b.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+      totalDone += (Math.min(blocks[id].combined.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+    });
+    const metaWeight = 5;
+    Object.keys(metaCounts).forEach((k) => {
+      totalDone +=
+        (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * metaWeight;
+    });
+    const totalWeight = 10 + 4 * 30 + 6 * metaWeight;
+    return Math.min(100, (totalDone / totalWeight) * 100);
+  }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
+
+  // Simpan progres ke localStorage dan database setiap user klik angka setiap tahapan
+  const isHydratedRef = useRef(false);
+  useEffect(() => {
+    isHydratedRef.current = false;
+    const t = setTimeout(() => {
+      isHydratedRef.current = true;
+    }, 500);
+    return () => clearTimeout(t);
+  }, [page]);
+
   useEffect(() => {
     if (loading || typeof window === 'undefined') return;
 
-    const timer = setTimeout(() => {
+    // 1. Simpan ke localStorage instan
+    const timerLocal = setTimeout(() => {
       const existing = localStorage.getItem(`tikrar_progress_p${page}`);
       const parsed = existing ? JSON.parse(existing) : {};
       localStorage.setItem(
@@ -497,10 +709,48 @@ export function TikrarSystem({
           metaCounts,
         })
       );
-    }, 350);
+    }, 200);
 
-    return () => clearTimeout(timer);
-  }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, loading]);
+    // 2. Simpan ke database jika sudah melewati inisialisasi awal
+    let timerDb: NodeJS.Timeout | null = null;
+    if (user?.id && isHydratedRef.current) {
+      timerDb = setTimeout(async () => {
+        try {
+          const res = await authFetch('/api/tikrar/progress', {
+            method: 'POST',
+            body: JSON.stringify({
+              page_number: page,
+              juz,
+              prep_listen_count: prepListenCount,
+              prep_translation_done: prepTranslationDone,
+              blocks,
+              meta_counts: metaCounts,
+              total_progress: Math.round(totalProgress),
+            }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            const awarded = Number(json.data?.pointsAwarded) || 0;
+            if (awarded > 0) {
+              toast({
+                title: 'Alhamdulillah, Poin Bertambah!',
+                description: `+${awarded} Poin telah ditambahkan ke akun Ukhti atas ketuntasan blok hafalan.`,
+              });
+              await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
+              onDataChanged?.();
+            }
+          }
+        } catch (e) {
+          console.error('Gagal sync progres ke database:', e);
+        }
+      }, 400);
+    }
+
+    return () => {
+      clearTimeout(timerLocal);
+      if (timerDb) clearTimeout(timerDb);
+    };
+  }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, juz, loading, user?.id, totalProgress]);
 
   const blockVerses = useMemo<Record<1 | 2 | 3 | 4, Verse[]>>(() => {
     if (verses.length === 0) return { 1: [], 2: [], 3: [], 4: [] };
@@ -551,8 +801,26 @@ export function TikrarSystem({
     return s;
   }, [todayScheduledItems, page]);
 
+  const surahsOnPage = useMemo(() => {
+    if (verses.length === 0) return [];
+    return Array.from(new Set(verses.map((v) => parseInt(v.verse_key.split(':')[0], 10))));
+  }, [verses]);
+
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds <= 0) return '00:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   const getAudioUrlByVerseKey = async (verseKey: string, reciterId: number) => {
     try {
+      const rec = RECITERS.find((r) => r.id === reciterId);
+      if (rec?.provider === "mp3quran" && rec.serverUrl) {
+        const surahId = parseInt(verseKey.split(':')[0], 10);
+        return `${rec.serverUrl}${String(surahId).padStart(3, '0')}.mp3`;
+      }
+
       const res = await fetch(
         `https://api.quran.com/api/v4/recitations/${reciterId}/by_ayah/${verseKey}`
       );
@@ -578,12 +846,83 @@ export function TikrarSystem({
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.onended = null;
+      audioRef.current.ontimeupdate = null;
     }
     setIsAutoPlaying(false);
     isAutoPlayingRef.current = false;
     setPlayingVerseIndex(null);
+    setCurrentSurahPlaying(null);
+    setActiveVerseKey(null);
     nextAudioUrlRef.current = null;
   };
+
+  const playMp3QuranSurah = useCallback(
+    (surahIndex: number, loopNum: number) => {
+      if (!isAutoPlayingRef.current || surahsOnPage.length === 0) return;
+
+      if (surahIndex >= surahsOnPage.length) {
+        if (loopNum < 4) {
+          setPrepListenCount((p) => Math.min(5, p + 1));
+          setCurrentLoop(loopNum + 1);
+          playMp3QuranSurah(0, loopNum + 1);
+        } else {
+          setPrepListenCount(5);
+          stopAutoPlay();
+          toast({
+            title: 'Simak Tuntas',
+            description: `Alhamdulillah, persiapan 5x simak bersama ${currentReciter.name} selesai!`,
+          });
+        }
+        return;
+      }
+
+      const surahId = surahsOnPage[surahIndex];
+      setCurrentSurahPlaying(surahId);
+      const serverBase = currentReciter.serverUrl || "https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/";
+      const audioUrl = `${serverBase}${String(surahId).padStart(3, '0')}.mp3`;
+
+      if (!audioRef.current) audioRef.current = new Audio();
+      const audio = audioRef.current;
+      audio.src = audioUrl;
+
+      const timingReadId = currentReciter.timingReadId;
+      if (timingReadId && !ayahTimingRef.current[surahId]) {
+        fetch(`https://www.mp3quran.net/api/v3/ayat_timing?surah=${surahId}&read=${timingReadId}`)
+          .then((r) => (r.ok ? r.json() : []))
+          .then((rows) => {
+            if (Array.isArray(rows)) ayahTimingRef.current[surahId] = rows;
+          })
+          .catch(() => {});
+      }
+
+      audio.ontimeupdate = () => {
+        setAudioCurrentTime(audio.currentTime);
+        setAudioDuration(audio.duration || 0);
+        const rows = ayahTimingRef.current[surahId];
+        if (!timingReadId || !rows?.length) return;
+        const ms = audio.currentTime * 1000;
+        let cur = 0;
+        for (const row of rows) {
+          if (row.start_time <= ms) cur = row.ayah;
+          else break;
+        }
+        const key = cur > 0 ? `${surahId}:${cur}` : null;
+        setActiveVerseKey((prev) => (prev === key ? prev : key));
+      };
+      audio.onloadedmetadata = () => {
+        setAudioDuration(audio.duration || 0);
+      };
+      audio.onended = () => {
+        playMp3QuranSurah(surahIndex + 1, loopNum);
+      };
+
+      audio.play().catch((err) => {
+        console.error('MP3Quran audio play error:', err);
+        stopAutoPlay();
+      });
+    },
+    [surahsOnPage, currentReciter, toast]
+  );
 
   const playVerse = useCallback(
     async (vIndex: number, loopNum: number) => {
@@ -640,7 +979,12 @@ export function TikrarSystem({
     isAutoPlayingRef.current = true;
     setCurrentLoop(0);
     nextAudioUrlRef.current = null;
-    playVerse(0, 0);
+
+    if (isMp3Quran) {
+      playMp3QuranSurah(0, 0);
+    } else {
+      playVerse(0, 0);
+    }
   };
 
   const handleRequestExam = async () => {
@@ -684,6 +1028,83 @@ export function TikrarSystem({
     [tuntasBlockNumbers, completedBlocksToday]
   );
 
+
+
+  // Milestone evaluasi setoran tasmi' (1/2 halaman pertama A&B, 1/2 halaman kedua C&D, atau 1 halaman penuh A-D)
+  const milestoneInfo = useMemo(() => {
+    const has1_2 = completedBlocksAllTime.has(1) && completedBlocksAllTime.has(2);
+    const has3_4 = completedBlocksAllTime.has(3) && completedBlocksAllTime.has(4);
+    const hasAll = has1_2 && has3_4;
+
+    if (!has1_2 && !has3_4) return null;
+
+    const targetRange = hasAll ? 'blok_1_4' : has1_2 && !has3_4 ? 'blok_1_2' : 'blok_3_4';
+    const label =
+      targetRange === 'blok_1_4'
+        ? '1 Halaman Penuh Selesai (Blok A–D)'
+        : targetRange === 'blok_1_2'
+        ? '1/2 Halaman Pertama Selesai (Blok A & B)'
+        : '1/2 Halaman Kedua Selesai (Blok C & D)';
+
+    const activeOrPassed = (userSubmissions || []).find(
+      (s: any) =>
+        Number(s.page_number) === page &&
+        (s.blocks_range === targetRange || s.blocks_range === 'blok_1_4') &&
+        (s.status === 'pending' || s.status === 'passed')
+    );
+
+    const latestRevision = !activeOrPassed
+      ? (userSubmissions || []).find(
+          (s: any) =>
+            Number(s.page_number) === page &&
+            (s.blocks_range === targetRange || s.blocks_range === 'blok_1_4') &&
+            s.status === 'needs_revision'
+        )
+      : null;
+
+    return {
+      targetRange,
+      label,
+      existing: activeOrPassed || null,
+      revision: latestRevision || null,
+    };
+  }, [completedBlocksAllTime, userSubmissions, page]);
+
+  const handleRegisterSubmission = async () => {
+    if (!user || !milestoneInfo) return;
+    setIsRegisteringSubmission(true);
+    try {
+      const res = await authFetch('/api/tikrar/daily-log', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'register_submission',
+          juz,
+          page_number: page,
+          blocks_range: milestoneInfo.targetRange,
+          notes: logNotes.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error?.message || 'Gagal mendaftar antrean setoran.');
+      }
+      toast({
+        title: 'Antrean Setoran Berhasil Didaftarkan!',
+        description: `Setoran Live Zoom untuk Halaman ${page} (${milestoneInfo.label}) telah diajukan ke Musyrifah.`,
+      });
+      await Promise.all([refreshSubmissions(), refreshUser()]);
+      onDataChanged?.();
+    } catch (err: any) {
+      toast({
+        title: 'Gagal Mendaftar Setoran',
+        description: err?.message || 'Terjadi kendala saat mendaftar setoran.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRegisteringSubmission(false);
+    }
+  };
+
   const handleSetAsActiveTarget = async () => {
     if (!user || isUpdatingTarget) return;
     setIsUpdatingTarget(true);
@@ -715,23 +1136,7 @@ export function TikrarSystem({
     }
   };
 
-  const totalProgress = useMemo(() => {
-    let totalDone = 0;
-    if (prepListenCount >= PREP_LISTEN_THRESHOLD) totalDone += 5;
-    if (prepTranslationDone) totalDone += 5;
-    [1, 2, 3, 4].forEach((id) => {
-      totalDone += (Math.min(blocks[id].a.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
-      totalDone += (Math.min(blocks[id].b.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
-      totalDone += (Math.min(blocks[id].combined.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
-    });
-    const metaWeight = 5;
-    Object.keys(metaCounts).forEach((k) => {
-      totalDone +=
-        (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * metaWeight;
-    });
-    const totalWeight = 10 + 4 * 30 + 6 * metaWeight;
-    return Math.min(100, (totalDone / totalWeight) * 100);
-  }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
+
 
   if (isUserDataLoading) {
     return (
@@ -860,7 +1265,7 @@ export function TikrarSystem({
       </Card>
 
       {/* Bar Navigasi Juz, Halaman & Font Size */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-2xl border shadow-sm sticky top-20 z-20 backdrop-blur-md border-[#800000]/10">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-[#800000]/10">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <select
             aria-label="Pilih Juz"
@@ -1072,35 +1477,87 @@ export function TikrarSystem({
                           size="sm"
                           className="rounded-xl h-9 gap-2 font-bold border-[#800000]/20 text-[#800000]"
                         >
-                          <Mic2 className="w-4 h-4" /> Pilih Qari
+                          <Mic2 className="w-4 h-4" />
+                          <span className="max-w-[140px] truncate text-xs">
+                            {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
+                          </span>
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Pilih Qari Al-Qur&apos;an</DialogTitle>
-                          <DialogDescription className="sr-only">
-                            Pilih qari favorit Ukhti untuk mendengarkan audio tilawah Al-Qur&apos;an.
+                          <DialogTitle className="text-[#800000] font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
+                          <DialogDescription className="text-xs text-muted-foreground">
+                            Pilih qari favorit Ukhti untuk mendengarkan audio persiapan simak Tikrar.
                           </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-2 py-4">
-                          {RECITERS.map((r) => (
-                            <Button
-                              key={r.id}
-                              variant={selectedReciterId === r.id ? 'default' : 'outline'}
-                              onClick={() => {
-                                setSelectedReciterId(r.id);
-                                localStorage.setItem('aqli_reciter_id', r.id.toString());
-                                setShowReciterDialog(false);
-                              }}
-                              className={cn(
-                                'justify-start gap-3 font-bold',
-                                selectedReciterId === r.id && 'bg-[#800000] text-white'
-                              )}
-                            >
-                              {selectedReciterId === r.id && <Check className="w-4 h-4" />}{' '}
-                              {r.name}
-                            </Button>
-                          ))}
+                        <div className="grid gap-2 py-3 max-h-[60vh] overflow-y-auto pr-1">
+                          {RECITERS.map((r) => {
+                            const isSelected = selectedReciterId === r.id;
+                            return (
+                              <Button
+                                key={r.id}
+                                variant={isSelected ? 'default' : 'outline'}
+                                onClick={() => {
+                                  if (isAutoPlaying) stopAutoPlay();
+                                  setSelectedReciterId(r.id);
+                                  localStorage.setItem('aqli_reciter_id', r.id.toString());
+                                  setShowReciterDialog(false);
+                                }}
+                                className={cn(
+                                  'justify-between items-center p-3 h-auto font-bold rounded-2xl text-left transition-all',
+                                  isSelected
+                                    ? 'bg-[#800000] text-white hover:bg-[#6b0000] hover:text-white border-[#800000]'
+                                    : 'border-muted-foreground/20 hover:border-[#800000]/30 hover:bg-[#800000]/5'
+                                )}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={cn(
+                                      'w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
+                                      isSelected
+                                        ? 'bg-white text-[#800000]'
+                                        : 'bg-[#800000]/10 text-[#800000]'
+                                    )}
+                                  >
+                                    {isSelected ? <Check className="w-4 h-4" /> : <Mic2 className="w-3.5 h-3.5" />}
+                                  </div>
+                                  <div>
+                                    <div className="font-bold leading-tight text-sm">{r.name}</div>
+                                    {r.provider === 'mp3quran' ? (
+                                      <div
+                                        className={cn(
+                                          'text-[10px] font-normal mt-0.5',
+                                          isSelected ? 'text-amber-200' : 'text-amber-800'
+                                        )}
+                                      >
+                                        {r.description || "Streaming CDN Resmi MP3Quran"}
+                                      </div>
+                                    ) : (
+                                      <div
+                                        className={cn(
+                                          'text-[10px] font-normal mt-0.5',
+                                          isSelected ? 'text-white/80' : 'text-muted-foreground'
+                                        )}
+                                      >
+                                        Audio Per Ayat (Quran.com)
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {r.provider === 'mp3quran' && (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'text-[9px] uppercase px-2 py-0.5 font-bold',
+                                      isSelected ? 'border-white/40 text-white' : 'border-amber-500/50 text-amber-800'
+                                    )}
+                                  >
+                                    CDN Resmi
+                                  </Badge>
+                                )}
+                              </Button>
+                            );
+                          })}
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -1130,7 +1587,125 @@ export function TikrarSystem({
                   )}
                 </Button>
 
-                {playingVerseIndex !== null && verses[playingVerseIndex] && (
+                {/* Card Player Khusus Qari MP3Quran CDN (Al-Qarafi, Ayman Suwaid, Ibrahim Al-Akhdar) */}
+                {isAutoPlaying && isMp3Quran && (
+                  <div className="mt-6 p-6 sm:p-8 bg-gradient-to-br from-white via-[#800000]/5 to-amber-50/40 rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D4AF37]/20 pb-4">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-[#800000] text-white text-[9px] font-black uppercase tracking-[0.2em]">
+                            Siklus {currentLoop + 1} / 5
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-black border-amber-600/30 text-amber-900 bg-amber-500/10 flex items-center gap-1"
+                          >
+                            <Radio className="w-3 h-3 text-amber-700 animate-pulse" /> MP3Quran CDN Resmi
+                          </Badge>
+                        </div>
+                        <span className="text-[11px] font-bold text-[#800000]">
+                          Halaman {page} • Juz {juz}
+                        </span>
+                      </div>
+
+                      <div className="text-center space-y-1">
+                        <h3 className="text-lg sm:text-xl font-black text-[#800000]">
+                          {currentReciter.name}
+                        </h3>
+                        <p className="text-xs sm:text-sm font-semibold text-black/70">
+                          {currentSurahPlaying ? (
+                            <>
+                              Surah {QURAN_CHAPTERS.find((c) => c.id === currentSurahPlaying)?.name_simple || `Surah ${currentSurahPlaying}`}
+                              {' '}
+                              <span className="font-arabic font-bold text-[#800000]">
+                                ({QURAN_CHAPTERS.find((c) => c.id === currentSurahPlaying)?.name_arabic})
+                              </span>
+                            </>
+                          ) : (
+                            'Memuat tilawah surah...'
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Seekbar and Timeline */}
+                      <div className="space-y-2 bg-white/80 p-4 rounded-2xl border border-amber-200/50 shadow-inner">
+                        <div className="w-full h-2 rounded-full bg-amber-100 overflow-hidden">
+                          <div
+                            className="h-full bg-[#800000] transition-all"
+                            style={{ width: `${audioDuration ? Math.min(100, (audioCurrentTime / audioDuration) * 100) : 0}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] sm:text-xs font-mono font-bold text-black/60">
+                          <span>{formatTime(audioCurrentTime)}</span>
+                          <span className="text-[#800000] font-sans font-bold text-[9px] uppercase tracking-wider">
+                            {currentReciter.description || "Streaming CDN Resmi MP3Quran"}
+                          </span>
+                          <span>{formatTime(audioDuration)}</span>
+                        </div>
+                      </div>
+
+                      {/* Control buttons */}
+                      <div className="flex flex-wrap items-center justify-center gap-3">
+                        <Button
+                          type="button"
+                          onClick={stopAutoPlay}
+                          className="rounded-xl h-10 px-5 gap-2 font-bold bg-[#800000] text-white hover:bg-[#6b0000]"
+                        >
+                          <Pause className="w-4 h-4" /> Pause Audio
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isAutoPlaying && isMp3Quran && verses.length > 0 && (
+                  <div className="mt-4 p-5 sm:p-6 bg-white rounded-[2rem] border-2 border-[#D4AF37]/60 shadow-md space-y-5">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest">
+                      <Languages className="w-3.5 h-3.5" /> Arti Per Kata &amp; Terjemahan Halaman {page}
+                    </div>
+                    {verses.map((verse) => (
+                      <div
+                        key={verse.verse_key}
+                        id={`verse-card-${verse.verse_key.replace(':', '-')}`}
+                        className={cn(
+                          'space-y-3 border-t border-muted-foreground/10 pt-4 first:border-t-0 first:pt-0 rounded-2xl transition-colors',
+                          activeVerseKey === verse.verse_key && 'bg-amber-100/70 ring-2 ring-[#D4AF37] p-3'
+                        )}
+                      >
+                        <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">
+                          Ayat {verse.verse_key}
+                        </Badge>
+                        <div className="flex flex-wrap justify-center gap-2" dir="rtl">
+                          {verse.words
+                            .filter((w) => w.text_uthmani)
+                            .map((word, wIdx) => (
+                              <div
+                                key={wIdx}
+                                dir="ltr"
+                                className="bg-muted border-2 border-muted-foreground/10 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]"
+                              >
+                                <span className="font-arabic text-black text-sm font-bold leading-none">
+                                  {word.text_uthmani}
+                                </span>
+                                <span className="text-[9px] font-medium text-[#800000] leading-none">
+                                  {word.translation?.text || '-'}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                        <div className="bg-[#800000]/5 p-4 rounded-2xl border-l-4 border-[#800000]">
+                          <p className="text-sm text-black leading-relaxed italic font-medium">
+                            &ldquo;
+                            {verse.translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...'}
+                            &rdquo;
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!isMp3Quran && playingVerseIndex !== null && verses[playingVerseIndex] && (
                   <div className="mt-6 p-6 sm:p-8 bg-white rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
                     <div className="flex flex-col gap-8">
                       <div className="flex items-center justify-center gap-2">
@@ -1240,14 +1815,14 @@ export function TikrarSystem({
             <Info className="w-5 h-5 shrink-0 mt-0.5 text-[#D4AF37]" />
             <div className="text-[11px] leading-relaxed font-bold">
               <span className="uppercase tracking-wider text-[#D4AF37] block mb-0.5">
-                Alur Kunci Berurutan (Metode Itqan HI Tikrar)
+                Metode Itqan HI Tikrar (Otomatis Tersimpan)
               </span>
               Setiap Blok dibagi menjadi 2 bagian teks berwarna:{' '}
               <strong>Bagian 1 (Maroon) 40x</strong> → <strong>Bagian 2 (Hitam) 40x</strong>{' '}
               → <strong>Gabung Blok 40x</strong>, lalu dilanjutkan{' '}
-              <strong>Sub-Repetisi Gabungan Antar Blok (10x)</strong> secara berurutan. Setiap blok
-              yang sudah <strong>TUNTAS</strong> dapat langsung dikirim sebagai{' '}
-              <strong>Laporan Harian</strong> di panel bawah!
+              <strong>Sub-Repetisi Gabungan Antar Blok (10x)</strong> secara berurutan. Setiap klik
+              hitungan repetisi <strong>otomatis tersimpan ke sistem</strong> &amp; langsung
+              memperbarui keaktifan harian serta heatmap grup!
             </div>
           </div>
 
@@ -1497,6 +2072,7 @@ export function TikrarSystem({
               </Button>
             </div>
           )}
+
         </div>
       </TooltipProvider>
     </div>

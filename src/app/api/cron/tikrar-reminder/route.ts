@@ -16,7 +16,10 @@ import {
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
 
-export type TikrarReminderMode = 'morning' | 'evening' | 'friday_weekly';
+export type TikrarReminderMode = 'morning' | 'evening' | 'friday_weekly' | 'sunday_closing';
+
+const NO_REPLY_FOOTER =
+  '\n\n━━━━━━━━━━━━━━━━━━━━\n📌 _Pesan ini dikirim secara otomatis oleh sistem HI AQLI. Mohon untuk tidak membalas pesan ini._';
 
 function extractCronSecret(req: NextRequest): string | null {
   const authHeader = req.headers.get('authorization');
@@ -53,11 +56,17 @@ function getSurahLabelForPage(page: number): string {
 }
 
 function resolveMode(rawMode: string | null | undefined, dateKey: string): TikrarReminderMode {
-  if (rawMode === 'morning' || rawMode === 'evening' || rawMode === 'friday_weekly') {
+  if (
+    rawMode === 'morning' ||
+    rawMode === 'evening' ||
+    rawMode === 'friday_weekly' ||
+    rawMode === 'sunday_closing'
+  ) {
     return rawMode;
   }
   const hourWIB = getHourWIB();
   const dow = getDayOfWeekFromKey(dateKey);
+  if (dow === 0 && hourWIB >= 17) return 'sunday_closing';
   if (hourWIB < 13) return 'morning';
   if (dow === 5 && hourWIB >= 15 && hourWIB < 19) return 'friday_weekly';
   return 'evening';
@@ -105,11 +114,8 @@ async function runTikrarReminderJob(opts: {
        AND COALESCE(u.wa_opt_out, false) = false
        AND COALESCE(NULLIF(TRIM(u.whatsapp), ''), NULLIF(TRIM(u.phone), '')) IS NOT NULL
        AND (
-         u.is_tikrar_paid = true
-         OR u.tikrar_halaqah_id IS NOT NULL
-         OR u.tikrar_level IS NOT NULL
+         (u.is_tikrar_paid = true AND u.tikrar_halaqah_id IS NOT NULL)
          OR EXISTS (SELECT 1 FROM public.tikrar_user_schedules s WHERE s.user_id = u.id)
-         OR EXISTS (SELECT 1 FROM public.tikrar_daily_logs l WHERE l.user_id = u.id)
        )
        ${targetFilterSql}
      ORDER BY COALESCE(u.full_name, u.username) ASC`,
@@ -193,6 +199,10 @@ async function runTikrarReminderJob(opts: {
 
     const salutation = u.salutation || 'Ukhti';
     const displayName = u.full_name || u.username || 'Sahabat Quran';
+    const isAkhi = salutation.trim().toLowerCase() === 'akhi';
+    const doaBarakah = isAkhi ? 'Barakallahu fika' : 'Barakallahu fiki';
+    const doaJazak = isAkhi ? 'Jazakallahu khairan' : 'Jazakillahu khairan';
+
     const activeJuz = Math.max(1, Math.min(30, Number(u.paidJuz) || 30));
     const { startPage, endPage } = getJuzPageRange(activeJuz);
     const targetDaysPerWeek = Math.max(1, Math.min(7, Number(u.tikrar_active_days_per_week) || 5));
@@ -201,37 +211,50 @@ async function runTikrarReminderJob(opts: {
     const loggedToday = userDates.has(dateKey);
     const metrics = computeTikrarStreakAndWeekly(userDates, dateKey);
 
-    const userSchedules = schedulesByUser.get(u.id) || [];
-    const exactTodayBlocks = userSchedules.filter((s) => s.scheduled_date === dateKey);
+    // Filter schedules specifically for user's active Juz page range
+    const userSchedules = (schedulesByUser.get(u.id) || []).filter(
+      (s) => Number(s.page_number) >= startPage && Number(s.page_number) <= endPage
+    );
     const pendingBlocks = userSchedules.filter((s) => s.status !== 'completed');
+    const exactTodayBlocks = userSchedules.filter((s) => s.scheduled_date === dateKey);
 
-    let targetPage =
-      Number(exactTodayBlocks[0]?.page_number) ||
-      Number(pendingBlocks[0]?.page_number) ||
-      Number(u.tikrar_current_page) ||
-      startPage;
+    // Adaptive target determination:
+    // 1. If participant has uncompleted (pending) blocks, remind the EARLIEST uncompleted block so they don't skip ahead!
+    // 2. If on-track (no overdue pending blocks), use today's scheduled block.
+    // 3. Fallback to user's saved current_page & current_block.
+    let targetPage = startPage;
+    let targetBlockNumbers: number[] = [1];
+
+    if (pendingBlocks.length > 0) {
+      const earliestPending = pendingBlocks[0];
+      targetPage = Number(earliestPending.page_number) || startPage;
+      // Get all pending blocks on that same page scheduled for that session
+      const sameSessionPending = pendingBlocks.filter(
+        (s) =>
+          Number(s.page_number) === targetPage &&
+          s.scheduled_date === earliestPending.scheduled_date
+      );
+      targetBlockNumbers =
+        sameSessionPending.length > 0
+          ? sameSessionPending.map((s) => Number(s.block_number))
+          : [Number(earliestPending.block_number) || 1];
+    } else if (exactTodayBlocks.length > 0) {
+      targetPage = Number(exactTodayBlocks[0].page_number) || startPage;
+      targetBlockNumbers = exactTodayBlocks
+        .filter((s) => Number(s.page_number) === targetPage)
+        .map((s) => Number(s.block_number));
+    } else {
+      targetPage = Number(u.tikrar_current_page) || startPage;
+      targetBlockNumbers = [Math.max(1, Math.min(4, Number(u.tikrar_current_block) || 1))];
+    }
+
     if (targetPage < startPage || targetPage > endPage) targetPage = startPage;
 
-    const blocksForTargetPage =
-      exactTodayBlocks.length > 0
-        ? exactTodayBlocks
-            .filter((s) => Number(s.page_number) === targetPage)
-            .map((s) => Number(s.block_number))
-        : pendingBlocks.length > 0
-        ? pendingBlocks
-            .filter(
-              (s) =>
-                s.scheduled_date === pendingBlocks[0].scheduled_date &&
-                Number(s.page_number) === targetPage
-            )
-            .map((s) => Number(s.block_number))
-        : [Math.max(1, Math.min(4, Number(u.tikrar_current_block) || 1))];
-
     const blockLetters =
-      Array.from(new Set<number>(blocksForTargetPage))
+      Array.from(new Set<number>(targetBlockNumbers))
         .sort((a, b) => a - b)
         .map((b) => BLOCK_LETTERS[b] || 'A')
-        .join(' & ') || 'A & B';
+        .join(' & ') || 'A';
 
     const surahLabel = getSurahLabelForPage(targetPage);
 
@@ -245,9 +268,40 @@ async function runTikrarReminderJob(opts: {
         continue;
       }
       message =
-        `Assalamu'alaikum ${salutation} ${displayName}, target Hi Tikrar hari ini adalah ` +
-        `Halaman ${targetPage}, Blok ${blockLetters} (${surahLabel}). ` +
-        `Semangat ber-itqan 40x hari ini! Buka aplikasi: https://hiaqli.pro/tikrar`;
+        `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${displayName} 🌸\n\n` +
+        `Semangat pagi! Mengawali hari penuh berkah ba'da Shubuh, berikut target Hi Tikrar ${salutation} hari ini:\n` +
+        `📖 *Target:* Halaman ${targetPage} | Blok ${blockLetters} (${surahLabel})\n` +
+        `🎯 *Metode Itqan:* Repetisi 40x per bagian teks & penggabungan blok\n\n` +
+        `Setiap ketukan hitungan repetisi otomatis tersimpan ke sistem serta memperbarui keaktifan dan heatmap halaqah ${salutation}.\n\n` +
+        `Mari luangkan waktu sejenak membuka mushaf dan aplikasi Tikrar pagi ini:\n` +
+        `🔗 https://hiaqli.pro/tikrar\n\n` +
+        `Semoga Allah senantiasa memudahkan, mengokohkan hafalan, dan memberkahi setiap ayat yang ${salutation} lantunkan hari ini. Aamiin ya Rabbal 'alamin 🤲✨` +
+        NO_REPLY_FOOTER;
+    } else if (mode === 'sunday_closing' || mode === 'friday_weekly') {
+      const isComplete = metrics.weeklyActiveDays >= targetDaysPerWeek;
+      const deficit = Math.max(0, targetDaysPerWeek - metrics.weeklyActiveDays);
+
+      if (isComplete) {
+        message =
+          `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${displayName} 🌸\n\n` +
+          `Alhamdulillah, evaluasi penutupan pekan ini telah tiba! Berikut capaian Hi Tikrar ${salutation} pekan ini:\n` +
+          `🎯 *Capaian Pekan Ini:* ${metrics.weeklyActiveDays}/${targetDaysPerWeek} Hari Aktif *(TUNTAS)* 🎉\n` +
+          `🔥 *Keistiqamahan (Streak):* ${metrics.streak} hari berturut-turut\n\n` +
+          `${doaBarakah} atas keistiqamahan ${salutation} dalam membersamai Al-Qur'an sepanjang pekan ini. Selamat beristirahat malam ini, dan bismillah esok hari kita sambut pekan baru dengan semangat yang lebih segar! ✨\n\n` +
+          `Pantau rekapitulasi & heatmap halaqah ${salutation}:\n` +
+          `🔗 https://hiaqli.pro/tikrar` +
+          NO_REPLY_FOOTER;
+      } else {
+        message =
+          `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${displayName} 💐\n\n` +
+          `Alhamdulillah, evaluasi penutupan pekan ini telah tiba. Berikut capaian Hi Tikrar ${salutation} pekan ini:\n` +
+          `🎯 *Capaian Pekan Ini:* ${metrics.weeklyActiveDays}/${targetDaysPerWeek} Hari Aktif (selisih ${deficit} hari)\n\n` +
+          `${doaJazak} atas setiap ikhtiar, waktu, dan lantunan tilawah yang telah ${salutation} perjuangkan pekan ini. Jangan berkecil hati, jadikan evaluasi ini sebagai pemicu semangat baru untuk lebih konsisten dan istiqamah di pekan depan, insya Allah.\n\n` +
+          `Bismillah, mari perbaharui tekad dan bersiap kembali mulai esok hari (Senin):\n` +
+          `🔗 https://hiaqli.pro/tikrar\n\n` +
+          `Semoga Allah senantiasa meneguhkan niat dan memudahkan langkah ${salutation} dalam menjaga kalam-Nya 🤲🌸` +
+          NO_REPLY_FOOTER;
+      }
     } else if (mode === 'evening') {
       if (loggedToday) continue;
       if (
@@ -259,18 +313,14 @@ async function runTikrarReminderJob(opts: {
       }
       const remainingDays = Math.max(1, targetDaysPerWeek - metrics.weeklyActiveDays);
       message =
-        `Pengingat Hi Tikrar: ${salutation} ${displayName} belum mengisi laporan hari ini ` +
-        `(Target: Halaman ${targetPage}, Blok ${blockLetters}). ` +
-        `Selesaikan repetisi hari ini untuk menjaga streak ${metrics.streak} hari dan target pekanan ` +
-        `(tersisa ${remainingDays} hari aktif pekan ini). Buka aplikasi: https://hiaqli.pro/tikrar`;
-    } else if (mode === 'friday_weekly') {
-      if (metrics.weeklyActiveDays >= targetDaysPerWeek) continue;
-      const deficit = targetDaysPerWeek - metrics.weeklyActiveDays;
-      message =
-        `Peringatan Pekanan Hi Tikrar: Assalamu'alaikum ${salutation} ${displayName}, ` +
-        `capaian pekan ini baru ${metrics.weeklyActiveDays}/${targetDaysPerWeek} hari aktif ` +
-        `(kurang ${deficit} hari). Yuk manfaatkan hari toleransi akhir pekan (Sabtu–Ahad) ` +
-        `untuk melengkapi target tikrar & murajaah pekan ini! Buka aplikasi: https://hiaqli.pro/tikrar`;
+        `Assalamu'alaikum warahmatullah wabarakatuh, ${salutation} ${displayName} 🌙\n\n` +
+        `Alhamdulillah hari sudah menjelang malam. Sistem mencatat ${salutation} belum menyelesaikan repetisi Hi Tikrar hari ini:\n` +
+        `📖 *Target:* Halaman ${targetPage} | Blok ${blockLetters} (${surahLabel})\n` +
+        `🔥 *Keistiqamahan (Streak):* ${metrics.streak} hari berturut-turut\n\n` +
+        `Mari luangkan waktu sejenak (15–20 menit) sebelum hari berganti untuk menjaga hafalan tetap mutqin dan menjaga kesinambungan keaktifan ${salutation}:\n` +
+        `🔗 https://hiaqli.pro/tikrar\n\n` +
+        `_(Cukup tekan tombol hitungan di aplikasi web, progres repetisi otomatis tersimpan)_ 🤲✨` +
+        NO_REPLY_FOOTER;
     }
 
     if (!message) continue;
