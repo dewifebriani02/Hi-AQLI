@@ -1265,7 +1265,7 @@ export function TikrarSystem({
       </Card>
 
       {/* Bar Navigasi Juz, Halaman & Font Size */}
-      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-2xl border shadow-sm sticky top-16 sm:top-20 z-20 backdrop-blur-md border-[#800000]/10">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-[#800000]/10">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <select
             aria-label="Pilih Juz"
