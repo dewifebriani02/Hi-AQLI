@@ -212,6 +212,7 @@ export function TikrarSystem({
   const [audioDuration, setAudioDuration] = useState(0);
   const [currentLoop, setCurrentLoop] = useState(0);
   const [activeVerseKey, setActiveVerseKey] = useState<string | null>(null);
+  const [manualVerseIdx, setManualVerseIdx] = useState(0);
   const ayahTimingRef = useRef<Record<number, { ayah: number; start_time: number }[]>>({});
   const [showReciterDialog, setShowReciterDialog] = useState(false);
 
@@ -230,6 +231,10 @@ export function TikrarSystem({
     [selectedReciterId]
   );
   const isMp3Quran = currentReciter.provider === "mp3quran";
+
+  useEffect(() => {
+    setManualVerseIdx(0);
+  }, [page]);
 
   // Cleanup audio saat unmount
   useEffect(() => {
@@ -1444,30 +1449,9 @@ export function TikrarSystem({
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-[#800000]/20 shadow-sm">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled={prepListenCount <= 0}
-                        onClick={() => setPrepListenCount((p) => Math.max(0, p - 1))}
-                        className="h-6 w-6 rounded-full text-[#800000]"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </Button>
-                      <span className="text-xs font-black text-[#800000] px-1.5">
+                      <span className="text-xs font-black text-[#800000] px-3" title="Bertambah otomatis setiap audio simak selesai satu putaran">
                         {prepListenCount} / 5
                       </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled={prepListenCount >= 5}
-                        onClick={() => setPrepListenCount((p) => Math.min(5, p + 1))}
-                        className="h-6 w-6 rounded-full text-[#800000]"
-                        title="Tambah hitungan simak manual"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </Button>
                     </div>
 
                     <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
@@ -1663,7 +1647,44 @@ export function TikrarSystem({
                     <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest">
                       <Languages className="w-3.5 h-3.5" /> Arti Per Kata &amp; Terjemahan Halaman {page}
                     </div>
-                    {verses.map((verse) => (
+                    {!currentReciter.timingReadId && verses.length > 1 && (
+                      <div className="flex items-center justify-between gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={manualVerseIdx <= 0}
+                          onClick={() => setManualVerseIdx((i) => Math.max(0, i - 1))}
+                          className="h-8 text-xs font-bold border-[#800000]/20 text-[#800000]"
+                        >
+                          ‹ Sebelumnya
+                        </Button>
+                        <span className="text-[10px] font-black text-[#800000]">
+                          Ayat {Math.min(manualVerseIdx, verses.length - 1) + 1} / {verses.length}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={manualVerseIdx >= verses.length - 1}
+                          onClick={() => setManualVerseIdx((i) => Math.min(verses.length - 1, i + 1))}
+                          className="h-8 text-xs font-bold border-[#800000]/20 text-[#800000]"
+                        >
+                          Berikutnya ›
+                        </Button>
+                      </div>
+                    )}
+                    {currentReciter.timingReadId && !verses.some((v) => v.verse_key === activeVerseKey) && (
+                      <p className="text-xs text-center text-muted-foreground">
+                        {activeVerseKey
+                          ? `Audio sedang membacakan ayat ${activeVerseKey}. Terjemahan tampil saat bacaan mencapai ayat di halaman ini.`
+                          : 'Menunggu bacaan ayat...'}
+                      </p>
+                    )}
+                    {(currentReciter.timingReadId
+                      ? verses.filter((v) => v.verse_key === activeVerseKey)
+                      : [verses[Math.min(manualVerseIdx, verses.length - 1)]]
+                    ).map((verse) => (
                       <div
                         key={verse.verse_key}
                         id={`verse-card-${verse.verse_key.replace(':', '-')}`}
@@ -1794,15 +1815,20 @@ export function TikrarSystem({
                 </div>
                 <Button
                   variant={prepTranslationDone ? 'default' : 'outline'}
+                  disabled={prepListenCount < PREP_LISTEN_THRESHOLD && !prepTranslationDone}
                   onClick={() => setPrepTranslationDone(!prepTranslationDone)}
                   className={cn(
-                    'h-11 px-6 font-black rounded-xl border-2 uppercase tracking-widest text-[10px] shrink-0',
+                    'h-11 px-6 disabled:opacity-50 disabled:cursor-not-allowed font-black rounded-xl border-2 uppercase tracking-widest text-[10px] shrink-0',
                     prepTranslationDone
                       ? 'bg-[#D4AF37] hover:bg-[#D4AF37]/90 border-transparent text-black'
                       : 'border-[#800000] text-[#800000] hover:bg-[#800000]/5'
                   )}
                 >
-                  {prepTranslationDone ? 'SUDAH DIPAHAMI ✓' : 'KONFIRMASI PEMAHAMAN'}
+                  {prepTranslationDone
+                    ? 'SUDAH DIPAHAMI ✓'
+                    : prepListenCount < PREP_LISTEN_THRESHOLD
+                    ? `SELESAIKAN ${PREP_LISTEN_THRESHOLD}X SIMAK DULU`
+                    : 'KONFIRMASI PEMAHAMAN'}
                 </Button>
               </div>
             </div>
