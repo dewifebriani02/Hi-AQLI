@@ -76,7 +76,7 @@ import {
 interface ReciterOption {
   id: number;
   name: string;
-  provider: 'mp3quran' | 'quran_api';
+  provider: 'mp3quran' | 'quran_api' | 'everyayah';
   serverUrl?: string;
   timingReadId?: number;
   description?: string;
@@ -93,9 +93,9 @@ const RECITERS: ReciterOption[] = [
   {
     id: 21203,
     name: 'Dr. Syaikh Ayman Rusydi Suwaid',
-    provider: 'mp3quran',
-    serverUrl: 'https://server15.mp3quran.net/a-rushdi/Almusshaf-Al-Mo-lim/',
-    description: "Al-Mushaf Al-Mu'allim (MP3Quran)",
+    provider: 'everyayah',
+    serverUrl: 'https://everyayah.com/data/Ayman_Sowaid_64kbps/',
+    description: "Audio Per Ayat (EveryAyah • Terjemahan Sinkron)",
   },
   {
     id: 21001,
@@ -826,6 +826,15 @@ export function TikrarSystem({
         return `${rec.serverUrl}${String(surahId).padStart(3, '0')}.mp3`;
       }
 
+      if (rec?.provider === "everyayah") {
+        const [surahStr, ayahStr] = verseKey.split(':');
+        const surahPad = String(surahStr).padStart(3, '0');
+        const ayahPad = String(ayahStr).padStart(3, '0');
+        const baseUrl = rec.serverUrl || 'https://everyayah.com/data/Ayman_Sowaid_64kbps/';
+        const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+        return `${cleanBase}${surahPad}${ayahPad}.mp3`;
+      }
+
       const res = await fetch(
         `https://api.quran.com/api/v4/recitations/${reciterId}/by_ayah/${verseKey}`
       );
@@ -941,7 +950,10 @@ export function TikrarSystem({
         } else {
           setPrepListenCount(5);
           stopAutoPlay();
-          toast({ title: 'Simak Tuntas', description: 'Persiapan 5x simak halaman selesai!' });
+          toast({
+            title: 'Simak Tuntas',
+            description: `Alhamdulillah, persiapan 5x simak bersama ${currentReciter.name} selesai!`,
+          });
         }
         return;
       }
@@ -971,7 +983,7 @@ export function TikrarSystem({
       };
       audioRef.current.play().catch(() => stopAutoPlay());
     },
-    [verses, selectedReciterId, toast]
+    [verses, selectedReciterId, currentReciter, toast]
   );
 
   const startAutoPlay = async () => {
@@ -1035,80 +1047,7 @@ export function TikrarSystem({
 
 
 
-  // Milestone evaluasi setoran tasmi' (1/2 halaman pertama A&B, 1/2 halaman kedua C&D, atau 1 halaman penuh A-D)
-  const milestoneInfo = useMemo(() => {
-    const has1_2 = completedBlocksAllTime.has(1) && completedBlocksAllTime.has(2);
-    const has3_4 = completedBlocksAllTime.has(3) && completedBlocksAllTime.has(4);
-    const hasAll = has1_2 && has3_4;
 
-    if (!has1_2 && !has3_4) return null;
-
-    const targetRange = hasAll ? 'blok_1_4' : has1_2 && !has3_4 ? 'blok_1_2' : 'blok_3_4';
-    const label =
-      targetRange === 'blok_1_4'
-        ? '1 Halaman Penuh Selesai (Blok A–D)'
-        : targetRange === 'blok_1_2'
-        ? '1/2 Halaman Pertama Selesai (Blok A & B)'
-        : '1/2 Halaman Kedua Selesai (Blok C & D)';
-
-    const activeOrPassed = (userSubmissions || []).find(
-      (s: any) =>
-        Number(s.page_number) === page &&
-        (s.blocks_range === targetRange || s.blocks_range === 'blok_1_4') &&
-        (s.status === 'pending' || s.status === 'passed')
-    );
-
-    const latestRevision = !activeOrPassed
-      ? (userSubmissions || []).find(
-          (s: any) =>
-            Number(s.page_number) === page &&
-            (s.blocks_range === targetRange || s.blocks_range === 'blok_1_4') &&
-            s.status === 'needs_revision'
-        )
-      : null;
-
-    return {
-      targetRange,
-      label,
-      existing: activeOrPassed || null,
-      revision: latestRevision || null,
-    };
-  }, [completedBlocksAllTime, userSubmissions, page]);
-
-  const handleRegisterSubmission = async () => {
-    if (!user || !milestoneInfo) return;
-    setIsRegisteringSubmission(true);
-    try {
-      const res = await authFetch('/api/tikrar/daily-log', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'register_submission',
-          juz,
-          page_number: page,
-          blocks_range: milestoneInfo.targetRange,
-          notes: logNotes.trim() || null,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error?.message || 'Gagal mendaftar antrean setoran.');
-      }
-      toast({
-        title: 'Antrean Setoran Berhasil Didaftarkan!',
-        description: `Setoran Live Zoom untuk Halaman ${page} (${milestoneInfo.label}) telah diajukan ke Musyrifah.`,
-      });
-      await Promise.all([refreshSubmissions(), refreshUser()]);
-      onDataChanged?.();
-    } catch (err: any) {
-      toast({
-        title: 'Gagal Mendaftar Setoran',
-        description: err?.message || 'Terjadi kendala saat mendaftar setoran.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRegisteringSubmission(false);
-    }
-  };
 
   const handleSetAsActiveTarget = async () => {
     if (!user || isUpdatingTarget) return;
@@ -1516,6 +1455,15 @@ export function TikrarSystem({
                                       >
                                         {r.description || "Streaming CDN Resmi MP3Quran"}
                                       </div>
+                                    ) : r.provider === 'everyayah' ? (
+                                      <div
+                                        className={cn(
+                                          'text-[10px] font-normal mt-0.5',
+                                          isSelected ? 'text-white/80' : 'text-emerald-700'
+                                        )}
+                                      >
+                                        {r.description || "Audio Per Ayat (EveryAyah • Sinkron Otomatis)"}
+                                      </div>
                                     ) : (
                                       <div
                                         className={cn(
@@ -1537,6 +1485,17 @@ export function TikrarSystem({
                                     )}
                                   >
                                     CDN Resmi
+                                  </Badge>
+                                )}
+                                {r.provider === 'everyayah' && (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'text-[9px] uppercase px-2 py-0.5 font-bold',
+                                      isSelected ? 'border-white/40 text-white' : 'border-emerald-500/50 text-emerald-800'
+                                    )}
+                                  >
+                                    Sinkron
                                   </Badge>
                                 )}
                               </Button>
@@ -1571,7 +1530,7 @@ export function TikrarSystem({
                   )}
                 </Button>
 
-                {/* Card Player Khusus Qari MP3Quran CDN (Al-Qarafi, Ayman Suwaid, Ibrahim Al-Akhdar) */}
+                {/* Card Player Khusus Qari MP3Quran CDN (Al-Qarafi, Ibrahim Al-Akhdar) */}
                 {isAutoPlaying && isMp3Quran && (
                   <div className="mt-6 p-6 sm:p-8 bg-gradient-to-br from-white via-[#800000]/5 to-amber-50/40 rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
                     <div className="flex flex-col gap-6">
@@ -1728,17 +1687,30 @@ export function TikrarSystem({
 
                 {!isMp3Quran && playingVerseIndex !== null && verses[playingVerseIndex] && (
                   <div className="mt-6 p-6 sm:p-8 bg-white rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
-                    <div className="flex flex-col gap-8">
-                      <div className="flex items-center justify-center gap-2">
-                        <Badge className="bg-[#800000] text-white text-[9px] font-black uppercase tracking-[0.2em]">
-                          Siklus {currentLoop + 1}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] font-black border-[#800000]/20 text-[#800000]"
-                        >
-                          Ayat {verses[playingVerseIndex].verse_key.split(':')[1]}
-                        </Badge>
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D4AF37]/20 pb-4">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-[#800000] text-white text-[9px] font-black uppercase tracking-[0.2em]">
+                            Siklus {currentLoop + 1} / 5
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-black border-[#800000]/20 text-[#800000]"
+                          >
+                            Ayat {verses[playingVerseIndex].verse_key}
+                          </Badge>
+                          {currentReciter.provider === 'everyayah' && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] font-bold text-emerald-800 border-emerald-500/30 bg-emerald-500/10"
+                            >
+                              EveryAyah Sinkron
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-bold text-[#800000]">
+                          {currentReciter.name}
+                        </span>
                       </div>
                       <div className="flex flex-wrap justify-center gap-x-2 gap-y-4" dir="rtl">
                         {verses[playingVerseIndex].words.map((word, wIdx) => (
@@ -1786,6 +1758,17 @@ export function TikrarSystem({
                           ) || 'Memuat terjemahan...'}
                           &rdquo;
                         </p>
+                      </div>
+
+                      {/* Control buttons */}
+                      <div className="flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-muted-foreground/10">
+                        <Button
+                          type="button"
+                          onClick={stopAutoPlay}
+                          className="rounded-xl h-10 px-5 gap-2 font-bold bg-[#800000] text-white hover:bg-[#6b0000]"
+                        >
+                          <Pause className="w-4 h-4" /> Pause Audio
+                        </Button>
                       </div>
                     </div>
                   </div>

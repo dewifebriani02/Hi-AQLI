@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Play, Pause, Loader2, Mic2, Check, Type, Minus, Plus, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
-import { RECITERS } from "@/lib/quran-reciters";
+import { RECITERS, getAyahAudioUrl } from "@/lib/quran-reciters";
 import {
   Tooltip,
   TooltipContent,
@@ -132,13 +132,8 @@ export default function TilawahJuzDetailPage() {
     setLoadingAudioKey(verseKey);
 
     try {
-      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
-      const data = await res.json();
-      const audioUrl = data.audio_files[0]?.url;
-
-      let fullUrl = audioUrl;
-      if (audioUrl.startsWith('//')) fullUrl = `https:${audioUrl}`;
-      else if (!audioUrl.startsWith('http')) fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
+      const fullUrl = await getAyahAudioUrl(selectedReciterId, verseKey);
+      if (!fullUrl) throw new Error("Audio URL not found");
 
       if (audioRef.current) audioRef.current.pause();
 
