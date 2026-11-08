@@ -1,4 +1,3 @@
-
 export interface Reciter {
   id: number;
   name: string;
@@ -32,3 +31,25 @@ export const RECITERS: Reciter[] = [
   { id: 175, name: "Abdullah Juhany" },
   { id: 176, name: "Fares Abbad" }
 ];
+
+export async function getAyahAudioUrl(reciterId: number, verseKey: string): Promise<string | null> {
+  if (reciterId === 128) {
+    const [surahStr, ayahStr] = verseKey.split(":");
+    return `https://everyayah.com/data/Ayman_Sowaid_64kbps/${surahStr.padStart(3, "0")}${ayahStr.padStart(3, "0")}.mp3`;
+  }
+
+  try {
+    const res = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/by_ayah/${verseKey}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const audioUrl = data.audio_files?.[0]?.url;
+    if (!audioUrl) return null;
+    return audioUrl.startsWith("//")
+      ? `https:${audioUrl}`
+      : audioUrl.startsWith("http")
+      ? audioUrl
+      : `https://audio.qurancdn.com/${audioUrl}`;
+  } catch {
+    return null;
+  }
+}

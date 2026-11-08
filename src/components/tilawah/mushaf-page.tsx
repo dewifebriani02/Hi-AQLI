@@ -31,7 +31,7 @@ interface Verse {
   }[];
 }
 
-import { RECITERS } from "@/lib/quran-reciters";
+import { RECITERS, getAyahAudioUrl } from "@/lib/quran-reciters";
 
 import { isMushafPageFree } from "@/lib/access-control";
 
@@ -141,14 +141,8 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
     setLoadingAudioKey(verseKey);
 
     try {
-      const res = await fetch(`https://api.quran.com/api/v4/recitations/${selectedReciterId}/by_ayah/${verseKey}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      const audioUrl = data.audio_files[0]?.url;
-
-      let fullUrl = audioUrl;
-      if (audioUrl.startsWith('//')) fullUrl = `https:${audioUrl}`;
-      else if (!audioUrl.startsWith('http')) fullUrl = `https://audio.qurancdn.com/${audioUrl}`;
+      const fullUrl = await getAyahAudioUrl(selectedReciterId, verseKey);
+      if (!fullUrl) throw new Error();
 
       if (audioRef.current) audioRef.current.pause();
 
