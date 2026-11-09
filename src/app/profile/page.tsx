@@ -249,7 +249,7 @@ export default function ProfilePage() {
         </div>
         <CardHeader className="relative pb-0 px-6 sm:px-8">
           <Avatar className="w-24 h-24 border-4 border-background absolute -top-12 shadow-lg">
-            <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
+            <AvatarImage src={user.user_metadata?.avatar_url || (userData?.metadata as any)?.avatar_url || (userData as any)?.avatar_url || (user as any)?.avatar_url || undefined} />
             <AvatarFallback className="bg-primary/5 text-[#800000] text-2xl font-bold">
               {user.user_metadata?.full_name?.[0] || user.email?.[0] || '?'}
             </AvatarFallback>

@@ -94,8 +94,8 @@ export async function GET(req: NextRequest) {
     let userRow;
     if (rows.length > 0) {
       userRow = rows[0];
-      // Update avatar or metadata if available
-      if (picture && (!userRow.metadata?.avatar_url && !userRow.avatar_url)) {
+      // Always sync Google picture to metadata.avatar_url if present
+      if (picture) {
         const metadata = { ...(userRow.metadata || {}), avatar_url: picture };
         await query(
           `UPDATE public.users SET metadata = $1, updated_at = now() WHERE id = $2`,

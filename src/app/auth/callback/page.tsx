@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { notifyAuthChange } from '@/db/client';
 
 export default function AuthCallbackPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -25,17 +25,18 @@ export default function AuthCallbackPage() {
             const json = await res.json();
             if (json.data?.session) {
               localStorage.setItem('hiaqli_session', JSON.stringify(json.data.session));
+              notifyAuthChange('SIGNED_IN', json.data.session);
             }
           }
         } catch (e) {
           console.error('Error saving session in auth callback:', e);
         }
       }
-      router.replace(next);
+      window.location.href = next;
     };
 
     handleCallback();
-  }, [router, searchParams]);
+  }, [searchParams]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-[#FAF9F5]">

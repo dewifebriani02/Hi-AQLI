@@ -199,7 +199,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                   user ? (
                     <Link href="/profile">
                       <Avatar className="h-10 w-10 border-2 border-slate-100 shadow-sm transform hover:scale-105 transition-transform">
-                        <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
+                        <AvatarImage src={user.user_metadata?.avatar_url || (userData?.metadata as any)?.avatar_url || (userData as any)?.avatar_url || (user as any)?.avatar_url || undefined} />
                         <AvatarFallback className="bg-slate-100 text-[#800000] text-xs font-black uppercase">
                           {user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U'}
                         </AvatarFallback>

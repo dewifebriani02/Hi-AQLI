@@ -50,7 +50,7 @@ export function TikrarSchedule({
   onJumpToDailyReport,
   refreshSignal = 0,
 }: TikrarScheduleProps) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
   const { data: userData, refresh: refreshUser } = useDoc<any>(user?.id ? 'users' : null, user?.id);
@@ -99,6 +99,8 @@ export function TikrarSchedule({
 
   // Form states
   const [selectedJuz, setSelectedJuz] = useState<number>(30);
+  const juzRange = useMemo(() => getJuzPageRange(selectedJuz), [selectedJuz]);
+  const [startFromPage, setStartFromPage] = useState<number>(juzRange.startPage);
   const [durationMonths, setDurationMonths] = useState<1 | 2 | 3 | 4>(2);
   const [activeDaysPerWeek, setActiveDaysPerWeek] = useState<number>(5);
   const [startDateKey, setStartDateKey] = useState<string>(todayKey);
@@ -111,10 +113,26 @@ export function TikrarSchedule({
   const [isEditingSchedule, setIsEditingSchedule] = useState<boolean>(false);
   const [hasCheckedInitialEditState, setHasCheckedInitialEditState] = useState(false);
 
+  // Keep startFromPage within juzRange bounds
+  useEffect(() => {
+    if (startFromPage < juzRange.startPage || startFromPage > juzRange.endPage) {
+      setStartFromPage(juzRange.startPage);
+    }
+  }, [juzRange, startFromPage]);
+
   useEffect(() => {
     if (userData && !hasInitializedForm) {
       const savedJuz = Number(userData.paidJuz ?? userData.paid_juz);
+      const effectiveJuz = savedJuz >= 1 && savedJuz <= 30 ? savedJuz : 30;
       if (savedJuz >= 1 && savedJuz <= 30) setSelectedJuz(savedJuz);
+
+      const range = getJuzPageRange(effectiveJuz);
+      const savedPage = Number(userData.tikrar_current_page);
+      if (savedPage >= range.startPage && savedPage <= range.endPage) {
+        setStartFromPage(savedPage);
+      } else {
+        setStartFromPage(range.startPage);
+      }
 
       const savedDur = Number(userData.tikrar_target_duration_months);
       if (savedDur >= 1 && savedDur <= 4) {
@@ -149,8 +167,9 @@ export function TikrarSchedule({
         durationMonths,
         activeDaysPerWeek,
         startDate: startDateKey,
+        startFromPage,
       }),
-    [selectedJuz, durationMonths, activeDaysPerWeek, startDateKey]
+    [selectedJuz, durationMonths, activeDaysPerWeek, startDateKey, startFromPage]
   );
 
   // Completed blocks set from daily logs so both saved & preview items reflect true completion
@@ -193,8 +212,6 @@ export function TikrarSchedule({
       TIKRAR_PACE_OPTIONS[1],
     [durationMonths]
   );
-
-  const juzRange = useMemo(() => getJuzPageRange(selectedJuz), [selectedJuz]);
 
   // Group schedule slots into Daily Cards -> Weekly Accordions (5 active days/week)
   const weeklyGroups = useMemo(() => {
@@ -332,7 +349,15 @@ export function TikrarSchedule({
   const handleCancelEdit = () => {
     if (userData) {
       const savedJuz = Number(userData.paidJuz ?? userData.paid_juz);
+      const effectiveJuz = savedJuz >= 1 && savedJuz <= 30 ? savedJuz : selectedJuz;
       if (savedJuz >= 1 && savedJuz <= 30) setSelectedJuz(savedJuz);
+      const range = getJuzPageRange(effectiveJuz);
+      const savedPage = Number(userData.tikrar_current_page);
+      if (savedPage >= range.startPage && savedPage <= range.endPage) {
+        setStartFromPage(savedPage);
+      } else {
+        setStartFromPage(range.startPage);
+      }
       const savedDur = Number(userData.tikrar_target_duration_months);
       if (savedDur >= 1 && savedDur <= 4) setDurationMonths(savedDur as 1 | 2 | 3 | 4);
       const savedDays = Number(userData.tikrar_active_days_per_week);
@@ -361,6 +386,7 @@ export function TikrarSchedule({
           duration_months: durationMonths,
           active_days_per_week: activeDaysPerWeek,
           start_date: startDateKey,
+          start_from_page: startFromPage,
           halaqah_id: selectedHalaqahId || null,
         }),
       });
@@ -542,7 +568,16 @@ export function TikrarSchedule({
                     Batal
                   </Button>
                 )}
-                {user && (
+                {isUserLoading ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled
+                    className="bg-white/10 text-white/70 border-white/20 font-bold text-xs h-9 px-4 rounded-xl shadow-sm"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Memeriksa...
+                  </Button>
+                ) : user ? (
                   <Button
                     type="button"
                     size="sm"
@@ -560,14 +595,14 @@ export function TikrarSchedule({
                       </>
                     )}
                   </Button>
-                )}
+                ) : null}
               </div>
             </div>
           </CardHeader>
 
           <CardContent className="p-5 sm:p-6 space-y-6">
-            {/* 2. Pilihan Juz, Hari Aktif & Tanggal Mulai */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* 2. Pilihan Juz, Halaman Mulai, Hari Aktif & Tanggal Mulai */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-black uppercase tracking-wider text-stone-700">
                   1. Target Juz Pilihan
@@ -575,7 +610,12 @@ export function TikrarSchedule({
                 <select
                   aria-label="Pilih Target Juz"
                   value={selectedJuz}
-                  onChange={(e) => setSelectedJuz(Number(e.target.value))}
+                  onChange={(e) => {
+                    const newJuz = Number(e.target.value);
+                    setSelectedJuz(newJuz);
+                    const r = getJuzPageRange(newJuz);
+                    setStartFromPage(r.startPage);
+                  }}
                   className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-black text-[#800000]"
                 >
                   {Array.from({ length: 30 }, (_, idx) => {
@@ -591,8 +631,34 @@ export function TikrarSchedule({
               </div>
 
               <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-wider text-stone-700 flex items-center justify-between">
+                  <span>2. Mulai dari Halaman</span>
+                  {startFromPage > juzRange.startPage && (
+                    <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                      Pertengahan
+                    </span>
+                  )}
+                </label>
+                <select
+                  aria-label="Pilih Halaman Awal"
+                  value={startFromPage}
+                  onChange={(e) => setStartFromPage(Number(e.target.value))}
+                  className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800"
+                >
+                  {Array.from({ length: juzRange.totalPages }, (_, idx) => {
+                    const pageNum = juzRange.startPage + idx;
+                    return (
+                      <option key={pageNum} value={pageNum}>
+                        Hal. {pageNum} {pageNum === juzRange.startPage ? '(Awal Juz)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
                 <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                  2. Hari Aktif / Pekan
+                  3. Hari Aktif / Pekan
                 </label>
                 <select
                   aria-label="Pilih Hari Aktif per Pekan"
@@ -609,7 +675,7 @@ export function TikrarSchedule({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                  3. Tanggal Mulai
+                  4. Tanggal Mulai
                 </label>
                 <Input
                   type="date"
@@ -623,7 +689,7 @@ export function TikrarSchedule({
             {/* 3. Pilihan Pace / Target Durasi 1 Juz */}
             <div className="space-y-2.5">
               <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                4. Pilih Kecepatan Hafalan (Pace 1 Juz)
+                5. Pilih Kecepatan Hafalan (Pace 1 Juz)
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {TIKRAR_PACE_OPTIONS.map((opt) => {
@@ -665,9 +731,9 @@ export function TikrarSchedule({
             <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
                 <div>
-                  <p className="text-[10px] font-black uppercase text-stone-500">Rentang Mushaf</p>
+                  <p className="text-[10px] font-black uppercase text-stone-500">Rentang Target</p>
                   <p className="text-sm font-black text-[#800000]">
-                    Hal. {juzRange.startPage}–{juzRange.endPage}
+                    Hal. {previewSchedule.startPage}–{juzRange.endPage} ({previewSchedule.totalPages} Hal)
                   </p>
                 </div>
                 <div>
@@ -695,7 +761,16 @@ export function TikrarSchedule({
                 </div>
               </div>
 
-              {user ? (
+              {isUserLoading ? (
+                <Button
+                  type="button"
+                  disabled
+                  className="bg-stone-200 text-stone-600 font-bold text-xs h-11 px-6 rounded-xl shrink-0"
+                >
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-stone-500" />
+                  Memeriksa Sesi Akun...
+                </Button>
+              ) : user ? (
                 <Button
                   type="button"
                   disabled={isSaving}
