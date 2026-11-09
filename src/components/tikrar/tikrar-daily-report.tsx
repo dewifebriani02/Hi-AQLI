@@ -20,6 +20,8 @@ import {
   TIKRAR_GRADE_LABELS,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
+import { TIKRAR_STEPS } from '@/lib/tikrar-steps';
+import type { TikrarSummary } from '@/lib/tikrar-server';
 import {
   Activity,
   Award,
@@ -43,7 +45,14 @@ export interface TikrarDailyReportProps {
   onOpenMushafTab?: (page: number, juz: number) => void;
   refreshSignal?: number;
   onDataChanged?: () => void;
+  summary?: TikrarSummary | null;
 }
+
+// Langkah (jumlah langkah tuntas) yang menandai Blok A/B/C/D tuntas
+const BLOCK_DONE_AT_STEPS: Record<number, number> = TIKRAR_STEPS.reduce((acc, s) => {
+  if (s.completesBlock) acc[s.completesBlock] = s.index + 1;
+  return acc;
+}, {} as Record<number, number>);
 
 function getSurahNameForPage(page: number): string {
   let surahId = 1;
@@ -63,7 +72,9 @@ export function TikrarDailyReport({
   onOpenScheduleTab,
   onOpenMushafTab,
   refreshSignal = 0,
+  summary = null,
 }: TikrarDailyReportProps) {
+  const target = summary?.target || null;
   const { user } = useUser();
   const { data: userData, refresh: refreshUser } = useDoc<any>(user?.id ? 'users' : null, user?.id);
 
@@ -165,14 +176,22 @@ export function TikrarDailyReport({
   const todayKey = useMemo(() => toDateKeyWIB(), []);
 
   const activeJuz = useMemo(() => {
+    if (target) return target.juz;
     const raw = Number(userData?.paidJuz ?? userData?.paid_juz);
     return raw >= 1 && raw <= 30 ? raw : 30;
-  }, [userData]);
+  }, [target, userData]);
 
-  const { startPage, endPage, totalPages } = useMemo(
-    () => getJuzPageRange(activeJuz),
-    [activeJuz]
-  );
+  // Rentang = halaman mulai sampai halaman akhir target terbaru
+  const { startPage, endPage, totalPages } = useMemo(() => {
+    if (target) {
+      return {
+        startPage: target.startPage,
+        endPage: target.endPage,
+        totalPages: target.endPage - target.startPage + 1,
+      };
+    }
+    return getJuzPageRange(activeJuz);
+  }, [target, activeJuz]);
 
   const passedExamPages = useMemo(() => {
     const set = new Set<number>();
@@ -200,6 +219,7 @@ export function TikrarDailyReport({
 
   // Prioritaskan halaman target pengguna jika berada dalam rentang Juz aktif
   const recommendedPage = useMemo(() => {
+    if (target) return target.unlockedPage;
     if (userCurrPage >= startPage && userCurrPage <= endPage) {
       return userCurrPage;
     }
@@ -208,7 +228,7 @@ export function TikrarDailyReport({
       if (p >= startPage && p <= endPage) return p;
     }
     return startPage;
-  }, [todayScheduledItems, userCurrPage, startPage, endPage]);
+  }, [target, todayScheduledItems, userCurrPage, startPage, endPage]);
 
   const activeHalaqah = useMemo(() => {
     if (!tikrarHalaqahs || tikrarHalaqahs.length === 0) return null;
@@ -247,9 +267,21 @@ export function TikrarDailyReport({
       });
     });
 
+    // Blok tuntas menurut langkah klik counter (tidak bergantung log harian)
+    for (let p = startPage; p <= endPage; p++) {
+      const steps = summary?.stepsByPage?.[p] || 0;
+      for (const b of [1, 2, 3, 4]) {
+        if (steps >= BLOCK_DONE_AT_STEPS[b]) {
+          completedBlockKeys.add(`${p}:${b}`);
+          if (p === recommendedPage) activePageBlocks.add(b);
+        }
+      }
+    }
+
+    const tasmiSet = new Set<number>(summary?.tasmiPassedPages || []);
     let clearedPagesCount = 0;
     for (let p = startPage; p <= endPage; p++) {
-      if (isPageSubmissionCleared(p, userSubmissions || [], passedExamPages)) {
+      if (tasmiSet.has(p) || isPageSubmissionCleared(p, userSubmissions || [], passedExamPages)) {
         clearedPagesCount += 1;
       }
     }
@@ -260,7 +292,7 @@ export function TikrarDailyReport({
       clearedPagesCount,
       activePageBlocks,
     };
-  }, [userLogs, startPage, endPage, totalPages, recommendedPage, userSubmissions, passedExamPages]);
+  }, [userLogs, startPage, endPage, totalPages, recommendedPage, userSubmissions, passedExamPages, summary]);
 
   // Analisis aktivitas sub-blok terkini dari tikrar_user_progress
   const activeStageInfo = useMemo(() => {
@@ -402,6 +434,15 @@ export function TikrarDailyReport({
           badgeText: 'Gabung 1 Hal',
           isStarted: true,
         };
+      } else if (!(summary?.quizPassedPages || []).includes(pageNumber)) {
+        activeSub = {
+          stageName: 'Ujian Halaman 30 Soal (syarat buka halaman berikutnya)',
+          subBlockLetter: 'Ujian Halaman',
+          currentCount: 0,
+          targetCount: 1,
+          badgeText: 'Ujian',
+          isStarted: true,
+        };
       } else {
         activeSub = {
           stageName: '1 Halaman Penuh Tuntas Mutqin!',
@@ -441,9 +482,28 @@ export function TikrarDailyReport({
       tuntasCount,
       blocksObj,
     };
-  }, [allUserProgress, recommendedPage]);
+  }, [allUserProgress, recommendedPage, summary?.quizPassedPages]);
 
-  const recentLogs = useMemo(() => (userLogs || []).slice(0, 6), [userLogs]);
+  // Laporan Blok Tuntas: hanya blok pada rentang target terbaru
+  const recentLogs = useMemo(
+    () =>
+      (userLogs || [])
+        .filter((l: any) => {
+          const p = Number(l.page_number);
+          return l?.completed && p >= startPage && p <= endPage;
+        })
+        .slice(0, 6),
+    [userLogs, startPage, endPage]
+  );
+
+  const weeklyMet = useMemo(() => {
+    const dow = new Date(`${todayKey}T12:00:00Z`).getUTCDay();
+    const monday = new Date(`${todayKey}T12:00:00Z`);
+    monday.setUTCDate(monday.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+    const mondayKey = monday.toISOString().slice(0, 10);
+    return (summary?.activity || []).filter((a) => a.targetMet && a.date >= mondayKey && a.date <= todayKey).length;
+  }, [summary?.activity, todayKey]);
+  const recentActivity = useMemo(() => (summary?.activity || []).slice(0, 5), [summary?.activity]);
   const recentSubmissions = useMemo(() => (userSubmissions || []).slice(0, 5), [userSubmissions]);
 
   return (
@@ -454,17 +514,17 @@ export function TikrarDailyReport({
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-black text-[#800000] tracking-widest uppercase">
-                REKAP PROGRES PRIBADI • JUZ {activeJuz}
+                REKAP PROGRES PRIBADI • JUZ {activeJuz} • HAL. {startPage}–{endPage}
               </span>
               <Badge
                 variant="outline"
                 className="border-[#800000]/20 text-[#800000] bg-white text-[10px] font-bold"
               >
-                Target Aktif: Hal. {recommendedPage} (QS. {getSurahNameForPage(recommendedPage)})
+                Halaman Aktif: Hal. {recommendedPage} (QS. {getSurahNameForPage(recommendedPage)})
               </Badge>
             </div>
             <h2 className="text-xl sm:text-2xl font-black font-headline text-[#800000]">
-              Ringkasan Laporan &amp; Riwayat Setoran Live Zoom
+              Ringkasan Laporan &amp; Riwayat Setoran Tasmi&apos;
             </h2>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-600">
               <span>
@@ -524,7 +584,7 @@ export function TikrarDailyReport({
                 className="h-9 bg-[#800000] hover:bg-[#800000]/90 text-white text-xs font-black px-4 rounded-xl shadow-sm"
               >
                 <BookOpen className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" />
-                Buka Mushaf &amp; Isi Laporan (Hal. {recommendedPage})
+                Buka Mushaf (Hal. {recommendedPage})
               </Button>
             )}
           </div>
@@ -534,23 +594,28 @@ export function TikrarDailyReport({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col justify-between gap-1">
             <span className="text-[10px] font-black uppercase tracking-wider text-stone-500">
-              Keaktifan Pekan Ini
+              Keaktifan Hari Ini
             </span>
             <div className="flex items-baseline justify-between gap-2 mt-1">
               <span className="text-xl font-black text-stone-900">
-                {consistency.weeklyActiveDays}/{targetDaysPerWeek} Hari
+                {summary?.today.stepsToday || 0}/{summary?.today.dailyQuota || 1} Langkah
               </span>
               <Badge
                 className={cn(
                   'text-[9px] font-black border-none',
-                  consistency.weeklyActiveDays >= targetDaysPerWeek
+                  summary?.today.targetMet
                     ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-amber-100 text-amber-900'
+                    : summary?.today.clicks
+                    ? 'bg-lime-100 text-lime-900'
+                    : 'bg-stone-100 text-stone-600'
                 )}
               >
-                {consistency.weeklyActiveDays >= targetDaysPerWeek ? 'Tercapai' : 'Berjalan'}
+                {summary?.today.targetMet ? 'Target Tercapai' : summary?.today.clicks ? 'Aktif' : 'Belum Aktif'}
               </Badge>
             </div>
+            <span className="text-[11px] font-bold text-stone-500">
+              Pekan ini: {weeklyMet}/{target?.activeDaysPerWeek || targetDaysPerWeek} hari target tercapai
+            </span>
           </div>
 
           <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col justify-between gap-1">
@@ -560,18 +625,18 @@ export function TikrarDailyReport({
             <div className="flex items-center justify-between gap-2 mt-1">
               <span className="inline-flex items-center gap-1 text-lg font-black text-orange-700">
                 <Flame className="w-4 h-4 fill-orange-500 text-orange-600" />
-                {consistency.streak} Hari
+                {summary?.streak ?? 0} Hari
               </span>
               <span className="inline-flex items-center gap-1 text-xs font-black text-[#800000]">
                 <Trophy className="w-3.5 h-3.5 text-[#D4AF37]" />
-                {Number(userData?.points) || 0} Poin
+                {summary?.points ?? (Number(userData?.points) || 0)} Poin
               </span>
             </div>
           </div>
 
           <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col justify-between gap-1">
             <span className="text-[10px] font-black uppercase tracking-wider text-stone-500">
-              Blok Tercatat (Juz {activeJuz})
+              Blok Tercatat (Hal. {startPage}–{endPage})
             </span>
             <div className="flex items-baseline justify-between gap-2 mt-1">
               <span className="text-xl font-black text-[#800000]">
@@ -719,10 +784,41 @@ export function TikrarDailyReport({
               </div>
             )}
 
+            {recentActivity.length > 0 && (
+              <div className="space-y-1.5">
+                {recentActivity.map((a) => (
+                  <div
+                    key={a.date}
+                    className="flex items-center justify-between gap-2 text-xs p-2 rounded-lg bg-stone-50 border border-stone-200/80"
+                  >
+                    <span className="font-bold text-stone-800">
+                      {parseDateKeyUTC(a.date).toLocaleDateString('id-ID', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                        timeZone: 'UTC',
+                      })}
+                    </span>
+                    <span className="text-[11px] text-stone-600">
+                      {a.clicks} klik • {a.stepsToday} langkah
+                    </span>
+                    <Badge
+                      className={cn(
+                        'text-[10px] font-black border-none',
+                        a.targetMet ? 'bg-emerald-700 text-white hover:bg-emerald-700' : 'bg-lime-100 text-lime-900 hover:bg-lime-100'
+                      )}
+                    >
+                      {a.targetMet ? 'Target Tercapai' : 'Aktif'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Sub-header untuk Log Blok Tuntas */}
             <div className="pt-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-stone-500">
-                Laporan Blok Tuntas (40x Selesai)
+                Laporan Blok Tuntas • Juz {activeJuz} (Hal. {startPage}–{endPage})
               </span>
             </div>
 
@@ -776,7 +872,7 @@ export function TikrarDailyReport({
           <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-[#800000]" /> Status Setoran Tasmi&apos; Live Zoom
+                <Award className="w-4 h-4 text-[#800000]" /> Status Setoran Tasmi&apos; (Diisi Muallimah)
               </h3>
               <span className="text-[11px] font-bold text-stone-500">
                 {(userSubmissions || []).length} Setoran
@@ -785,8 +881,8 @@ export function TikrarDailyReport({
 
             {recentSubmissions.length === 0 ? (
               <div className="py-6 text-center text-xs text-stone-500 bg-stone-50 rounded-lg border border-dashed border-stone-200">
-                Belum ada riwayat setoran. Selesaikan minimal 2 blok (Blok A &amp; B + Gabung A&amp;B
-                10x) di tab <strong>Mushaf &amp; Audio</strong> untuk mendaftar setoran Live Zoom.
+                Belum ada riwayat setoran. Hasil setoran Tasmi&apos; diisi langsung oleh muallimah/admin
+                setelah Ukhti menyetorkan hafalan.
               </div>
             ) : (
               <div className="space-y-2">

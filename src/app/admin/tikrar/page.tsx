@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserPermissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { TikrarGroupHeatmap } from '@/components/tikrar/tikrar-group-heatmap';
+import { TikrarManualSetoranForm } from '@/components/tikrar/tikrar-manual-setoran-form';
 import { getJuzPageRange, TIKRAR_GRADE_LABELS } from '@/lib/tikrar-schedule-generator';
 import {
   AlertCircle,
@@ -411,7 +412,7 @@ export default function AdminTikrarPage() {
             ? `Catatan perbaikan Halaman ${sub.page_number} telah dikirim ke profil peserta.`
             : `Halaman ${sub.page_number} disetujui${
                 d.pointsAwarded ? ` (+${d.pointsAwarded} Poin)` : ''
-              }${d.pageCleared ? ` • Kunci Hal. ${d.nextUnlockedPage} terbuka` : ''}.`,
+              }${d.pageCleared ? ' • tercatat sudah diuji' : ''}.`,
       });
 
       await Promise.all([refreshSubmissions(), refreshUsers(), refreshExams(), refreshWaLogs()]);
@@ -710,6 +711,10 @@ export default function AdminTikrarPage() {
 
         {/* TAB 1: Verifikasi Kelas Setoran Live Zoom (Fase 5) */}
         <TabsContent value="submissions" className="space-y-4 outline-none">
+          <TikrarManualSetoranForm
+            participants={tikrarParticipants}
+            onSaved={() => Promise.all([refreshSubmissions(), refreshUsers(), refreshExams()])}
+          />
           {placeholderZoomCount > 0 && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
               <div className="flex items-start gap-2.5 text-amber-950">

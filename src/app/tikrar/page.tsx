@@ -20,8 +20,9 @@ import { TikrarDailyReport } from '@/components/tikrar/tikrar-daily-report';
 import { TikrarGroupHeatmap } from '@/components/tikrar/tikrar-group-heatmap';
 import { TikrarSchedule } from '@/components/tikrar/tikrar-schedule';
 import { HifzProgressChart } from '@/components/progress/hifz-progress-chart';
-import { useDoc, useUser, useCollection } from '@/db';
-import { getJuzPageRange } from '@/lib/tikrar-schedule-generator';
+import { useDoc, useUser } from '@/db';
+import { useTikrarSummary } from '@/hooks/use-tikrar-summary';
+import { Loader2, Lock } from 'lucide-react';
 
 export default function TikrarPage() {
   const { user, isUserLoading } = useUser();
@@ -41,56 +42,26 @@ export default function TikrarPage() {
 
   const triggerGlobalRefresh = () => setRefreshSignal((n) => n + 1);
 
-  // Target aktif default dari user data / jadwal
-  const userActiveJuz = useMemo(() => {
-    const raw = Number(userData?.paidJuz ?? userData?.paid_juz);
-    return raw >= 1 && raw <= 30 ? raw : 30;
-  }, [userData]);
+  const { summary, isLoading: isSummaryLoading, refresh: refreshSummary } = useTikrarSummary(refreshSignal);
+  const activeTarget = summary?.target || null;
+  const hasExistingSchedule = Boolean(activeTarget);
+  const isSchedulesLoading = isSummaryLoading;
 
-  const userActivePage = useMemo(() => {
-    const range = getJuzPageRange(userActiveJuz);
-    if (typeof window !== "undefined") {
-      const localPage = Number(localStorage.getItem("aqli_tikrar_last_page"));
-      const localJuz = Number(localStorage.getItem("aqli_tikrar_last_juz"));
-      if (
-        localPage >= range.startPage &&
-        localPage <= range.endPage &&
-        (!localJuz || localJuz === userActiveJuz)
-      ) {
-        return localPage;
-      }
-    }
-    const curr = Number(userData?.tikrar_current_page);
-    if (curr >= range.startPage && curr <= range.endPage) return curr;
-    return range.startPage;
-  }, [userActiveJuz, userData?.tikrar_current_page]);
-
-  // Periksa apakah peserta sudah memiliki jadwal belajar Tikrar tersimpan di database
-  const schedulesOptions = useMemo(
-    () => ({
-      filters: [{ column: 'user_id', operator: '==', value: user?.id }],
-    }),
-    [user?.id]
-  );
-  const {
-    data: userSchedules,
-    isLoading: isSchedulesLoading,
-    refresh: refreshSchedules,
-  } = useCollection<any>(user?.id ? 'tikrar_user_schedules' : null, schedulesOptions);
+  // Halaman aktif = halaman target yang sedang terbuka (belum lulus ujian 30 soal)
+  const userActiveJuz = activeTarget?.juz ?? null;
+  const userActivePage = activeTarget?.unlockedPage ?? null;
 
   useEffect(() => {
-    if (refreshSignal > 0 && user?.id) {
-      refreshUser();
-      refreshSchedules();
-    }
-  }, [refreshSignal, user?.id, refreshUser, refreshSchedules]);
+    if (refreshSignal > 0 && user?.id) refreshUser();
+  }, [refreshSignal, user?.id, refreshUser]);
 
-  const hasExistingSchedule = useMemo(() => {
-    if (!user?.id) return false;
-    if (userSchedules && userSchedules.length > 0) return true;
-    if (userData?.tikrar_target_duration_months && userData?.tikrar_start_date) return true;
-    return false;
-  }, [user?.id, userSchedules, userData]);
+  // Thalibah baru wajib mengisi Target & Jadwal terlebih dahulu
+  const [hasRoutedInitialTab, setHasRoutedInitialTab] = useState(false);
+  useEffect(() => {
+    if (hasRoutedInitialTab || isSummaryLoading || !user) return;
+    if (!activeTarget) setActiveTab('schedule');
+    setHasRoutedInitialTab(true);
+  }, [hasRoutedInitialTab, isSummaryLoading, user, activeTarget]);
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-32">
@@ -146,45 +117,53 @@ export default function TikrarPage() {
             value="progress"
             className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
           >
-            <BarChart3 className="w-4 h-4 shrink-0" /> Progres 30 Juz
+            <BarChart3 className="w-4 h-4 shrink-0" /> Itqan 30 Juz
           </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Mushaf Per Kata, Audio 5x Simak, Gabungan Sub-Repetisi & Auto-Sync Laporan */}
         <TabsContent value="mushaf" className="outline-none space-y-4">
-          {user && !hasExistingSchedule && !isSchedulesLoading && (
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-200/80 text-amber-900 flex items-center justify-center shrink-0">
-                  <CalendarDays className="w-5 h-5 text-amber-900" />
+          {user && isSchedulesLoading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
+            </div>
+          ) : user && !hasExistingSchedule ? (
+            <Card className="border-2 border-dashed border-amber-300 bg-amber-50">
+              <CardContent className="py-12 flex flex-col items-center text-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-200 text-amber-900 flex items-center justify-center">
+                  <Lock className="w-7 h-7" />
                 </div>
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-black uppercase text-amber-950 tracking-wider">
-                    Jadwal Belajar Belum Disimpan
+                <div className="space-y-1 max-w-md">
+                  <h4 className="text-sm font-black uppercase tracking-wider text-amber-950">
+                    Mushaf Terkunci: Isi Target &amp; Jadwal Dulu
                   </h4>
                   <p className="text-xs text-amber-900 leading-relaxed">
-                    Afwan {fullSalutation}, tentukan target Juz &amp; hari aktif di tab <strong>Target &amp; Jadwal</strong> agar hafalan terjadwal rapi, atau Ukhti tetap dapat langsung berlatih di bawah.
+                    Afwan {fullSalutation}, tentukan Juz, halaman mulai sampai halaman akhir, dan durasi
+                    periode di tab <strong>Target &amp; Jadwal</strong>. Setelah disimpan, Mushaf &amp; Audio
+                    akan terbuka otomatis pada halaman mulai.
                   </p>
                 </div>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => setActiveTab('schedule')}
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0 shadow-sm"
-              >
-                <CalendarDays className="w-3.5 h-3.5 mr-1.5" /> Atur Jadwal
-              </Button>
-            </div>
+                <Button
+                  size="sm"
+                  onClick={() => setActiveTab('schedule')}
+                  className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 px-5 rounded-xl"
+                >
+                  <CalendarDays className="w-4 h-4 mr-1.5" /> Isi Target &amp; Jadwal
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <TikrarSystem
+              targetPage={mushafTarget.page}
+              targetJuz={mushafTarget.juz}
+              targetTimestamp={mushafTarget.timestamp}
+              refreshSignal={refreshSignal}
+              summary={summary}
+              onDataChanged={triggerGlobalRefresh}
+              onOpenScheduleTab={() => setActiveTab('schedule')}
+              onOpenGroupRecapTab={() => setActiveTab('daily-report')}
+            />
           )}
-          <TikrarSystem
-            targetPage={mushafTarget.page}
-            targetJuz={mushafTarget.juz}
-            targetTimestamp={mushafTarget.timestamp}
-            refreshSignal={refreshSignal}
-            onDataChanged={triggerGlobalRefresh}
-            onOpenScheduleTab={() => setActiveTab('schedule')}
-            onOpenGroupRecapTab={() => setActiveTab('daily-report')}
-          />
         </TabsContent>
 
         {/* Tab 2: Rekap Pribadi Ringkas & Leaderboard/Heatmap Grup 30 Hari */}
@@ -215,6 +194,7 @@ export default function TikrarPage() {
           )}
           <TikrarDailyReport
             refreshSignal={refreshSignal}
+            summary={summary}
             onDataChanged={triggerGlobalRefresh}
             onOpenScheduleTab={() => setActiveTab('schedule')}
             onOpenMushafTab={(page, juz) => {
@@ -237,16 +217,17 @@ export default function TikrarPage() {
                   Langkah Awal: Buat Jadwal Belajar {fullSalutation}
                 </h4>
                 <p className="text-xs font-semibold text-stone-900 leading-relaxed">
-                  Silakan tentukan 1 Juz target hafalan dan kecepatan belajar di bawah, lalu klik tombol <strong>&quot;Simpan Target &amp; Generate Jadwal&quot;</strong> untuk membuka mushaf dan memulai latihan.
+                  Tentukan Juz, halaman mulai sampai halaman akhir, dan durasi periode di bawah, lalu klik <strong>&quot;Simpan &amp; Buka Mushaf&quot;</strong>. Mushaf &amp; Audio terkunci sampai target disimpan.
                 </p>
               </div>
             </div>
           )}
           <TikrarSchedule
             refreshSignal={refreshSignal}
+            summary={summary}
             onScheduleSaved={(target) => {
               triggerGlobalRefresh();
-              refreshSchedules();
+              refreshSummary();
               refreshUser();
               if (target?.page) {
                 setMushafTarget({ page: target.page, juz: target.juz || null, timestamp: Date.now() });
@@ -277,12 +258,12 @@ export default function TikrarPage() {
                   <div className="flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-[#D4AF37]" />
                     <CardTitle className="text-lg font-headline">
-                      Pencapaian Tikrar 30 Juz
+                      Itqan 30 Juz: Dihafal &amp; Sudah Diuji
                     </CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-8">
-                  <HifzProgressChart />
+                  <HifzProgressChart refreshSignal={refreshSignal} />
                 </CardContent>
               </Card>
             </div>
