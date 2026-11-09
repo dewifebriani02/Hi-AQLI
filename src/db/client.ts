@@ -36,6 +36,25 @@ export function notifyAuthChange(event: AuthChangeEvent, session: Session | null
   });
 }
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return true;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(json);
+    if (!payload.exp) return false;
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 function getBaseUrl(): string {
   if (typeof window !== 'undefined') return '';
   return process.env.NEXT_PUBLIC_SITE_URL || 'http://127.0.0.1:3001';
@@ -48,11 +67,24 @@ function getStoredToken(): string | null {
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        if (parsed?.access_token) return parsed.access_token;
+        if (parsed?.access_token) {
+          if (isTokenExpired(parsed.access_token)) {
+            localStorage.removeItem('hiaqli_session');
+            localStorage.removeItem('hiaqli_token');
+            return null;
+          }
+          return parsed.access_token;
+        }
       } catch {}
     }
     const token = localStorage.getItem('hiaqli_token');
-    if (token) return token;
+    if (token) {
+      if (isTokenExpired(token)) {
+        localStorage.removeItem('hiaqli_token');
+        return null;
+      }
+      return token;
+    }
   } catch (e) {}
   return null;
 }
@@ -290,6 +322,12 @@ export function createLocalClient() {
           if (raw) {
             const parsed = JSON.parse(raw);
             if (parsed?.access_token) {
+              if (isTokenExpired(parsed.access_token)) {
+                localStorage.removeItem('hiaqli_session');
+                localStorage.removeItem('hiaqli_token');
+                notifyAuthChange('SIGNED_OUT', null);
+                return { data: { session: null }, error: null };
+              }
               return { data: { session: parsed }, error: null };
             }
           }
