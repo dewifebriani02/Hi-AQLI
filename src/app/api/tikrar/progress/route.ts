@@ -21,9 +21,9 @@ export async function GET(req: NextRequest) {
     const pageNumber = Number(searchParams.get('page'));
 
     if (!pageNumber || isNaN(pageNumber)) {
-      // List all progress for current user
+      // List all progress for current user (terbaru di paling atas)
       const { rows } = await pool.query(
-        `SELECT * FROM public.tikrar_user_progress WHERE user_id = $1 ORDER BY page_number ASC`,
+        `SELECT * FROM public.tikrar_user_progress WHERE user_id = $1 ORDER BY updated_at DESC, page_number ASC`,
         [ctx.userId]
       );
       return NextResponse.json({ data: rows, error: null });
@@ -115,8 +115,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Simpan progres gabungan ke database (public.tikrar_user_progress)
     const { rows: progressRows } = await client.query(
-      `INSERT INTO public.tikrar_user_progress (
-         user_id, page_number, juz, prep_listen_count, prep_translation_done,
+      `INSERT INTO public.tikrar_user_progress (\n         user_id, page_number, juz, prep_listen_count, prep_translation_done,
          blocks, meta_counts, tuntas_blocks, total_progress, updated_at
        )
        VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb, $9, now())
@@ -190,8 +189,7 @@ export async function POST(req: NextRequest) {
       const beforeMetrics = computeTikrarStreakAndWeekly(priorDates, logDateKey);
 
       const { rows: savedLogRows } = await client.query(
-        `INSERT INTO public.tikrar_daily_logs (
-           user_id, halaqah_id, log_date, juz, page_number, blocks_completed,
+        `INSERT INTO public.tikrar_daily_logs (\n           user_id, halaqah_id, log_date, juz, page_number, blocks_completed,
            repetition_count, duration_minutes, completed, updated_at
          )
          VALUES ($1, $2, $3::date, $4, $5, $6::jsonb, 40, 30, true, now())
