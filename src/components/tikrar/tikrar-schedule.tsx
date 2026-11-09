@@ -328,8 +328,12 @@ export function TikrarSchedule({
     [weeklyGroups]
   );
 
-  // Active target page to jump to
+  // Active target page to jump to (prioritaskan target halaman berjalan pengguna)
   const activeTargetPage = useMemo(() => {
+    const userCurr = Number(userData?.tikrar_current_page);
+    if (userCurr >= juzRange.startPage && userCurr <= juzRange.endPage) {
+      return userCurr;
+    }
     const firstPending = savedForSelectedJuz.find((r: any) => {
       const isDone =
         r.status === 'completed' ||
@@ -338,10 +342,6 @@ export function TikrarSchedule({
     });
     if (firstPending) {
       return Number(firstPending.page_number);
-    }
-    const userCurr = Number(userData?.tikrar_current_page);
-    if (userCurr >= juzRange.startPage && userCurr <= juzRange.endPage) {
-      return userCurr;
     }
     return juzRange.startPage;
   }, [savedForSelectedJuz, completedBlockKeys, userData?.tikrar_current_page, juzRange]);

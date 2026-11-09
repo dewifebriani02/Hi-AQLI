@@ -84,32 +84,61 @@ interface ReciterOption {
 
 const RECITERS: ReciterOption[] = [
   {
-    id: 21136,
-    name: 'Syaikh Abdullah Al-Qarafi',
-    provider: 'mp3quran',
-    serverUrl: 'https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/',
-    description: "Streaming CDN Resmi MP3Quran (Hafs 'an 'Asim)",
-  },
-  {
     id: 21203,
     name: 'Dr. Syaikh Ayman Rusydi Suwaid',
     provider: 'everyayah',
     serverUrl: 'https://everyayah.com/data/Ayman_Sowaid_64kbps/',
-    description: "Audio Per Ayat (EveryAyah • Terjemahan Sinkron)",
+    description: "Audio Per Ayat (Tajwid & Murottal Standar • Sinkron Per Halaman)",
   },
   {
     id: 21001,
     name: 'Syaikh Ibrahim Al-Akhdar',
-    provider: 'mp3quran',
-    serverUrl: 'https://cdn.mp3quran.net/audio/ibrahim-akhdar/r1/',
-    timingReadId: 1,
-    description: "Imam Masjid Nabawi (Murattal MP3Quran)",
+    provider: 'everyayah',
+    serverUrl: 'https://everyayah.com/data/Ibrahim_Akhdar_32kbps/',
+    description: "Imam Masjid Nabawi (Audio Per Ayat • Sinkron Per Halaman)",
   },
-  { id: 2, name: 'AbdulBaset AbdulSamad (Murattal)', provider: 'quran_api' },
-  { id: 3, name: 'Abdur-Rahman as-Sudais', provider: 'quran_api' },
-  { id: 6, name: 'Mahmoud Khalil Al-Husary', provider: 'quran_api' },
-  { id: 12, name: 'Saud al-Shuraim', provider: 'quran_api' },
-  { id: 1, name: 'AbdulBaset AbdulSamad (Mujawwad)', provider: 'quran_api' },
+  {
+    id: 6,
+    name: 'Syaikh Mahmoud Khalil Al-Husary',
+    provider: 'everyayah',
+    serverUrl: 'https://everyayah.com/data/Husary_64kbps/',
+    description: "Standar Tahfiz Internasional (Audio Per Ayat • Sinkron Per Halaman)",
+  },
+  {
+    id: 7,
+    name: 'Syaikh Mishary Rashid Alafasy',
+    provider: 'everyayah',
+    serverUrl: 'https://everyayah.com/data/Alafasy_64kbps/',
+    description: "Audio Per Ayat Populer (Sinkron Per Halaman)",
+  },
+  {
+    id: 3,
+    name: 'Syaikh Abdur-Rahman As-Sudais',
+    provider: 'everyayah',
+    serverUrl: 'https://everyayah.com/data/Abdurrahmaan_As-Sudais_64kbps/',
+    description: "Imam Masjidil Haram (Audio Per Ayat)",
+  },
+  {
+    id: 10,
+    name: "Syaikh Sa'ud Ash-Shuraim",
+    provider: 'everyayah',
+    serverUrl: 'https://everyayah.com/data/Saood_ash-Shuraym_64kbps/',
+    description: "Imam Masjidil Haram (Audio Per Ayat)",
+  },
+  {
+    id: 9,
+    name: 'Syaikh Muhammad Siddiq Al-Minshawi',
+    provider: 'everyayah',
+    serverUrl: 'https://everyayah.com/data/Minshawy_Murattal_128kbps/',
+    description: "Murattal Al-Minshawi (Audio Per Ayat)",
+  },
+  {
+    id: 21136,
+    name: 'Syaikh Abdullah Al-Qarafi',
+    provider: 'mp3quran',
+    serverUrl: 'https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/',
+    description: "Streaming 1 Surah Penuh MP3Quran (Tidak sinkron per halaman)",
+  },
 ];
 
 const PASS_THRESHOLD = 40;
@@ -203,7 +232,7 @@ export function TikrarSystem({
   const [prepListenCount, setPrepListenCount] = useState(0);
   const [prepTranslationDone, setPrepTranslationDone] = useState(false);
 
-  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(21136);
+  const [selectedReciterId, setSelectedReciterId] = useState<number | null>(21203);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const isAutoPlayingRef = useRef(false);
   const [playingVerseIndex, setPlayingVerseIndex] = useState<number | null>(null);
@@ -476,14 +505,16 @@ export function TikrarSystem({
 
     if (typeof window !== 'undefined') {
       const savedReciter = localStorage.getItem('aqli_reciter_id');
-      if (savedReciter) {
-        const parsed = parseInt(savedReciter, 10);
-        if (!isNaN(parsed) && RECITERS.some((r) => r.id === parsed)) {
-          setSelectedReciterId(parsed);
-        } else {
-          setSelectedReciterId(RECITERS[0].id);
-          localStorage.setItem('aqli_reciter_id', RECITERS[0].id.toString());
-        }
+      const parsed = parseInt(savedReciter, 10);
+      // Migrasi otomatis pengguna dari 21136 (Al-Qarafi surah utuh) ke 21203 (Ayman Suwaid per halaman)
+      if (parsed === 21136 || !parsed) {
+        setSelectedReciterId(21203);
+        localStorage.setItem('aqli_reciter_id', '21203');
+      } else if (!isNaN(parsed) && RECITERS.some((r) => r.id === parsed)) {
+        setSelectedReciterId(parsed);
+      } else {
+        setSelectedReciterId(21203);
+        localStorage.setItem('aqli_reciter_id', '21203');
       }
     }
   }, [
@@ -942,17 +973,26 @@ export function TikrarSystem({
     async (vIndex: number, loopNum: number) => {
       if (!isAutoPlayingRef.current) return;
 
+      // Saat ayat melebihi jumlah ayat di halaman ini: 1 HALAMAN PENUH SELESAI
       if (vIndex >= verses.length) {
-        if (loopNum < 4) {
-          setPrepListenCount((p) => Math.min(5, p + 1));
-          setCurrentLoop(loopNum + 1);
-          playVerse(0, loopNum + 1);
+        setPlayingVerseIndex(null);
+        // Tambah siklus simak untuk halaman ini
+        setPrepListenCount((p) => Math.min(5, p + 1));
+
+        const nextLoop = loopNum + 1;
+        if (nextLoop < 5) {
+          setCurrentLoop(nextLoop);
+          toast({
+            title: `Putaran Simak Selesai (${nextLoop}/5)`,
+            description: `Alhamdulillah, putaran ke-${nextLoop} selesai. Mengulang Halaman ${page} (putaran ke-${nextLoop + 1})...`,
+          });
+          playVerse(0, nextLoop);
         } else {
           setPrepListenCount(5);
           stopAutoPlay();
           toast({
-            title: 'Simak Tuntas',
-            description: `Alhamdulillah, persiapan 5x simak bersama ${currentReciter.name} selesai!`,
+            title: '5x Simak Selesai! 🎉',
+            description: `Alhamdulillah, 5x siklus simak Halaman ${page} tuntas bersama ${currentReciter.name}. Silakan konfirmasi pemahaman untuk membuka kunci Blok A!`,
           });
         }
         return;
@@ -966,6 +1006,7 @@ export function TikrarSystem({
         return;
       }
 
+      // Preload ayat berikutnya di halaman ini, atau preload ayat pertama jika putaran belum selesai
       if (vIndex + 1 < verses.length) {
         getAudioUrl(vIndex + 1).then((url) => {
           nextAudioUrlRef.current = url;
@@ -983,7 +1024,7 @@ export function TikrarSystem({
       };
       audioRef.current.play().catch(() => stopAutoPlay());
     },
-    [verses, selectedReciterId, currentReciter, toast]
+    [verses, selectedReciterId, currentReciter, page, toast]
   );
 
   const startAutoPlay = async () => {
@@ -994,13 +1035,20 @@ export function TikrarSystem({
     if (verses.length === 0) return;
     setIsAutoPlaying(true);
     isAutoPlayingRef.current = true;
-    setCurrentLoop(0);
+
+    // Jika sudah tuntas 5x atau pengguna klik "Ulangi Audio Simak", mulai dari putaran awal
+    let loopToStart = prepListenCount;
+    if (prepListenCount >= 5) {
+      setPrepListenCount(0);
+      loopToStart = 0;
+    }
+    setCurrentLoop(loopToStart);
     nextAudioUrlRef.current = null;
 
     if (isMp3Quran) {
-      playMp3QuranSurah(0, 0);
+      playMp3QuranSurah(0, loopToStart);
     } else {
-      playVerse(0, 0);
+      playVerse(0, loopToStart);
     }
   };
 
@@ -1387,10 +1435,33 @@ export function TikrarSystem({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-[#800000]/20 shadow-sm">
-                      <span className="text-xs font-black text-[#800000] px-3" title="Bertambah otomatis setiap audio simak selesai satu putaran">
+                    <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-full border border-[#800000]/20 shadow-sm">
+                      <span className="text-xs font-black text-[#800000] px-1.5" title="Bertambah otomatis setiap audio simak selesai satu halaman">
                         {prepListenCount} / 5
                       </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPrepListenCount((prev) => Math.min(5, prev + 1))}
+                        disabled={prepListenCount >= 5}
+                        className="h-6 px-1.5 rounded-full font-black text-[11px] text-[#800000] hover:bg-[#800000]/10 border border-[#800000]/30"
+                        title="Tambah 1 siklus simak manual"
+                      >
+                        +1
+                      </Button>
+                      {prepListenCount > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPrepListenCount((prev) => Math.max(0, prev - 1))}
+                          className="h-6 px-1.5 rounded-full font-bold text-[10px] text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+                          title="Kurangi 1 siklus"
+                        >
+                          -1
+                        </Button>
+                      )}
                     </div>
 
                     <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
