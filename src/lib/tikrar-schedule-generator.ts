@@ -202,15 +202,21 @@ export function generateTikrarSchedule(params: {
   durationMonths?: number;
   activeDaysPerWeek?: number;
   startDate?: Date | string;
+  startFromPage?: number;
 }): GeneratedScheduleResult {
   const { juz, startPage, endPage, totalPages } = getJuzPageRange(params.juz);
   const durationMonths = Math.max(1, Math.min(4, Math.floor(Number(params.durationMonths) || 2)));
   const activeDaysPerWeek = Math.max(1, Math.min(7, Math.floor(Number(params.activeDaysPerWeek) || 5)));
   const startDateKey = toDateKeyWIB(params.startDate || new Date());
 
-  // Build ordered queue of all blocks in this Juz
+  const effectiveStartPage =
+    params.startFromPage && params.startFromPage >= startPage && params.startFromPage <= endPage
+      ? Math.floor(params.startFromPage)
+      : startPage;
+
+  // Build ordered queue of all blocks in this Juz starting from effectiveStartPage
   const queue: { page_number: number; block_number: 1 | 2 | 3 | 4 }[] = [];
-  for (let p = startPage; p <= endPage; p++) {
+  for (let p = effectiveStartPage; p <= endPage; p++) {
     for (const b of [1, 2, 3, 4] as const) {
       queue.push({ page_number: p, block_number: b });
     }
@@ -251,9 +257,9 @@ export function generateTikrarSchedule(params: {
 
   return {
     juz,
-    startPage,
+    startPage: effectiveStartPage,
     endPage,
-    totalPages,
+    totalPages: endPage - effectiveStartPage + 1,
     totalBlocks: queue.length,
     durationMonths,
     activeDaysPerWeek,

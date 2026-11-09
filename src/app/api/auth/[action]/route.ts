@@ -53,6 +53,7 @@ export async function POST(
         user_metadata: {
           full_name: userRow.full_name || userRow.username || email.split('@')[0],
           username: userRow.username,
+          avatar_url: userRow.avatar_url || userRow.metadata?.avatar_url || null,
           ...(userRow.metadata || {})
         },
         app_metadata: {},
@@ -284,6 +285,7 @@ export async function GET(
       }
 
       const u = rows[0];
+      const avatarUrl = u.avatar_url || u.metadata?.avatar_url || (decoded as any)?.user_metadata?.avatar_url || null;
       const user = {
         id: u.id,
         email: u.email,
@@ -293,7 +295,9 @@ export async function GET(
         user_metadata: {
           full_name: u.full_name || u.username || u.email?.split('@')[0],
           username: u.username,
-          ...(u.metadata || {})
+          avatar_url: avatarUrl,
+          ...(u.metadata || {}),
+          ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         },
         app_metadata: {},
         created_at: u.created_at,

@@ -108,6 +108,13 @@ export async function POST(req: NextRequest) {
         ? rawHalaqahId.trim()
         : null;
 
+    const { startPage: juzStart, endPage: juzEnd } = getJuzPageRange(juz);
+    const rawStartFromPage = Number(body.start_from_page ?? body.startFromPage);
+    const startFromPage =
+      !isNaN(rawStartFromPage) && rawStartFromPage >= juzStart && rawStartFromPage <= juzEnd
+        ? Math.floor(rawStartFromPage)
+        : juzStart;
+
     const paceMeta =
       TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) || TIKRAR_PACE_OPTIONS[1];
     const generated = generateTikrarSchedule({
@@ -115,6 +122,7 @@ export async function POST(req: NextRequest) {
       durationMonths,
       activeDaysPerWeek,
       startDate: startDateKey,
+      startFromPage,
     });
 
     await client.query('BEGIN');
@@ -138,7 +146,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine earliest uncompleted page & block in selected Juz
-    let nextCurrentPage = generated.startPage;
+    let nextCurrentPage = startFromPage;
     let nextCurrentBlock = 1;
     for (const item of generated.items) {
       if (!completedBlockKeys.has(`${item.page_number}:${item.block_number}`)) {
