@@ -574,6 +574,8 @@ export function TikrarSystem({
     fetchVerses();
   }, [page]);
 
+  const isHydratedRef = useRef(false);
+
   // Hydrate progress from DB + localStorage + merge DB completed blocks
   useEffect(() => {
     let isCancelled = false;
@@ -691,6 +693,9 @@ export function TikrarSystem({
         setPrepTranslationDone(nextPrepTrans);
         setBlocks(nextBlocks);
         setMetaCounts(nextMeta);
+        setTimeout(() => {
+          isHydratedRef.current = true;
+        }, 150);
       }
     }
 
@@ -720,13 +725,8 @@ export function TikrarSystem({
   }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
 
   // Simpan progres ke localStorage dan database setiap user klik angka setiap tahapan
-  const isHydratedRef = useRef(false);
   useEffect(() => {
     isHydratedRef.current = false;
-    const t = setTimeout(() => {
-      isHydratedRef.current = true;
-    }, 500);
-    return () => clearTimeout(t);
   }, [page]);
 
   useEffect(() => {

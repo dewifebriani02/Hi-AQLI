@@ -64,17 +64,56 @@ export async function POST(req: NextRequest) {
     const metaCounts = typeof body.meta_counts === 'object' && body.meta_counts !== null ? body.meta_counts : {};
     const totalProgress = Math.max(0, Math.min(100, Math.floor(Number(body.total_progress) || 0)));
 
+    await client.query('BEGIN');
+
+    // Ambil record yang sudah ada di database untuk digabungkan secara monotonik (mencegah reset oleh device lain)
+    const { rows: existingProgressRows } = await client.query(
+      `SELECT prep_listen_count, prep_translation_done, blocks, meta_counts, tuntas_blocks, total_progress
+       FROM public.tikrar_user_progress
+       WHERE user_id = $1 AND page_number = $2
+       FOR UPDATE`,
+      [ctx.userId, pageNumber]
+    );
+
+    let finalPrepListen = prepListenCount;
+    let finalPrepTrans = prepTranslationDone;
+    let finalBlocks: any = { ...blocks };
+    let finalMetaCounts: any = { ...metaCounts };
+    let finalTotalProgress = totalProgress;
+
+    if (existingProgressRows.length > 0) {
+      const ex = existingProgressRows[0];
+      finalPrepListen = Math.max(Number(ex.prep_listen_count) || 0, prepListenCount);
+      finalPrepTrans = Boolean(ex.prep_translation_done) || prepTranslationDone;
+      finalTotalProgress = Math.max(Number(ex.total_progress) || 0, totalProgress);
+
+      const exBlocks = typeof ex.blocks === 'object' && ex.blocks !== null ? ex.blocks : {};
+      finalBlocks = {};
+      for (const b of [1, 2, 3, 4] as const) {
+        finalBlocks[b] = {
+          a: { count: Math.max(Number(exBlocks?.[b]?.a?.count) || 0, Number(blocks?.[b]?.a?.count) || 0) },
+          b: { count: Math.max(Number(exBlocks?.[b]?.b?.count) || 0, Number(blocks?.[b]?.b?.count) || 0) },
+          combined: { count: Math.max(Number(exBlocks?.[b]?.combined?.count) || 0, Number(blocks?.[b]?.combined?.count) || 0) },
+        };
+      }
+
+      const exMeta = typeof ex.meta_counts === 'object' && ex.meta_counts !== null ? ex.meta_counts : {};
+      finalMetaCounts = {};
+      const allMetaKeys = new Set([...Object.keys(exMeta), ...Object.keys(metaCounts)]);
+      allMetaKeys.forEach((k) => {
+        finalMetaCounts[k] = Math.max(Number(exMeta[k]) || 0, Number(metaCounts[k]) || 0);
+      });
+    }
+
     // Identifikasi blok-blok yang tuntas (combined >= 40)
     const tuntasBlocks: number[] = [];
     for (const b of [1, 2, 3, 4] as const) {
-      if (Number(blocks?.[b]?.combined?.count) >= 40) {
+      if (Number(finalBlocks?.[b]?.combined?.count) >= 40) {
         tuntasBlocks.push(b);
       }
     }
 
-    await client.query('BEGIN');
-
-    // 1. Simpan progres per klik ke database (public.tikrar_user_progress)
+    // 1. Simpan progres gabungan ke database (public.tikrar_user_progress)
     const { rows: progressRows } = await client.query(
       `INSERT INTO public.tikrar_user_progress (
          user_id, page_number, juz, prep_listen_count, prep_translation_done,
@@ -84,24 +123,24 @@ export async function POST(req: NextRequest) {
        ON CONFLICT (user_id, page_number)
        DO UPDATE SET
          juz = EXCLUDED.juz,
-         prep_listen_count = GREATEST(public.tikrar_user_progress.prep_listen_count, EXCLUDED.prep_listen_count),
-         prep_translation_done = (public.tikrar_user_progress.prep_translation_done OR EXCLUDED.prep_translation_done),
+         prep_listen_count = EXCLUDED.prep_listen_count,
+         prep_translation_done = EXCLUDED.prep_translation_done,
          blocks = EXCLUDED.blocks,
          meta_counts = EXCLUDED.meta_counts,
          tuntas_blocks = EXCLUDED.tuntas_blocks,
-         total_progress = GREATEST(public.tikrar_user_progress.total_progress, EXCLUDED.total_progress),
+         total_progress = EXCLUDED.total_progress,
          updated_at = now()
        RETURNING *`,
       [
         ctx.userId,
         pageNumber,
         juz,
-        prepListenCount,
-        prepTranslationDone,
-        JSON.stringify(blocks),
-        JSON.stringify(metaCounts),
+        finalPrepListen,
+        finalPrepTrans,
+        JSON.stringify(finalBlocks),
+        JSON.stringify(finalMetaCounts),
         JSON.stringify(tuntasBlocks),
-        totalProgress,
+        finalTotalProgress,
       ]
     );
 
