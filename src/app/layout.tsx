@@ -1,4 +1,3 @@
-
 "use client";
 
 import './globals.css';
@@ -8,16 +7,17 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/common/bottom-nav';
 import { PWAInstallPrompt } from '@/components/common/pwa-install-prompt';
-import {AuthProvider, useUser, db } from '@/db';
+import { AuthProvider, useUser, db } from '@/db';
 import { signOut } from '@/db';
 import { useDoc, useCollection } from '@/db';
-import { Trophy, Zap, Star, ShieldAlert, LogOut, Smartphone } from 'lucide-react';
+import { Trophy, Zap, Star, ShieldAlert, LogOut, Smartphone, Minus, Plus } from 'lucide-react';
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
+import { FontSizeProvider, useFontSize } from '@/contexts/font-size-context';
 
 const Logo = dynamic(() => import('@/components/common/logo').then(mod => mod.Logo), { 
   ssr: false,
@@ -29,6 +29,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isUserLoading } = useUser();
+  const { fontSize, increaseFontSize, decreaseFontSize } = useFontSize();
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const [mounted, setMounted] = useState(false);
 
@@ -164,15 +165,45 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <SidebarInset className="w-full flex flex-col">
           {/* Padding bottom untuk BottomNav (selalu ada) */}
           <div className="flex flex-col flex-1 w-full pb-20">
-            <header className="sticky top-0 z-40 flex h-16 sm:h-20 items-center justify-between px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
-              <div className="flex items-center gap-4">
+            <header className="sticky top-0 z-40 flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
+              <div className="flex items-center gap-3 sm:gap-4">
                 {showAdminUI && <SidebarTrigger className="md:hidden text-slate-400" />}
                 <Link href="/" className="transition-transform hover:scale-105 active:scale-95">
-                  <Logo variant="default" showText={true} className="scale-110 md:scale-125 origin-left" textClassName="text-2xl md:text-3xl font-black tracking-tight" imageSize={48} />
+                  <Logo variant="default" showText={true} className="scale-100 sm:scale-110 md:scale-125 origin-left" textClassName="text-xl sm:text-2xl md:text-3xl font-black tracking-tight" imageSize={42} />
                 </Link>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Global Font Size Stepper */}
+                <div 
+                  className="flex items-center gap-0.5 sm:gap-1 bg-slate-50 border border-slate-200/90 shadow-xs rounded-full px-1.5 py-0.5" 
+                  title="Ukuran Font Teks Arab (Global)"
+                >
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={decreaseFontSize}
+                    aria-label="Perkecil Font"
+                    className="h-6 w-6 sm:h-7 sm:w-7 text-[#800000] hover:bg-slate-200/60 rounded-full"
+                  >
+                    <Minus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  </Button>
+                  <span className="text-[11px] sm:text-xs font-black text-slate-700 w-5 sm:w-6 text-center select-none">
+                    {fontSize}
+                  </span>
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={increaseFontSize}
+                    aria-label="Perbesar Font"
+                    className="h-6 w-6 sm:h-7 sm:w-7 text-[#800000] hover:bg-slate-200/60 rounded-full"
+                  >
+                    <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  </Button>
+                </div>
+
                 {/* PWA Install Button */}
                 {isInstallable && (
                   <Button 
@@ -198,7 +229,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 {showUserUI && (
                   user ? (
                     <Link href="/profile">
-                      <Avatar className="h-10 w-10 border-2 border-slate-100 shadow-sm transform hover:scale-105 transition-transform">
+                      <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-slate-100 shadow-sm transform hover:scale-105 transition-transform">
                         <AvatarImage src={user.user_metadata?.avatar_url || (userData?.metadata as any)?.avatar_url || (userData as any)?.avatar_url || (user as any)?.avatar_url || undefined} />
                         <AvatarFallback className="bg-slate-100 text-[#800000] text-xs font-black uppercase">
                           {user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U'}
@@ -206,7 +237,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                       </Avatar>
                     </Link>
                   ) : (
-                    <Button asChild size="sm" className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase rounded-xl px-6 shadow-md transition-all active:scale-95 text-[10px]">
+                    <Button asChild size="sm" className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase rounded-xl px-4 sm:px-6 shadow-md transition-all active:scale-95 text-[10px]">
                       <Link href="/login">Masuk</Link>
                     </Button>
                   )
@@ -273,7 +304,9 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
         <AuthProvider>
-          <LayoutContent>{children}</LayoutContent>
+          <FontSizeProvider>
+            <LayoutContent>{children}</LayoutContent>
+          </FontSizeProvider>
         </AuthProvider>
       </body>
     </html>
