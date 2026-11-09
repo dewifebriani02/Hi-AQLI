@@ -57,6 +57,7 @@ import { cn } from '@/lib/utils';
 import { useUser, useDoc, useCollection, addDocumentNonBlocking, db } from '@/db';
 import { authFetch } from '@/db/client';
 import { useToast } from '@/hooks/use-toast';
+import { useFontSize } from '@/contexts/font-size-context';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { QURAN_CHAPTERS } from '@/lib/quran-data';
@@ -220,7 +221,7 @@ export function TikrarSystem({
   const [page, setPage] = useState<number>(targetPage || 582);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fontSize, setFontSize] = useState(18);
+  const { fontSize } = useFontSize();
   const [hasInitializedPage, setHasInitializedPage] = useState(false);
   const [isRequestingExam, setIsRequestingExam] = useState(false);
 
@@ -1368,25 +1369,7 @@ export function TikrarSystem({
               <Settings2 className="w-3.5 h-3.5 mr-1.5" /> Atur Target
             </Button>
           )}
-          <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-[#800000]"
-              onClick={() => setFontSize((f) => Math.max(12, f - 4))}
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <span className="text-xs font-bold w-6 text-center">{fontSize}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-[#800000]"
-              onClick={() => setFontSize((f) => Math.min(64, f + 4))}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+
         </div>
       </div>
 
@@ -1726,7 +1709,7 @@ export function TikrarSystem({
                         <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">
                           Ayat {verse.verse_key}
                         </Badge>
-                        <div className="flex flex-wrap justify-center gap-2" dir="rtl">
+                        <div className="flex flex-wrap justify-start gap-2" dir="rtl">
                           {verse.words
                             .filter((w) => w.text_uthmani)
                             .map((word, wIdx) => (
@@ -1783,7 +1766,7 @@ export function TikrarSystem({
                           {currentReciter.name}
                         </span>
                       </div>
-                      <div className="flex flex-wrap justify-center gap-x-2 gap-y-4" dir="rtl">
+                      <div className="flex flex-wrap justify-start gap-x-2 gap-y-4" dir="rtl">
                         {verses[playingVerseIndex].words.map((word, wIdx) => (
                           <span
                             key={wIdx}
@@ -1799,18 +1782,19 @@ export function TikrarSystem({
                         <div className="flex items-center gap-2 text-[10px] font-black text-[#D4AF37] uppercase tracking-widest mb-2">
                           <Languages className="w-3 h-3" /> Arti Per Kata
                         </div>
-                        <div className="flex flex-wrap justify-center gap-2">
+                        <div className="flex flex-wrap justify-start gap-2" dir="rtl">
                           {verses[playingVerseIndex].words
                             .filter((w) => w.text_uthmani)
                             .map((word, wIdx) => (
                               <div
                                 key={wIdx}
+                                dir="ltr"
                                 className="bg-muted border-2 border-muted-foreground/10 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]"
                               >
                                 <span className="font-arabic text-black text-sm font-bold leading-none">
                                   {word.text_uthmani}
                                 </span>
-                                <span className="text-[9px] font-medium text-[#800000] leading-none">
+                                <span className="text-[9px] font-medium text-[#800000] leading-none text-center">
                                   {word.translation?.text || '-'}
                                 </span>
                               </div>
