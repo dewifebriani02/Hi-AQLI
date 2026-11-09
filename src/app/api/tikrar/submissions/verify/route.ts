@@ -6,21 +6,14 @@ import { isFullAdmin, isStaff } from '@/lib/db-policy';
 import { whatsappService, normalizePhoneNumber } from '@/lib/services/whatsapp';
 import {
   getJuzForPage,
-  getJuzPageRange,
   isPageSubmissionCleared,
   TIKRAR_GRADE_LABELS,
+  toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
+import { TIKRAR_POINTS } from '@/lib/tikrar-steps';
 
 const NO_REPLY_FOOTER =
   '\n\n━━━━━━━━━━━━━━━━━━━━\n📌 _Pesan ini dikirim secara otomatis oleh sistem HI AQLI. Mohon untuk tidak membalas pesan ini._';
-
-function calcPageSetoranPoints(passedRanges: Set<string>): number {
-  if (passedRanges.has('blok_1_4')) return 250;
-  let total = 0;
-  if (passedRanges.has('blok_1_2')) total += 100;
-  if (passedRanges.has('blok_3_4')) total += 100;
-  return total;
-}
 
 function formatRangeHuman(range: string): string {
   if (range === 'blok_1_4') return '1 Halaman Penuh (Blok A–D)';
@@ -66,7 +59,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const submissionId = typeof body.submission_id === 'string' ? body.submission_id.trim() : '';
+    let submissionId = typeof body.submission_id === 'string' ? body.submission_id.trim() : '';
+    // Input manual oleh muallimah/admin tanpa antrean dari thalibah
+    const manual = body.manual && typeof body.manual === 'object' ? body.manual : null;
+    const manualUserId = typeof manual?.user_id === 'string' ? manual.user_id.trim() : '';
+    const manualPage = Math.floor(Number(manual?.page_number) || 0);
+    const manualRange = ['blok_1_2', 'blok_3_4', 'blok_1_4'].includes(manual?.blocks_range)
+      ? manual.blocks_range
+      : 'blok_1_4';
     const allowedGrades = new Set(['mumtaz', 'jayyid_jiddan', 'perlu_perbaikan']);
     const grade = typeof body.grade === 'string' ? body.grade.trim() : '';
     const feedback =
@@ -75,7 +75,14 @@ export async function POST(req: NextRequest) {
         : null;
     const sendWhatsapp = Boolean(body.send_whatsapp);
 
-    if (!submissionId || !allowedGrades.has(grade)) {
+    if (!submissionId && manual && (!manualUserId || manualPage < 1 || manualPage > 604)) {
+      return NextResponse.json(
+        { error: { message: 'Pilih thalibah dan halaman (1–604) untuk input setoran manual.' } },
+        { status: 400 }
+      );
+    }
+
+    if ((!submissionId && !manual) || !allowedGrades.has(grade)) {
       return NextResponse.json(
         {
           error: {
@@ -88,6 +95,35 @@ export async function POST(req: NextRequest) {
     }
 
     await client.query('BEGIN');
+
+    if (!submissionId && manual) {
+      const { rows: uRows } = await client.query(
+        `SELECT id, full_name, username, tikrar_halaqah_id FROM public.users WHERE id = $1 LIMIT 1`,
+        [manualUserId]
+      );
+      if (!uRows[0]) {
+        await client.query('ROLLBACK');
+        return NextResponse.json({ error: { message: 'Thalibah tidak ditemukan.' } }, { status: 404 });
+      }
+      const { rows: created } = await client.query(
+        `INSERT INTO public.tikrar_submissions (
+           user_id, user_name, halaqah_id, juz, page_number, blocks_range, session_date, status, notes, submitted_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::date, 'pending', 'Input manual oleh muallimah/admin', now())
+         RETURNING id`,
+        [
+          manualUserId,
+          uRows[0].full_name || uRows[0].username || 'Thalibah HI AQLI',
+          uRows[0].tikrar_halaqah_id || null,
+          getJuzForPage(manualPage),
+          manualPage,
+          manualRange,
+          typeof manual.session_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(manual.session_date)
+            ? manual.session_date
+            : toDateKeyWIB(),
+        ]
+      );
+      submissionId = created[0].id;
+    }
 
     // Lock target submission row
     const { rows: subRows } = await client.query(
@@ -130,8 +166,6 @@ export async function POST(req: NextRequest) {
     }
 
     const pageNumber = Number(sub.page_number);
-    const juz = Number(sub.juz) || getJuzForPage(pageNumber);
-    const { endPage } = getJuzPageRange(juz);
 
     // Fetch all submissions on this page BEFORE updating for idempotent point delta calculation
     const { rows: pageSubsBefore } = await client.query(
@@ -140,10 +174,6 @@ export async function POST(req: NextRequest) {
        WHERE user_id = $1 AND page_number = $2`,
       [sub.user_id, pageNumber]
     );
-    const beforePassedRanges = new Set<string>(
-      pageSubsBefore.filter((r) => r.status === 'passed').map((r) => r.blocks_range || 'blok_1_2')
-    );
-
     const nextStatus = grade === 'perlu_perbaikan' ? 'needs_revision' : 'passed';
 
     const { rows: updatedSubRows } = await client.query(
@@ -163,16 +193,11 @@ export async function POST(req: NextRequest) {
     const afterSubs = pageSubsBefore.map((r) =>
       r.id === submissionId ? { ...r, status: nextStatus } : r
     );
-    const afterPassedRanges = new Set<string>(
-      afterSubs.filter((r) => r.status === 'passed').map((r) => r.blocks_range || 'blok_1_2')
-    );
+    // Poin lulus setoran Tasmi' (sekali per setoran yang baru lulus)
+    const pointsAwarded = nextStatus === 'passed' && sub.status !== 'passed' ? TIKRAR_POINTS.tasmiPassed : 0;
 
-    const pointsAwarded = Math.max(
-      0,
-      calcPageSetoranPoints(afterPassedRanges) - calcPageSetoranPoints(beforePassedRanges)
-    );
-
-    // Check if full page is now cleared -> unlock next page & sync page_exams
+    // Halaman penuh lulus tasmi' -> sinkron page_exams (lapis "sudah diuji" di Itqan 30 Juz).
+    // Tasmi' tidak lagi mengunci/membuka halaman; gerbang halaman = ujian 30 soal.
     const { rows: examRows } = await client.query(
       `SELECT id, page_number, passed FROM public.page_exams
        WHERE user_id = $1 AND page_number = $2 LIMIT 1`,
@@ -182,9 +207,6 @@ export async function POST(req: NextRequest) {
       examRows.filter((e) => e.passed).map((e) => Number(e.page_number))
     );
     const pageCleared = isPageSubmissionCleared(pageNumber, afterSubs, existingPassedExamSet);
-
-    let nextUnlockedPage = Number(learner.tikrar_current_page) || pageNumber;
-    let nextBlock = Number(learner.tikrar_current_block) || 1;
 
     if (pageCleared) {
       const scoreVal = grade === 'mumtaz' ? 98 : 90;
@@ -200,23 +222,14 @@ export async function POST(req: NextRequest) {
           [sub.user_id, pageNumber, scoreVal]
         );
       }
-
-      if (pageNumber < endPage && nextUnlockedPage <= pageNumber) {
-        nextUnlockedPage = pageNumber + 1;
-        nextBlock = 1;
-      }
-    } else if (nextStatus === 'passed' && sub.blocks_range === 'blok_1_2' && nextUnlockedPage === pageNumber) {
-      nextBlock = Math.max(nextBlock, 3);
     }
 
     await client.query(
       `UPDATE public.users
        SET points = COALESCE(points, 0) + $1,
-           tikrar_current_page = $2,
-           tikrar_current_block = $3,
            updated_at = now()
-       WHERE id = $4`,
-      [pointsAwarded, nextUnlockedPage, nextBlock, sub.user_id]
+       WHERE id = $2`,
+      [pointsAwarded, sub.user_id]
     );
 
     await client.query('COMMIT');
@@ -240,9 +253,7 @@ export async function POST(req: NextRequest) {
             `Alhamdulillah, ${doaBarakah}! Setoran Tasmi' Live Zoom *Halaman ${pageNumber} (${rangeHuman})* telah selesai disimak dan disetujui oleh *${musyrifahName}* dengan predikat *${gradeLabel}*` +
             (pointsAwarded > 0 ? ` (+${pointsAwarded} Poin)` : '') +
             `.\n\n` +
-            (pageCleared && pageNumber < endPage
-              ? `🔓 Kunci *Halaman ${pageNumber + 1}* kini telah terbuka!`
-              : `Silakan lanjutkan repetisi pada blok berikutnya di Halaman ${pageNumber}.`) +
+            `Hafalan ini kini tercatat *sudah diuji* di Itqan 30 Juz. Tetap istiqamah murajaah ya.` +
             (feedback ? `\n\n📝 *Catatan Musyrifah:* _"${feedback}"_` : '') +
             `\n\nBuka aplikasi HI Tikrar:\n🔗 https://hiaqli.pro/tikrar` +
             NO_REPLY_FOOTER;
@@ -288,7 +299,6 @@ export async function POST(req: NextRequest) {
         submission: updatedSubRows[0],
         pointsAwarded,
         pageCleared,
-        nextUnlockedPage,
         whatsappSent: waSent,
       },
       error: null,

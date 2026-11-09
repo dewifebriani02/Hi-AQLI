@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
+import { getJuzForPage, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
+import { countTotalClicks } from '@/lib/tikrar-steps';
 import {
-  computeTikrarStreakAndWeekly,
-  getJuzForPage,
-  toDateKeyWIB,
-} from '@/lib/tikrar-schedule-generator';
+  computeTotalCompletedSteps,
+  isPagePracticeAllowed,
+  loadActiveTarget,
+  loadClearedPages,
+  recordTikrarActivity,
+} from '@/lib/tikrar-server';
 
 export async function GET(req: NextRequest) {
   try {
@@ -64,6 +68,17 @@ export async function POST(req: NextRequest) {
     const metaCounts = typeof body.meta_counts === 'object' && body.meta_counts !== null ? body.meta_counts : {};
     const totalProgress = Math.max(0, Math.min(100, Math.floor(Number(body.total_progress) || 0)));
 
+    // Gerbang: wajib punya target & halaman harus sudah terbuka (lulus ujian halaman sebelumnya)
+    const target = await loadActiveTarget(client, ctx.userId);
+    const { cleared } = await loadClearedPages(client, ctx.userId);
+    const gate = isPagePracticeAllowed(pageNumber, target, cleared);
+    if (!gate.allowed) {
+      return NextResponse.json(
+        { error: { message: gate.reason, code: target ? 'PAGE_LOCKED' : 'TARGET_REQUIRED', unlockedPage: gate.unlockedPage ?? null } },
+        { status: 403 }
+      );
+    }
+
     await client.query('BEGIN');
 
     // Ambil record yang sudah ada di database untuk digabungkan secara monotonik (mencegah reset oleh device lain)
@@ -74,6 +89,10 @@ export async function POST(req: NextRequest) {
        FOR UPDATE`,
       [ctx.userId, pageNumber]
     );
+
+    const existingRow = existingProgressRows[0] || null;
+    const clicksBefore = countTotalClicks(existingRow);
+    const stepsBefore = await computeTotalCompletedSteps(client, ctx.userId, cleared);
 
     let finalPrepListen = prepListenCount;
     let finalPrepTrans = prepTranslationDone;
@@ -143,6 +162,15 @@ export async function POST(req: NextRequest) {
       ]
     );
 
+    const savedRow = progressRows[0];
+    const stepsAfter = await computeTotalCompletedSteps(client, ctx.userId, cleared, { page: pageNumber, row: savedRow });
+    const activity = await recordTikrarActivity(client, ctx.userId, {
+      clicksDelta: countTotalClicks(savedRow) - clicksBefore,
+      stepsBefore,
+      stepsAfter,
+      target,
+    });
+
     // Perbarui posisi halaman terakhir aktif peserta di public.users agar selalu sinkron
     await client.query(
       `UPDATE public.users
@@ -152,10 +180,12 @@ export async function POST(req: NextRequest) {
       [pageNumber, ctx.userId]
     );
 
-    // 2. Jika ada blok yang tuntas, otomatis rekam ke public.tikrar_daily_logs & schedule tanpa tombol manual
+    // 2. Blok yang BARU tuntas pada penyimpanan ini direkam ke public.tikrar_daily_logs (Laporan Blok Tuntas)
+    const newlyTuntasBlocks = tuntasBlocks.filter(
+      (b) => !(Number(existingRow?.blocks?.[b]?.combined?.count) >= 40)
+    );
     let dailyLogSaved = null;
-    let pointsAwarded = 0;
-    if (tuntasBlocks.length > 0) {
+    if (newlyTuntasBlocks.length > 0) {
       const logDateKey = toDateKeyWIB();
 
       // Ambil user halaqah_id
@@ -175,18 +205,7 @@ export async function POST(req: NextRequest) {
       const prevBlocks: number[] = Array.isArray(existingLogRows[0]?.blocks_completed)
         ? existingLogRows[0].blocks_completed.map((n: any) => Number(n))
         : [];
-      const mergedBlocks = Array.from(new Set<number>([...prevBlocks, ...tuntasBlocks])).sort((a, b) => a - b);
-
-      // Cek apakah user sudah mencatat aktivitas hari ini untuk poin
-      const { rows: priorDateRows } = await client.query(
-        `SELECT DISTINCT to_char(log_date, 'YYYY-MM-DD') AS log_date
-         FROM public.tikrar_daily_logs
-         WHERE user_id = $1 AND completed = true`,
-        [ctx.userId]
-      );
-      const priorDates = new Set<string>(priorDateRows.map((r) => r.log_date));
-      const alreadyLoggedToday = priorDates.has(logDateKey);
-      const beforeMetrics = computeTikrarStreakAndWeekly(priorDates, logDateKey);
+      const mergedBlocks = Array.from(new Set<number>([...prevBlocks, ...newlyTuntasBlocks])).sort((a, b) => a - b);
 
       const { rows: savedLogRows } = await client.query(
         `INSERT INTO public.tikrar_daily_logs (\n           user_id, halaqah_id, log_date, juz, page_number, blocks_completed,
@@ -213,27 +232,6 @@ export async function POST(req: NextRequest) {
          WHERE user_id = $1 AND page_number = $2 AND block_number = ANY($3::int[])`,
         [ctx.userId, pageNumber, mergedBlocks]
       );
-
-      // Hitung poin konsistensi
-      if (!alreadyLoggedToday) {
-        const updatedDates = new Set<string>(priorDates);
-        updatedDates.add(logDateKey);
-        const afterMetrics = computeTikrarStreakAndWeekly(updatedDates, logDateKey);
-
-        pointsAwarded += 20;
-        if (beforeMetrics.weeklyActiveDays < 5 && afterMetrics.weeklyActiveDays >= 5) {
-          pointsAwarded += 50;
-        }
-
-        await client.query(
-          `UPDATE public.users
-           SET points = COALESCE(points, 0) + $1,
-               tikrar_current_page = $2,
-               updated_at = now()
-           WHERE id = $3`,
-          [pointsAwarded, pageNumber, ctx.userId]
-        );
-      }
     }
 
     await client.query('COMMIT');
@@ -242,7 +240,8 @@ export async function POST(req: NextRequest) {
       data: {
         progress: progressRows[0],
         dailyLog: dailyLogSaved,
-        pointsAwarded,
+        pointsAwarded: activity.pointsAwarded,
+        activity,
       },
       error: null,
     });

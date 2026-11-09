@@ -73,6 +73,8 @@ import {
   TIKRAR_GRADE_LABELS,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
+import { QUIZ_PASS_PERCENT, QUIZ_QUESTION_COUNT } from '@/lib/tikrar-steps';
+import type { TikrarSummary } from '@/lib/tikrar-server';
 
 interface ReciterOption {
   id: number;
@@ -169,6 +171,7 @@ export interface TikrarSystemProps {
   onDataChanged?: () => void;
   onOpenScheduleTab?: () => void;
   onOpenGroupRecapTab?: () => void;
+  summary?: TikrarSummary | null;
 }
 
 function getSurahNameForPage(page: number): string {
@@ -201,6 +204,7 @@ export function TikrarSystem({
   onDataChanged,
   onOpenScheduleTab,
   onOpenGroupRecapTab,
+  summary = null,
 }: TikrarSystemProps = {}) {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
@@ -353,7 +357,33 @@ export function TikrarSystem({
   ]);
 
   const todayKey = useMemo(() => toDateKeyWIB(), []);
-  const { startPage, endPage } = useMemo(() => getJuzPageRange(juz), [juz]);
+  // Target aktif dari Target & Jadwal: menentukan rentang halaman & gerbang ujian 30 soal
+  const activeTarget = summary?.target || null;
+  const { startPage, endPage } = useMemo(
+    () =>
+      activeTarget
+        ? { startPage: activeTarget.startPage, endPage: activeTarget.endPage }
+        : getJuzPageRange(juz),
+    [activeTarget, juz]
+  );
+  const clearedPages = useMemo(
+    () => new Set<number>([...(summary?.quizPassedPages || []), ...(summary?.tasmiPassedPages || [])]),
+    [summary?.quizPassedPages, summary?.tasmiPassedPages]
+  );
+  const quizPassedPages = useMemo(() => new Set<number>(summary?.quizPassedPages || []), [summary?.quizPassedPages]);
+  const pageLockReason = useMemo(() => {
+    if (!user) return null;
+    if (!activeTarget) return 'Isi Target & Jadwal terlebih dahulu sebelum mulai berlatih.';
+    if (clearedPages.has(page)) return null;
+    if (page > activeTarget.unlockedPage) {
+      return `Halaman ${page} masih terkunci. Luluskan ujian ${QUIZ_QUESTION_COUNT} soal Halaman ${activeTarget.unlockedPage} terlebih dahulu.`;
+    }
+    return null;
+  }, [user, activeTarget, clearedPages, page]);
+  const lastQuizOnPage = useMemo(
+    () => (summary?.recentQuizzes || []).find((q) => q.page === page) || null,
+    [summary?.recentQuizzes, page]
+  );
 
   const passedExamPages = useMemo(() => {
     const set = new Set<number>();
@@ -387,6 +417,7 @@ export function TikrarSystem({
   }, [userSchedules, juz, todayKey]);
 
   const recommendedPage = useMemo(() => {
+    if (activeTarget) return activeTarget.unlockedPage;
     if (todayScheduledItems.length > 0) {
       const p = Number(todayScheduledItems[0].page_number);
       if (p >= startPage && p <= endPage) return p;
@@ -395,10 +426,10 @@ export function TikrarSystem({
       return userCurrentTarget;
     }
     return startPage;
-  }, [todayScheduledItems, userCurrentTarget, startPage, endPage]);
+  }, [activeTarget, todayScheduledItems, userCurrentTarget, startPage, endPage]);
   const isSelectedPageCleared = useMemo(
-    () => isPageSubmissionCleared(page, userSubmissions || [], passedExamPages),
-    [page, userSubmissions, passedExamPages]
+    () => clearedPages.has(page) || isPageSubmissionCleared(page, userSubmissions || [], passedExamPages),
+    [clearedPages, page, userSubmissions, passedExamPages]
   );
 
   const [blocks, setBlocks] = useState<any>({
@@ -460,8 +491,10 @@ export function TikrarSystem({
     if (user && (isUserDataLoading || !userData)) return;
 
     if (!hasInitializedPage && !targetPage) {
-      const activeJuz = paidJuz;
-      const range = getJuzPageRange(activeJuz);
+      const activeJuz = activeTarget?.juz ?? paidJuz;
+      const range = activeTarget
+        ? { startPage: activeTarget.startPage, endPage: activeTarget.endPage }
+        : getJuzPageRange(activeJuz);
 
       let initialPage: number | null = null;
 
@@ -472,10 +505,16 @@ export function TikrarSystem({
         if (
           savedPage >= range.startPage &&
           savedPage <= range.endPage &&
-          (!savedJuz || savedJuz === activeJuz)
+          (!savedJuz || savedJuz === activeJuz) &&
+          (!activeTarget || savedPage <= activeTarget.unlockedPage || clearedPages.has(savedPage))
         ) {
           initialPage = savedPage;
         }
+      }
+
+      // Prioritas 1b: halaman target yang sedang terbuka
+      if (!initialPage && activeTarget) {
+        initialPage = activeTarget.unlockedPage;
       }
 
       // Prioritas 2: Terakhir berhenti di database pengguna (tikrar_current_page)
@@ -527,6 +566,8 @@ export function TikrarSystem({
     hasInitializedPage,
     targetPage,
     todayScheduledItems,
+    activeTarget,
+    clearedPages,
   ]);
 
   // Simpan posisi halaman & juz terakhir ke localStorage setiap kali berganti halaman
@@ -575,6 +616,8 @@ export function TikrarSystem({
   }, [page]);
 
   const isHydratedRef = useRef(false);
+  const lockToastShownRef = useRef(false);
+  const lastStepsTodayRef = useRef<number>(-1);
 
   // Hydrate progress from DB + localStorage + merge DB completed blocks
   useEffect(() => {
@@ -750,7 +793,7 @@ export function TikrarSystem({
 
     // 2. Simpan ke database jika sudah melewati inisialisasi awal
     let timerDb: NodeJS.Timeout | null = null;
-    if (user?.id && isHydratedRef.current) {
+    if (user?.id && isHydratedRef.current && !pageLockReason) {
       timerDb = setTimeout(async () => {
         try {
           const res = await authFetch('/api/tikrar/progress', {
@@ -765,14 +808,33 @@ export function TikrarSystem({
               total_progress: Math.round(totalProgress),
             }),
           });
-          if (res.ok) {
-            const json = await res.json();
-            const awarded = Number(json.data?.pointsAwarded) || 0;
-            if (awarded > 0) {
+          const json = await res.json().catch(() => ({}));
+          if (res.status === 403) {
+            if (!lockToastShownRef.current) {
+              lockToastShownRef.current = true;
               toast({
-                title: 'Alhamdulillah, Poin Bertambah!',
-                description: `+${awarded} Poin telah ditambahkan ke akun Ukhti atas ketuntasan blok hafalan.`,
+                variant: 'destructive',
+                title: 'Halaman Terkunci',
+                description: json.error?.message || 'Progres tidak tersimpan karena halaman masih terkunci.',
               });
+            }
+          } else if (res.ok) {
+            const awarded = Number(json.data?.pointsAwarded) || 0;
+            const act = json.data?.activity;
+            if (act?.justMetTarget) {
+              toast({
+                title: 'Target Hari Ini Tercapai!',
+                description: `Masya Allah, ${act.stepsToday}/${act.dailyQuota} langkah tuntas hari ini.${awarded > 0 ? ` +${awarded} Poin.` : ''}`,
+              });
+            } else if (awarded > 0) {
+              toast({
+                title: 'Aktif Hari Ini Tercatat',
+                description: `+${awarded} Poin keaktifan. Lanjutkan sampai ${act?.dailyQuota || 1} langkah untuk mencapai target hari ini.`,
+              });
+            }
+            const stepsToday = Number(act?.stepsToday) || 0;
+            if (awarded > 0 || stepsToday !== lastStepsTodayRef.current) {
+              lastStepsTodayRef.current = stepsToday;
               await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
               onDataChanged?.();
             }
@@ -787,7 +849,7 @@ export function TikrarSystem({
       clearTimeout(timerLocal);
       if (timerDb) clearTimeout(timerDb);
     };
-  }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, juz, loading, user?.id, totalProgress]);
+  }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, juz, loading, user?.id, totalProgress, pageLockReason]);
 
   const blockVerses = useMemo<Record<1 | 2 | 3 | 4, Verse[]>>(() => {
     if (verses.length === 0) return { 1: [], 2: [], 3: [], 4: [] };
@@ -1226,15 +1288,16 @@ export function TikrarSystem({
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 self-start md:self-center">
               <div className="bg-white/10 backdrop-blur-sm px-3.5 py-2.5 rounded-2xl border border-white/15 flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-white/75">
-                  Target Pekan Ini
+                  Target Hari Ini
                 </span>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-sm font-black text-[#D4AF37]">
-                    {consistency.weeklyActiveDays}/{targetDaysPerWeek} Hari
+                    {summary?.today.stepsToday || 0}/{summary?.today.dailyQuota || activeTarget?.dailyQuota || 1} Langkah
+                    {summary?.today.targetMet ? ' ✓' : ''}
                   </span>
                   <span className="inline-flex items-center gap-0.5 text-xs font-extrabold text-orange-300">
                     <Flame className="w-3.5 h-3.5 fill-orange-400 text-orange-300" />
-                    {consistency.streak}h
+                    {summary?.streak ?? consistency.streak}h
                   </span>
                 </div>
               </div>
@@ -1263,7 +1326,7 @@ export function TikrarSystem({
           <select
             aria-label="Pilih Juz"
             value={juz}
-            disabled={loading}
+            disabled={loading || Boolean(activeTarget)}
             onChange={(e) => {
               const j = Number(e.target.value);
               setJuz(j);
@@ -1297,18 +1360,17 @@ export function TikrarSystem({
           >
             {Array.from({ length: endPage - startPage + 1 }, (_, idx) => {
               const pNum = startPage + idx;
-              const pCleared = isPageSubmissionCleared(
-                pNum,
-                userSubmissions || [],
-                passedExamPages
-              );
+              const pCleared = clearedPages.has(pNum);
+              const pLocked = Boolean(activeTarget) && !pCleared && pNum > (activeTarget?.unlockedPage || 0);
               return (
                 <option key={pNum} value={pNum}>
-                  {pCleared ? '★ ' : ''}Hal. {pNum}
+                  {pCleared ? '★ ' : pLocked ? '🔒 ' : ''}Hal. {pNum}
                   {pNum === recommendedPage
-                    ? ' (Target Aktif)'
+                    ? ' (Halaman Aktif)'
                     : pCleared
-                    ? ' (Lulus)'
+                    ? ' (Lulus Ujian)'
+                    : pLocked
+                    ? ' (Terkunci)'
                     : ''}
                 </option>
               );
@@ -1334,25 +1396,8 @@ export function TikrarSystem({
                 onClick={() => setPage(recommendedPage)}
                 className="h-9 text-xs font-extrabold text-[#800000]"
               >
-                Ke Target Aktif (Hal. {recommendedPage})
+                Ke Halaman Aktif (Hal. {recommendedPage})
               </Button>
-              {user && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isUpdatingTarget}
-                  onClick={handleSetAsActiveTarget}
-                  className="h-9 text-xs font-black border-[#D4AF37] text-stone-900 bg-amber-50 hover:bg-amber-100"
-                >
-                  {isUpdatingTarget ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5 text-[#D4AF37] mr-1" />
-                  )}
-                  Mulai dari Hal. {page}
-                </Button>
-              )}
             </div>
           )}
         </div>
@@ -1375,6 +1420,37 @@ export function TikrarSystem({
 
       
 
+      {pageLockReason && (
+        <div className="bg-stone-100 border-2 border-stone-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Lock className="w-5 h-5 text-stone-600 shrink-0" />
+            <p className="text-xs font-bold text-stone-800">{pageLockReason}</p>
+          </div>
+          {activeTarget ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setPage(activeTarget.unlockedPage)}
+              className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
+            >
+              Ke Halaman {activeTarget.unlockedPage}
+            </Button>
+          ) : (
+            onOpenScheduleTab && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={onOpenScheduleTab}
+                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
+              >
+                Isi Target &amp; Jadwal
+              </Button>
+            )
+          )}
+        </div>
+      )}
+
+      <div className={cn(pageLockReason && 'pointer-events-none opacity-50 select-none')} aria-disabled={Boolean(pageLockReason)}>
       <TooltipProvider delayDuration={0}>
         {/* Tahap 0: Persiapan (Simak 5x & Konfirmasi Pemahaman) */}
         <Card
@@ -1422,29 +1498,6 @@ export function TikrarSystem({
                       <span className="text-xs font-black text-[#800000] px-1.5" title="Bertambah otomatis setiap audio simak selesai satu halaman">
                         {prepListenCount} / 5
                       </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPrepListenCount((prev) => Math.min(5, prev + 1))}
-                        disabled={prepListenCount >= 5}
-                        className="h-6 px-1.5 rounded-full font-black text-[11px] text-[#800000] hover:bg-[#800000]/10 border border-[#800000]/30"
-                        title="Tambah 1 siklus simak manual"
-                      >
-                        +1
-                      </Button>
-                      {prepListenCount > 0 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPrepListenCount((prev) => Math.max(0, prev - 1))}
-                          className="h-6 px-1.5 rounded-full font-bold text-[10px] text-stone-400 hover:text-stone-700 hover:bg-stone-100"
-                          title="Kurangi 1 siklus"
-                        >
-                          -1
-                        </Button>
-                      )}
                     </div>
 
                     <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
@@ -2044,25 +2097,35 @@ export function TikrarSystem({
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in duration-500">
-                  <Card className="border-none bg-[#800000] text-white shadow-xl overflow-hidden group hover:scale-[1.02] transition-transform border-b-4 border-[#D4AF37]">
+                  <Card className="border-none bg-[#800000] text-white shadow-xl overflow-hidden border-b-4 border-[#D4AF37]">
                     <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                       <div className="space-y-2">
                         <div className="w-12 h-12 rounded-2xl bg-[#D4AF37] flex items-center justify-center mb-4">
                           <ClipboardCheck className="w-6 h-6 text-black" />
                         </div>
                         <h5 className="text-lg font-black leading-tight uppercase">
-                          Simulasi Ujian Mandiri
+                          {quizPassedPages.has(page)
+                            ? 'Ujian Halaman Lulus'
+                            : `Ujian Halaman ${QUIZ_QUESTION_COUNT} Soal`}
                         </h5>
                         <p className="text-[11px] opacity-80 leading-relaxed">
-                          Uji pemahaman terjemahan dan sambung ayat halaman ini.
+                          Sambung ayat, tebak nomor ayat, lengkapi potongan kata, urutan ayat &amp; arti.
+                          Lulus minimal {QUIZ_PASS_PERCENT}% untuk membuka halaman berikutnya.
                         </p>
+                        {lastQuizOnPage && (
+                          <p className="text-[11px] font-black text-[#D4AF37]">
+                            Hasil terakhir: {lastQuizOnPage.correct}/{lastQuizOnPage.total} ({lastQuizOnPage.score}%)
+                            {lastQuizOnPage.passed ? ' • LULUS' : ' • Belum lulus'}
+                          </p>
+                        )}
                       </div>
                       <Button
                         asChild
                         className="bg-[#D4AF37] text-black font-black w-full rounded-xl hover:bg-[#D4AF37]/90 h-12 shadow-lg"
                       >
-                        <Link href={`/tajweed/simulation?page=${page}`}>
-                          MULAI SIMULASI <ArrowRight className="ml-2 w-4 h-4" />
+                        <Link href={`/tikrar/ujian?page=${page}`}>
+                          {quizPassedPages.has(page) ? 'ULANGI UJIAN (LATIHAN)' : 'MULAI UJIAN'}{' '}
+                          <ArrowRight className="ml-2 w-4 h-4" />
                         </Link>
                       </Button>
                     </CardContent>
@@ -2072,7 +2135,7 @@ export function TikrarSystem({
                       'border-none shadow-xl overflow-hidden transition-all border-b-4',
                       activeExam
                         ? 'bg-[#800000] text-white border-white'
-                        : 'bg-white text-[#800000] hover:scale-[1.02] border-[#D4AF37] border-2'
+                        : 'bg-white text-[#800000] border-[#D4AF37] border-2'
                     )}
                   >
                     <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
@@ -2087,14 +2150,14 @@ export function TikrarSystem({
                         <h5 className="text-lg font-black leading-tight uppercase">
                           {activeExam
                             ? activeExam.passed
-                              ? 'Ujian Lulus'
-                              : 'Ujian Diajukan'
-                            : 'Ajukan Ujian Lisan'}
+                              ? "Tasmi' Lulus"
+                              : "Tasmi' Diajukan"
+                            : "Setoran Tasmi' ke Muallimah"}
                         </h5>
                         <p className="text-[11px] opacity-80 leading-relaxed">
                           {activeExam
                             ? `Status: ${activeExamStatusLabel}.`
-                            : 'Dapatkan sertifikasi Itqan melalui ujian lisan resmi.'}
+                            : "Tasmi' dinilai & diisi oleh muallimah. Tidak mengunci halaman berikutnya, tetapi tercatat sebagai \"sudah diuji\" di Itqan 30 Juz."}
                         </p>
                       </div>
                       {!activeExam && (
@@ -2107,8 +2170,7 @@ export function TikrarSystem({
                             <Loader2 className="animate-spin" />
                           ) : (
                             <>
-                              <Zap className="mr-2 w-4 h-4 fill-current text-[#D4AF37]" /> AJUKAN
-                              SEKARANG
+                              <Zap className="mr-2 w-4 h-4 fill-current text-[#D4AF37]" /> HUBUNGI MUALLIMAH
                             </>
                           )}
                         </Button>
@@ -2121,11 +2183,11 @@ export function TikrarSystem({
           )}
 
           {/* Navigasi Lanjut ke Halaman Berikutnya setelah Lulus */}
-          {isSelectedPageCleared && page < endPage && (
+          {clearedPages.has(page) && page < endPage && (
             <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm mt-4">
               <div className="flex items-center gap-2 text-sm font-black text-emerald-950">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>Alhamdulillah, Halaman {page} Telah Lulus!</span>
+                <span>Alhamdulillah, Halaman {page} Telah Lulus Ujian!</span>
               </div>
               <Button
                 type="button"
@@ -2139,6 +2201,7 @@ export function TikrarSystem({
 
         </div>
       </TooltipProvider>
+      </div>
     </div>
   );
 }
