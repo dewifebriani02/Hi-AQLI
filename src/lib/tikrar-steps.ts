@@ -67,7 +67,7 @@ const meta = (key: string, label: string, shortLabel: string): TikrarStepDef => 
 });
 
 export const TIKRAR_STEPS: readonly TikrarStepDef[] = ([
-  { index: 0, key: 'prep', label: 'Simak Audio 5x & Pahami Terjemahan', shortLabel: 'Simak', kind: 'prep', target: PREP_LISTEN_THRESHOLD },
+  { index: 0, key: 'prep', label: 'Simak Audio Blok A 5x', shortLabel: 'Simak', kind: 'prep', target: PREP_LISTEN_THRESHOLD },
   ...SUB_STEPS.slice(0, 6),
   meta('1_2', 'Gabung Blok A & B', 'Gab A-B'),
   ...SUB_STEPS.slice(6, 9),
@@ -94,8 +94,8 @@ export interface TikrarProgressLike {
 export function stepValue(step: TikrarStepDef, prog: TikrarProgressLike | null | undefined): number {
   if (!prog) return 0;
   if (step.kind === 'prep') {
-    const listened = Number(prog.prep_listen_count) || 0;
-    return listened >= PREP_LISTEN_THRESHOLD && prog.prep_translation_done ? step.target : Math.min(listened, step.target - 1);
+    // Simak per blok: langkah "Simak" = Blok A sudah disimak 5x (atau simak 5x satu halaman versi lama)
+    return Math.min(step.target, Math.max(getBlockListenCount(prog, 1), Number(prog.prep_listen_count) || 0));
   }
   if (step.kind === 'sub') {
     const [b, part] = step.key.split('.');
@@ -105,6 +105,21 @@ export function stepValue(step: TikrarStepDef, prog: TikrarProgressLike | null |
     return Number(prog.meta_counts?.[step.key.slice(5)]) || 0;
   }
   return 0;
+}
+
+/** Hitungan simak audio satu blok (0..5) */
+export function getBlockListenCount(prog: TikrarProgressLike | null | undefined, block: 1 | 2 | 3 | 4): number {
+  return Number(prog?.blocks?.[block]?.listen?.count) || 0;
+}
+
+/**
+ * Counter blok terbuka bila blok sudah disimak 5x. Blok yang sudah mulai dihafal (versi lama)
+ * dan Blok A yang sudah tuntas simak satu halaman versi lama tidak dikunci ulang.
+ */
+export function isBlockListenDone(prog: TikrarProgressLike | null | undefined, block: 1 | 2 | 3 | 4): boolean {
+  if (getBlockListenCount(prog, block) >= PREP_LISTEN_THRESHOLD) return true;
+  if ((Number(prog?.blocks?.[block]?.a?.count) || 0) > 0) return true;
+  return block === 1 && (Number(prog?.prep_listen_count) || 0) >= PREP_LISTEN_THRESHOLD;
 }
 
 /**
@@ -137,7 +152,7 @@ export function countTotalClicks(prog: TikrarProgressLike | null | undefined): n
   if (!prog) return 0;
   let total = Number(prog.prep_listen_count) || 0;
   for (const b of ['1', '2', '3', '4']) {
-    for (const part of ['a', 'b', 'combined']) {
+    for (const part of ['a', 'b', 'combined', 'listen']) {
       total += Number(prog.blocks?.[b]?.[part]?.count) || 0;
     }
   }

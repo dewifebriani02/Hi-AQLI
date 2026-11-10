@@ -81,6 +81,8 @@ import {
 import {
   canUndoStep,
   countCompletedSteps,
+  getBlockListenCount,
+  isBlockListenDone,
   generateTikrarStepSchedule,
   QUIZ_PASS_PERCENT,
   QUIZ_QUESTION_COUNT,
@@ -89,7 +91,14 @@ import {
   TIKRAR_STEPS,
 } from '@/lib/tikrar-steps';
 import type { TikrarSummary } from '@/lib/tikrar-server';
-import { isTikrarSoundEnabled, playTikrarCount, playTikrarTap, playTikrarUndo, setTikrarSoundEnabled } from '@/lib/tikrar-sound';
+import {
+  isTikrarSoundEnabled,
+  playTikrarCount,
+  playTikrarDone,
+  playTikrarTap,
+  playTikrarUndo,
+  setTikrarSoundEnabled,
+} from '@/lib/tikrar-sound';
 
 interface ReciterOption {
   id: number;
@@ -266,6 +275,10 @@ export function TikrarSystem({
   const [showReciterDialog, setShowReciterDialog] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Audio simak per blok: memutar ayat-ayat satu blok, 5 putaran, menambah hitungan simak blok
+  const [blockPlayback, setBlockPlayback] = useState<{ block: 1 | 2 | 3 | 4; verseIdx: number; loop: number } | null>(null);
+  const blockPlaybackRef = useRef<{ block: number } | null>(null);
 
   useEffect(() => {
     if (!activeVerseKey) return;
@@ -448,10 +461,10 @@ export function TikrarSystem({
   );
 
   const [blocks, setBlocks] = useState<any>({
-    1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-    2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-    3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-    4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+    1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
   });
 
   const [metaCounts, setMetaCounts] = useState<Record<string, number>>({
@@ -600,6 +613,8 @@ export function TikrarSystem({
     async function fetchVerses() {
       setLoading(true);
       if (audioRef.current) audioRef.current.pause();
+      blockPlaybackRef.current = null;
+      setBlockPlayback(null);
       setIsAutoPlaying(false);
       isAutoPlayingRef.current = false;
       setPlayingVerseIndex(null);
@@ -647,10 +662,10 @@ export function TikrarSystem({
       let nextPrepListen = 0;
       let nextPrepTrans = false;
       const nextBlocks: any = {
-        1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-        2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-        3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
-        4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 } },
+        1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+        2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+        3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+        4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
       };
       const nextMeta: Record<string, number> = {
         '1_2': 0,
@@ -674,6 +689,7 @@ export function TikrarSystem({
                 a: { count: Number(saved.blocks[b]?.a?.count) || 0 },
                 b: { count: Number(saved.blocks[b]?.b?.count) || 0 },
                 combined: { count: Number(saved.blocks[b]?.combined?.count) || 0 },
+                listen: { count: Number(saved.blocks[b]?.listen?.count) || 0 },
               };
             }
           }
@@ -702,6 +718,7 @@ export function TikrarSystem({
                       a: { count: Math.max(nextBlocks[b].a.count, Number(dbProg.blocks[b]?.a?.count) || 0) },
                       b: { count: Math.max(nextBlocks[b].b.count, Number(dbProg.blocks[b]?.b?.count) || 0) },
                       combined: { count: Math.max(nextBlocks[b].combined.count, Number(dbProg.blocks[b]?.combined?.count) || 0) },
+                      listen: { count: Math.max(nextBlocks[b].listen.count, Number(dbProg.blocks[b]?.listen?.count) || 0) },
                     };
                   }
                 }
@@ -728,6 +745,7 @@ export function TikrarSystem({
               a: { count: Math.max(nextBlocks[b].a.count, PASS_THRESHOLD) },
               b: { count: Math.max(nextBlocks[b].b.count, PASS_THRESHOLD) },
               combined: { count: Math.max(nextBlocks[b].combined.count, PASS_THRESHOLD) },
+              listen: { count: Math.max(nextBlocks[b].listen.count, PREP_LISTEN_THRESHOLD) },
             };
           }
         }
@@ -769,9 +787,8 @@ export function TikrarSystem({
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
-    if (prepListenCount >= PREP_LISTEN_THRESHOLD) totalDone += 5;
-    if (prepTranslationDone) totalDone += 5;
     [1, 2, 3, 4].forEach((id) => {
+      totalDone += (Math.min(blocks[id].listen?.count || 0, PREP_LISTEN_THRESHOLD) / PREP_LISTEN_THRESHOLD) * 2.5;
       totalDone += (Math.min(blocks[id].a.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
       totalDone += (Math.min(blocks[id].b.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
       totalDone += (Math.min(blocks[id].combined.count, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
@@ -987,155 +1004,68 @@ export function TikrarSystem({
     nextAudioUrlRef.current = null;
   };
 
-  const playMp3QuranSurah = useCallback(
-    (surahIndex: number, loopNum: number) => {
-      if (!isAutoPlayingRef.current || surahsOnPage.length === 0) return;
+  // Qari MP3Quran hanya punya audio per surah; simak per blok memakai audio per ayat
+  const blockReciterId = currentReciter.provider === 'mp3quran' ? 21203 : currentReciter.id;
+  const blockReciterIdRef = useRef(blockReciterId);
+  blockReciterIdRef.current = blockReciterId;
+  const blockVersesRef = useRef(blockVerses);
+  blockVersesRef.current = blockVerses;
 
-      if (surahIndex >= surahsOnPage.length) {
-        if (loopNum < 4) {
-          setPrepListenCount((p) => Math.min(5, p + 1));
-          setCurrentLoop(loopNum + 1);
-          playMp3QuranSurah(0, loopNum + 1);
-        } else {
-          setPrepListenCount(5);
-          stopAutoPlay();
-          toast({
-            title: 'Simak Tuntas',
-            description: `Alhamdulillah, persiapan 5x simak bersama ${currentReciter.name} selesai!`,
-          });
-        }
-        return;
-      }
+  const stopBlockAudio = () => {
+    blockPlaybackRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+    }
+    setBlockPlayback(null);
+  };
 
-      const surahId = surahsOnPage[surahIndex];
-      setCurrentSurahPlaying(surahId);
-      const serverBase = currentReciter.serverUrl || "https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/";
-      const audioUrl = `${serverBase}${String(surahId).padStart(3, '0')}.mp3`;
-
-      if (!audioRef.current) audioRef.current = new Audio();
-      const audio = audioRef.current;
-      audio.src = audioUrl;
-
-      const timingReadId = currentReciter.timingReadId;
-      if (timingReadId && !ayahTimingRef.current[surahId]) {
-        fetch(`https://www.mp3quran.net/api/v3/ayat_timing?surah=${surahId}&read=${timingReadId}`)
-          .then((r) => (r.ok ? r.json() : []))
-          .then((rows) => {
-            if (Array.isArray(rows)) ayahTimingRef.current[surahId] = rows;
-          })
-          .catch(() => {});
-      }
-
-      audio.ontimeupdate = () => {
-        setAudioCurrentTime(audio.currentTime);
-        setAudioDuration(audio.duration || 0);
-        const rows = ayahTimingRef.current[surahId];
-        if (!timingReadId || !rows?.length) return;
-        const ms = audio.currentTime * 1000;
-        let cur = 0;
-        for (const row of rows) {
-          if (row.start_time <= ms) cur = row.ayah;
-          else break;
-        }
-        const key = cur > 0 ? `${surahId}:${cur}` : null;
-        setActiveVerseKey((prev) => (prev === key ? prev : key));
-      };
-      audio.onloadedmetadata = () => {
-        setAudioDuration(audio.duration || 0);
-      };
-      audio.onended = () => {
-        playMp3QuranSurah(surahIndex + 1, loopNum);
-      };
-
-      audio.play().catch((err) => {
-        console.error('MP3Quran audio play error:', err);
-        stopAutoPlay();
-      });
-    },
-    [surahsOnPage, currentReciter, toast]
-  );
-
-  const playVerse = useCallback(
-    async (vIndex: number, loopNum: number) => {
-      if (!isAutoPlayingRef.current) return;
-
-      // Saat ayat melebihi jumlah ayat di halaman ini: 1 HALAMAN PENUH SELESAI
-      if (vIndex >= verses.length) {
-        setPlayingVerseIndex(null);
-        // Tambah siklus simak untuk halaman ini
-        setPrepListenCount((p) => Math.min(5, p + 1));
-
-        const nextLoop = loopNum + 1;
-        if (nextLoop < 5) {
-          setCurrentLoop(nextLoop);
-          toast({
-            title: `Putaran Simak Selesai (${nextLoop}/5)`,
-            description: `Alhamdulillah, putaran ke-${nextLoop} selesai. Mengulang Halaman ${page} (putaran ke-${nextLoop + 1})...`,
-          });
-          playVerse(0, nextLoop);
-        } else {
-          setPrepListenCount(5);
-          stopAutoPlay();
-          toast({
-            title: '5x Simak Selesai! 🎉',
-            description: `Alhamdulillah, 5x siklus simak Halaman ${page} tuntas bersama ${currentReciter.name}. Silakan konfirmasi pemahaman untuk membuka kunci Blok A!`,
-          });
-        }
-        return;
-      }
-
-      setPlayingVerseIndex(vIndex);
-      const fullUrl = nextAudioUrlRef.current || (await getAudioUrl(vIndex));
-
-      if (!fullUrl) {
-        stopAutoPlay();
-        return;
-      }
-
-      // Preload ayat berikutnya di halaman ini, atau preload ayat pertama jika putaran belum selesai
-      if (vIndex + 1 < verses.length) {
-        getAudioUrl(vIndex + 1).then((url) => {
-          nextAudioUrlRef.current = url;
-        });
-      } else if (loopNum < 4) {
-        getAudioUrl(0).then((url) => {
-          nextAudioUrlRef.current = url;
+  const playBlockVerse = async (block: 1 | 2 | 3 | 4, vIdx: number, loop: number) => {
+    if (blockPlaybackRef.current?.block !== block) return;
+    const list = blockVersesRef.current[block] || [];
+    if (vIdx >= list.length) {
+      // Satu putaran blok selesai
+      setBlocks((p: any) => ({
+        ...p,
+        [block]: {
+          ...p[block],
+          listen: { count: Math.min(PREP_LISTEN_THRESHOLD, (p[block]?.listen?.count || 0) + 1) },
+        },
+      }));
+      const next = loop + 1;
+      if (next < PREP_LISTEN_THRESHOLD) {
+        playBlockVerse(block, 0, next);
+      } else {
+        stopBlockAudio();
+        playTikrarDone();
+        toast({
+          title: `Simak Blok ${BLOCK_LETTERS[block]} Tuntas 5x`,
+          description: 'Counter blok ini sudah terbuka. Bismillah, mulai menghafal!',
         });
       }
-
-      if (!audioRef.current) audioRef.current = new Audio();
-      audioRef.current.src = fullUrl;
-      audioRef.current.onended = () => {
-        playVerse(vIndex + 1, loopNum);
-      };
-      audioRef.current.play().catch(() => stopAutoPlay());
-    },
-    [verses, selectedReciterId, currentReciter, page, toast]
-  );
-
-  const startAutoPlay = async () => {
-    if (!selectedReciterId) {
-      setShowReciterDialog(true);
       return;
     }
-    if (verses.length === 0) return;
-    setIsAutoPlaying(true);
-    isAutoPlayingRef.current = true;
-
-    // Jika sudah tuntas 5x atau pengguna klik "Ulangi Audio Simak", mulai dari putaran awal
-    let loopToStart = prepListenCount;
-    if (prepListenCount >= 5) {
-      setPrepListenCount(0);
-      loopToStart = 0;
+    setBlockPlayback({ block, verseIdx: vIdx, loop });
+    const url = await getAudioUrlByVerseKey(list[vIdx].verse_key, blockReciterIdRef.current);
+    if (blockPlaybackRef.current?.block !== block) return;
+    if (!url) {
+      stopBlockAudio();
+      toast({ variant: 'destructive', title: 'Audio gagal dimuat', description: 'Coba lagi atau pilih qari lain.' });
+      return;
     }
-    setCurrentLoop(loopToStart);
-    nextAudioUrlRef.current = null;
+    if (!audioRef.current) audioRef.current = new Audio();
+    const audio = audioRef.current;
+    audio.ontimeupdate = null;
+    audio.src = url;
+    audio.onended = () => playBlockVerse(block, vIdx + 1, loop);
+    audio.play().catch(() => stopBlockAudio());
+  };
 
-    if (isMp3Quran) {
-      playMp3QuranSurah(0, loopToStart);
-    } else {
-      playVerse(0, loopToStart);
-    }
+  const startBlockAudio = (block: 1 | 2 | 3 | 4) => {
+    stopBlockAudio();
+    const listened = blocks[block]?.listen?.count || 0;
+    blockPlaybackRef.current = { block };
+    playBlockVerse(block, 0, listened >= PREP_LISTEN_THRESHOLD ? 0 : listened);
   };
 
   const handleRequestExam = async () => {
@@ -1164,7 +1094,8 @@ export function TikrarSystem({
     }
   };
 
-  const isPrepTuntas = prepListenCount >= PREP_LISTEN_THRESHOLD && prepTranslationDone;
+  const isPrepTuntas = isBlockListenDone({ prep_listen_count: prepListenCount, blocks }, 1);
+  const blockListenDone = (b: 1 | 2 | 3 | 4) => isBlockListenDone({ prep_listen_count: prepListenCount, blocks }, b);
   const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
   const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= META_PASS_THRESHOLD;
 
@@ -1496,7 +1427,118 @@ export function TikrarSystem({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+            <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl h-9 gap-2 font-bold border-[#800000]/20 text-[#800000]"
+                >
+                  <Mic2 className="w-4 h-4" />
+                  <span className="max-w-[140px] truncate text-xs">
+                    {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
+                  </span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-[#800000] font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Pilih qari untuk audio simak per blok.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-2 py-3 max-h-[60vh] overflow-y-auto pr-1">
+                  {RECITERS.filter((r) => r.provider !== 'mp3quran').map((r) => {
+                    const isSelected = selectedReciterId === r.id;
+                    return (
+                      <Button
+                        key={r.id}
+                        variant={isSelected ? 'default' : 'outline'}
+                        onClick={() => {
+                          stopBlockAudio();
+                          setSelectedReciterId(r.id);
+                          localStorage.setItem('aqli_reciter_id', r.id.toString());
+                          setShowReciterDialog(false);
+                        }}
+                        className={cn(
+                          'justify-between items-center p-3 h-auto font-bold rounded-2xl text-left transition-all',
+                          isSelected
+                            ? 'bg-[#800000] text-white hover:bg-[#6b0000] hover:text-white border-[#800000]'
+                            : 'border-muted-foreground/20 hover:border-[#800000]/30 hover:bg-[#800000]/5'
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              'w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
+                              isSelected
+                                ? 'bg-white text-[#800000]'
+                                : 'bg-[#800000]/10 text-[#800000]'
+                            )}
+                          >
+                            {isSelected ? <Check className="w-4 h-4" /> : <Mic2 className="w-3.5 h-3.5" />}
+                          </div>
+                          <div>
+                            <div className="font-bold leading-tight text-sm">{r.name}</div>
+                            {r.provider === 'mp3quran' ? (
+                              <div
+                                className={cn(
+                                  'text-[10px] font-normal mt-0.5',
+                                  isSelected ? 'text-amber-200' : 'text-amber-800'
+                                )}
+                              >
+                                {r.description || "Streaming CDN Resmi MP3Quran"}
+                              </div>
+                            ) : r.provider === 'everyayah' ? (
+                              <div
+                                className={cn(
+                                  'text-[10px] font-normal mt-0.5',
+                                  isSelected ? 'text-white/80' : 'text-emerald-700'
+                                )}
+                              >
+                                {r.description || "Audio Per Ayat (EveryAyah • Sinkron Otomatis)"}
+                              </div>
+                            ) : (
+                              <div
+                                className={cn(
+                                  'text-[10px] font-normal mt-0.5',
+                                  isSelected ? 'text-white/80' : 'text-muted-foreground'
+                                )}
+                              >
+                                Audio Per Ayat (Quran.com)
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {r.provider === 'mp3quran' && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[9px] uppercase px-2 py-0.5 font-bold',
+                              isSelected ? 'border-white/40 text-white' : 'border-amber-500/50 text-amber-800'
+                            )}
+                          >
+                            CDN Resmi
+                          </Badge>
+                        )}
+                        {r.provider === 'everyayah' && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[9px] uppercase px-2 py-0.5 font-bold',
+                              isSelected ? 'border-white/40 text-white' : 'border-emerald-500/50 text-emerald-800'
+                            )}
+                          >
+                            Sinkron
+                          </Badge>
+                        )}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </DialogContent>
+            </Dialog>
           <Button
             type="button"
             variant="outline"
@@ -1613,483 +1655,6 @@ export function TikrarSystem({
 
       <div className={cn(pageLockReason && 'pointer-events-none opacity-50 select-none')} aria-disabled={Boolean(pageLockReason)}>
       <TooltipProvider delayDuration={0}>
-        {/* Tahap 0: Persiapan (Simak 5x & Konfirmasi Pemahaman) */}
-        <Card
-          id="step-prep"
-          className={cn(
-            'border-2 transition-all shadow-md overflow-hidden',
-            isPrepTuntas ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-[#800000]/30 bg-white',
-            stepInfo('prep')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2'
-          )}
-        >
-          <div className="bg-[#800000] py-2 px-4 border-b flex justify-between items-center">
-            <span className="text-[10px] font-black uppercase tracking-widest text-white">
-              Tahap 0: Persiapan (Prasyarat Buka Blok A)
-            </span>
-            {isPrepTuntas && (
-              <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4">
-                SIAP MENGHAFAL
-              </Badge>
-            )}
-          </div>
-          <CardContent className="p-6 space-y-6">
-            <StepTag info={stepInfo('prep')} />
-            <div className="flex flex-col gap-6">
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        'w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
-                        prepListenCount >= 5
-                          ? 'bg-[#D4AF37] text-black'
-                          : 'bg-white text-[#800000] border-2 border-[#800000]/20'
-                      )}
-                    >
-                      <Headphones className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-[#800000]">
-                        Simak Murattal &amp; Tadabbur
-                      </h4>
-                      <p className="text-[10px] text-muted-foreground uppercase">
-                        Wajib 5x siklus simak sebelum membuka kunci Blok A
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-full border border-[#800000]/20 shadow-sm">
-                      <span className="text-xs font-black text-[#800000] px-1.5" title="Bertambah otomatis setiap audio simak selesai satu halaman">
-                        {prepListenCount} / 5
-                      </span>
-                    </div>
-
-                    <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="rounded-xl h-9 gap-2 font-bold border-[#800000]/20 text-[#800000]"
-                        >
-                          <Mic2 className="w-4 h-4" />
-                          <span className="max-w-[140px] truncate text-xs">
-                            {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
-                          </span>
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="text-[#800000] font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
-                          <DialogDescription className="text-xs text-muted-foreground">
-                            Pilih qari favorit Ukhti untuk mendengarkan audio persiapan simak Tikrar.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-2 py-3 max-h-[60vh] overflow-y-auto pr-1">
-                          {RECITERS.map((r) => {
-                            const isSelected = selectedReciterId === r.id;
-                            return (
-                              <Button
-                                key={r.id}
-                                variant={isSelected ? 'default' : 'outline'}
-                                onClick={() => {
-                                  if (isAutoPlaying) stopAutoPlay();
-                                  setSelectedReciterId(r.id);
-                                  localStorage.setItem('aqli_reciter_id', r.id.toString());
-                                  setShowReciterDialog(false);
-                                }}
-                                className={cn(
-                                  'justify-between items-center p-3 h-auto font-bold rounded-2xl text-left transition-all',
-                                  isSelected
-                                    ? 'bg-[#800000] text-white hover:bg-[#6b0000] hover:text-white border-[#800000]'
-                                    : 'border-muted-foreground/20 hover:border-[#800000]/30 hover:bg-[#800000]/5'
-                                )}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div
-                                    className={cn(
-                                      'w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
-                                      isSelected
-                                        ? 'bg-white text-[#800000]'
-                                        : 'bg-[#800000]/10 text-[#800000]'
-                                    )}
-                                  >
-                                    {isSelected ? <Check className="w-4 h-4" /> : <Mic2 className="w-3.5 h-3.5" />}
-                                  </div>
-                                  <div>
-                                    <div className="font-bold leading-tight text-sm">{r.name}</div>
-                                    {r.provider === 'mp3quran' ? (
-                                      <div
-                                        className={cn(
-                                          'text-[10px] font-normal mt-0.5',
-                                          isSelected ? 'text-amber-200' : 'text-amber-800'
-                                        )}
-                                      >
-                                        {r.description || "Streaming CDN Resmi MP3Quran"}
-                                      </div>
-                                    ) : r.provider === 'everyayah' ? (
-                                      <div
-                                        className={cn(
-                                          'text-[10px] font-normal mt-0.5',
-                                          isSelected ? 'text-white/80' : 'text-emerald-700'
-                                        )}
-                                      >
-                                        {r.description || "Audio Per Ayat (EveryAyah • Sinkron Otomatis)"}
-                                      </div>
-                                    ) : (
-                                      <div
-                                        className={cn(
-                                          'text-[10px] font-normal mt-0.5',
-                                          isSelected ? 'text-white/80' : 'text-muted-foreground'
-                                        )}
-                                      >
-                                        Audio Per Ayat (Quran.com)
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                {r.provider === 'mp3quran' && (
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      'text-[9px] uppercase px-2 py-0.5 font-bold',
-                                      isSelected ? 'border-white/40 text-white' : 'border-amber-500/50 text-amber-800'
-                                    )}
-                                  >
-                                    CDN Resmi
-                                  </Badge>
-                                )}
-                                {r.provider === 'everyayah' && (
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      'text-[9px] uppercase px-2 py-0.5 font-bold',
-                                      isSelected ? 'border-white/40 text-white' : 'border-emerald-500/50 text-emerald-800'
-                                    )}
-                                  >
-                                    Sinkron
-                                  </Badge>
-                                )}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay}
-                  className={cn(
-                    'w-full h-14 font-black rounded-2xl border-2 transition-all gap-3 shadow-md uppercase tracking-widest',
-                    isAutoPlaying
-                      ? 'bg-[#800000] text-white border-white'
-                      : prepListenCount >= 5
-                      ? 'bg-[#D4AF37] border-[#D4AF37] text-black'
-                      : 'bg-[#800000] text-white border-transparent'
-                  )}
-                >
-                  {isAutoPlaying ? (
-                    <>
-                      <Pause className="w-6 h-6 fill-current" /> Berhenti
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-6 h-6 fill-current" />{' '}
-                      {prepListenCount >= 5 ? 'Ulangi Audio Simak' : 'Putar Audio Simak Otomatis'}
-                    </>
-                  )}
-                </Button>
-
-                {/* Card Player Khusus Qari MP3Quran CDN (Al-Qarafi, Ibrahim Al-Akhdar) */}
-                {isAutoPlaying && isMp3Quran && (
-                  <div className="mt-6 p-6 sm:p-8 bg-gradient-to-br from-white via-[#800000]/5 to-amber-50/40 rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
-                    <div className="flex flex-col gap-6">
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D4AF37]/20 pb-4">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-[#800000] text-white text-[9px] font-black uppercase tracking-[0.2em]">
-                            Siklus {currentLoop + 1} / 5
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className="text-[9px] font-black border-amber-600/30 text-amber-900 bg-amber-500/10 flex items-center gap-1"
-                          >
-                            <Radio className="w-3 h-3 text-amber-700 animate-pulse" /> MP3Quran CDN Resmi
-                          </Badge>
-                        </div>
-                        <span className="text-[11px] font-bold text-[#800000]">
-                          Halaman {page} • Juz {juz}
-                        </span>
-                      </div>
-
-                      <div className="text-center space-y-1">
-                        <h3 className="text-lg sm:text-xl font-black text-[#800000]">
-                          {currentReciter.name}
-                        </h3>
-                        <p className="text-xs sm:text-sm font-semibold text-black/70">
-                          {currentSurahPlaying ? (
-                            <>
-                              Surah {QURAN_CHAPTERS.find((c) => c.id === currentSurahPlaying)?.name_simple || `Surah ${currentSurahPlaying}`}
-                              {' '}
-                              <span className="font-arabic font-bold text-[#800000]">
-                                ({QURAN_CHAPTERS.find((c) => c.id === currentSurahPlaying)?.name_arabic})
-                              </span>
-                            </>
-                          ) : (
-                            'Memuat tilawah surah...'
-                          )}
-                        </p>
-                      </div>
-
-                      {/* Seekbar and Timeline */}
-                      <div className="space-y-2 bg-white/80 p-4 rounded-2xl border border-amber-200/50 shadow-inner">
-                        <div className="w-full h-2 rounded-full bg-amber-100 overflow-hidden">
-                          <div
-                            className="h-full bg-[#800000] transition-all"
-                            style={{ width: `${audioDuration ? Math.min(100, (audioCurrentTime / audioDuration) * 100) : 0}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] sm:text-xs font-mono font-bold text-black/60">
-                          <span>{formatTime(audioCurrentTime)}</span>
-                          <span className="text-[#800000] font-sans font-bold text-[9px] uppercase tracking-wider">
-                            {currentReciter.description || "Streaming CDN Resmi MP3Quran"}
-                          </span>
-                          <span>{formatTime(audioDuration)}</span>
-                        </div>
-                      </div>
-
-                      {/* Control buttons */}
-                      <div className="flex flex-wrap items-center justify-center gap-3">
-                        <Button
-                          type="button"
-                          onClick={stopAutoPlay}
-                          className="rounded-xl h-10 px-5 gap-2 font-bold bg-[#800000] text-white hover:bg-[#6b0000]"
-                        >
-                          <Pause className="w-4 h-4" /> Pause Audio
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {isAutoPlaying && isMp3Quran && verses.length > 0 && (
-                  <div className="mt-4 p-5 sm:p-6 bg-white rounded-[2rem] border-2 border-[#D4AF37]/60 shadow-md space-y-5">
-                    <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest">
-                      <Languages className="w-3.5 h-3.5" /> Arti Per Kata &amp; Terjemahan Halaman {page}
-                    </div>
-                    {!currentReciter.timingReadId && verses.length > 1 && (
-                      <div className="flex items-center justify-between gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={manualVerseIdx <= 0}
-                          onClick={() => setManualVerseIdx((i) => Math.max(0, i - 1))}
-                          className="h-8 text-xs font-bold border-[#800000]/20 text-[#800000]"
-                        >
-                          ‹ Sebelumnya
-                        </Button>
-                        <span className="text-[10px] font-black text-[#800000]">
-                          Ayat {Math.min(manualVerseIdx, verses.length - 1) + 1} / {verses.length}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={manualVerseIdx >= verses.length - 1}
-                          onClick={() => setManualVerseIdx((i) => Math.min(verses.length - 1, i + 1))}
-                          className="h-8 text-xs font-bold border-[#800000]/20 text-[#800000]"
-                        >
-                          Berikutnya ›
-                        </Button>
-                      </div>
-                    )}
-                    {currentReciter.timingReadId && !verses.some((v) => v.verse_key === activeVerseKey) && (
-                      <p className="text-xs text-center text-muted-foreground">
-                        {activeVerseKey
-                          ? `Audio sedang membacakan ayat ${activeVerseKey}. Terjemahan tampil saat bacaan mencapai ayat di halaman ini.`
-                          : 'Menunggu bacaan ayat...'}
-                      </p>
-                    )}
-                    {(currentReciter.timingReadId
-                      ? verses.filter((v) => v.verse_key === activeVerseKey)
-                      : [verses[Math.min(manualVerseIdx, verses.length - 1)]]
-                    ).map((verse) => (
-                      <div
-                        key={verse.verse_key}
-                        id={`verse-card-${verse.verse_key.replace(':', '-')}`}
-                        className={cn(
-                          'space-y-3 border-t border-muted-foreground/10 pt-4 first:border-t-0 first:pt-0 rounded-2xl transition-colors',
-                          activeVerseKey === verse.verse_key && 'bg-amber-100/70 ring-2 ring-[#D4AF37] p-3'
-                        )}
-                      >
-                        <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000]">
-                          Ayat {verse.verse_key}
-                        </Badge>
-                        <div className="flex flex-wrap justify-start gap-2" dir="rtl">
-                          {verse.words
-                            .filter((w) => w.text_uthmani)
-                            .map((word, wIdx) => (
-                              <div
-                                key={wIdx}
-                                dir="ltr"
-                                className="bg-muted border-2 border-muted-foreground/10 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]"
-                              >
-                                <span className="font-arabic text-black text-sm font-bold leading-none">
-                                  {word.text_uthmani}
-                                </span>
-                                <span className="text-[9px] font-medium text-[#800000] leading-none">
-                                  {word.translation?.text || '-'}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                        <div className="bg-[#800000]/5 p-4 rounded-2xl border-l-4 border-[#800000]">
-                          <p className="text-sm text-black leading-relaxed italic font-medium">
-                            &ldquo;
-                            {verse.translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...'}
-                            &rdquo;
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {!isMp3Quran && playingVerseIndex !== null && verses[playingVerseIndex] && (
-                  <div className="mt-6 p-6 sm:p-8 bg-white rounded-[2.5rem] border-2 border-[#D4AF37] shadow-xl animate-in fade-in zoom-in duration-500 overflow-hidden">
-                    <div className="flex flex-col gap-6">
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D4AF37]/20 pb-4">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-[#800000] text-white text-[9px] font-black uppercase tracking-[0.2em]">
-                            Siklus {currentLoop + 1} / 5
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className="text-[9px] font-black border-[#800000]/20 text-[#800000]"
-                          >
-                            Ayat {verses[playingVerseIndex].verse_key}
-                          </Badge>
-                          {currentReciter.provider === 'everyayah' && (
-                            <Badge
-                              variant="outline"
-                              className="text-[9px] font-bold text-emerald-800 border-emerald-500/30 bg-emerald-500/10"
-                            >
-                              EveryAyah Sinkron
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-[11px] font-bold text-[#800000]">
-                          {currentReciter.name}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap justify-start gap-x-2 gap-y-4" dir="rtl">
-                        {verses[playingVerseIndex].words.map((word, wIdx) => (
-                          <span
-                            key={wIdx}
-                            style={{ fontSize: `${fontSize * 1.4}px`, lineHeight: 1.6 }}
-                            className="font-arabic text-[#800000] font-bold"
-                          >
-                            {word.text_uthmani}
-                          </span>
-                        ))}
-                      </div>
-                      <Separator className="bg-[#D4AF37]/20" />
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-[#D4AF37] uppercase tracking-widest mb-2">
-                          <Languages className="w-3 h-3" /> Arti Per Kata
-                        </div>
-                        <div className="flex flex-wrap justify-start gap-2" dir="rtl">
-                          {verses[playingVerseIndex].words
-                            .filter((w) => w.text_uthmani)
-                            .map((word, wIdx) => (
-                              <div
-                                key={wIdx}
-                                dir="ltr"
-                                className="bg-muted border-2 border-muted-foreground/10 rounded-xl px-3 py-1.5 flex flex-col items-center gap-0.5 shadow-sm min-w-[60px]"
-                              >
-                                <span className="font-arabic text-black text-sm font-bold leading-none">
-                                  {word.text_uthmani}
-                                </span>
-                                <span className="text-[9px] font-medium text-[#800000] leading-none text-center">
-                                  {word.translation?.text || '-'}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                      <div className="bg-[#800000]/5 p-5 rounded-3xl border-l-4 border-[#800000]">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-[#800000] uppercase tracking-widest mb-2">
-                          <BookOpen className="w-3 h-3" /> Terjemahan Kalimat
-                        </div>
-                        <p className="text-sm sm:text-base text-black leading-relaxed italic font-medium">
-                          &ldquo;
-                          {verses[playingVerseIndex].translations?.[0]?.text.replace(
-                            /<[^>]*>?/gm,
-                            ''
-                          ) || 'Memuat terjemahan...'}
-                          &rdquo;
-                        </p>
-                      </div>
-
-                      {/* Control buttons */}
-                      <div className="flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-muted-foreground/10">
-                        <Button
-                          type="button"
-                          onClick={stopAutoPlay}
-                          className="rounded-xl h-10 px-5 gap-2 font-bold bg-[#800000] text-white hover:bg-[#6b0000]"
-                        >
-                          <Pause className="w-4 h-4" /> Pause Audio
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-muted p-5 rounded-3xl border-2 border-dashed border-muted-foreground/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      'w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0',
-                      prepTranslationDone
-                        ? 'bg-[#D4AF37] text-black'
-                        : 'bg-white text-[#800000] border-2 border-[#800000]/20'
-                    )}
-                  >
-                    <Languages className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-[#800000]">
-                      Konfirmasi Pemahaman Terjemahan
-                    </h4>
-                    <p className="text-[10px] text-muted-foreground uppercase">
-                      Klik kata Arab pada mushaf di bawah untuk melihat arti per kata
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant={prepTranslationDone ? 'default' : 'outline'}
-                  disabled={prepListenCount < PREP_LISTEN_THRESHOLD && !prepTranslationDone}
-                  onClick={() => setPrepTranslationDone(!prepTranslationDone)}
-                  className={cn(
-                    'h-11 px-6 disabled:opacity-50 disabled:cursor-not-allowed font-black rounded-xl border-2 uppercase tracking-widest text-[10px] shrink-0',
-                    prepTranslationDone
-                      ? 'bg-[#D4AF37] hover:bg-[#D4AF37]/90 border-transparent text-black'
-                      : 'border-[#800000] text-[#800000] hover:bg-[#800000]/5'
-                  )}
-                >
-                  {prepTranslationDone
-                    ? 'SUDAH DIPAHAMI ✓'
-                    : prepListenCount < PREP_LISTEN_THRESHOLD
-                    ? `SELESAIKAN ${PREP_LISTEN_THRESHOLD}X SIMAK DULU`
-                    : 'KONFIRMASI PEMAHAMAN'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Alur Kunci Berurutan: Blok A..D & Sub-Repetisi Gabungan (Opsi B) */}
         <div className="flex flex-col gap-8 mt-8">
           <div className="bg-[#800000] text-white p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 shadow-lg">
@@ -2098,7 +1663,7 @@ export function TikrarSystem({
               <span className="uppercase tracking-wider text-[#D4AF37] block mb-0.5">
                 Metode Itqan HI Tikrar (Otomatis Tersimpan)
               </span>
-              Setiap Blok dibagi menjadi 2 bagian teks berwarna:{' '}
+              Setiap blok <strong>disimak 5x dulu</strong> (audio per blok + arti per kata &amp; kalimat), lalu dibagi menjadi 2 bagian teks berwarna:{' '}
               <strong>Bagian 1 (Maroon) 40x</strong> → <strong>Bagian 2 (Hitam) 40x</strong>{' '}
               → <strong>Gabung Blok 40x</strong>, lalu dilanjutkan{' '}
               <strong>Sub-Repetisi Gabungan Antar Blok (10x)</strong> secara berurutan. Setiap klik
@@ -2112,6 +1677,12 @@ export function TikrarSystem({
               id={1}
               canUndo={(part: string) => canUndoKey('1.' + part)}
               stepInfoFor={(part: string) => stepInfo('1.' + part)}
+              listenCount={getBlockListenCount({ blocks }, 1)}
+              listenDone={blockListenDone(1)}
+              listenStepInfo={stepInfo('prep')}
+              playback={blockPlayback?.block === 1 ? blockPlayback : null}
+              onPlayAudio={() => startBlockAudio(1)}
+              onStopAudio={stopBlockAudio}
               onUndo={(part: string) => markUndo('1.' + part)}
               page={page}
               state={blocks[1]}
@@ -2119,7 +1690,7 @@ export function TikrarSystem({
               rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[1])}
               isSavedInDb={completedBlocksAllTime.has(1)}
               isScheduledToday={scheduledBlockSetOnPage.has(1)}
-              isLocked={!isPrepTuntas}
+              isLocked={false}
               onIncrement={setBlocks}
               fontSize={fontSize}
               letter="A"
@@ -2128,6 +1699,12 @@ export function TikrarSystem({
               id={2}
               canUndo={(part: string) => canUndoKey('2.' + part)}
               stepInfoFor={(part: string) => stepInfo('2.' + part)}
+              listenCount={getBlockListenCount({ blocks }, 2)}
+              listenDone={blockListenDone(2)}
+              listenStepInfo={null}
+              playback={blockPlayback?.block === 2 ? blockPlayback : null}
+              onPlayAudio={() => startBlockAudio(2)}
+              onStopAudio={stopBlockAudio}
               onUndo={(part: string) => markUndo('2.' + part)}
               page={page}
               state={blocks[2]}
@@ -2155,6 +1732,12 @@ export function TikrarSystem({
             id={3}
               canUndo={(part: string) => canUndoKey('3.' + part)}
               stepInfoFor={(part: string) => stepInfo('3.' + part)}
+              listenCount={getBlockListenCount({ blocks }, 3)}
+              listenDone={blockListenDone(3)}
+              listenStepInfo={null}
+              playback={blockPlayback?.block === 3 ? blockPlayback : null}
+              onPlayAudio={() => startBlockAudio(3)}
+              onStopAudio={stopBlockAudio}
               onUndo={(part: string) => markUndo('3.' + part)}
             page={page}
             state={blocks[3]}
@@ -2191,6 +1774,12 @@ export function TikrarSystem({
             id={4}
               canUndo={(part: string) => canUndoKey('4.' + part)}
               stepInfoFor={(part: string) => stepInfo('4.' + part)}
+              listenCount={getBlockListenCount({ blocks }, 4)}
+              listenDone={blockListenDone(4)}
+              listenStepInfo={null}
+              playback={blockPlayback?.block === 4 ? blockPlayback : null}
+              onPlayAudio={() => startBlockAudio(4)}
+              onStopAudio={stopBlockAudio}
               onUndo={(part: string) => markUndo('4.' + part)}
             page={page}
             state={blocks[4]}
@@ -2382,8 +1971,35 @@ function MaqtaCard({
   canUndo,
   onUndo,
   stepInfoFor,
+  listenCount = 0,
+  listenDone = true,
+  listenStepInfo,
+  playback,
+  onPlayAudio,
+  onStopAudio,
 }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
+  const isPlaying = Boolean(playback);
+  const playingVerse = isPlaying ? verses[playback.verseIdx] : null;
+  const playingVerseKey = playingVerse?.verse_key || null;
+  // Counter blok terbuka setelah blok disimak 5x
+  const countersLocked = isLocked || !listenDone;
+
+  // Arti kata: tetap tampil 2,5 detik setelah kursor pergi; ketuk untuk menahan/menutup
+  const [openWord, setOpenWord] = useState<string | null>(null);
+  const [pinnedWord, setPinnedWord] = useState<string | null>(null);
+  const closeWordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (closeWordTimer.current) clearTimeout(closeWordTimer.current);
+  }, []);
+  const showWord = (wid: string) => {
+    if (closeWordTimer.current) clearTimeout(closeWordTimer.current);
+    setOpenWord(wid);
+  };
+  const hideWordLater = (wid: string) => {
+    if (closeWordTimer.current) clearTimeout(closeWordTimer.current);
+    closeWordTimer.current = setTimeout(() => setOpenWord((cur) => (cur === wid ? null : cur)), 2500);
+  };
   const tokens = useMemo(() => {
     const items: any[] = [];
     verses.forEach((v: any) => {
@@ -2417,15 +2033,26 @@ function MaqtaCard({
 
   const renderToken = (token: any, colorClass: string) => {
     if (token.type === 'word') {
+      const wid = `${token.verse_key}-${token.word_idx}`;
       return (
-        <Tooltip key={`${token.verse_key}-${token.word_idx}`}>
+        <Tooltip key={wid} open={openWord === wid || pinnedWord === wid} onOpenChange={() => {}}>
           <TooltipTrigger asChild>
             <span
               tabIndex={0}
+              onMouseEnter={() => showWord(wid)}
+              onMouseLeave={() => hideWordLater(wid)}
+              onFocus={() => showWord(wid)}
+              onBlur={() => hideWordLater(wid)}
+              onClick={() => {
+                setPinnedWord((cur) => (cur === wid ? null : wid));
+                showWord(wid);
+              }}
               style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
               className={cn(
                 'font-arabic cursor-help hover:bg-[#D4AF37]/20 rounded px-0.5 outline-none transition-colors',
-                colorClass
+                colorClass,
+                token.verse_key === playingVerseKey && 'bg-amber-200/70',
+                pinnedWord === wid && 'bg-[#D4AF37]/30'
               )}
             >
               {token.data.text_uthmani}
@@ -2449,7 +2076,7 @@ function MaqtaCard({
     );
   };
 
-  const isCombinedLocked = isLocked || state.b.count < PASS_THRESHOLD;
+  const isCombinedLocked = countersLocked || state.b.count < PASS_THRESHOLD;
 
   return (
     <Card
@@ -2490,6 +2117,47 @@ function MaqtaCard({
       </div>
 
       <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">
+        {/* Simak audio per blok (wajib 5x sebelum counter blok terbuka) */}
+        <div
+          id={listenStepInfo ? 'step-prep' : undefined}
+          className={cn(
+            'rounded-2xl border-2 p-3 space-y-2',
+            listenDone ? 'border-[#D4AF37]/50 bg-[#D4AF37]/5' : 'border-[#800000]/20 bg-white',
+            listenStepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2'
+          )}
+        >
+          <Button
+            type="button"
+            disabled={isLocked}
+            onClick={isPlaying ? onStopAudio : onPlayAudio}
+            className={cn(
+              'w-full h-12 rounded-xl font-black text-xs uppercase tracking-wider gap-2 touch-manipulation',
+              isPlaying
+                ? 'bg-[#800000] text-white hover:bg-[#800000]/90'
+                : listenDone
+                ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90'
+                : 'bg-[#800000] text-white hover:bg-[#800000]/90'
+            )}
+          >
+            {isPlaying ? (
+              <>
+                <Pause className="w-5 h-5 fill-current" /> Jeda • Putaran {playback.loop + 1}/5
+              </>
+            ) : (
+              <>
+                <Headphones className="w-5 h-5" />
+                {listenDone ? `Ulangi Simak Blok ${letter}` : `Simak Blok ${letter} (${listenCount}/5)`}
+              </>
+            )}
+          </Button>
+          {!listenDone && !isLocked && (
+            <p className="text-[10px] font-bold text-center text-stone-600">
+              Simak audio blok ini 5x dulu untuk membuka counter.
+            </p>
+          )}
+          <StepTag info={listenStepInfo} className="justify-center" />
+        </div>
+
         <div
           className="bg-white p-4 rounded-xl border-2 border-[#800000]/5 flex-1 overflow-y-auto no-scrollbar"
           dir="rtl"
@@ -2500,11 +2168,42 @@ function MaqtaCard({
           </div>
         </div>
 
+        {/* Arti per kata & terjemahan kalimat ayat yang sedang diputar */}
+        {playingVerse && (
+          <div className="rounded-2xl border-2 border-[#D4AF37]/60 bg-amber-50/60 p-3 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000] bg-white">
+                Ayat {playingVerse.verse_key}
+              </Badge>
+              <span className="text-[10px] font-black text-[#800000]">Putaran {playback.loop + 1}/5</span>
+            </div>
+            <div className="flex flex-wrap justify-start gap-1.5" dir="rtl">
+              {playingVerse.words
+                .filter((w: any) => w.text_uthmani && w.char_type_name !== 'end')
+                .map((word: any, wIdx: number) => (
+                  <div
+                    key={wIdx}
+                    dir="ltr"
+                    className="bg-white border border-[#800000]/10 rounded-xl px-2.5 py-1 flex flex-col items-center gap-0.5 min-w-[52px]"
+                  >
+                    <span className="font-arabic text-black text-sm font-bold leading-none">{word.text_uthmani}</span>
+                    <span className="text-[9px] font-medium text-[#800000] leading-none text-center">
+                      {word.translation?.text || '-'}
+                    </span>
+                  </div>
+                ))}
+            </div>
+            <p className="text-sm text-black leading-relaxed italic font-medium bg-white rounded-xl p-3 border-l-4 border-[#800000]">
+              &ldquo;{playingVerse.translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...'}&rdquo;
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox
             label={`${page}${letter}-1 (Maroon)`}
             count={state.a.count}
-            isLocked={isLocked}
+            isLocked={countersLocked}
             onInc={(delta = 1) => addSubCount('a', delta)}
             canUndo={canUndo?.('a')}
             stepInfo={stepInfoFor?.('a')}
@@ -2514,7 +2213,7 @@ function MaqtaCard({
           <CounterBox
             label={`${page}${letter}-2 (Hitam)`}
             count={state.b.count}
-            isLocked={isLocked || state.a.count < PASS_THRESHOLD}
+            isLocked={countersLocked || state.a.count < PASS_THRESHOLD}
             onInc={(delta = 1) => addSubCount('b', delta)}
             canUndo={canUndo?.('b')}
             stepInfo={stepInfoFor?.('b')}

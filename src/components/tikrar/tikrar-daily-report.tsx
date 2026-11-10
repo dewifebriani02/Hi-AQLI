@@ -20,7 +20,7 @@ import {
   TIKRAR_GRADE_LABELS,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
-import { TIKRAR_STEPS } from '@/lib/tikrar-steps';
+import { getBlockListenCount, isBlockListenDone, TIKRAR_STEPS } from '@/lib/tikrar-steps';
 import type { TikrarSummary } from '@/lib/tikrar-server';
 import {
   Activity,
@@ -305,6 +305,7 @@ export function TikrarDailyReport({
       const bObj = typeof p.blocks === 'object' && p.blocks !== null ? p.blocks : {};
       for (const b of [1, 2, 3, 4] as const) {
         if (
+          Number(bObj[b]?.listen?.count) > 0 ||
           Number(bObj[b]?.a?.count) > 0 ||
           Number(bObj[b]?.b?.count) > 0 ||
           Number(bObj[b]?.combined?.count) > 0
@@ -333,8 +334,6 @@ export function TikrarDailyReport({
       typeof matched.meta_counts === 'object' && matched.meta_counts !== null
         ? matched.meta_counts
         : {};
-    const prepListen = Number(matched.prep_listen_count) || 0;
-    const prepTrans = Boolean(matched.prep_translation_done);
 
     let tuntasCount = 0;
     let activeSub: {
@@ -378,6 +377,18 @@ export function TikrarDailyReport({
           isStarted: true,
         };
         break;
+      } else if (aCount === 0 && !isBlockListenDone(matched, b)) {
+        // Simak audio blok 5x sebelum counter blok terbuka
+        const listen = getBlockListenCount(matched, b);
+        activeSub = {
+          stageName: `Simak Audio Blok ${letter} 5x`,
+          subBlockLetter: `Simak Blok ${letter}`,
+          currentCount: listen,
+          targetCount: 5,
+          badgeText: `Simak ${letter}`,
+          isStarted: listen > 0,
+        };
+        break;
       } else if (aCount > 0) {
         activeSub = {
           stageName: `Blok ${letter}-1 (Sub-blok Bagian Pertama)`,
@@ -398,28 +409,6 @@ export function TikrarDailyReport({
           isStarted: false,
         };
         break;
-      }
-    }
-
-    if (!activeSub || (!activeSub.isStarted && tuntasCount === 0)) {
-      if (prepListen < 5) {
-        activeSub = {
-          stageName: 'Tahap Persiapan: Simak Murattal 5x',
-          subBlockLetter: 'Simak Murattal',
-          currentCount: prepListen,
-          targetCount: 5,
-          badgeText: 'Persiapan',
-          isStarted: prepListen > 0,
-        };
-      } else if (!prepTrans) {
-        activeSub = {
-          stageName: 'Tahap Persiapan: Baca & Pahami Terjemahan',
-          subBlockLetter: 'Terjemahan',
-          currentCount: 0,
-          targetCount: 1,
-          badgeText: 'Persiapan',
-          isStarted: true,
-        };
       }
     }
 
