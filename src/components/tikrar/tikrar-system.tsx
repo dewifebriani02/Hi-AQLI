@@ -752,22 +752,24 @@ export function TikrarSystem({
             };
           }
         }
-        if (
-          completedBlocksAllTime.has(3) ||
-          completedBlocksAllTime.has(4) ||
-          (completedBlocksAllTime.has(1) && completedBlocksAllTime.has(2))
-        ) {
-          nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
-        }
-        if (completedBlocksAllTime.has(4)) {
-          nextMeta['2_3'] = Math.max(nextMeta['2_3'], META_PASS_THRESHOLD);
-          nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], META_PASS_THRESHOLD);
-        }
-        if (isSelectedPageCleared) {
-          Object.keys(nextMeta).forEach((k) => {
-            nextMeta[k] = Math.max(nextMeta[k], META_PASS_THRESHOLD);
-          });
-        }
+      }
+
+      // Gabungan antar blok wajib diklik 10x sendiri. Hanya diisi otomatis bila halaman sudah lulus,
+      // atau (data lama) blok sesudahnya sudah mulai dikerjakan agar blok itu tidak terkunci lagi.
+      const blockStarted = (b: 1 | 2 | 3 | 4) =>
+        nextBlocks[b].a.count > 0 || nextBlocks[b].b.count > 0 || nextBlocks[b].combined.count > 0;
+      if (blockStarted(3)) {
+        nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
+      }
+      if (blockStarted(4)) {
+        nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
+        nextMeta['2_3'] = Math.max(nextMeta['2_3'], META_PASS_THRESHOLD);
+        nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], META_PASS_THRESHOLD);
+      }
+      if (isSelectedPageCleared) {
+        Object.keys(nextMeta).forEach((k) => {
+          nextMeta[k] = Math.max(nextMeta[k], META_PASS_THRESHOLD);
+        });
       }
 
       if (!isCancelled) {
