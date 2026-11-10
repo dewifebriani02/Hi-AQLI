@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/db/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { getJuzForPage, getJuzPageRange } from '@/lib/tikrar-schedule-generator';
-import { History, Loader2, Trash2 } from 'lucide-react';
+import { ClipboardCheck, History, Loader2, Trash2 } from 'lucide-react';
 
 type PriorStatus = 'tested_external' | 'untested';
 interface PriorRow {
   page: number;
   status: PriorStatus;
   testedBy: string | null;
+  quizPassed?: boolean;
 }
 
 const STATUS_LABEL: Record<PriorStatus, string> = {
@@ -23,11 +25,24 @@ const STATUS_LABEL: Record<PriorStatus, string> = {
 
 /** Ringkas halaman berurutan dengan status & penguji yang sama menjadi rentang */
 function groupRanges(rows: PriorRow[]) {
-  const out: { start: number; end: number; status: PriorStatus; testedBy: string | null }[] = [];
+  const out: {
+    start: number;
+    end: number;
+    status: PriorStatus;
+    testedBy: string | null;
+    quizPassedCount: number;
+    nextQuizPage: number | null;
+  }[] = [];
   for (const r of rows) {
     const last = out[out.length - 1];
-    if (last && last.end + 1 === r.page && last.status === r.status && last.testedBy === r.testedBy) last.end = r.page;
-    else out.push({ start: r.page, end: r.page, status: r.status, testedBy: r.testedBy });
+    if (last && last.end + 1 === r.page && last.status === r.status && last.testedBy === r.testedBy) {
+      last.end = r.page;
+    } else {
+      out.push({ start: r.page, end: r.page, status: r.status, testedBy: r.testedBy, quizPassedCount: 0, nextQuizPage: null });
+    }
+    const cur = out[out.length - 1];
+    if (r.quizPassed) cur.quizPassedCount += 1;
+    else if (cur.nextQuizPage === null) cur.nextQuizPage = r.page;
   }
   return out;
 }
@@ -124,7 +139,7 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
         <p className="text-xs text-muted-foreground leading-relaxed">
           Isi hafalan yang sudah Ukhti miliki sebelum memakai HI AQLI. Hafalan ini tampil di Itqan 30 Juz dengan warna
           lebih muda, tidak menambah poin/streak, dan tidak membuka kunci halaman. Muallimah AQLI dapat mengujinya lewat
-          setoran Tasmi&apos;.
+          setoran Tasmi&apos;. Ujian 30 soal bisa langsung diambil per halaman; lulus ujian + lulus tasmi&apos; = mutqin.
         </p>
       </div>
 
@@ -250,7 +265,22 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
                   {STATUS_LABEL[r.status]}
                   {r.testedBy ? ` • ${r.testedBy}` : ''} • {r.end - r.start + 1} hal.
                 </p>
+                <p className={cn('text-[11px] font-bold', r.nextQuizPage ? 'text-stone-600' : 'text-emerald-700')}>
+                  Lulus ujian 30 soal: {r.quizPassedCount}/{r.end - r.start + 1} hal.
+                </p>
               </div>
+              <div className="flex items-center gap-1 shrink-0">
+              {r.nextQuizPage && (
+                <Button
+                  asChild
+                  size="sm"
+                  className="h-10 bg-[#800000] hover:bg-[#800000]/90 text-white text-[11px] font-black rounded-xl"
+                >
+                  <Link href={`/tikrar/ujian?page=${r.nextQuizPage}`}>
+                    <ClipboardCheck className="w-3.5 h-3.5 mr-1" /> Ujian Hal. {r.nextQuizPage}
+                  </Link>
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -262,6 +292,7 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
+              </div>
             </div>
           ))
         )}

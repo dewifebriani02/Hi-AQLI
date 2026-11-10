@@ -18,10 +18,22 @@ function parseRange(body: any): { start: number; end: number } | null {
 
 async function listRows(userId: string) {
   const { rows } = await pool.query(
-    `SELECT page_number, status, tested_by FROM public.tikrar_prior_hafalan WHERE user_id = $1 ORDER BY page_number`,
+    `SELECT h.page_number, h.status, h.tested_by,
+            EXISTS (
+              SELECT 1 FROM public.tikrar_page_quizzes q
+              WHERE q.user_id = h.user_id AND q.page_number = h.page_number AND q.passed
+            ) AS quiz_passed
+     FROM public.tikrar_prior_hafalan h
+     WHERE h.user_id = $1
+     ORDER BY h.page_number`,
     [userId]
   );
-  return rows.map((r) => ({ page: Number(r.page_number), status: r.status, testedBy: r.tested_by || null }));
+  return rows.map((r) => ({
+    page: Number(r.page_number),
+    status: r.status,
+    testedBy: r.tested_by || null,
+    quizPassed: Boolean(r.quiz_passed),
+  }));
 }
 
 /** Hafalan lama semua thalibah + halaman yang sudah lulus tasmi' di AQLI (untuk panel muallimah/admin) */
