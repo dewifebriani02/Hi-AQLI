@@ -150,7 +150,8 @@ export function getActiveStep(
 /** Total klik counter pada satu baris progres (untuk menghitung klik harian) */
 export function countTotalClicks(prog: TikrarProgressLike | null | undefined): number {
   if (!prog) return 0;
-  let total = Number(prog.prep_listen_count) || 0;
+  // Simak dicatat per blok (blocks[n].listen); kolom simak satu halaman versi lama tidak dihitung
+  let total = 0;
   for (const b of ['1', '2', '3', '4']) {
     for (const part of ['a', 'b', 'combined', 'listen']) {
       total += Number(prog.blocks?.[b]?.[part]?.count) || 0;
@@ -173,6 +174,9 @@ export function canUndoStep(key: string, prog: TikrarProgressLike | null | undef
 /**
  * Perkiraan sisa klik untuk menuntaskan `stepsNeeded` langkah berikutnya, mulai dari langkah aktif
  * di halaman `fromPage` (berlanjut ke halaman berikutnya sampai `endPage`). Ujian dihitung 0 klik.
+ * Simak 5x Blok B/C/D yang belum tuntas ikut dihitung saat langkah pertama blok itu (B-1/C-1/D-1)
+ * termasuk dalam langkah yang dihitung (simak Blok A sudah menjadi langkah "Simak").
+ * Dipakai bersama oleh bar "Target hari ini" (tab Mushaf) dan kartu heatmap grup.
  */
 export function estimateClicksForNextSteps(
   progressByPage: Record<number, TikrarProgressLike | undefined>,
@@ -191,6 +195,10 @@ export function estimateClicksForNextSteps(
       if (step.kind !== 'quiz') {
         const current = Math.min(stepValue(step, prog), step.target);
         clicks += Math.max(0, step.target - current);
+      }
+      const block = Number(step.key.split('.')[0]) as 1 | 2 | 3 | 4;
+      if (step.kind === 'sub' && step.key.endsWith('.a') && block > 1 && !isBlockListenDone(prog, block)) {
+        clicks += Math.max(0, PREP_LISTEN_THRESHOLD - getBlockListenCount(prog, block));
       }
       remaining -= 1;
     }
