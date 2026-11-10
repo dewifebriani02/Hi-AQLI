@@ -16,6 +16,7 @@ import { useUserPermissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { TikrarGroupHeatmap } from '@/components/tikrar/tikrar-group-heatmap';
 import { TikrarManualSetoranForm } from '@/components/tikrar/tikrar-manual-setoran-form';
+import { TikrarPriorHafalanAdmin } from '@/components/tikrar/tikrar-prior-hafalan-admin';
 import { getJuzPageRange, TIKRAR_GRADE_LABELS, TIKRAR_WA_SALUTATION } from '@/lib/tikrar-schedule-generator';
 import {
   AlertCircle,
@@ -77,6 +78,8 @@ export default function AdminTikrarPage() {
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<string>('submissions');
+  // Dari tab Hafalan Lama: isi otomatis form setoran tasmi' manual
+  const [setoranPrefill, setSetoranPrefill] = useState<{ userId: string; page: number; name: string; nonce: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sessionFilter, setSessionFilter] = useState<string>('all');
   const [subStatusFilter, setSubStatusFilter] = useState<
@@ -690,10 +693,16 @@ export default function AdminTikrarPage() {
             )}
           </TabsTrigger>
           <TabsTrigger
+            value="prior"
+            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
+          >
+            Hafalan Lama
+          </TabsTrigger>
+          <TabsTrigger
             value="heatmap"
             className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
           >
-            Heatmap Grup 30 Hari
+            Heatmap Grup
           </TabsTrigger>
           <TabsTrigger
             value="reminders"
@@ -711,10 +720,13 @@ export default function AdminTikrarPage() {
 
         {/* TAB 1: Verifikasi Kelas Setoran Live Zoom (Fase 5) */}
         <TabsContent value="submissions" className="space-y-4 outline-none">
-          <TikrarManualSetoranForm
-            participants={tikrarParticipants}
-            onSaved={() => Promise.all([refreshSubmissions(), refreshUsers(), refreshExams()])}
-          />
+          <div id="manual-setoran-form">
+            <TikrarManualSetoranForm
+              participants={tikrarParticipants}
+              prefill={setoranPrefill}
+              onSaved={() => Promise.all([refreshSubmissions(), refreshUsers(), refreshExams()])}
+            />
+          </div>
           {placeholderZoomCount > 0 && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
               <div className="flex items-start gap-2.5 text-amber-950">
@@ -1280,6 +1292,20 @@ export default function AdminTikrarPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Hafalan sebelum bergabung per thalibah: halaman yang perlu diuji tasmi' */}
+        <TabsContent value="prior" className="outline-none">
+          <TikrarPriorHafalanAdmin
+            onTestPage={(userId, page, name) => {
+              setSetoranPrefill({ userId, page, name, nonce: Date.now() });
+              setActiveTab('submissions');
+              setTimeout(
+                () => document.getElementById('manual-setoran-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                150
+              );
+            }}
+          />
         </TabsContent>
 
         {/* TAB 3: Heatmap Keaktifan Grup 30 Hari */}

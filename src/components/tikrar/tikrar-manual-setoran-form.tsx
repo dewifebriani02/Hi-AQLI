@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,9 +22,12 @@ interface Participant {
 export function TikrarManualSetoranForm({
   participants,
   onSaved,
+  prefill,
 }: {
   participants: Participant[];
   onSaved?: () => void;
+  /** Isi otomatis dari panel hafalan lama (nonce berubah setiap tombol "Uji Tasmi'" ditekan) */
+  prefill?: { userId: string; page: number; name: string; nonce: number } | null;
 }) {
   const { toast } = useToast();
   const [query, setQuery] = useState('');
@@ -36,6 +39,14 @@ export function TikrarManualSetoranForm({
   const [feedback, setFeedback] = useState('');
   const [sendWa, setSendWa] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!prefill) return;
+    setQuery(prefill.name);
+    setUserId(prefill.userId);
+    setPage(String(prefill.page));
+    setRange('blok_1_4');
+  }, [prefill]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

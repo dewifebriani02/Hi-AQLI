@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
+import { isStaff } from '@/lib/db-policy';
+import { buildClearedPageSet } from '@/lib/tikrar-steps';
 
 /**
  * Hafalan sebelum bergabung, diisi sendiri oleh thalibah per rentang halaman.
@@ -22,11 +24,62 @@ async function listRows(userId: string) {
   return rows.map((r) => ({ page: Number(r.page_number), status: r.status, testedBy: r.tested_by || null }));
 }
 
+/** Hafalan lama semua thalibah + halaman yang sudah lulus tasmi' di AQLI (untuk panel muallimah/admin) */
+async function listAllForStaff() {
+  const { rows } = await pool.query(
+    `SELECT h.user_id, h.page_number, h.status, h.tested_by,
+            COALESCE(NULLIF(u.full_name, ''), u.username, 'Thalibah') AS name, u.whatsapp, u.phone
+     FROM public.tikrar_prior_hafalan h
+     JOIN public.users u ON u.id = h.user_id
+     ORDER BY name, h.page_number`
+  );
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
+  if (userIds.length === 0) return [];
+  const [{ rows: subRows }, { rows: examRows }] = await Promise.all([
+    pool.query(
+      `SELECT user_id, page_number, blocks_range, status FROM public.tikrar_submissions
+       WHERE user_id = ANY($1::uuid[]) AND status = 'passed'`,
+      [userIds]
+    ),
+    pool.query(
+      `SELECT DISTINCT user_id, page_number FROM public.page_exams WHERE user_id = ANY($1::uuid[]) AND passed = true`,
+      [userIds]
+    ),
+  ]);
+  const byUser = new Map<string, any>();
+  for (const r of rows) {
+    if (!byUser.has(r.user_id)) {
+      byUser.set(r.user_id, {
+        userId: r.user_id,
+        name: r.name,
+        hasWhatsapp: Boolean(r.whatsapp || r.phone),
+        pages: [] as { page: number; status: string; testedBy: string | null }[],
+      });
+    }
+    byUser.get(r.user_id).pages.push({ page: Number(r.page_number), status: r.status, testedBy: r.tested_by || null });
+  }
+  return Array.from(byUser.values()).map((u) => {
+    const subs = subRows.filter((s) => s.user_id === u.userId);
+    const exams = new Set<number>(examRows.filter((e) => e.user_id === u.userId).map((e) => Number(e.page_number)));
+    const aqliTested = buildClearedPageSet([], subs, exams);
+    return {
+      ...u,
+      pages: u.pages.map((p: any) => ({ ...p, aqliTested: aqliTested.has(p.page) })),
+    };
+  });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getAuthContext(req);
     if (!ctx.userId) {
       return NextResponse.json({ error: { message: 'Silakan login terlebih dahulu.' } }, { status: 401 });
+    }
+    if (new URL(req.url).searchParams.get('scope') === 'all') {
+      if (!isStaff(ctx)) {
+        return NextResponse.json({ error: { message: 'Hanya muallimah/admin.' } }, { status: 403 });
+      }
+      return NextResponse.json({ data: await listAllForStaff(), error: null });
     }
     return NextResponse.json({ data: await listRows(ctx.userId), error: null });
   } catch (err: any) {
