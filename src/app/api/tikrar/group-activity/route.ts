@@ -19,10 +19,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: { message: 'Silakan login terlebih dahulu.' } }, { status: 401 });
     }
 
-    const halaqah = new URL(req.url).searchParams.get('halaqah') || 'all';
+    const searchParams = new URL(req.url).searchParams;
+    const halaqah = searchParams.get('halaqah') || 'all';
     const halaqahId = UUID_RE.test(halaqah) ? halaqah : null;
     const todayKey = toDateKeyWIB();
-    const fromKey = addCalendarDays(todayKey, -29);
+    // Bulan kalender yang ditampilkan (YYYY-MM), default bulan berjalan (WIB); tidak boleh melewati bulan ini
+    const currentMonth = todayKey.slice(0, 7);
+    const rawMonth = searchParams.get('month') || '';
+    const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth) && rawMonth <= currentMonth ? rawMonth : currentMonth;
+    const fromKey = `${month}-01`;
+    const [mYear, mMonth] = month.split('-').map(Number);
+    const daysInMonth = new Date(Date.UTC(mYear, mMonth, 0)).getUTCDate();
+    const toKey = `${month}-${String(daysInMonth).padStart(2, '0')}`;
     const streakFromKey = addCalendarDays(todayKey, -400);
 
     // Anggota: siapa pun yang pernah memakai Tikrar (target, aktivitas, laporan lama, progres, setoran), ditambah diri sendiri
@@ -148,7 +156,7 @@ export async function GET(req: NextRequest) {
     }
 
     const dateKeys: string[] = [];
-    for (let i = 29; i >= 0; i--) dateKeys.push(addCalendarDays(todayKey, -i));
+    for (let i = 0; i < daysInMonth; i++) dateKeys.push(addCalendarDays(fromKey, i));
 
     // Senin pekan berjalan
     const dow = new Date(`${todayKey}T12:00:00Z`).getUTCDay();
@@ -196,7 +204,10 @@ export async function GET(req: NextRequest) {
         return b.points - a.points;
       });
 
-    return NextResponse.json({ data: { todayKey, dateKeys, members: rows }, error: null });
+    return NextResponse.json({
+      data: { todayKey, month, currentMonth, fromKey, toKey, dateKeys, members: rows },
+      error: null,
+    });
   } catch (err: any) {
     console.error('[TIKRAR_GROUP_ACTIVITY_ERROR]:', err);
     return NextResponse.json({ error: { message: err?.message || 'Gagal memuat keaktifan grup.' } }, { status: 500 });

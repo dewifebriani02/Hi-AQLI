@@ -15,7 +15,7 @@ import { authFetch } from '@/db/client';
 import { cn } from '@/lib/utils';
 import { getDayOfWeekFromKey, parseDateKeyUTC } from '@/lib/tikrar-schedule-generator';
 import { HEATMAP_COLORS, type HeatmapLevel } from '@/lib/tikrar-steps';
-import { Flame, Loader2, Star, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flame, Loader2, Star, Users } from 'lucide-react';
 
 export interface TikrarGroupHeatmapProps {
   refreshSignal?: number;
@@ -62,7 +62,21 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [todayKey, setTodayKey] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-
+  // Bulan kalender yang ditampilkan (YYYY-MM); kosong = bulan berjalan
+  const [month, setMonth] = useState<string>('');
+  const [currentMonth, setCurrentMonth] = useState<string>('');
+  const shownMonth = month || currentMonth;
+  const shiftMonth = (delta: number) => {
+    if (!shownMonth) return;
+    const [y, m] = shownMonth.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+    const next = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    if (currentMonth && next > currentMonth) return;
+    setMonth(next);
+  };
+  const monthLabel = shownMonth
+    ? new Date(`${shownMonth}-01T12:00:00Z`).toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    : '';
 
   const load = useCallback(async () => {
     if (!user?.id) {
@@ -71,18 +85,21 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
     }
     setIsLoading(true);
     try {
-      const res = await authFetch(`/api/tikrar/group-activity?halaqah=${encodeURIComponent(selectedHalaqahFilter)}`);
+      const res = await authFetch(
+        `/api/tikrar/group-activity?halaqah=${encodeURIComponent(selectedHalaqahFilter)}${month ? `&month=${month}` : ''}`
+      );
       const json = await res.json();
       if (res.ok) {
         setMembers(json.data?.members || []);
         setTodayKey(json.data?.todayKey || '');
+        setCurrentMonth(json.data?.currentMonth || '');
       }
     } catch (e) {
       console.warn('Gagal memuat keaktifan grup:', e);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, selectedHalaqahFilter]);
+  }, [user?.id, selectedHalaqahFilter, month]);
 
   useEffect(() => {
     load();
@@ -96,7 +113,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-[#800000]" />
               <h3 className="text-base sm:text-lg font-black text-stone-900">
-                Pantau Progres Anggota Grup (30 Hari Terakhir)
+                Pantau Progres Anggota Grup
               </h3>
             </div>
             <p className="text-xs text-stone-500">
@@ -115,6 +132,27 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
               </span>
             ))}
           </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5">
+          <button
+            type="button"
+            onClick={() => shiftMonth(-1)}
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-[#800000] hover:bg-white"
+            aria-label="Bulan sebelumnya"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-sm font-black text-stone-900 capitalize">{monthLabel || 'Memuat…'}</span>
+          <button
+            type="button"
+            onClick={() => shiftMonth(1)}
+            disabled={!shownMonth || shownMonth >= currentMonth}
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-[#800000] hover:bg-white disabled:opacity-30"
+            aria-label="Bulan berikutnya"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap border-b border-stone-100 pb-3">
@@ -191,11 +229,13 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                     </div>
 
                     <div className="py-1">
-                      {/* 30 hari: 2 baris x 15 di HP, 1 baris di layar lebar, tanpa perlu digeser */}
-                      <div className="grid gap-[3px] [grid-template-columns:repeat(15,14px)] lg:[grid-template-columns:repeat(30,14px)]">
+                      {/* Tanggal 1 s/d akhir bulan: 2 baris x 16 di HP, 1 baris di layar lebar */}
+                      <div className="grid gap-x-[3px] gap-y-1 [grid-template-columns:repeat(16,15px)] lg:[grid-template-columns:repeat(31,15px)]">
                         {member.days.map((d) => {
                           const dow = getDayOfWeekFromKey(d.date);
                           const isToday = d.date === todayKey;
+                          const isFuture = Boolean(todayKey) && d.date > todayKey;
+                          const isWeekend = dow === 0 || dow === 6;
                           const statusText =
                             d.level === 'tasmi'
                               ? `★ Lulus Tasmi' ${d.tasmi?.join(', ')}`
@@ -205,6 +245,8 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                               ? d.clicks > 0
                                 ? `Aktif ${d.clicks} klik • ${d.steps} langkah (target belum tercapai)`
                                 : 'Aktif (laporan blok tuntas)'
+                              : isFuture
+                              ? 'Belum terjadi'
                               : 'Tidak ada klik counter';
                           const prettyDate = parseDateKeyUTC(d.date).toLocaleDateString('id-ID', {
                             day: 'numeric',
@@ -214,15 +256,24 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                           return (
                             <Tooltip key={d.date}>
                               <TooltipTrigger asChild>
-                                <div
-                                  tabIndex={0}
-                                  style={{ backgroundColor: HEATMAP_COLORS[d.level] }}
-                                  className={cn(
-                                    'w-3.5 h-3.5 rounded-[3px] border border-stone-200 transition-transform hover:scale-125 cursor-pointer flex items-center justify-center',
-                                    isToday && 'ring-1 ring-[#800000] ring-offset-1'
-                                  )}
-                                >
-                                  {d.level === 'tasmi' && <Star className="w-2.5 h-2.5 text-white fill-white" />}
+                                <div tabIndex={0} className={cn('flex flex-col items-center gap-0.5 cursor-pointer', isFuture && 'opacity-30')}>
+                                  <span
+                                    className={cn(
+                                      'text-[8px] leading-none font-bold tabular-nums',
+                                      isToday ? 'text-[#800000] font-black' : isWeekend ? 'text-stone-400' : 'text-stone-500'
+                                    )}
+                                  >
+                                    {Number(d.date.slice(8))}
+                                  </span>
+                                  <span
+                                    style={{ backgroundColor: HEATMAP_COLORS[d.level] }}
+                                    className={cn(
+                                      'w-3.5 h-3.5 rounded-[3px] border border-stone-200 transition-transform hover:scale-125 flex items-center justify-center',
+                                      isToday && 'ring-1 ring-[#800000] ring-offset-1'
+                                    )}
+                                  >
+                                    {d.level === 'tasmi' && <Star className="w-2.5 h-2.5 text-white fill-white" />}
+                                  </span>
                                 </div>
                               </TooltipTrigger>
                               <TooltipPortal>
