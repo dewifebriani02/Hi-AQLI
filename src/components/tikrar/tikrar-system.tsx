@@ -36,6 +36,8 @@ import {
   Settings2,
   Sparkles,
   Video,
+  Volume2,
+  VolumeX,
   Zap,
 } from 'lucide-react';
 import {
@@ -75,6 +77,7 @@ import {
 } from '@/lib/tikrar-schedule-generator';
 import { QUIZ_PASS_PERCENT, QUIZ_QUESTION_COUNT } from '@/lib/tikrar-steps';
 import type { TikrarSummary } from '@/lib/tikrar-server';
+import { isTikrarSoundEnabled, playTikrarCount, playTikrarTap, setTikrarSoundEnabled } from '@/lib/tikrar-sound';
 
 interface ReciterOption {
   id: number;
@@ -616,6 +619,8 @@ export function TikrarSystem({
   }, [page]);
 
   const isHydratedRef = useRef(false);
+  const [soundOn, setSoundOn] = useState(true);
+  useEffect(() => setSoundOn(isTikrarSoundEnabled()), []);
   const lockToastShownRef = useRef(false);
   const lastStepsTodayRef = useRef<number>(-1);
 
@@ -1403,6 +1408,22 @@ export function TikrarSystem({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const next = !soundOn;
+              setTikrarSoundEnabled(next);
+              setSoundOn(next);
+              if (next) playTikrarTap();
+            }}
+            className="h-9 text-xs font-bold border-[#800000]/20 text-[#800000]"
+            title={soundOn ? 'Matikan bunyi counter' : 'Nyalakan bunyi counter'}
+          >
+            {soundOn ? <Volume2 className="w-3.5 h-3.5 mr-1.5" /> : <VolumeX className="w-3.5 h-3.5 mr-1.5" />}
+            Bunyi {soundOn ? 'On' : 'Off'}
+          </Button>
           {onOpenScheduleTab && (
             <Button
               type="button"
@@ -2235,6 +2256,7 @@ function MaqtaCard({
   const tokensB = tokens.slice(mid);
 
   const addSubCount = (part: 'a' | 'b' | 'combined', delta: number) => {
+    if (delta > 0) playTikrarCount((state?.[part]?.count || 0) + delta, PASS_THRESHOLD);
     onIncrement((p: any) => ({
       ...p,
       [id]: {
@@ -2356,22 +2378,22 @@ function MaqtaCard({
             onClick={() => addSubCount('combined', 1)}
             disabled={isCombinedLocked}
             className={cn(
-              'flex-1 h-12 flex-col rounded-xl font-black uppercase tracking-widest py-1 transition-all relative',
+              'flex-1 h-20 flex-col rounded-2xl font-black uppercase tracking-widest py-2 transition-all relative touch-manipulation select-none active:scale-[0.97]',
               isDoneG
                 ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg'
                 : 'bg-[#800000] text-white hover:bg-[#800000]/90'
             )}
           >
-            <span className="text-[8px] flex items-center gap-1 leading-none opacity-80 mb-0.5">
-              {isCombinedLocked ? <Lock className="w-2 h-2" /> : null} GABUNG {page}
-              {letter} (+1)
+            <span className="text-[10px] flex items-center gap-1 leading-none opacity-80 mb-1">
+              {isCombinedLocked ? <Lock className="w-3 h-3" /> : null} GABUNG {page}
+              {letter} • KETUK +1
             </span>
-            <span className="text-sm leading-none">
-              {state.combined.count} / {PASS_THRESHOLD}
+            <span className="text-2xl leading-none">
+              {state.combined.count} <span className="text-sm opacity-70">/ {PASS_THRESHOLD}</span>
             </span>
             {isDoneG && (
-              <div className="absolute top-1 right-1">
-                <CheckCircle2 className="w-3 h-3 text-black" />
+              <div className="absolute top-2 right-2">
+                <CheckCircle2 className="w-5 h-5 text-black" />
               </div>
             )}
           </Button>
@@ -2387,7 +2409,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
   return (
     <div
       className={cn(
-        'relative p-4 rounded-2xl border-2 flex items-center justify-between transition-all gap-3',
+        'relative p-4 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between transition-all gap-3',
         isDone ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'bg-white border-[#800000]/10',
         highlight && !isDone && 'border-[#800000] bg-[#800000]/5',
         isLocked && 'opacity-40 grayscale select-none'
@@ -2423,12 +2445,12 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
         <div className="text-right flex flex-col items-end mr-1">
-          <span className="text-[10px] font-bold text-black uppercase">
+          <span className="text-base font-black text-black uppercase">
             {count} / {TARGET_MAX_LOCAL}
           </span>
-          <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden">
+          <div className="w-16 h-1.5 bg-muted rounded-full mt-1 overflow-hidden">
             <div
               className="h-full bg-[#D4AF37] transition-all"
               style={{ width: `${(count / TARGET_MAX_LOCAL) * 100}%` }}
@@ -2437,16 +2459,19 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
         </div>
         <Button
           type="button"
-          onClick={() => onIncrement(1)}
+          onClick={() => {
+            playTikrarCount(count + 1, META_PASS_THRESHOLD);
+            onIncrement(1);
+          }}
           disabled={isLocked || isDone}
           className={cn(
-            'h-9 w-9 rounded-lg p-0 font-black text-xs shrink-0 transition-all shadow-sm',
+            'h-16 flex-1 sm:flex-none sm:w-28 rounded-2xl p-0 font-black text-xl shrink-0 transition-all shadow-md touch-manipulation select-none active:scale-[0.95]',
             isDone
               ? 'bg-[#D4AF37] text-black border-none'
               : 'bg-[#800000] text-white hover:bg-[#800000]/90'
           )}
         >
-          {isDone ? <CheckCircle2 className="w-4 h-4" /> : '+1'}
+          {isDone ? <CheckCircle2 className="w-7 h-7" /> : '+1'}
         </Button>
       </div>
     </div>
@@ -2464,42 +2489,29 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
       : 'bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5',
   };
   return (
-    <div
+    <button
+      type="button"
+      disabled={isLocked || isDone}
+      onClick={() => onInc(1)}
       className={cn(
-        'rounded-xl border-2 flex flex-col justify-between transition-all relative p-2 shadow-sm gap-1.5',
-        isLocked ? 'opacity-50 grayscale cursor-not-allowed bg-muted shadow-none' : themes[color]
+        'rounded-2xl border-2 flex flex-col items-center justify-center transition-all relative px-2 py-3 min-h-[88px] w-full shadow-sm gap-1 touch-manipulation select-none',
+        isLocked ? 'opacity-50 grayscale cursor-not-allowed bg-muted shadow-none' : themes[color],
+        !isLocked && !isDone && 'active:scale-[0.96] cursor-pointer'
       )}
     >
-      <div
-        onClick={isLocked || isDone ? undefined : () => onInc(1)}
-        className={cn(
-          'flex flex-col items-center justify-center py-0.5',
-          !isLocked && !isDone && 'cursor-pointer'
-        )}
-      >
-        <span className="text-[9px] font-black uppercase opacity-70 tracking-wider truncate w-full text-center leading-none mb-1">
-          {label}
-        </span>
-        <div className="flex items-baseline gap-0.5 leading-none">
-          <span className="text-base font-black">{count}</span>
-          <span className="text-[8px] font-bold opacity-50">/ {threshold}</span>
-        </div>
+      <span className="text-[10px] font-black uppercase opacity-70 tracking-wider truncate w-full text-center leading-none">
+        {label}
+      </span>
+      <div className="flex items-baseline gap-1 leading-none">
+        <span className="text-3xl font-black">{count}</span>
+        <span className="text-xs font-bold opacity-50">/ {threshold}</span>
       </div>
-
       {!isLocked && !isDone && (
-        <div className="flex items-center justify-center gap-1 pt-1 border-t border-current/10">
-          <button
-            type="button"
-            onClick={() => onInc(1)}
-            className="flex-1 py-0.5 rounded bg-[#800000]/10 hover:bg-[#800000]/20 text-[9px] font-black"
-          >
-            +1
-          </button>
-        </div>
+        <span className="text-[10px] font-black opacity-60 leading-none">KETUK +1</span>
       )}
 
-      {isLocked && <Lock className="absolute top-1.5 right-1.5 w-2.5 h-2.5 text-muted-foreground" />}
-      {isDone && <CheckCircle2 className="absolute top-1.5 right-1.5 w-3 h-3 text-current" />}
-    </div>
+      {isLocked && <Lock className="absolute top-2 right-2 w-3.5 h-3.5 text-muted-foreground" />}
+      {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
+    </button>
   );
 }
