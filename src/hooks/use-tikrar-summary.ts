@@ -7,14 +7,17 @@ import type { TikrarSummary } from '@/lib/tikrar-server';
 
 /** Ringkasan Tikrar (target aktif, jadwal hari ini, streak, halaman terbuka) dari /api/tikrar/schedule */
 export function useTikrarSummary(refreshSignal = 0) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const [summary, setSummary] = useState<TikrarSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     if (!user?.id) {
-      setSummary(null);
-      setIsLoading(false);
+      // Jangan dianggap selesai selama status login belum diketahui (mencegah salah arah ke tab Target)
+      if (!isUserLoading) {
+        setSummary(null);
+        setIsLoading(false);
+      }
       return null;
     }
     try {
@@ -30,7 +33,7 @@ export function useTikrarSummary(refreshSignal = 0) {
       setIsLoading(false);
     }
     return null;
-  }, [user?.id]);
+  }, [user?.id, isUserLoading]);
 
   useEffect(() => {
     refresh();

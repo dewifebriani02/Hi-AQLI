@@ -35,6 +35,7 @@ import {
   Send,
   Settings2,
   Sparkles,
+  Star,
   Video,
   Volume2,
   VolumeX,
@@ -70,12 +71,23 @@ import {
   computeTikrarStreakAndWeekly,
   getJuzForPage,
   getJuzPageRange,
+  isActiveStudyDay,
   isPageSubmissionCleared,
   JUZ_PAGES,
+  parseDateKeyUTC,
   TIKRAR_GRADE_LABELS,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
-import { canUndoStep, QUIZ_PASS_PERCENT, QUIZ_QUESTION_COUNT } from '@/lib/tikrar-steps';
+import {
+  canUndoStep,
+  countCompletedSteps,
+  generateTikrarStepSchedule,
+  QUIZ_PASS_PERCENT,
+  QUIZ_QUESTION_COUNT,
+  STEPS_PER_PAGE,
+  stepValue,
+  TIKRAR_STEPS,
+} from '@/lib/tikrar-steps';
 import type { TikrarSummary } from '@/lib/tikrar-server';
 import { isTikrarSoundEnabled, playTikrarCount, playTikrarTap, playTikrarUndo, setTikrarSoundEnabled } from '@/lib/tikrar-sound';
 
@@ -1176,6 +1188,57 @@ export function TikrarSystem({
     }));
   };
 
+  // ---- Target hari ini per langkah: bintang mengikuti posisi sekarang (N langkah berikutnya),
+  // tanggal dari jadwal per langkah sebagai keterangan ----
+  const localProgress = {
+    prep_listen_count: prepListenCount,
+    prep_translation_done: prepTranslationDone,
+    blocks,
+    meta_counts: metaCounts,
+  };
+  const stepDates = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (!activeTarget) return map;
+    const sched = generateTikrarStepSchedule({
+      juz: activeTarget.juz,
+      startPage: activeTarget.startPage,
+      endPage: activeTarget.endPage,
+      startDate: activeTarget.startDate,
+      durationMonths: activeTarget.durationMonths,
+      activeDaysPerWeek: activeTarget.activeDaysPerWeek,
+    });
+    for (const d of sched.days) {
+      for (const it of d.items) {
+        if (it.page === page) map[TIKRAR_STEPS[it.stepIndex].key] = d.date;
+      }
+    }
+    return map;
+  }, [activeTarget, page]);
+
+  const todayTargets: { page: number; key: string; label: string }[] = [];
+  if (activeTarget && summary && !summary.today.targetMet) {
+    let remaining = Math.max(0, (summary.today.dailyQuota || activeTarget.dailyQuota) - (summary.today.stepsToday || 0));
+    for (let p = activeTarget.unlockedPage; p <= activeTarget.endPage && remaining > 0; p++) {
+      const done =
+        p === page ? countCompletedSteps(localProgress, clearedPages.has(p)) : summary.stepsByPage?.[p] || 0;
+      for (let i = done; i < STEPS_PER_PAGE && remaining > 0; i++) {
+        todayTargets.push({ page: p, key: TIKRAR_STEPS[i].key, label: TIKRAR_STEPS[i].shortLabel });
+        remaining -= 1;
+      }
+    }
+  }
+  const starredKeysOnPage = new Set(todayTargets.filter((t) => t.page === page).map((t) => t.key));
+  const stepInfo = (key: string): StepInfo | null => {
+    if (!activeTarget || !user) return null;
+    const step = TIKRAR_STEPS.find((st) => st.key === key);
+    if (!step) return null;
+    const done = step.kind === 'quiz' ? clearedPages.has(page) : stepValue(step, localProgress) >= step.target;
+    return { key, isTarget: starredKeysOnPage.has(key) && !done, done, date: stepDates[key] || null, todayKey };
+  };
+  const scrollToStep = (key: string) => {
+    document.getElementById(`step-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   // Blocks that have reached TUNTAS (40x on A-1, A-2, and Gabung A)
   const tuntasBlockNumbers = useMemo(
     () => ([1, 2, 3, 4] as const).filter((id) => blocks[id]?.combined?.count >= PASS_THRESHOLD),
@@ -1497,13 +1560,66 @@ export function TikrarSystem({
         </div>
       )}
 
+      {activeTarget && user && summary && (
+        <div
+          className={cn(
+            'rounded-2xl border-2 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3',
+            summary.today.targetMet ? 'bg-emerald-50 border-emerald-300' : 'bg-amber-50 border-[#D4AF37]'
+          )}
+        >
+          <div className="space-y-1.5 min-w-0">
+            {summary.today.targetMet ? (
+              <p className="text-sm font-black text-emerald-800">
+                ✓ Target hari ini tercapai ({summary.today.stepsToday}/{summary.today.dailyQuota} langkah)
+              </p>
+            ) : todayTargets.length === 0 ? (
+              <p className="text-sm font-black text-stone-800">Semua langkah target sudah tuntas. Masya Allah!</p>
+            ) : (
+              <>
+                <p className="text-xs font-black uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                  <Star className="w-4 h-4 fill-[#D4AF37] text-[#D4AF37]" /> Target hari ini •{' '}
+                  {summary.today.stepsToday}/{summary.today.dailyQuota} langkah tuntas
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {todayTargets.map((t) => (
+                    <button
+                      key={`${t.page}-${t.key}`}
+                      type="button"
+                      onClick={() => (t.page === page ? scrollToStep(t.key) : setPage(t.page))}
+                      className="px-2.5 py-1 rounded-full bg-white border border-[#D4AF37] text-[11px] font-black text-stone-800 hover:bg-[#D4AF37]/20"
+                    >
+                      Hal. {t.page} • {t.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            {!isActiveStudyDay(todayKey, activeTarget.activeDaysPerWeek) && !summary.today.targetMet && (
+              <p className="text-[11px] text-stone-600">Hari ini bukan hari aktif jadwal Ukhti, boleh mencicil langkah berikutnya.</p>
+            )}
+          </div>
+          {todayTargets.length > 0 && !summary.today.targetMet && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => (todayTargets[0].page === page ? scrollToStep(todayTargets[0].key) : setPage(todayTargets[0].page))}
+              className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 px-4 rounded-xl shrink-0"
+            >
+              {todayTargets[0].page === page ? 'Ke Counter Target ↓' : `Buka Hal. ${todayTargets[0].page}`}
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className={cn(pageLockReason && 'pointer-events-none opacity-50 select-none')} aria-disabled={Boolean(pageLockReason)}>
       <TooltipProvider delayDuration={0}>
         {/* Tahap 0: Persiapan (Simak 5x & Konfirmasi Pemahaman) */}
         <Card
+          id="step-prep"
           className={cn(
             'border-2 transition-all shadow-md overflow-hidden',
-            isPrepTuntas ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-[#800000]/30 bg-white'
+            isPrepTuntas ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-[#800000]/30 bg-white',
+            stepInfo('prep')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2'
           )}
         >
           <div className="bg-[#800000] py-2 px-4 border-b flex justify-between items-center">
@@ -1517,6 +1633,7 @@ export function TikrarSystem({
             )}
           </div>
           <CardContent className="p-6 space-y-6">
+            <StepTag info={stepInfo('prep')} />
             <div className="flex flex-col gap-6">
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1994,6 +2111,7 @@ export function TikrarSystem({
             <MaqtaCard
               id={1}
               canUndo={(part: string) => canUndoKey('1.' + part)}
+              stepInfoFor={(part: string) => stepInfo('1.' + part)}
               onUndo={(part: string) => markUndo('1.' + part)}
               page={page}
               state={blocks[1]}
@@ -2009,6 +2127,7 @@ export function TikrarSystem({
             <MaqtaCard
               id={2}
               canUndo={(part: string) => canUndoKey('2.' + part)}
+              stepInfoFor={(part: string) => stepInfo('2.' + part)}
               onUndo={(part: string) => markUndo('2.' + part)}
               page={page}
               state={blocks[2]}
@@ -2029,11 +2148,13 @@ export function TikrarSystem({
             isLocked={!isTuntasTM(1) || !isTuntasTM(2)}
             onIncrement={(delta = 1) => adjustMeta('1_2', delta)}
               canUndo={canUndoKey('meta.1_2')}
+              stepInfo={stepInfo('meta.1_2')}
           />
 
           <MaqtaCard
             id={3}
               canUndo={(part: string) => canUndoKey('3.' + part)}
+              stepInfoFor={(part: string) => stepInfo('3.' + part)}
               onUndo={(part: string) => markUndo('3.' + part)}
             page={page}
             state={blocks[3]}
@@ -2054,6 +2175,7 @@ export function TikrarSystem({
               isLocked={!isTuntasTM(3)}
               onIncrement={(delta = 1) => adjustMeta('2_3', delta)}
               canUndo={canUndoKey('meta.2_3')}
+              stepInfo={stepInfo('meta.2_3')}
             />
             <MetaStep
               label="GABUNG BLOK A s/d C"
@@ -2061,12 +2183,14 @@ export function TikrarSystem({
               isLocked={!isMetaTuntas('2_3')}
               onIncrement={(delta = 1) => adjustMeta('1_2_3', delta)}
               canUndo={canUndoKey('meta.1_2_3')}
+              stepInfo={stepInfo('meta.1_2_3')}
             />
           </div>
 
           <MaqtaCard
             id={4}
               canUndo={(part: string) => canUndoKey('4.' + part)}
+              stepInfoFor={(part: string) => stepInfo('4.' + part)}
               onUndo={(part: string) => markUndo('4.' + part)}
             page={page}
             state={blocks[4]}
@@ -2087,6 +2211,7 @@ export function TikrarSystem({
               isLocked={!isTuntasTM(4)}
               onIncrement={(delta = 1) => adjustMeta('3_4', delta)}
               canUndo={canUndoKey('meta.3_4')}
+              stepInfo={stepInfo('meta.3_4')}
             />
             <MetaStep
               label="GABUNG BLOK B s/d D"
@@ -2094,6 +2219,7 @@ export function TikrarSystem({
               isLocked={!isMetaTuntas('3_4')}
               onIncrement={(delta = 1) => adjustMeta('2_3_4', delta)}
               canUndo={canUndoKey('meta.2_3_4')}
+              stepInfo={stepInfo('meta.2_3_4')}
             />
             <MetaStep
               label="GABUNG SELURUH HALAMAN (A - D)"
@@ -2101,6 +2227,7 @@ export function TikrarSystem({
               isLocked={!isMetaTuntas('2_3_4')}
               onIncrement={(delta = 1) => adjustMeta('1_2_3_4', delta)}
               canUndo={canUndoKey('meta.1_2_3_4')}
+              stepInfo={stepInfo('meta.1_2_3_4')}
               highlight
             />
           </div>
@@ -2113,6 +2240,9 @@ export function TikrarSystem({
                 <h4 className="text-xl font-black font-headline text-black uppercase tracking-widest">
                   Tahap Ujian Halaman
                 </h4>
+              </div>
+              <div id="step-quiz" className={cn('rounded-xl', stepInfo('quiz')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2 p-2')}>
+                <StepTag info={stepInfo('quiz')} />
               </div>
               {!isMetaTuntas('1_2_3_4') ? (
                 <Card className="border-2 border-dashed bg-muted py-10">
@@ -2251,6 +2381,7 @@ function MaqtaCard({
   letter,
   canUndo,
   onUndo,
+  stepInfoFor,
 }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
   const tokens = useMemo(() => {
@@ -2341,9 +2472,9 @@ function MaqtaCard({
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {isScheduledToday && !isSavedInDb && (
-            <Badge className="bg-white/20 text-white hover:bg-white/20 font-black text-[8px] tracking-widest h-4">
-              TARGET HARI INI
+          {(['a', 'b', 'combined'] as const).some((part) => stepInfoFor?.(part)?.isTarget) && (
+            <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37] font-black text-[8px] tracking-widest h-4 gap-0.5">
+              <Star className="w-2.5 h-2.5 fill-current" /> TARGET HARI INI
             </Badge>
           )}
           {isSavedInDb ? (
@@ -2376,6 +2507,7 @@ function MaqtaCard({
             isLocked={isLocked}
             onInc={(delta = 1) => addSubCount('a', delta)}
             canUndo={canUndo?.('a')}
+            stepInfo={stepInfoFor?.('a')}
             color="maroon"
             threshold={PASS_THRESHOLD}
           />
@@ -2385,18 +2517,21 @@ function MaqtaCard({
             isLocked={isLocked || state.a.count < PASS_THRESHOLD}
             onInc={(delta = 1) => addSubCount('b', delta)}
             canUndo={canUndo?.('b')}
+            stepInfo={stepInfoFor?.('b')}
             color="darkMaroon"
             threshold={PASS_THRESHOLD}
           />
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <StepTag info={stepInfoFor?.('combined')} />
+        <div id={`step-${id}.combined`} className="flex items-center gap-1.5 shrink-0">
           <Button
             type="button"
             onClick={() => addSubCount('combined', 1)}
             disabled={isCombinedLocked}
             className={cn(
               'flex-1 h-20 flex-col rounded-2xl font-black uppercase tracking-widest py-2 transition-all relative touch-manipulation select-none active:scale-[0.97]',
+              stepInfoFor?.('combined')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
               isDoneG
                 ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg'
                 : 'bg-[#800000] text-white hover:bg-[#800000]/90'
@@ -2441,13 +2576,15 @@ function UndoButton({ onClick, className }: { onClick: () => void; className?: s
   );
 }
 
-function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo }: any) {
+function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, stepInfo }: any) {
   const isDone = count >= META_PASS_THRESHOLD;
   const TARGET_MAX_LOCAL = 10;
   return (
     <div
+      id={stepInfo ? `step-${stepInfo.key}` : undefined}
       className={cn(
         'relative p-4 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between transition-all gap-3',
+        stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
         isDone ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'bg-white border-[#800000]/10',
         highlight && !isDone && 'border-[#800000] bg-[#800000]/5',
         isLocked && 'opacity-40 grayscale select-none'
@@ -2481,6 +2618,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo }: a
           <span className="text-[8px] font-bold text-muted-foreground">
             WAJIB {META_PASS_THRESHOLD}x SEBELUM MEMBUKA TAHAP BERIKUTNYA
           </span>
+          <StepTag info={stepInfo} className="pt-1" />
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
@@ -2517,7 +2655,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo }: a
   );
 }
 
-function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo }: any) {
+function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo, stepInfo }: any) {
   const isDone = count >= threshold;
   const themes: any = {
     maroon: isDone
@@ -2528,7 +2666,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo }
       : 'bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5',
   };
   return (
-    <div className="flex flex-col gap-1.5">
+    <div id={stepInfo ? `step-${stepInfo.key}` : undefined} className="flex flex-col gap-1.5">
     <button
       type="button"
       disabled={isLocked || isDone}
@@ -2536,7 +2674,8 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo }
       className={cn(
         'rounded-2xl border-2 flex flex-col items-center justify-center transition-all relative px-2 py-3 min-h-[88px] w-full shadow-sm gap-1 touch-manipulation select-none',
         isLocked ? 'opacity-50 grayscale cursor-not-allowed bg-muted shadow-none' : themes[color],
-        !isLocked && !isDone && 'active:scale-[0.96] cursor-pointer'
+        !isLocked && !isDone && 'active:scale-[0.96] cursor-pointer',
+        stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2'
       )}
     >
       <span className="text-[10px] font-black uppercase opacity-70 tracking-wider truncate w-full text-center leading-none">
@@ -2554,6 +2693,48 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo }
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
     </button>
     {canUndo && <UndoButton onClick={() => onInc(-1)} className="h-11 w-full text-base" />}
+    <StepTag info={stepInfo} className="justify-center" />
+    </div>
+  );
+}
+
+interface StepInfo {
+  key: string;
+  isTarget: boolean;
+  done: boolean;
+  date: string | null;
+  todayKey: string;
+}
+
+/** Bintang "target hari ini" + keterangan tanggal jadwal langkah */
+function StepTag({ info, className }: { info?: StepInfo | null; className?: string }) {
+  if (!info) return null;
+  const pretty = info.date
+    ? parseDateKeyUTC(info.date).toLocaleDateString('id-ID', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      })
+    : null;
+  return (
+    <div className={cn('flex flex-wrap items-center gap-1', className)}>
+      {info.isTarget && (
+        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#D4AF37] text-black text-[9px] font-black">
+          <Star className="w-2.5 h-2.5 fill-current" /> TARGET HARI INI
+        </span>
+      )}
+      {info.done ? (
+        <span className="text-[9px] font-black text-emerald-700">✓ Tuntas</span>
+      ) : pretty && info.date! < info.todayKey ? (
+        <span className="px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-[9px] font-black text-rose-700">
+          Terlewat • {pretty}
+        </span>
+      ) : pretty ? (
+        <span className="text-[9px] font-bold text-stone-500">
+          Jadwal: {info.date === info.todayKey ? 'hari ini' : pretty}
+        </span>
+      ) : null}
     </div>
   );
 }
