@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const fromKey = addCalendarDays(todayKey, -29);
     const streakFromKey = addCalendarDays(todayKey, -400);
 
-    // Anggota: punya target / aktivitas / setoran Tikrar, ditambah diri sendiri
+    // Anggota: siapa pun yang pernah memakai Tikrar (target, aktivitas, laporan lama, progres, setoran), ditambah diri sendiri
     const { rows: members } = await pool.query(
       `SELECT u.id, COALESCE(NULLIF(u.full_name, ''), u.username, 'Thalibah HI AQLI') AS name,
               u.points, u.tikrar_halaqah_id,
@@ -28,14 +28,19 @@ export async function GET(req: NextRequest) {
        LEFT JOIN public.tikrar_targets t ON t.user_id = u.id AND t.is_active
        WHERE (u.id = $1
               OR t.id IS NOT NULL
-              OR EXISTS (SELECT 1 FROM public.tikrar_daily_activity a WHERE a.user_id = u.id))
+              OR u.is_tikrar_paid
+              OR u.tikrar_halaqah_id IS NOT NULL
+              OR EXISTS (SELECT 1 FROM public.tikrar_daily_activity a WHERE a.user_id = u.id)
+              OR EXISTS (SELECT 1 FROM public.tikrar_daily_logs l WHERE l.user_id = u.id)
+              OR EXISTS (SELECT 1 FROM public.tikrar_user_progress p WHERE p.user_id = u.id)
+              OR EXISTS (SELECT 1 FROM public.tikrar_submissions s WHERE s.user_id = u.id))
          AND ($2::uuid IS NULL OR u.tikrar_halaqah_id = $2::uuid OR u.id = $1)
        LIMIT 200`,
       [ctx.userId, halaqahId]
     );
     const ids = members.map((m) => m.id);
 
-    const [{ rows: actRows }, { rows: subRows }] = await Promise.all([
+    const [{ rows: actRows }, { rows: subRows }, { rows: logRows }] = await Promise.all([
       pool.query(
         `SELECT user_id, to_char(activity_date, 'YYYY-MM-DD') AS d, clicks, target_met,
                 GREATEST(steps_now - steps_start, 0) AS steps
@@ -51,7 +56,20 @@ export async function GET(req: NextRequest) {
            AND COALESCE(verified_at, session_date::timestamptz, submitted_at) >= $2::date - INTERVAL '1 day'`,
         [ids, fromKey]
       ),
+      // Laporan blok tuntas (termasuk sebelum aktivitas harian dicatat) sebagai tanda hari aktif
+      pool.query(
+        `SELECT user_id, to_char(log_date, 'YYYY-MM-DD') AS d, COUNT(*)::int AS pages
+         FROM public.tikrar_daily_logs
+         WHERE user_id = ANY($1::uuid[]) AND completed AND log_date >= $2::date
+         GROUP BY user_id, log_date`,
+        [ids, fromKey]
+      ),
     ]);
+    const logByUser = new Map<string, Set<string>>();
+    for (const l of logRows) {
+      if (!logByUser.has(l.user_id)) logByUser.set(l.user_id, new Set());
+      logByUser.get(l.user_id)!.add(l.d);
+    }
 
     const actByUser = new Map<string, Map<string, { clicks: number; met: boolean; steps: number }>>();
     for (const a of actRows) {
@@ -76,6 +94,7 @@ export async function GET(req: NextRequest) {
       .map((m) => {
         const acts = actByUser.get(m.id) || new Map();
         const subs = subByUser.get(m.id) || new Map();
+        const logDays = logByUser.get(m.id) || new Set<string>();
         const metDates = Array.from(acts.entries()).filter(([, v]) => v.met).map(([d]) => d);
         let weeklyMet = 0;
         for (let i = 0; i < 7; i++) {
@@ -84,7 +103,13 @@ export async function GET(req: NextRequest) {
         const days = dateKeys.map((d) => {
           const a = acts.get(d);
           const s = subs.get(d);
-          const level: HeatmapLevel = s ? 'tasmi' : a?.met ? 'met' : a && a.clicks > 0 ? 'active' : 'none';
+          const level: HeatmapLevel = s
+            ? 'tasmi'
+            : a?.met
+            ? 'met'
+            : (a && a.clicks > 0) || logDays.has(d)
+            ? 'active'
+            : 'none';
           return { date: d, level, clicks: a?.clicks || 0, steps: a?.steps || 0, tasmi: s || null };
         });
         return {
