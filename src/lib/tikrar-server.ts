@@ -370,6 +370,20 @@ export async function buildTikrarSummary(userId: string) {
       createdAt: new Date(q.created_at).toISOString(),
     })),
     lastPracticedPage: progressRows[0] ? Number(progressRows[0].page_number) : null,
+    // Progres halaman aktif target: bahan perkiraan klik target hari ini yang sama dengan heatmap grup
+    unlockedPageProgress: targetInfo
+      ? (() => {
+          const r = progressRows.find((row) => Number(row.page_number) === targetInfo!.unlockedPage);
+          return r
+            ? {
+                prep_listen_count: r.prep_listen_count,
+                prep_translation_done: r.prep_translation_done,
+                blocks: r.blocks,
+                meta_counts: r.meta_counts,
+              }
+            : null;
+        })()
+      : null,
     lastPracticedJuz: progressRows[0] ? Number(progressRows[0].juz) || getJuzForPage(Number(progressRows[0].page_number)) : null,
   };
 }

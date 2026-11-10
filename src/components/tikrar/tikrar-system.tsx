@@ -81,6 +81,7 @@ import {
 import {
   canUndoStep,
   countCompletedSteps,
+  estimateClicksForNextSteps,
   getBlockListenCount,
   isBlockListenDone,
   generateTikrarStepSchedule,
@@ -740,8 +741,6 @@ export function TikrarSystem({
 
       // 3. Gabungkan DB completed blocks agar kunci berurutan konsisten
       if (completedBlocksAllTime.size > 0) {
-        nextPrepListen = Math.max(nextPrepListen, PREP_LISTEN_THRESHOLD);
-        nextPrepTrans = true;
         for (const b of [1, 2, 3, 4] as const) {
           if (completedBlocksAllTime.has(b)) {
             nextBlocks[b] = {
@@ -1168,12 +1167,20 @@ export function TikrarSystem({
 
   // Progres klik hari ini: klik sudah dilakukan vs perkiraan total klik untuk langkah bertanda bintang
   const todayClicks = liveTodayClicks ?? summary?.today.clicks ?? 0;
-  const remainingTargetClicks = todayTargets.reduce((sum, t) => {
-    const step = TIKRAR_STEPS.find((st) => st.key === t.key);
-    if (!step || step.kind === 'quiz') return sum;
-    const current = t.page === page ? Math.min(stepValue(step, localProgress), step.target) : 0;
-    return sum + Math.max(0, step.target - current);
-  }, 0);
+  // Rumus sama dengan kartu heatmap grup (estimateClicksForNextSteps), termasuk simak blok berikutnya
+  const remainingTargetClicks =
+    activeTarget && summary && !summary.today.targetMet
+      ? estimateClicksForNextSteps(
+          {
+            [activeTarget.unlockedPage]:
+              activeTarget.unlockedPage === page ? localProgress : summary.unlockedPageProgress || undefined,
+          },
+          activeTarget.unlockedPage,
+          activeTarget.endPage,
+          clearedPages,
+          Math.max(0, (summary.today.dailyQuota || activeTarget.dailyQuota) - (summary.today.stepsToday || 0))
+        )
+      : 0;
   const targetTotalClicks = todayClicks + remainingTargetClicks;
   const todayClicksPct = targetTotalClicks > 0 ? Math.min(100, Math.round((todayClicks / targetTotalClicks) * 100)) : 0;
   const stepInfo = (key: string): StepInfo | null => {
