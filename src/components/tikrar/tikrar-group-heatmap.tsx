@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useCollection, useDoc, useUser } from '@/db';
+import { useCollection, useUser } from '@/db';
 import { authFetch } from '@/db/client';
 import { cn } from '@/lib/utils';
 import { getDayOfWeekFromKey, parseDateKeyUTC } from '@/lib/tikrar-schedule-generator';
@@ -43,7 +43,6 @@ const LEGEND: { level: HeatmapLevel; label: string }[] = [
 
 export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProps) {
   const { user } = useUser();
-  const { data: myUserData } = useDoc<any>(user?.id ? 'users' : null, user?.id);
 
   const halaqahOptions = useMemo(
     () => ({ filters: [{ column: 'program_type', operator: '==', value: 'tikrar_daily' }] }),
@@ -52,17 +51,10 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
   const { data: tikrarHalaqahs } = useCollection<any>('halaqahs', halaqahOptions);
 
   const [selectedHalaqahFilter, setSelectedHalaqahFilter] = useState<string>('all');
-  const [hasAutoSelectedGroup, setHasAutoSelectedGroup] = useState(false);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [todayKey, setTodayKey] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!hasAutoSelectedGroup && myUserData?.tikrar_halaqah_id) {
-      setSelectedHalaqahFilter(myUserData.tikrar_halaqah_id);
-      setHasAutoSelectedGroup(true);
-    }
-  }, [myUserData?.tikrar_halaqah_id, hasAutoSelectedGroup]);
 
   const load = useCallback(async () => {
     if (!user?.id) {
@@ -189,8 +181,9 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto py-1">
-                      <div className="flex items-center gap-[3px] min-w-max">
+                    <div className="py-1">
+                      {/* 30 hari: 2 baris x 15 di HP, 1 baris di layar lebar, tanpa perlu digeser */}
+                      <div className="grid gap-[3px] [grid-template-columns:repeat(15,14px)] lg:[grid-template-columns:repeat(30,14px)]">
                         {member.days.map((d) => {
                           const dow = getDayOfWeekFromKey(d.date);
                           const isToday = d.date === todayKey;
@@ -200,7 +193,9 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                               : d.level === 'met'
                               ? `Target tercapai • ${d.steps} langkah, ${d.clicks} klik`
                               : d.level === 'active'
-                              ? `Aktif ${d.clicks} klik • ${d.steps} langkah (target belum tercapai)`
+                              ? d.clicks > 0
+                                ? `Aktif ${d.clicks} klik • ${d.steps} langkah (target belum tercapai)`
+                                : 'Aktif (laporan blok tuntas)'
                               : 'Tidak ada klik counter';
                           const prettyDate = parseDateKeyUTC(d.date).toLocaleDateString('id-ID', {
                             day: 'numeric',
