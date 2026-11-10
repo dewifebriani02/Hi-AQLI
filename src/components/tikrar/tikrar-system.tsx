@@ -650,6 +650,9 @@ export function TikrarSystem({
   useEffect(() => setSoundOn(isTikrarSoundEnabled()), []);
   const lockToastShownRef = useRef(false);
   const pendingUndoKeysRef = useRef<Set<string>>(new Set());
+  // Klik hari ini dari respons simpan terakhir (lebih baru daripada ringkasan sampai ringkasan dimuat ulang)
+  const [liveTodayClicks, setLiveTodayClicks] = useState<number | null>(null);
+  useEffect(() => setLiveTodayClicks(null), [summary]);
   const lastStepsTodayRef = useRef<number>(-1);
 
   // Hydrate progress from DB + localStorage + merge DB completed blocks
@@ -871,6 +874,7 @@ export function TikrarSystem({
                 description: `+${awarded} Poin keaktifan. Lanjutkan sampai ${act?.dailyQuota || 1} langkah untuk mencapai target hari ini.`,
               });
             }
+            if (act && typeof act.clicks === 'number') setLiveTodayClicks(act.clicks);
             const stepsToday = Number(act?.stepsToday) || 0;
             if (awarded > 0 || stepsToday !== lastStepsTodayRef.current) {
               lastStepsTodayRef.current = stepsToday;
@@ -1159,6 +1163,17 @@ export function TikrarSystem({
     }
   }
   const starredKeysOnPage = new Set(todayTargets.filter((t) => t.page === page).map((t) => t.key));
+
+  // Progres klik hari ini: klik sudah dilakukan vs perkiraan total klik untuk langkah bertanda bintang
+  const todayClicks = liveTodayClicks ?? summary?.today.clicks ?? 0;
+  const remainingTargetClicks = todayTargets.reduce((sum, t) => {
+    const step = TIKRAR_STEPS.find((st) => st.key === t.key);
+    if (!step || step.kind === 'quiz') return sum;
+    const current = t.page === page ? Math.min(stepValue(step, localProgress), step.target) : 0;
+    return sum + Math.max(0, step.target - current);
+  }, 0);
+  const targetTotalClicks = todayClicks + remainingTargetClicks;
+  const todayClicksPct = targetTotalClicks > 0 ? Math.min(100, Math.round((todayClicks / targetTotalClicks) * 100)) : 0;
   const stepInfo = (key: string): StepInfo | null => {
     if (!activeTarget || !user) return null;
     const step = TIKRAR_STEPS.find((st) => st.key === key);
@@ -1612,7 +1627,7 @@ export function TikrarSystem({
           <div className="space-y-1.5 min-w-0">
             {summary.today.targetMet ? (
               <p className="text-sm font-black text-emerald-800">
-                ✓ Target hari ini tercapai ({summary.today.stepsToday}/{summary.today.dailyQuota} langkah)
+                ✓ Target hari ini tercapai ({summary.today.stepsToday}/{summary.today.dailyQuota} langkah • {todayClicks} klik)
               </p>
             ) : todayTargets.length === 0 ? (
               <p className="text-sm font-black text-stone-800">Semua langkah target sudah tuntas. Masya Allah!</p>
@@ -1622,6 +1637,19 @@ export function TikrarSystem({
                   <Star className="w-4 h-4 fill-[#D4AF37] text-[#D4AF37]" /> Target hari ini •{' '}
                   {summary.today.stepsToday}/{summary.today.dailyQuota} langkah tuntas
                 </p>
+                <div className="space-y-1 max-w-md">
+                  <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-stone-700">
+                    <span>
+                      Hari ini: <span className="font-black text-[#800000]">{todayClicks}/{targetTotalClicks} klik</span>
+                    </span>
+                    {remainingTargetClicks > 0 && (
+                      <span className="text-stone-500">±{remainingTargetClicks} klik lagi untuk hijau pekat</span>
+                    )}
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white border border-[#D4AF37]/40 overflow-hidden">
+                    <div className="h-full rounded-full bg-[#4ade80] transition-all" style={{ width: `${todayClicksPct}%` }} />
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-1.5">
                   {todayTargets.map((t) => (
                     <button
