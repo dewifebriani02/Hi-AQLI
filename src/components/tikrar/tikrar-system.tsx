@@ -2375,28 +2375,6 @@ function MaqtaCard({
               </div>
             )}
           </Button>
-          {!isCombinedLocked && !isDoneG && (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => addSubCount('combined', 5)}
-                className="h-12 px-2.5 rounded-xl font-black text-[10px] border-[#800000]/30 text-[#800000]"
-                title="Tambah 5x repetisi gabungan"
-              >
-                +5
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => addSubCount('combined', 40)}
-                className="h-12 px-2.5 rounded-xl font-black text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50/50"
-                title="Tandai 40x Gabung Blok Selesai"
-              >
-                40x
-              </Button>
-            </>
-          )}
         </div>
       </CardContent>
     </Card>
@@ -2470,17 +2448,6 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
         >
           {isDone ? <CheckCircle2 className="w-4 h-4" /> : '+1'}
         </Button>
-        {!isLocked && !isDone && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onIncrement(10)}
-            className="h-9 px-2 rounded-lg font-black text-[10px] border-emerald-300 text-emerald-700"
-            title="Selesaikan 10x gabungan"
-          >
-            10x
-          </Button>
-        )}
       </div>
     </div>
   );
@@ -2527,21 +2494,6 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
             className="flex-1 py-0.5 rounded bg-[#800000]/10 hover:bg-[#800000]/20 text-[9px] font-black"
           >
             +1
-          </button>
-          <button
-            type="button"
-            onClick={() => onInc(5)}
-            className="flex-1 py-0.5 rounded bg-[#800000]/10 hover:bg-[#800000]/20 text-[9px] font-black"
-          >
-            +5
-          </button>
-          <button
-            type="button"
-            onClick={() => onInc(40)}
-            className="px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 text-[9px] font-black"
-            title="Selesai 40x"
-          >
-            40x
           </button>
         </div>
       )}
