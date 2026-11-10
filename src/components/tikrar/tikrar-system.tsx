@@ -2523,14 +2523,14 @@ function MaqtaCard({
           />
         </div>
 
-        <StepTag info={stepInfoFor?.('combined')} />
-        <div id={`step-${id}.combined`} className="flex items-center gap-1.5 shrink-0">
+        <div id={`step-${id}.combined`} className="flex flex-col gap-1.5 shrink-0">
+          <div className="relative">
           <Button
             type="button"
             onClick={() => addSubCount('combined', 1)}
             disabled={isCombinedLocked}
             className={cn(
-              'flex-1 h-20 flex-col rounded-2xl font-black uppercase tracking-widest py-2 transition-all relative touch-manipulation select-none active:scale-[0.97]',
+              'w-full h-20 flex-col rounded-2xl font-black uppercase tracking-widest py-2 transition-all relative touch-manipulation select-none active:scale-[0.97]',
               stepInfoFor?.('combined')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
               isDoneG
                 ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg'
@@ -2551,11 +2551,34 @@ function MaqtaCard({
             )}
           </Button>
           {canUndo?.('combined') && (
-            <UndoButton onClick={() => addSubCount('combined', -1)} className="h-20 w-16" />
+            <InlineUndoButton onClick={() => addSubCount('combined', -1)} className="left-2 top-1/2 -translate-y-1/2" />
           )}
+          </div>
+          <StepTag info={stepInfoFor?.('combined')} className="justify-center" />
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Tombol -1 kecil (seukuran jari) yang diletakkan di dalam kotak counter */
+function InlineUndoButton({ onClick, className }: { onClick: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      title="Kurangi 1 (kelebihan pencet)"
+      aria-label="Kurangi 1"
+      className={cn(
+        'absolute z-10 h-10 w-10 rounded-xl border-2 border-stone-300 bg-white/95 text-stone-700 font-black text-sm flex items-center justify-center shadow-sm touch-manipulation select-none active:scale-95',
+        className
+      )}
+    >
+      −1
+    </button>
   );
 }
 
@@ -2667,6 +2690,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo, 
   };
   return (
     <div id={stepInfo ? `step-${stepInfo.key}` : undefined} className="flex flex-col gap-1.5">
+    <div className="relative">
     <button
       type="button"
       disabled={isLocked || isDone}
@@ -2692,7 +2716,8 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo, 
       {isLocked && <Lock className="absolute top-2 right-2 w-3.5 h-3.5 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
     </button>
-    {canUndo && <UndoButton onClick={() => onInc(-1)} className="h-11 w-full text-base" />}
+    {canUndo && <InlineUndoButton onClick={() => onInc(-1)} className="left-2 bottom-2" />}
+    </div>
     <StepTag info={stepInfo} className="justify-center" />
     </div>
   );
