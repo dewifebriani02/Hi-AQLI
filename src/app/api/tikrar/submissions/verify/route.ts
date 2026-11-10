@@ -8,6 +8,8 @@ import {
   getJuzForPage,
   isPageSubmissionCleared,
   TIKRAR_GRADE_LABELS,
+  TIKRAR_WA_DOA_BARAKAH,
+  TIKRAR_WA_SALUTATION,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
 import { TIKRAR_POINTS } from '@/lib/tikrar-steps';
@@ -239,10 +241,9 @@ export async function POST(req: NextRequest) {
     if (sendWhatsapp) {
       const phone = normalizePhoneNumber(learner.whatsapp || learner.phone || '');
       if (phone) {
-        const salutation = learner.salutation || 'Ukhti';
+        const salutation = TIKRAR_WA_SALUTATION;
         const learnerName = learner.full_name || learner.username || 'Thalibah';
-        const isAkhi = salutation.trim().toLowerCase() === 'akhi';
-        const doaBarakah = isAkhi ? 'Barakallahu fika' : 'Barakallahu fiki';
+        const doaBarakah = TIKRAR_WA_DOA_BARAKAH;
         const gradeLabel = TIKRAR_GRADE_LABELS[grade] || grade;
         const rangeHuman = formatRangeHuman(sub.blocks_range);
 

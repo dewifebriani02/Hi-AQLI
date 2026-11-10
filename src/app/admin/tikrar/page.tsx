@@ -16,7 +16,7 @@ import { useUserPermissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { TikrarGroupHeatmap } from '@/components/tikrar/tikrar-group-heatmap';
 import { TikrarManualSetoranForm } from '@/components/tikrar/tikrar-manual-setoran-form';
-import { getJuzPageRange, TIKRAR_GRADE_LABELS } from '@/lib/tikrar-schedule-generator';
+import { getJuzPageRange, TIKRAR_GRADE_LABELS, TIKRAR_WA_SALUTATION } from '@/lib/tikrar-schedule-generator';
 import {
   AlertCircle,
   ArrowLeft,
@@ -860,7 +860,7 @@ export default function AdminTikrarPage() {
                   participant?.full_name ||
                   participant?.username ||
                   'Thalibah HI AQLI';
-                const salutation = participant?.salutation || 'Ukhti';
+                const salutation = TIKRAR_WA_SALUTATION;
                 const waNumber = normalizePhone(participant?.whatsapp || participant?.phone);
                 const halaqahObj = sub.halaqah_id ? halaqahMap.get(sub.halaqah_id) : null;
                 const zoomUrl = sub.zoom_meeting_url || halaqahObj?.zoom_link || null;
