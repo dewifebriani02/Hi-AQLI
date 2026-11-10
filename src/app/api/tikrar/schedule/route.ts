@@ -49,20 +49,6 @@ export async function POST(req: NextRequest) {
 
     const schedule = generateTikrarStepSchedule({ juz, startPage, endPage, startDate, durationMonths, activeDaysPerWeek });
 
-    // Target hanya boleh diubah setelah lulus >=1 halaman pada target aktif
-    const summary = await buildTikrarSummary(ctx.userId);
-    if (summary.target && !summary.target.canChangeTarget) {
-      return NextResponse.json(
-        {
-          error: {
-            message: `Target baru bisa diubah setelah Ukhti lulus ujian minimal 1 halaman pada target saat ini (Hal. ${summary.target.startPage}–${summary.target.endPage}).`,
-            code: 'TARGET_LOCKED',
-          },
-        },
-        { status: 403 }
-      );
-    }
-
     await client.query('BEGIN');
 
     await client.query(

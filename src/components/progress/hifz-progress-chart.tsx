@@ -16,6 +16,7 @@ interface JuzItqan {
   priorPages: number;
   testedPages: number;
   externalTestedPages: number;
+  mutqinPages: number;
 }
 
 interface ItqanData {
@@ -28,18 +29,23 @@ interface ItqanData {
   totalTestedPages: number;
   totalAqliTestedPages: number;
   totalExternalTestedPages: number;
+  mutqinJuzCount: number;
+  totalMutqinPages: number;
 }
 
 const MEMORIZED_COLOR = "#D4AF37";
 const PRIOR_COLOR = "#f1dd9a";
 const TESTED_COLOR = "#800000";
 const EXTERNAL_COLOR = "#c08a5b";
+const MUTQIN_COLOR = "#047857";
+const EMPTY_COLOR = "#80000012";
 const TOTAL_PAGES = 604;
 
 /**
- * Itqan 30 Juz dua lapis:
- *  - lingkar dalam: halaman yang sudah dihafal (semua klik counter sampai Gabung A–D tuntas)
- *  - lingkar luar: halaman yang sudah diuji & dinyatakan lulus oleh muallimah
+ * Itqan 30 Juz tiga lapis:
+ *  - lingkar luar: halaman dihafal (klik counter sampai Gabung A–D tuntas + hafalan sebelum bergabung)
+ *  - lingkar tengah: halaman sudah diuji (Tasmi' muallimah AQLI + diuji di luar AQLI)
+ *  - lingkar dalam: halaman mutqin (lulus ujian 30 soal dan lulus Tasmi')
  */
 export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: number }) {
   const { user } = useUser();
@@ -86,6 +92,7 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
       priorPages: 0,
       testedPages: 0,
       externalTestedPages: 0,
+      mutqinPages: 0,
     }));
 
   // Satu irisan per juz: bagian via AQLI, bagian hafalan lama/luar AQLI, lalu sisa
@@ -93,13 +100,18 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
     juzList.flatMap((j) => [
       { name: `Juz ${j.juz}`, value: j[primary], fill: colors[0] },
       { name: `Juz ${j.juz} lama`, value: j[secondary], fill: colors[1] },
-      { name: `Juz ${j.juz} sisa`, value: Math.max(0, j.totalPages - j[primary] - j[secondary]), fill: "#80000012" },
+      { name: `Juz ${j.juz} sisa`, value: Math.max(0, j.totalPages - j[primary] - j[secondary]), fill: EMPTY_COLOR },
     ]);
-  const innerRing = ringData("memorizedPages", "priorPages", [MEMORIZED_COLOR, PRIOR_COLOR]);
-  const outerRing = ringData("testedPages", "externalTestedPages", [TESTED_COLOR, EXTERNAL_COLOR]);
+  const memorizedRing = ringData("memorizedPages", "priorPages", [MEMORIZED_COLOR, PRIOR_COLOR]);
+  const testedRing = ringData("testedPages", "externalTestedPages", [TESTED_COLOR, EXTERNAL_COLOR]);
+  const mutqinRing = juzList.flatMap((j) => [
+    { name: `Juz ${j.juz}`, value: j.mutqinPages, fill: MUTQIN_COLOR },
+    { name: `Juz ${j.juz} sisa`, value: Math.max(0, j.totalPages - j.mutqinPages), fill: EMPTY_COLOR },
+  ]);
 
   const memorizedPct = Math.round(((data?.totalMemorizedPages || 0) / TOTAL_PAGES) * 1000) / 10;
   const testedPct = Math.round(((data?.totalTestedPages || 0) / TOTAL_PAGES) * 1000) / 10;
+  const mutqinPct = Math.round(((data?.totalMutqinPages || 0) / TOTAL_PAGES) * 1000) / 10;
 
   return (
     <div className="flex flex-col gap-10">
@@ -107,9 +119,9 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
         <div className="relative w-64 h-64 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={innerRing} cx="50%" cy="50%" innerRadius={68} outerRadius={88} dataKey="value" stroke="none" isAnimationActive={false}>
-                {innerRing.map((e, i) => (
-                  <Cell key={`m-${i}`} fill={e.fill} />
+              <Pie data={mutqinRing} cx="50%" cy="50%" innerRadius={56} outerRadius={72} dataKey="value" stroke="none" isAnimationActive={false}>
+                {mutqinRing.map((e, i) => (
+                  <Cell key={`q-${i}`} fill={e.fill} />
                 ))}
                 <Label
                   content={({ viewBox }) => {
@@ -119,8 +131,8 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
                           <tspan x={viewBox.cx} y={(viewBox.cy || 0) - 8} className="fill-[#800000] text-3xl font-black">
                             {data?.totalMemorizedPages || 0}
                           </tspan>
-                          <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 16} className="fill-[#800000] text-[9px] font-black uppercase tracking-[0.15em]">
-                            Halaman Dihafal
+                          <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 14} className="fill-[#800000] text-[8px] font-black uppercase tracking-[0.12em]">
+                            Hal. Dihafal
                           </tspan>
                         </text>
                       );
@@ -128,9 +140,14 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
                   }}
                 />
               </Pie>
-              <Pie data={outerRing} cx="50%" cy="50%" innerRadius={96} outerRadius={116} dataKey="value" stroke="none" isAnimationActive={false}>
-                {outerRing.map((e, i) => (
+              <Pie data={testedRing} cx="50%" cy="50%" innerRadius={78} outerRadius={94} dataKey="value" stroke="none" isAnimationActive={false}>
+                {testedRing.map((e, i) => (
                   <Cell key={`t-${i}`} fill={e.fill} />
+                ))}
+              </Pie>
+              <Pie data={memorizedRing} cx="50%" cy="50%" innerRadius={100} outerRadius={118} dataKey="value" stroke="none" isAnimationActive={false}>
+                {memorizedRing.map((e, i) => (
+                  <Cell key={`m-${i}`} fill={e.fill} />
                 ))}
               </Pie>
             </PieChart>
@@ -138,10 +155,10 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
         </div>
 
         <div className="flex-1 space-y-4 w-full">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-5 rounded-3xl bg-[#D4AF37]/15 border-2 border-[#D4AF37] space-y-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-4 rounded-3xl bg-[#D4AF37]/15 border-2 border-[#D4AF37] space-y-1">
               <p className="text-[10px] font-black text-[#800000] uppercase tracking-widest text-center">
-                Lingkar Dalam • Dihafal
+                Lingkar Luar • Dihafal
               </p>
               <p className="text-3xl font-black text-[#800000] text-center">
                 {data?.memorizedJuzCount || 0} <span className="text-xs opacity-60">Juz</span>
@@ -153,9 +170,9 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
                 AQLI {data?.totalAppMemorizedPages || 0} • lama {data?.totalPriorPages || 0}
               </p>
             </div>
-            <div className="p-5 rounded-3xl bg-[#800000] border-b-4 border-[#D4AF37] space-y-1 text-white">
+            <div className="p-4 rounded-3xl bg-[#800000] border-b-4 border-[#D4AF37] space-y-1 text-white">
               <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">
-                Lingkar Luar • Sudah Diuji
+                Lingkar Tengah • Diuji
               </p>
               <p className="text-3xl font-black text-center">
                 {data?.testedJuzCount || 0} <span className="text-xs opacity-60">Juz</span>
@@ -167,15 +184,28 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
                 AQLI {data?.totalAqliTestedPages || 0} • luar AQLI {data?.totalExternalTestedPages || 0}
               </p>
             </div>
+            <div className="p-4 rounded-3xl bg-emerald-50 border-2 border-emerald-600 space-y-1">
+              <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest text-center">
+                Lingkar Dalam • Mutqin
+              </p>
+              <p className="text-3xl font-black text-emerald-800 text-center">
+                {data?.mutqinJuzCount || 0} <span className="text-xs opacity-60">Juz</span>
+              </p>
+              <p className="text-[11px] font-bold text-stone-600 text-center">
+                {data?.totalMutqinPages || 0} hal. ({mutqinPct}%)
+              </p>
+              <p className="text-[10px] text-stone-500 text-center">Lulus ujian 30 soal + Tasmi&apos;</p>
+            </div>
           </div>
           <div className="space-y-2 bg-muted p-5 rounded-3xl border border-[#800000]/5">
             <h4 className="text-xs font-black text-[#800000] uppercase tracking-widest flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-[#D4AF37]" /> Cara Penghitungan
             </h4>
             <p className="text-sm text-black/70 leading-relaxed font-medium">
-              <strong>Dihafal</strong> = halaman yang semua langkah klik counter sampai Gabung Seluruh Halaman (A–D)
-              tuntas (emas), ditambah hafalan sebelum bergabung (emas muda). <strong>Sudah diuji</strong> = lulus
-              setoran Tasmi&apos; oleh muallimah AQLI (marun), ditambah yang sudah diuji di luar AQLI (cokelat muda).
+              <strong>Dihafal</strong> (lingkar luar) = semua langkah klik counter sampai Gabung Seluruh Halaman (A–D)
+              tuntas (emas), ditambah hafalan sebelum bergabung (emas muda). <strong>Diuji</strong> (lingkar tengah) =
+              lulus setoran Tasmi&apos; oleh muallimah AQLI (marun), ditambah yang diuji di luar AQLI (cokelat muda).{' '}
+              <strong>Mutqin</strong> (lingkar dalam, hijau) = lulus ujian 30 soal <em>dan</em> lulus Tasmi&apos;.
             </p>
           </div>
         </div>
@@ -229,6 +259,7 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
             [PRIOR_COLOR, "Hafalan lama"],
             [TESTED_COLOR, "Diuji muallimah AQLI"],
             [EXTERNAL_COLOR, "Diuji di luar AQLI"],
+            [MUTQIN_COLOR, "Mutqin"],
           ].map(([c, l]) => (
             <span key={l} className="inline-flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: c }} />
