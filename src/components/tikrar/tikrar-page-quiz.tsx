@@ -246,7 +246,13 @@ export function TikrarPageQuiz({ page }: { page: number }) {
   const [correct, setCorrect] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
-  const [result, setResult] = useState<{ score: number; passed: boolean; pointsAwarded: number; unlockedPage: number | null } | null>(null);
+  const [result, setResult] = useState<{
+    score: number;
+    passed: boolean;
+    pointsAwarded: number;
+    unlockedPage: number | null;
+    isPriorPage?: boolean;
+  } | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verses, setVerses] = useState<QuizVerse[]>([]);
@@ -312,7 +318,9 @@ export function TikrarPageQuiz({ page }: { page: number }) {
         if (json.data?.passed && json.data?.firstPass) {
           toast({
             title: 'Alhamdulillah, Lulus Ujian Halaman!',
-            description: `+${json.data.pointsAwarded} Poin. Halaman berikutnya telah terbuka.`,
+            description: json.data.isPriorPage
+              ? `+${json.data.pointsAwarded} Poin. Hafalan lama Hal. ${page} tercatat lulus ujian.`
+              : `+${json.data.pointsAwarded} Poin. Halaman berikutnya telah terbuka.`,
           });
         }
       } catch (e: any) {
@@ -382,7 +390,9 @@ export function TikrarPageQuiz({ page }: { page: number }) {
           </div>
           <p className={cn('text-sm font-black', passed ? 'text-emerald-700' : 'text-amber-700')}>
             {passed
-              ? `Lulus! ${result?.unlockedPage && result.unlockedPage !== page ? `Halaman ${result.unlockedPage} kini terbuka.` : ''}`
+              ? result?.isPriorPage
+                ? `Lulus! Hal. ${page} (hafalan lama) tercatat lulus ujian. Dengan lulus tasmi', halaman ini naik ke lapis mutqin.`
+                : `Lulus! ${result?.unlockedPage && result.unlockedPage !== page ? `Halaman ${result.unlockedPage} kini terbuka.` : ''}`
               : 'Belum lulus. Ulangi murajaah halaman ini lalu coba ujian lagi.'}
           </p>
           {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#800000]" />}

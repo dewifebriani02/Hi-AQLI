@@ -41,7 +41,13 @@ export async function POST(req: NextRequest) {
 
     const target = await loadActiveTarget(client, ctx.userId);
     const { cleared } = await loadClearedPages(client, ctx.userId);
-    const gate = isPagePracticeAllowed(pageNumber, target, cleared);
+    // Halaman hafalan lama (sebelum bergabung) boleh diujikan langsung tanpa target & tanpa langkah klik
+    const { rows: priorRows } = await client.query(
+      `SELECT 1 FROM public.tikrar_prior_hafalan WHERE user_id = $1 AND page_number = $2 LIMIT 1`,
+      [ctx.userId, pageNumber]
+    );
+    const isPriorPage = priorRows.length > 0;
+    const gate = isPriorPage ? { allowed: true as const } : isPagePracticeAllowed(pageNumber, target, cleared);
     if (!gate.allowed) {
       return NextResponse.json({ error: { message: gate.reason, code: 'PAGE_LOCKED' } }, { status: 403 });
     }
@@ -51,7 +57,7 @@ export async function POST(req: NextRequest) {
        FROM public.tikrar_user_progress WHERE user_id = $1 AND page_number = $2`,
       [ctx.userId, pageNumber]
     );
-    if (!cleared.has(pageNumber) && countCompletedSteps(progRows[0], false) < MEMORIZED_STEP_COUNT) {
+    if (!isPriorPage && !cleared.has(pageNumber) && countCompletedSteps(progRows[0], false) < MEMORIZED_STEP_COUNT) {
       return NextResponse.json(
         {
           error: {
@@ -113,6 +119,7 @@ export async function POST(req: NextRequest) {
         firstPass,
         pointsAwarded,
         activity,
+        isPriorPage,
         unlockedPage: computeUnlockedPageForTarget(target, cleared),
       },
       error: null,
