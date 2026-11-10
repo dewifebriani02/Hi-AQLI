@@ -13,6 +13,9 @@ import {
   getHourWIB,
   getJuzPageRange,
   isActiveStudyDay,
+  TIKRAR_WA_DOA_BARAKAH,
+  TIKRAR_WA_DOA_JAZAK,
+  TIKRAR_WA_SALUTATION,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
 
@@ -197,11 +200,10 @@ async function runTikrarReminderJob(opts: {
       continue;
     }
 
-    const salutation = u.salutation || 'Ukhti';
-    const displayName = u.full_name || u.username || 'Sahabat Quran';
-    const isAkhi = salutation.trim().toLowerCase() === 'akhi';
-    const doaBarakah = isAkhi ? 'Barakallahu fika' : 'Barakallahu fiki';
-    const doaJazak = isAkhi ? 'Jazakallahu khairan' : 'Jazakillahu khairan';
+    const salutation = TIKRAR_WA_SALUTATION;
+    const displayName = u.full_name || u.username || 'Thalibah';
+    const doaBarakah = TIKRAR_WA_DOA_BARAKAH;
+    const doaJazak = TIKRAR_WA_DOA_JAZAK;
 
     const activeJuz = Math.max(1, Math.min(30, Number(u.paidJuz) || 30));
     const { startPage, endPage } = getJuzPageRange(activeJuz);

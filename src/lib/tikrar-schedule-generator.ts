@@ -20,6 +20,11 @@ export const BLOCK_LETTERS: Record<number, 'A' | 'B' | 'C' | 'D'> = {
   4: 'D',
 };
 
+/** Semua peserta Hi Tikrar perempuan: sapaan & doa baku untuk pesan WhatsApp otomatis */
+export const TIKRAR_WA_SALUTATION = 'Kak';
+export const TIKRAR_WA_DOA_BARAKAH = 'Barakallahu fiiki';
+export const TIKRAR_WA_DOA_JAZAK = 'Jazakillahu khairan';
+
 export const TIKRAR_GRADE_LABELS: Record<string, string> = {
   mumtaz: 'Mumtaz',
   jayyid_jiddan: 'Jayyid Jiddan',
