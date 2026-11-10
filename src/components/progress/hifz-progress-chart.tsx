@@ -7,12 +7,15 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/db";
 import { authFetch } from "@/db/client";
+import { TikrarPriorHafalanForm } from "@/components/tikrar/tikrar-prior-hafalan-form";
 
 interface JuzItqan {
   juz: number;
   totalPages: number;
   memorizedPages: number;
+  priorPages: number;
   testedPages: number;
+  externalTestedPages: number;
 }
 
 interface ItqanData {
@@ -20,11 +23,17 @@ interface ItqanData {
   memorizedJuzCount: number;
   testedJuzCount: number;
   totalMemorizedPages: number;
+  totalAppMemorizedPages: number;
+  totalPriorPages: number;
   totalTestedPages: number;
+  totalAqliTestedPages: number;
+  totalExternalTestedPages: number;
 }
 
 const MEMORIZED_COLOR = "#D4AF37";
+const PRIOR_COLOR = "#f1dd9a";
 const TESTED_COLOR = "#800000";
+const EXTERNAL_COLOR = "#c08a5b";
 const TOTAL_PAGES = 604;
 
 /**
@@ -36,6 +45,7 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
   const { user } = useUser();
   const [data, setData] = useState<ItqanData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +67,7 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
     return () => {
       cancelled = true;
     };
-  }, [user?.id, refreshSignal]);
+  }, [user?.id, refreshSignal, reloadKey]);
 
   if (loading) {
     return (
@@ -69,17 +79,24 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
 
   const juzList: JuzItqan[] =
     data?.juz ||
-    Array.from({ length: 30 }, (_, i) => ({ juz: i + 1, totalPages: 20, memorizedPages: 0, testedPages: 0 }));
+    Array.from({ length: 30 }, (_, i) => ({
+      juz: i + 1,
+      totalPages: 20,
+      memorizedPages: 0,
+      priorPages: 0,
+      testedPages: 0,
+      externalTestedPages: 0,
+    }));
 
-  // Satu irisan per juz; bagian terisi sebanding dengan halaman
-  const ringData = (key: "memorizedPages" | "testedPages") =>
-    juzList.flatMap((j) => {
-      const filled = j[key];
-      return [
-        { name: `Juz ${j.juz}`, value: filled, filled: true },
-        { name: `Juz ${j.juz} sisa`, value: j.totalPages - filled, filled: false },
-      ];
-    });
+  // Satu irisan per juz: bagian via AQLI, bagian hafalan lama/luar AQLI, lalu sisa
+  const ringData = (primary: "memorizedPages" | "testedPages", secondary: "priorPages" | "externalTestedPages", colors: [string, string]) =>
+    juzList.flatMap((j) => [
+      { name: `Juz ${j.juz}`, value: j[primary], fill: colors[0] },
+      { name: `Juz ${j.juz} lama`, value: j[secondary], fill: colors[1] },
+      { name: `Juz ${j.juz} sisa`, value: Math.max(0, j.totalPages - j[primary] - j[secondary]), fill: "#80000012" },
+    ]);
+  const innerRing = ringData("memorizedPages", "priorPages", [MEMORIZED_COLOR, PRIOR_COLOR]);
+  const outerRing = ringData("testedPages", "externalTestedPages", [TESTED_COLOR, EXTERNAL_COLOR]);
 
   const memorizedPct = Math.round(((data?.totalMemorizedPages || 0) / TOTAL_PAGES) * 1000) / 10;
   const testedPct = Math.round(((data?.totalTestedPages || 0) / TOTAL_PAGES) * 1000) / 10;
@@ -90,9 +107,9 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
         <div className="relative w-64 h-64 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={ringData("memorizedPages")} cx="50%" cy="50%" innerRadius={68} outerRadius={88} dataKey="value" stroke="none" isAnimationActive={false}>
-                {ringData("memorizedPages").map((e, i) => (
-                  <Cell key={`m-${i}`} fill={e.filled ? MEMORIZED_COLOR : "#80000012"} />
+              <Pie data={innerRing} cx="50%" cy="50%" innerRadius={68} outerRadius={88} dataKey="value" stroke="none" isAnimationActive={false}>
+                {innerRing.map((e, i) => (
+                  <Cell key={`m-${i}`} fill={e.fill} />
                 ))}
                 <Label
                   content={({ viewBox }) => {
@@ -111,9 +128,9 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
                   }}
                 />
               </Pie>
-              <Pie data={ringData("testedPages")} cx="50%" cy="50%" innerRadius={96} outerRadius={116} dataKey="value" stroke="none" isAnimationActive={false}>
-                {ringData("testedPages").map((e, i) => (
-                  <Cell key={`t-${i}`} fill={e.filled ? TESTED_COLOR : "#80000012"} />
+              <Pie data={outerRing} cx="50%" cy="50%" innerRadius={96} outerRadius={116} dataKey="value" stroke="none" isAnimationActive={false}>
+                {outerRing.map((e, i) => (
+                  <Cell key={`t-${i}`} fill={e.fill} />
                 ))}
               </Pie>
             </PieChart>
@@ -132,6 +149,9 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
               <p className="text-[11px] font-bold text-stone-600 text-center">
                 {data?.totalMemorizedPages || 0} hal. ({memorizedPct}%)
               </p>
+              <p className="text-[10px] text-stone-500 text-center">
+                AQLI {data?.totalAppMemorizedPages || 0} • lama {data?.totalPriorPages || 0}
+              </p>
             </div>
             <div className="p-5 rounded-3xl bg-[#800000] border-b-4 border-[#D4AF37] space-y-1 text-white">
               <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">
@@ -143,6 +163,9 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
               <p className="text-[11px] font-bold text-white/80 text-center">
                 {data?.totalTestedPages || 0} hal. ({testedPct}%)
               </p>
+              <p className="text-[10px] text-white/70 text-center">
+                AQLI {data?.totalAqliTestedPages || 0} • luar AQLI {data?.totalExternalTestedPages || 0}
+              </p>
             </div>
           </div>
           <div className="space-y-2 bg-muted p-5 rounded-3xl border border-[#800000]/5">
@@ -151,7 +174,8 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
             </h4>
             <p className="text-sm text-black/70 leading-relaxed font-medium">
               <strong>Dihafal</strong> = halaman yang semua langkah klik counter sampai Gabung Seluruh Halaman (A–D)
-              tuntas. <strong>Sudah diuji</strong> = halaman yang dinyatakan lulus setoran Tasmi&apos; oleh muallimah/admin.
+              tuntas (emas), ditambah hafalan sebelum bergabung (emas muda). <strong>Sudah diuji</strong> = lulus
+              setoran Tasmi&apos; oleh muallimah AQLI (marun), ditambah yang sudah diuji di luar AQLI (cokelat muda).
             </p>
           </div>
         </div>
@@ -164,12 +188,14 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
         </div>
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-3">
           {juzList.map((j) => {
-            const memFull = j.memorizedPages >= j.totalPages;
-            const testFull = j.testedPages >= j.totalPages;
+            const memAll = j.memorizedPages + j.priorPages;
+            const testAll = j.testedPages + j.externalTestedPages;
+            const memFull = memAll >= j.totalPages;
+            const testFull = testAll >= j.totalPages;
             return (
               <div
                 key={j.juz}
-                title={`Juz ${j.juz}: dihafal ${j.memorizedPages}/${j.totalPages} hal., diuji ${j.testedPages}/${j.totalPages} hal.`}
+                title={`Juz ${j.juz}: dihafal ${memAll}/${j.totalPages} hal. (lama ${j.priorPages}), diuji ${testAll}/${j.totalPages} hal. (luar AQLI ${j.externalTestedPages})`}
                 className={cn(
                   "h-16 flex flex-col items-center justify-center rounded-2xl border-2 relative select-none overflow-hidden",
                   testFull
@@ -181,13 +207,14 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
               >
                 <span className="text-[9px] font-black uppercase tracking-tighter">Juz</span>
                 <span className="text-lg font-black leading-none">{j.juz}</span>
-                {(j.memorizedPages > 0 || j.testedPages > 0) && !testFull && (
+                {(memAll > 0 || testAll > 0) && !testFull && (
                   <span className="text-[8px] font-black mt-0.5">
-                    {j.memorizedPages}/{j.testedPages}
+                    {memAll}/{testAll}
                   </span>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 h-1 flex">
                   <div style={{ width: `${(j.memorizedPages / j.totalPages) * 100}%`, backgroundColor: MEMORIZED_COLOR }} />
+                  <div style={{ width: `${(j.priorPages / j.totalPages) * 100}%`, backgroundColor: PRIOR_COLOR }} />
                 </div>
               </div>
             );
@@ -196,7 +223,22 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
         <p className="text-[11px] text-muted-foreground px-1">
           Angka kecil = halaman dihafal / halaman sudah diuji. Emas = 1 juz penuh dihafal, merah marun = 1 juz penuh lulus diuji.
         </p>
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] font-semibold text-stone-600 px-1">
+          {[
+            [MEMORIZED_COLOR, "Dihafal via AQLI"],
+            [PRIOR_COLOR, "Hafalan lama"],
+            [TESTED_COLOR, "Diuji muallimah AQLI"],
+            [EXTERNAL_COLOR, "Diuji di luar AQLI"],
+          ].map(([c, l]) => (
+            <span key={l} className="inline-flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: c }} />
+              {l}
+            </span>
+          ))}
+        </div>
       </div>
+
+      <TikrarPriorHafalanForm onSaved={() => setReloadKey((k) => k + 1)} />
     </div>
   );
 }
