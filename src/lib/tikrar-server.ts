@@ -165,7 +165,15 @@ export async function recordTikrarActivity(
   client: PoolClient,
   userId: string,
   input: { clicksDelta: number; stepsBefore: number; stepsAfter: number; target: ActiveTikrarTarget | null }
-): Promise<{ pointsAwarded: number; targetMet: boolean; justMetTarget: boolean; streak: number; stepsToday: number; dailyQuota: number }> {
+): Promise<{
+  pointsAwarded: number;
+  targetMet: boolean;
+  justMetTarget: boolean;
+  streak: number;
+  stepsToday: number;
+  dailyQuota: number;
+  clicks: number;
+}> {
   const todayKey = toDateKeyWIB();
   const dailyQuota = input.target?.schedule.dailyQuota || 1;
   const clicksDelta = Math.max(0, Math.floor(input.clicksDelta));
@@ -179,7 +187,7 @@ export async function recordTikrarActivity(
   const ex = exRows[0];
 
   if (!ex && clicksDelta === 0 && !stepsAdvanced) {
-    return { pointsAwarded: 0, targetMet: false, justMetTarget: false, streak: 0, stepsToday: 0, dailyQuota };
+    return { pointsAwarded: 0, targetMet: false, justMetTarget: false, streak: 0, stepsToday: 0, dailyQuota, clicks: 0 };
   }
 
   const clicks = (Number(ex?.clicks) || 0) + clicksDelta;
@@ -231,7 +239,7 @@ export async function recordTikrarActivity(
     ]);
   }
 
-  return { pointsAwarded, targetMet, justMetTarget, streak, stepsToday, dailyQuota };
+  return { pointsAwarded, targetMet, justMetTarget, streak, stepsToday, dailyQuota, clicks };
 }
 
 /** Ringkasan Tikrar untuk satu thalibah: target, jadwal, hari ini, streak, halaman terbuka, langkah per halaman */
