@@ -258,7 +258,7 @@ export default function TikrarPage() {
                   <div className="flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-[#D4AF37]" />
                     <CardTitle className="text-lg font-headline">
-                      Itqan 30 Juz: Dihafal &amp; Sudah Diuji
+                      Itqan 30 Juz: Dihafal, Diuji &amp; Mutqin
                     </CardTitle>
                   </div>
                 </CardHeader>

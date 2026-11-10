@@ -6,6 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useUser } from '@/db';
 import { authFetch } from '@/db/client';
@@ -27,7 +35,6 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
-  Lock,
   Pencil,
   Sparkles,
   Target,
@@ -77,6 +84,8 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
   const [isSaving, setIsSaving] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [hasInitializedForm, setHasInitializedForm] = useState(false);
+  const [showIstiqomah, setShowIstiqomah] = useState(false);
+  const recentChanges = summary?.targetChangesLast30Days || 0;
 
   // Isi form dari target aktif (sekali)
   useEffect(() => {
@@ -189,6 +198,63 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
 
   return (
     <div className="space-y-8 pb-20">
+      <Dialog open={showIstiqomah} onOpenChange={setShowIstiqomah}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#800000] font-black">Istiqomah Lebih Utama</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {recentChanges >= 2
+                ? `Ukhti sudah mengubah target ${recentChanges} kali dalam 30 hari terakhir. Sering berganti target bisa membuat hafalan tidak kokoh.`
+                : 'Sebelum mengubah target, renungkan sejenak pesan berikut.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-[#800000]/5 border border-[#800000]/10 p-4 space-y-2">
+              <p dir="rtl" className="font-arabic text-2xl leading-loose text-right text-stone-900">
+                أَحَبُّ الْأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ
+              </p>
+              <p className="text-sm font-semibold text-stone-800">
+                &ldquo;Amalan yang paling dicintai Allah adalah yang paling rutin dikerjakan, meskipun sedikit.&rdquo;
+              </p>
+              <p className="text-[11px] font-bold text-stone-500">HR. Al-Bukhari dan Muslim</p>
+            </div>
+            <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 space-y-2">
+              <p dir="rtl" className="font-arabic text-2xl leading-loose text-right text-stone-900">
+                فَاسْتَقِمْ كَمَا أُمِرْتَ
+              </p>
+              <p className="text-sm font-semibold text-stone-800">
+                &ldquo;Maka tetaplah (istiqomahlah) engkau sebagaimana telah diperintahkan kepadamu.&rdquo;
+              </p>
+              <p className="text-[11px] font-bold text-stone-500">QS. Hud: 112</p>
+            </div>
+            <p className="text-xs text-stone-600 leading-relaxed">
+              Lebih baik sedikit tapi terus-menerus daripada banyak lalu berhenti. Ubah target bila memang perlu,
+              misalnya jadwal tidak sesuai kondisi Ukhti, bukan karena ingin berpindah-pindah.
+            </p>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              type="button"
+              onClick={() => setShowIstiqomah(false)}
+              className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black rounded-xl h-11"
+            >
+              Tetap dengan Target Sekarang
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowIstiqomah(false);
+                setIsEditing(true);
+              }}
+              className="font-bold rounded-xl h-11 border-stone-300"
+            >
+              Saya Tetap Ingin Mengubah
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {!showForm && target ? (
         <Card className="border border-stone-200 shadow-md rounded-2xl overflow-hidden bg-white">
           <CardHeader className="bg-[#800000] text-white border-b-4 border-[#D4AF37] p-5 sm:p-6">
@@ -210,20 +276,15 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                   type="button"
                   size="sm"
                   variant="outline"
-                  disabled={!target.canChangeTarget}
-                  onClick={() => setIsEditing(true)}
-                  className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-black text-xs h-9 px-3.5 rounded-xl disabled:opacity-60"
+                  onClick={() => setShowIstiqomah(true)}
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-black text-xs h-9 px-3.5 rounded-xl"
                 >
-                  {target.canChangeTarget ? (
-                    <Pencil className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" />
-                  ) : (
-                    <Lock className="w-3.5 h-3.5 mr-1.5" />
-                  )}
+                  <Pencil className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" />
                   Ubah Target
                 </Button>
-                {!target.canChangeTarget && (
+                {recentChanges >= 2 && (
                   <span className="text-[10px] text-white/75 max-w-[220px] sm:text-right">
-                    Bisa diubah setelah lulus ujian minimal 1 halaman pada target ini.
+                    Target sudah diubah {recentChanges}x dalam 30 hari terakhir.
                   </span>
                 )}
               </div>
@@ -309,7 +370,8 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 <CardTitle className="text-xl font-headline font-black">Target Hafalan &amp; Jadwal Per Langkah</CardTitle>
                 <CardDescription className="text-white/80 text-xs mt-1">
                   Pilih Juz, halaman mulai sampai halaman akhir, dan durasi periode. Jadwal disusun mengikuti urutan
-                  mushaf: Simak → A1 → A2 → Gabung A → … → Gabung A–D → Ujian.
+                  mushaf: Simak → A1 → A2 → Gabung A → … → Gabung A–D → Ujian. Progres yang sudah tercatat tidak hilang
+                  saat target diubah.
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 self-start sm:self-center">
@@ -489,7 +551,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               <strong className="text-[#800000]">Ringkasan:</strong> {totalPagesSelected} halaman × {STEPS_PER_PAGE} langkah ={' '}
               <strong>{preview.totalSteps} langkah</strong>, dibagi ke {preview.activeDays} hari aktif ({paceMeta.durationMonths}{' '}
               bulan) → <strong>{preview.dailyQuota} langkah per hari</strong>. Periode {formatDate(startDateKey)} –{' '}
-              {formatDate(preview.endDate, true)}. Target dapat diubah lagi setelah lulus ujian minimal 1 halaman.
+              {formatDate(preview.endDate, true)}.
             </div>
           </CardContent>
         </Card>

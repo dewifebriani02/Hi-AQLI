@@ -260,7 +260,12 @@ export async function buildTikrarSummary(userId: string) {
          FROM public.tikrar_page_quizzes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
         [userId]
       ),
-      pool.query(`SELECT COUNT(*)::int AS n FROM public.tikrar_targets WHERE user_id = $1`, [userId]),
+      pool.query(
+        `SELECT COUNT(*)::int AS n,
+                COUNT(*) FILTER (WHERE created_at >= now() - INTERVAL '30 days' AND NOT is_legacy)::int AS recent
+         FROM public.tikrar_targets WHERE user_id = $1`,
+        [userId]
+      ),
     ]);
 
   const stepsByPage: Record<number, number> = {};
@@ -310,9 +315,10 @@ export async function buildTikrarSummary(userId: string) {
       clearedPagesInTarget: clearedInTarget,
       todaySchedule,
       nextSchedule,
-      // Boleh ubah target bila sudah lulus >=1 halaman dalam target ini sejak target dibuat
-      // (target hasil migrasi sistem lama boleh langsung diubah)
-      canChangeTarget: target.isLegacy || quizRows.some(
+      // Target selalu boleh diubah; UI mengingatkan istiqomah bila sering berganti
+      canChangeTarget: true,
+      // Sudah lulus >=1 halaman pada target ini sejak target dibuat
+      hasPassedPageInTarget: quizRows.some(
         (q) =>
           q.passed &&
           Number(q.page_number) >= target.startPage &&
@@ -326,6 +332,8 @@ export async function buildTikrarSummary(userId: string) {
     todayKey,
     target: targetInfo,
     hasEverHadTarget: (targetHistory[0]?.n || 0) > 0,
+    // Jumlah target yang dibuat thalibah dalam 30 hari terakhir (untuk pengingat istiqomah)
+    targetChangesLast30Days: Number(targetHistory[0]?.recent) || 0,
     points: Number(userRows[0]?.points) || 0,
     streak,
     today: today

@@ -9,6 +9,7 @@ import { loadClearedPages } from '@/lib/tikrar-server';
  * Itqan 30 Juz dua lapis:
  * - memorized: halaman yang semua langkah klik counter sampai Gabung A–D tuntas
  * - tested: halaman yang dinyatakan lulus setoran Tasmi' / ujian lisan oleh muallimah
+ * - mutqin: halaman yang lulus ujian 30 soal dan lulus Tasmi' (di AQLI atau di luar AQLI)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -45,17 +46,24 @@ export async function GET(req: NextRequest) {
       if (r.status === 'tested_external' && !tasmiPassed.has(p)) externalTested.add(p);
     }
 
+    // Mutqin = lulus ujian 30 soal DAN lulus Tasmi' (di AQLI atau di luar AQLI)
+    const mutqinPages = new Set<number>(
+      Array.from(quizPassed).filter((p) => tasmiPassed.has(p) || externalTested.has(p))
+    );
+
     const juz = Array.from({ length: 30 }, (_, i) => {
       const { startPage, endPage, totalPages } = getJuzPageRange(i + 1);
       let mem = 0;
       let prior = 0;
       let tested = 0;
       let external = 0;
+      let mutqin = 0;
       for (let p = startPage; p <= endPage; p++) {
         if (memorized.has(p)) mem += 1;
         else if (priorMemorized.has(p)) prior += 1;
         if (tasmiPassed.has(p)) tested += 1;
         else if (externalTested.has(p)) external += 1;
+        if (mutqinPages.has(p)) mutqin += 1;
       }
       return {
         juz: i + 1,
@@ -64,6 +72,7 @@ export async function GET(req: NextRequest) {
         priorPages: prior,
         testedPages: tested,
         externalTestedPages: external,
+        mutqinPages: mutqin,
       };
     });
 
@@ -84,6 +93,8 @@ export async function GET(req: NextRequest) {
         totalTestedPages: allTested.size,
         totalAqliTestedPages: tasmiPassed.size,
         totalExternalTestedPages: externalTested.size,
+        mutqinJuzCount: juz.filter((j) => j.mutqinPages >= j.totalPages).length,
+        totalMutqinPages: mutqinPages.size,
         lastJuz: allMemorized.size ? getJuzForPage(Math.max(...allMemorized)) : null,
       },
       error: null,
