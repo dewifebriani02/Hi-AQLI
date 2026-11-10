@@ -2309,23 +2309,6 @@ function InlineUndoButton({ onClick, className }: { onClick: () => void; classNa
   );
 }
 
-function UndoButton({ onClick, className }: { onClick: () => void; className?: string }) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={onClick}
-      title="Kurangi 1 (kelebihan pencet)"
-      className={cn(
-        'rounded-2xl border-2 border-stone-300 bg-white text-stone-600 font-black text-lg shrink-0 touch-manipulation select-none active:scale-[0.95] hover:bg-stone-50',
-        className
-      )}
-    >
-      −1
-    </Button>
-  );
-}
-
 function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, stepInfo }: any) {
   const isDone = count >= META_PASS_THRESHOLD;
   const TARGET_MAX_LOCAL = 10;
@@ -2334,7 +2317,6 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
       id={stepInfo ? `step-${stepInfo.key}` : undefined}
       className={cn(
         'relative p-4 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between transition-all gap-3',
-        stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
         isDone ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'bg-white border-[#800000]/10',
         highlight && !isDone && 'border-[#800000] bg-[#800000]/5',
         isLocked && 'opacity-40 grayscale select-none'
@@ -2368,7 +2350,6 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
           <span className="text-[8px] font-bold text-muted-foreground">
             WAJIB {META_PASS_THRESHOLD}x SEBELUM MEMBUKA TAHAP BERIKUTNYA
           </span>
-          <StepTag info={stepInfo} className="pt-1" />
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
@@ -2383,23 +2364,31 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
             />
           </div>
         </div>
-        {canUndo && <UndoButton onClick={() => onIncrement(-1)} className="h-16 w-16" />}
-        <Button
-          type="button"
-          onClick={() => {
-            playTikrarCount(count + 1, META_PASS_THRESHOLD);
-            onIncrement(1);
-          }}
-          disabled={isLocked || isDone}
-          className={cn(
-            'h-16 flex-1 sm:flex-none sm:w-28 rounded-2xl p-0 font-black text-xl shrink-0 transition-all shadow-md touch-manipulation select-none active:scale-[0.95]',
-            isDone
-              ? 'bg-[#D4AF37] text-black border-none'
-              : 'bg-[#800000] text-white hover:bg-[#800000]/90'
-          )}
-        >
-          {isDone ? <CheckCircle2 className="w-7 h-7" /> : '+1'}
-        </Button>
+        <div className="flex-1 sm:flex-none sm:w-40 flex flex-col gap-1.5">
+          <div className="relative">
+            <Button
+              type="button"
+              onClick={() => {
+                playTikrarCount(count + 1, META_PASS_THRESHOLD);
+                onIncrement(1);
+              }}
+              disabled={isLocked || isDone}
+              className={cn(
+                'h-16 w-full rounded-2xl p-0 font-black text-xl transition-all shadow-md touch-manipulation select-none active:scale-[0.95]',
+                stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
+                isDone
+                  ? 'bg-[#D4AF37] text-black border-none'
+                  : 'bg-[#800000] text-white hover:bg-[#800000]/90'
+              )}
+            >
+              {isDone ? <CheckCircle2 className="w-7 h-7" /> : '+1'}
+            </Button>
+            {canUndo && (
+              <InlineUndoButton onClick={() => onIncrement(-1)} className="left-2 top-1/2 -translate-y-1/2" />
+            )}
+          </div>
+          <StepTag info={stepInfo} className="justify-center" />
+        </div>
       </div>
     </div>
   );
