@@ -91,7 +91,7 @@ export interface TikrarProgressLike {
   meta_counts?: any;
 }
 
-function stepValue(step: TikrarStepDef, prog: TikrarProgressLike | null | undefined): number {
+export function stepValue(step: TikrarStepDef, prog: TikrarProgressLike | null | undefined): number {
   if (!prog) return 0;
   if (step.kind === 'prep') {
     const listened = Number(prog.prep_listen_count) || 0;
@@ -143,6 +143,16 @@ export function countTotalClicks(prog: TikrarProgressLike | null | undefined): n
   }
   for (const v of Object.values(prog.meta_counts || {})) total += Number(v) || 0;
   return total;
+}
+
+/** Langkah boleh dikurangi (-1) bila sudah ada hitungannya dan langkah berikutnya belum dimulai */
+export function canUndoStep(key: string, prog: TikrarProgressLike | null | undefined): boolean {
+  const i = TIKRAR_STEPS.findIndex((s) => s.key === key);
+  const step = TIKRAR_STEPS[i];
+  if (!step || step.kind === 'prep' || step.kind === 'quiz') return false;
+  if (stepValue(step, prog) <= 0) return false;
+  const next = TIKRAR_STEPS[i + 1];
+  return !next || next.kind === 'quiz' || stepValue(next, prog) <= 0;
 }
 
 export function getStepByGlobalIndex(startPage: number, globalIndex: number) {

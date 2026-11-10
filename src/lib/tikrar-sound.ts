@@ -73,3 +73,10 @@ export function playTikrarCount(nextCount: number, threshold: number) {
   if (nextCount >= threshold) playTikrarDone();
   else playTikrarTap();
 }
+
+export function playTikrarUndo() {
+  vibrate([10, 40, 10]);
+  if (!isTikrarSoundEnabled()) return;
+  tone(440, 0, 0.09, 0.22, 'triangle');
+  tone(330, 0.08, 0.12, 0.2, 'triangle');
+}
