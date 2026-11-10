@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
 import { addCalendarDays, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
-import { computeTargetStreak, type HeatmapLevel } from '@/lib/tikrar-steps';
+import {
+  computeTargetStreak,
+  computeUnlockedPage,
+  estimateClicksForNextSteps,
+  generateTikrarStepSchedule,
+  type HeatmapLevel,
+} from '@/lib/tikrar-steps';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -40,7 +46,7 @@ export async function GET(req: NextRequest) {
     );
     const ids = members.map((m) => m.id);
 
-    const [{ rows: actRows }, { rows: subRows }, { rows: logRows }] = await Promise.all([
+    const [{ rows: actRows }, { rows: subRows }, { rows: logRows }, { rows: targetRows }, { rows: progRows }, { rows: clearedRows }] = await Promise.all([
       pool.query(
         `SELECT user_id, to_char(activity_date, 'YYYY-MM-DD') AS d, clicks, target_met,
                 GREATEST(steps_now - steps_start, 0) AS steps
@@ -64,7 +70,65 @@ export async function GET(req: NextRequest) {
          GROUP BY user_id, log_date`,
         [ids, fromKey]
       ),
+      // Untuk menghitung progres klik hari ini menuju target harian
+      pool.query(
+        `SELECT user_id, juz, start_page, end_page, to_char(start_date, 'YYYY-MM-DD') AS start_date,
+                duration_months, active_days_per_week
+         FROM public.tikrar_targets WHERE user_id = ANY($1::uuid[]) AND is_active`,
+        [ids]
+      ),
+      pool.query(
+        `SELECT user_id, page_number, prep_listen_count, prep_translation_done, blocks, meta_counts
+         FROM public.tikrar_user_progress WHERE user_id = ANY($1::uuid[])`,
+        [ids]
+      ),
+      pool.query(
+        `SELECT user_id, page_number FROM public.tikrar_page_quizzes WHERE user_id = ANY($1::uuid[]) AND passed
+         UNION
+         SELECT user_id, page_number FROM public.page_exams WHERE user_id = ANY($1::uuid[]) AND passed = true`,
+        [ids]
+      ),
     ]);
+    const targetByUser = new Map<string, any>(targetRows.map((t) => [t.user_id, t]));
+    const progressByUser = new Map<string, Record<number, any>>();
+    for (const r of progRows) {
+      if (!progressByUser.has(r.user_id)) progressByUser.set(r.user_id, {});
+      progressByUser.get(r.user_id)![Number(r.page_number)] = r;
+    }
+    const clearedByUser = new Map<string, Set<number>>();
+    for (const r of clearedRows) {
+      if (!clearedByUser.has(r.user_id)) clearedByUser.set(r.user_id, new Set());
+      clearedByUser.get(r.user_id)!.add(Number(r.page_number));
+    }
+
+    // Progres hari ini: klik sudah dilakukan vs perkiraan klik total untuk mencapai kuota langkah harian
+    const buildToday = (userId: string, todayAct?: { clicks: number; met: boolean; steps: number }) => {
+      const t = targetByUser.get(userId);
+      const clicks = todayAct?.clicks || 0;
+      const stepsToday = todayAct?.steps || 0;
+      if (!t) return { hasTarget: false, clicks, stepsToday, dailyQuota: 0, clicksTarget: 0, met: false };
+      const dailyQuota = generateTikrarStepSchedule({
+        juz: Number(t.juz),
+        startPage: Number(t.start_page),
+        endPage: Number(t.end_page),
+        startDate: t.start_date,
+        durationMonths: Number(t.duration_months),
+        activeDaysPerWeek: Number(t.active_days_per_week),
+      }).dailyQuota;
+      const met = Boolean(todayAct?.met);
+      const cleared = clearedByUser.get(userId) || new Set<number>();
+      const fromPage = computeUnlockedPage(Number(t.start_page), Number(t.end_page), cleared);
+      const remainingClicks = met
+        ? 0
+        : estimateClicksForNextSteps(
+            progressByUser.get(userId) || {},
+            fromPage,
+            Number(t.end_page),
+            cleared,
+            Math.max(0, dailyQuota - stepsToday)
+          );
+      return { hasTarget: true, clicks, stepsToday, dailyQuota, clicksTarget: clicks + remainingClicks, met };
+    };
     const logByUser = new Map<string, Set<string>>();
     for (const l of logRows) {
       if (!logByUser.has(l.user_id)) logByUser.set(l.user_id, new Set());
@@ -121,6 +185,7 @@ export async function GET(req: NextRequest) {
           targetDays: Number(m.active_days) || 5,
           weeklyMet,
           streak: computeTargetStreak(metDates, Number(m.active_days) || 5, todayKey),
+          today: buildToday(m.id, acts.get(todayKey)),
           days,
         };
       })

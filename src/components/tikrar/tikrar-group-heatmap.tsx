@@ -29,6 +29,14 @@ interface MemberRow {
   targetDays: number;
   weeklyMet: number;
   streak: number;
+  today: {
+    hasTarget: boolean;
+    clicks: number;
+    stepsToday: number;
+    dailyQuota: number;
+    clicksTarget: number;
+    met: boolean;
+  };
   days: { date: string; level: HeatmapLevel; clicks: number; steps: number; tasmi: string[] | null }[];
 }
 
@@ -179,6 +187,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                           </span>
                         )}
                       </div>
+                      <TodayProgress today={member.today} />
                     </div>
 
                     <div className="py-1">
@@ -241,5 +250,38 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** Progres klik hari ini menuju target harian (hijau pekat) */
+function TodayProgress({ today }: { today?: MemberRow['today'] }) {
+  if (!today) return null;
+  if (!today.hasTarget) {
+    return <p className="text-[11px] font-semibold text-stone-400 pt-1">Belum mengisi target</p>;
+  }
+  const pct = today.met
+    ? 100
+    : today.clicksTarget > 0
+    ? Math.min(100, Math.round((today.clicks / today.clicksTarget) * 100))
+    : 0;
+  return (
+    <div className="pt-1.5 space-y-1 max-w-[230px]">
+      <p className={cn('text-[11px] font-bold', today.met ? 'text-emerald-700' : 'text-stone-600')}>
+        {today.met
+          ? `✓ Target hari ini tercapai • ${today.clicks} klik`
+          : `Hari ini: ${today.clicks}/${today.clicksTarget} klik • ${today.stepsToday}/${today.dailyQuota} langkah`}
+      </p>
+      <div className="h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, backgroundColor: today.met ? HEATMAP_COLORS.met : '#4ade80' }}
+        />
+      </div>
+      {!today.met && today.clicksTarget > today.clicks && (
+        <p className="text-[10px] text-stone-500">
+          ±{today.clicksTarget - today.clicks} klik lagi untuk hijau pekat
+        </p>
+      )}
+    </div>
   );
 }

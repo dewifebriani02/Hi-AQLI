@@ -155,6 +155,34 @@ export function canUndoStep(key: string, prog: TikrarProgressLike | null | undef
   return !next || next.kind === 'quiz' || stepValue(next, prog) <= 0;
 }
 
+/**
+ * Perkiraan sisa klik untuk menuntaskan `stepsNeeded` langkah berikutnya, mulai dari langkah aktif
+ * di halaman `fromPage` (berlanjut ke halaman berikutnya sampai `endPage`). Ujian dihitung 0 klik.
+ */
+export function estimateClicksForNextSteps(
+  progressByPage: Record<number, TikrarProgressLike | undefined>,
+  fromPage: number,
+  endPage: number,
+  clearedPages: Set<number>,
+  stepsNeeded: number
+): number {
+  let remaining = Math.max(0, Math.floor(stepsNeeded));
+  let clicks = 0;
+  for (let p = fromPage; p <= endPage && remaining > 0; p++) {
+    const prog = progressByPage[p];
+    const done = countCompletedSteps(prog, clearedPages.has(p));
+    for (let i = done; i < STEPS_PER_PAGE && remaining > 0; i++) {
+      const step = TIKRAR_STEPS[i];
+      if (step.kind !== 'quiz') {
+        const current = Math.min(stepValue(step, prog), step.target);
+        clicks += Math.max(0, step.target - current);
+      }
+      remaining -= 1;
+    }
+  }
+  return clicks;
+}
+
 export function getStepByGlobalIndex(startPage: number, globalIndex: number) {
   const page = startPage + Math.floor(globalIndex / STEPS_PER_PAGE);
   const step = TIKRAR_STEPS[globalIndex % STEPS_PER_PAGE];
