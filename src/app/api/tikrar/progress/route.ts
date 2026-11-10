@@ -117,6 +117,10 @@ export async function POST(req: NextRequest) {
           a: { count: Math.max(Number(exBlocks?.[b]?.a?.count) || 0, Number(blocks?.[b]?.a?.count) || 0) },
           b: { count: Math.max(Number(exBlocks?.[b]?.b?.count) || 0, Number(blocks?.[b]?.b?.count) || 0) },
           combined: { count: Math.max(Number(exBlocks?.[b]?.combined?.count) || 0, Number(blocks?.[b]?.combined?.count) || 0) },
+          // Hitungan simak audio per blok (0..5), monoton
+          listen: {
+            count: Math.min(5, Math.max(Number(exBlocks?.[b]?.listen?.count) || 0, Number(blocks?.[b]?.listen?.count) || 0)),
+          },
         };
       }
 
