@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
 import { getJuzForPage, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
-import { countTotalClicks } from '@/lib/tikrar-steps';
+import { canUndoStep, countTotalClicks, PASS_THRESHOLD } from '@/lib/tikrar-steps';
 import {
   computeTotalCompletedSteps,
   isPagePracticeAllowed,
@@ -67,6 +67,10 @@ export async function POST(req: NextRequest) {
     const blocks = typeof body.blocks === 'object' && body.blocks !== null ? body.blocks : {};
     const metaCounts = typeof body.meta_counts === 'object' && body.meta_counts !== null ? body.meta_counts : {};
     const totalProgress = Math.max(0, Math.min(100, Math.floor(Number(body.total_progress) || 0)));
+    // Counter yang dikurangi thalibah (tombol -1): nilainya boleh turun, counter lain tetap monoton
+    const undoKeys: string[] = Array.isArray(body.undo_keys)
+      ? body.undo_keys.filter((k: unknown) => typeof k === 'string' && /^([1-4]\.(a|b|combined)|meta\.[1-4_]+)$/.test(k)).slice(0, 30)
+      : [];
 
     // Gerbang: wajib punya target & halaman harus sudah terbuka (lulus ujian halaman sebelumnya)
     const target = await loadActiveTarget(client, ctx.userId);
@@ -124,6 +128,26 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Terapkan pengurangan (-1) hanya bila langkah berikutnya belum dimulai
+    const undoneCombinedBlocks: number[] = [];
+    for (const key of undoKeys) {
+      const current = { blocks: finalBlocks, meta_counts: finalMetaCounts };
+      if (!canUndoStep(key, current)) continue;
+      if (key.startsWith('meta.')) {
+        const k = key.slice(5);
+        const wanted = Math.max(0, Math.floor(Number(metaCounts?.[k]) || 0));
+        if (wanted < (Number(finalMetaCounts[k]) || 0)) finalMetaCounts[k] = wanted;
+      } else {
+        const [b, part] = key.split('.');
+        const wanted = Math.max(0, Math.floor(Number(blocks?.[b]?.[part]?.count) || 0));
+        const now = Number(finalBlocks?.[b]?.[part]?.count) || 0;
+        if (wanted < now) {
+          finalBlocks[b] = { ...(finalBlocks[b] || {}), [part]: { count: wanted } };
+          if (part === 'combined' && now >= PASS_THRESHOLD && wanted < PASS_THRESHOLD) undoneCombinedBlocks.push(Number(b));
+        }
+      }
+    }
+
     // Identifikasi blok-blok yang tuntas (combined >= 40)
     const tuntasBlocks: number[] = [];
     for (const b of [1, 2, 3, 4] as const) {
@@ -161,6 +185,27 @@ export async function POST(req: NextRequest) {
         finalTotalProgress,
       ]
     );
+
+    // Blok yang batal tuntas karena -1: keluarkan dari laporan blok tuntas halaman ini
+    if (undoneCombinedBlocks.length > 0) {
+      await client.query(
+        `UPDATE public.tikrar_daily_logs
+         SET blocks_completed = COALESCE((
+               SELECT jsonb_agg(e) FROM jsonb_array_elements(blocks_completed) e
+               WHERE (e #>> '{}') <> ALL($3::text[])
+             ), '[]'::jsonb),
+             updated_at = now()
+         WHERE user_id = $1 AND page_number = $2 AND EXISTS (
+           SELECT 1 FROM jsonb_array_elements(blocks_completed) e WHERE (e #>> '{}') = ANY($3::text[])
+         )`,
+        [ctx.userId, pageNumber, undoneCombinedBlocks.map(String)]
+      );
+      await client.query(
+        `DELETE FROM public.tikrar_daily_logs
+         WHERE user_id = $1 AND page_number = $2 AND jsonb_array_length(blocks_completed) = 0`,
+        [ctx.userId, pageNumber]
+      );
+    }
 
     const savedRow = progressRows[0];
     const stepsAfter = await computeTotalCompletedSteps(client, ctx.userId, cleared, { page: pageNumber, row: savedRow });

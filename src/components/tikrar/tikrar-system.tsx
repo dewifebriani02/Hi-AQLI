@@ -75,9 +75,9 @@ import {
   TIKRAR_GRADE_LABELS,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
-import { QUIZ_PASS_PERCENT, QUIZ_QUESTION_COUNT } from '@/lib/tikrar-steps';
+import { canUndoStep, QUIZ_PASS_PERCENT, QUIZ_QUESTION_COUNT } from '@/lib/tikrar-steps';
 import type { TikrarSummary } from '@/lib/tikrar-server';
-import { isTikrarSoundEnabled, playTikrarCount, playTikrarTap, setTikrarSoundEnabled } from '@/lib/tikrar-sound';
+import { isTikrarSoundEnabled, playTikrarCount, playTikrarTap, playTikrarUndo, setTikrarSoundEnabled } from '@/lib/tikrar-sound';
 
 interface ReciterOption {
   id: number;
@@ -622,6 +622,7 @@ export function TikrarSystem({
   const [soundOn, setSoundOn] = useState(true);
   useEffect(() => setSoundOn(isTikrarSoundEnabled()), []);
   const lockToastShownRef = useRef(false);
+  const pendingUndoKeysRef = useRef<Set<string>>(new Set());
   const lastStepsTodayRef = useRef<number>(-1);
 
   // Hydrate progress from DB + localStorage + merge DB completed blocks
@@ -800,6 +801,8 @@ export function TikrarSystem({
     let timerDb: NodeJS.Timeout | null = null;
     if (user?.id && isHydratedRef.current && !pageLockReason) {
       timerDb = setTimeout(async () => {
+        const undoKeys = Array.from(pendingUndoKeysRef.current);
+        pendingUndoKeysRef.current.clear();
         try {
           const res = await authFetch('/api/tikrar/progress', {
             method: 'POST',
@@ -811,9 +814,11 @@ export function TikrarSystem({
               blocks,
               meta_counts: metaCounts,
               total_progress: Math.round(totalProgress),
+              undo_keys: undoKeys,
             }),
           });
           const json = await res.json().catch(() => ({}));
+          if (!res.ok) undoKeys.forEach((k) => pendingUndoKeysRef.current.add(k));
           if (res.status === 403) {
             if (!lockToastShownRef.current) {
               lockToastShownRef.current = true;
@@ -845,6 +850,7 @@ export function TikrarSystem({
             }
           }
         } catch (e) {
+          undoKeys.forEach((k) => pendingUndoKeysRef.current.add(k));
           console.error('Gagal sync progres ke database:', e);
         }
       }, 400);
@@ -1149,6 +1155,26 @@ export function TikrarSystem({
   const isPrepTuntas = prepListenCount >= PREP_LISTEN_THRESHOLD && prepTranslationDone;
   const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
   const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= META_PASS_THRESHOLD;
+
+  // Tombol -1: hanya untuk counter yang langkah berikutnya belum dimulai
+  const canUndoKey = (key: string) =>
+    !pageLockReason &&
+    !clearedPages.has(page) &&
+    canUndoStep(key, { prep_listen_count: prepListenCount, prep_translation_done: prepTranslationDone, blocks, meta_counts: metaCounts });
+  const markUndo = (key: string) => {
+    pendingUndoKeysRef.current.add(key);
+    playTikrarUndo();
+  };
+  const adjustMeta = (key: string, delta: number) => {
+    if (delta < 0) {
+      if (!canUndoKey(`meta.${key}`)) return;
+      markUndo(`meta.${key}`);
+    }
+    setMetaCounts((p) => ({
+      ...p,
+      [key]: Math.max(0, Math.min(META_PASS_THRESHOLD, (p[key] || 0) + delta)),
+    }));
+  };
 
   // Blocks that have reached TUNTAS (40x on A-1, A-2, and Gabung A)
   const tuntasBlockNumbers = useMemo(
@@ -1967,6 +1993,8 @@ export function TikrarSystem({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MaqtaCard
               id={1}
+              canUndo={(part: string) => canUndoKey('1.' + part)}
+              onUndo={(part: string) => markUndo('1.' + part)}
               page={page}
               state={blocks[1]}
               verses={blockVerses[1]}
@@ -1980,6 +2008,8 @@ export function TikrarSystem({
             />
             <MaqtaCard
               id={2}
+              canUndo={(part: string) => canUndoKey('2.' + part)}
+              onUndo={(part: string) => markUndo('2.' + part)}
               page={page}
               state={blocks[2]}
               verses={blockVerses[2]}
@@ -1997,16 +2027,14 @@ export function TikrarSystem({
             label="GABUNG BLOK A & B (SYARAT SETORAN 1/2 HALAMAN PERTAMA)"
             count={metaCounts['1_2']}
             isLocked={!isTuntasTM(1) || !isTuntasTM(2)}
-            onIncrement={(delta = 1) =>
-              setMetaCounts((p) => ({
-                ...p,
-                '1_2': Math.min(META_PASS_THRESHOLD, p['1_2'] + delta),
-              }))
-            }
+            onIncrement={(delta = 1) => adjustMeta('1_2', delta)}
+              canUndo={canUndoKey('meta.1_2')}
           />
 
           <MaqtaCard
             id={3}
+              canUndo={(part: string) => canUndoKey('3.' + part)}
+              onUndo={(part: string) => markUndo('3.' + part)}
             page={page}
             state={blocks[3]}
             verses={blockVerses[3]}
@@ -2024,28 +2052,22 @@ export function TikrarSystem({
               label="GABUNG BLOK B & C"
               count={metaCounts['2_3']}
               isLocked={!isTuntasTM(3)}
-              onIncrement={(delta = 1) =>
-                setMetaCounts((p) => ({
-                  ...p,
-                  '2_3': Math.min(META_PASS_THRESHOLD, p['2_3'] + delta),
-                }))
-              }
+              onIncrement={(delta = 1) => adjustMeta('2_3', delta)}
+              canUndo={canUndoKey('meta.2_3')}
             />
             <MetaStep
               label="GABUNG BLOK A s/d C"
               count={metaCounts['1_2_3']}
               isLocked={!isMetaTuntas('2_3')}
-              onIncrement={(delta = 1) =>
-                setMetaCounts((p) => ({
-                  ...p,
-                  '1_2_3': Math.min(META_PASS_THRESHOLD, p['1_2_3'] + delta),
-                }))
-              }
+              onIncrement={(delta = 1) => adjustMeta('1_2_3', delta)}
+              canUndo={canUndoKey('meta.1_2_3')}
             />
           </div>
 
           <MaqtaCard
             id={4}
+              canUndo={(part: string) => canUndoKey('4.' + part)}
+              onUndo={(part: string) => markUndo('4.' + part)}
             page={page}
             state={blocks[4]}
             verses={blockVerses[4]}
@@ -2063,34 +2085,22 @@ export function TikrarSystem({
               label="GABUNG BLOK C & D"
               count={metaCounts['3_4']}
               isLocked={!isTuntasTM(4)}
-              onIncrement={(delta = 1) =>
-                setMetaCounts((p) => ({
-                  ...p,
-                  '3_4': Math.min(META_PASS_THRESHOLD, p['3_4'] + delta),
-                }))
-              }
+              onIncrement={(delta = 1) => adjustMeta('3_4', delta)}
+              canUndo={canUndoKey('meta.3_4')}
             />
             <MetaStep
               label="GABUNG BLOK B s/d D"
               count={metaCounts['2_3_4']}
               isLocked={!isMetaTuntas('3_4')}
-              onIncrement={(delta = 1) =>
-                setMetaCounts((p) => ({
-                  ...p,
-                  '2_3_4': Math.min(META_PASS_THRESHOLD, p['2_3_4'] + delta),
-                }))
-              }
+              onIncrement={(delta = 1) => adjustMeta('2_3_4', delta)}
+              canUndo={canUndoKey('meta.2_3_4')}
             />
             <MetaStep
               label="GABUNG SELURUH HALAMAN (A - D)"
               count={metaCounts['1_2_3_4']}
               isLocked={!isMetaTuntas('2_3_4')}
-              onIncrement={(delta = 1) =>
-                setMetaCounts((p) => ({
-                  ...p,
-                  '1_2_3_4': Math.min(META_PASS_THRESHOLD, p['1_2_3_4'] + delta),
-                }))
-              }
+              onIncrement={(delta = 1) => adjustMeta('1_2_3_4', delta)}
+              canUndo={canUndoKey('meta.1_2_3_4')}
               highlight
             />
           </div>
@@ -2239,6 +2249,8 @@ function MaqtaCard({
   fontSize,
   isLocked,
   letter,
+  canUndo,
+  onUndo,
 }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
   const tokens = useMemo(() => {
@@ -2257,6 +2269,10 @@ function MaqtaCard({
 
   const addSubCount = (part: 'a' | 'b' | 'combined', delta: number) => {
     if (delta > 0) playTikrarCount((state?.[part]?.count || 0) + delta, PASS_THRESHOLD);
+    if (delta < 0) {
+      if (!canUndo?.(part)) return;
+      onUndo?.(part);
+    }
     onIncrement((p: any) => ({
       ...p,
       [id]: {
@@ -2359,6 +2375,7 @@ function MaqtaCard({
             count={state.a.count}
             isLocked={isLocked}
             onInc={(delta = 1) => addSubCount('a', delta)}
+            canUndo={canUndo?.('a')}
             color="maroon"
             threshold={PASS_THRESHOLD}
           />
@@ -2367,6 +2384,7 @@ function MaqtaCard({
             count={state.b.count}
             isLocked={isLocked || state.a.count < PASS_THRESHOLD}
             onInc={(delta = 1) => addSubCount('b', delta)}
+            canUndo={canUndo?.('b')}
             color="darkMaroon"
             threshold={PASS_THRESHOLD}
           />
@@ -2397,13 +2415,33 @@ function MaqtaCard({
               </div>
             )}
           </Button>
+          {canUndo?.('combined') && (
+            <UndoButton onClick={() => addSubCount('combined', -1)} className="h-20 w-16" />
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
+function UndoButton({ onClick, className }: { onClick: () => void; className?: string }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={onClick}
+      title="Kurangi 1 (kelebihan pencet)"
+      className={cn(
+        'rounded-2xl border-2 border-stone-300 bg-white text-stone-600 font-black text-lg shrink-0 touch-manipulation select-none active:scale-[0.95] hover:bg-stone-50',
+        className
+      )}
+    >
+      −1
+    </Button>
+  );
+}
+
+function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo }: any) {
   const isDone = count >= META_PASS_THRESHOLD;
   const TARGET_MAX_LOCAL = 10;
   return (
@@ -2457,6 +2495,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
             />
           </div>
         </div>
+        {canUndo && <UndoButton onClick={() => onIncrement(-1)} className="h-16 w-16" />}
         <Button
           type="button"
           onClick={() => {
@@ -2478,7 +2517,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight }: any) {
   );
 }
 
-function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
+function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo }: any) {
   const isDone = count >= threshold;
   const themes: any = {
     maroon: isDone
@@ -2489,6 +2528,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
       : 'bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5',
   };
   return (
+    <div className="flex flex-col gap-1.5">
     <button
       type="button"
       disabled={isLocked || isDone}
@@ -2513,5 +2553,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold }: any) {
       {isLocked && <Lock className="absolute top-2 right-2 w-3.5 h-3.5 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
     </button>
+    {canUndo && <UndoButton onClick={() => onInc(-1)} className="h-11 w-full text-base" />}
+    </div>
   );
 }
