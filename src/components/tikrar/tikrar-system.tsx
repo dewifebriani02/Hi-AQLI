@@ -83,6 +83,7 @@ import {
   countCompletedSteps,
   estimateClicksForNextSteps,
   getBlockListenCount,
+  getMetaThreshold,
   isBlockListenDone,
   generateTikrarStepSchedule,
   QUIZ_PASS_PERCENT,
@@ -763,16 +764,16 @@ export function TikrarSystem({
       const blockStarted = (b: 1 | 2 | 3 | 4) =>
         nextBlocks[b].a.count > 0 || nextBlocks[b].b.count > 0 || nextBlocks[b].combined.count > 0;
       if (blockStarted(3)) {
-        nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
+        nextMeta['1_2'] = Math.max(nextMeta['1_2'], getMetaThreshold('1_2'));
       }
       if (blockStarted(4)) {
-        nextMeta['1_2'] = Math.max(nextMeta['1_2'], META_PASS_THRESHOLD);
-        nextMeta['2_3'] = Math.max(nextMeta['2_3'], META_PASS_THRESHOLD);
-        nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], META_PASS_THRESHOLD);
+        nextMeta['1_2'] = Math.max(nextMeta['1_2'], getMetaThreshold('1_2'));
+        nextMeta['2_3'] = Math.max(nextMeta['2_3'], getMetaThreshold('2_3'));
+        nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], getMetaThreshold('1_2_3'));
       }
       if (isSelectedPageCleared) {
         Object.keys(nextMeta).forEach((k) => {
-          nextMeta[k] = Math.max(nextMeta[k], META_PASS_THRESHOLD);
+          nextMeta[k] = Math.max(nextMeta[k], getMetaThreshold(k));
         });
       }
 
@@ -804,8 +805,8 @@ export function TikrarSystem({
     });
     const metaWeight = 5;
     Object.keys(metaCounts).forEach((k) => {
-      totalDone +=
-        (Math.min(metaCounts[k], META_PASS_THRESHOLD) / META_PASS_THRESHOLD) * metaWeight;
+      const th = getMetaThreshold(k);
+      totalDone += (Math.min(metaCounts[k], th) / th) * metaWeight;
     });
     const totalWeight = 10 + 4 * 30 + 6 * metaWeight;
     return Math.min(100, (totalDone / totalWeight) * 100);
@@ -1100,7 +1101,7 @@ export function TikrarSystem({
   const isPrepTuntas = isBlockListenDone({ prep_listen_count: prepListenCount, blocks }, 1);
   const blockListenDone = (b: 1 | 2 | 3 | 4) => isBlockListenDone({ prep_listen_count: prepListenCount, blocks }, b);
   const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
-  const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= META_PASS_THRESHOLD;
+  const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= getMetaThreshold(key);
 
   // Tombol -1: hanya untuk counter yang langkah berikutnya belum dimulai
   const canUndoKey = (key: string) =>
@@ -1118,7 +1119,8 @@ export function TikrarSystem({
     }
     setMetaCounts((p) => ({
       ...p,
-      [key]: Math.max(0, Math.min(META_PASS_THRESHOLD, (p[key] || 0) + delta)),
+      // Boleh lebih sampai berapa saja, tidak dibatasi nilai maksimum
+      [key]: Math.max(0, (p[key] || 0) + delta),
     }));
   };
 
@@ -1782,7 +1784,7 @@ export function TikrarSystem({
               Setiap blok <strong>disimak 5x dulu</strong> (audio per blok + arti per kata &amp; kalimat), lalu dibagi menjadi 2 bagian teks berwarna:{' '}
               <strong>Bagian 1 (Maroon) 40x</strong> → <strong>Bagian 2 (Hitam) 40x</strong>{' '}
               → <strong>Gabung Blok 40x</strong>, lalu dilanjutkan{' '}
-              <strong>Sub-Repetisi Gabungan Antar Blok (10x)</strong> secara berurutan. Setiap klik
+              <strong>Sub-Repetisi Gabungan Antar Blok (2 blok min. 10x, 3–4 blok min. 5x, boleh lebih)</strong> secara berurutan. Setiap klik
               hitungan repetisi <strong>otomatis tersimpan ke sistem</strong> &amp; langsung
               memperbarui keaktifan harian serta heatmap grup!
             </div>
@@ -1838,10 +1840,11 @@ export function TikrarSystem({
           <MetaStep
             label="GABUNG BLOK A & B (SYARAT SETORAN 1/2 HALAMAN PERTAMA)"
             count={metaCounts['1_2']}
+            threshold={10}
             isLocked={!isTuntasTM(1) || !isTuntasTM(2)}
             onIncrement={(delta = 1) => adjustMeta('1_2', delta)}
-              canUndo={canUndoKey('meta.1_2')}
-              stepInfo={stepInfo('meta.1_2')}
+            canUndo={canUndoKey('meta.1_2')}
+            stepInfo={stepInfo('meta.1_2')}
           />
 
           <MaqtaCard
@@ -1871,6 +1874,7 @@ export function TikrarSystem({
             <MetaStep
               label="GABUNG BLOK B & C"
               count={metaCounts['2_3']}
+              threshold={10}
               isLocked={!isTuntasTM(3)}
               onIncrement={(delta = 1) => adjustMeta('2_3', delta)}
               canUndo={canUndoKey('meta.2_3')}
@@ -1879,6 +1883,7 @@ export function TikrarSystem({
             <MetaStep
               label="GABUNG BLOK A s/d C"
               count={metaCounts['1_2_3']}
+              threshold={5}
               isLocked={!isMetaTuntas('2_3')}
               onIncrement={(delta = 1) => adjustMeta('1_2_3', delta)}
               canUndo={canUndoKey('meta.1_2_3')}
@@ -1913,6 +1918,7 @@ export function TikrarSystem({
             <MetaStep
               label="GABUNG BLOK C & D"
               count={metaCounts['3_4']}
+              threshold={10}
               isLocked={!isTuntasTM(4)}
               onIncrement={(delta = 1) => adjustMeta('3_4', delta)}
               canUndo={canUndoKey('meta.3_4')}
@@ -1921,6 +1927,7 @@ export function TikrarSystem({
             <MetaStep
               label="GABUNG BLOK B s/d D"
               count={metaCounts['2_3_4']}
+              threshold={5}
               isLocked={!isMetaTuntas('3_4')}
               onIncrement={(delta = 1) => adjustMeta('2_3_4', delta)}
               canUndo={canUndoKey('meta.2_3_4')}
@@ -1929,6 +1936,7 @@ export function TikrarSystem({
             <MetaStep
               label="GABUNG SELURUH HALAMAN (A - D)"
               count={metaCounts['1_2_3_4']}
+              threshold={5}
               isLocked={!isMetaTuntas('2_3_4')}
               onIncrement={(delta = 1) => adjustMeta('1_2_3_4', delta)}
               canUndo={canUndoKey('meta.1_2_3_4')}
@@ -1956,7 +1964,7 @@ export function TikrarSystem({
                       <Lock className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[240px]">
-                      Selesaikan repetisi gabungan seluruh halaman (A–D 10x) untuk membuka
+                      Selesaikan repetisi gabungan seluruh halaman (A–D min. 5x) untuk membuka
                       simulasi &amp; ujian halaman.
                     </p>
                   </CardContent>
@@ -2423,9 +2431,8 @@ function InlineUndoButton({ onClick, className }: { onClick: () => void; classNa
   );
 }
 
-function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, stepInfo }: any) {
-  const isDone = count >= META_PASS_THRESHOLD;
-  const TARGET_MAX_LOCAL = 10;
+function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, stepInfo, threshold = 10 }: any) {
+  const isDone = count >= threshold;
   return (
     <div
       id={stepInfo ? `step-${stepInfo.key}` : undefined}
@@ -2441,7 +2448,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
           className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0',
             isDone
-              ? 'bg-[#D4AF37] text-black'
+              ? 'bg-[#D4AF37] text-black shadow-md'
               : highlight
               ? 'bg-[#800000] text-white'
               : 'bg-[#800000]/10 text-[#800000]'
@@ -2462,19 +2469,19 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
             {label}
           </span>
           <span className="text-[8px] font-bold text-muted-foreground">
-            WAJIB {META_PASS_THRESHOLD}x SEBELUM MEMBUKA TAHAP BERIKUTNYA
+            WAJIB MIN. {threshold}x SEBELUM MEMBUKA TAHAP BERIKUTNYA
           </span>
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
         <div className="text-right flex flex-col items-end mr-1">
           <span className="text-base font-black text-black uppercase">
-            {count} / {TARGET_MAX_LOCAL}
+            {count} / {threshold}
           </span>
           <div className="w-16 h-1.5 bg-muted rounded-full mt-1 overflow-hidden">
             <div
               className="h-full bg-[#D4AF37] transition-all"
-              style={{ width: `${(count / TARGET_MAX_LOCAL) * 100}%` }}
+              style={{ width: `${Math.min(100, (count / threshold) * 100)}%` }}
             />
           </div>
         </div>
@@ -2483,19 +2490,22 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
             <Button
               type="button"
               onClick={() => {
-                playTikrarCount(count + 1, META_PASS_THRESHOLD);
+                playTikrarCount(count + 1, threshold);
                 onIncrement(1);
               }}
-              disabled={isLocked || isDone}
+              disabled={isLocked}
               className={cn(
                 'h-16 w-full rounded-2xl p-0 font-black text-xl transition-all shadow-md touch-manipulation select-none active:scale-[0.95]',
                 stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
                 isDone
-                  ? 'bg-[#D4AF37] text-black border-none'
+                  ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 border-none'
                   : 'bg-[#800000] text-white hover:bg-[#800000]/90'
               )}
             >
-              {isDone ? <CheckCircle2 className="w-7 h-7" /> : '+1'}
+              <span className="flex items-center justify-center gap-1.5">
+                {isDone && <Check className="w-5 h-5 stroke-[3]" />}
+                +1
+              </span>
             </Button>
             {canUndo && (
               <InlineUndoButton onClick={() => onIncrement(-1)} className="left-2 top-1/2 -translate-y-1/2" />

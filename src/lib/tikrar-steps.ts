@@ -21,10 +21,22 @@ import {
 } from '@/lib/tikrar-schedule-generator';
 
 export const PASS_THRESHOLD = 40;
+export const META_2_BLOCKS_THRESHOLD = 10;
+export const META_3_BLOCKS_THRESHOLD = 5;
+export const META_4_BLOCKS_THRESHOLD = 5;
+/** Default / backwards-compatible threshold */
 export const META_PASS_THRESHOLD = 10;
 export const PREP_LISTEN_THRESHOLD = 5;
 export const QUIZ_QUESTION_COUNT = 30;
 export const QUIZ_PASS_PERCENT = 80;
+
+/** Minimal repetisi penggabungan antar blok: 2 blok min. 10x, 3 blok min. 5x, 4 blok min. 5x */
+export function getMetaThreshold(key: string): number {
+  const cleanKey = key.startsWith('meta.') ? key.slice(5) : key;
+  if (cleanKey === '1_2_3_4') return META_4_BLOCKS_THRESHOLD; // 5x
+  if (cleanKey === '1_2_3' || cleanKey === '2_3_4') return META_3_BLOCKS_THRESHOLD; // 5x
+  return META_2_BLOCKS_THRESHOLD; // 10x (1_2, 2_3, 3_4)
+}
 
 export type TikrarStepKind = 'prep' | 'sub' | 'meta' | 'quiz';
 
@@ -57,26 +69,26 @@ const SUB_STEPS: TikrarStepDef[] = [];
   );
 });
 
-const meta = (key: string, label: string, shortLabel: string): TikrarStepDef => ({
+const meta = (key: string, label: string, shortLabel: string, target = getMetaThreshold(key)): TikrarStepDef => ({
   index: 0,
   key: `meta.${key}`,
   label,
   shortLabel,
   kind: 'meta',
-  target: META_PASS_THRESHOLD,
+  target,
 });
 
 export const TIKRAR_STEPS: readonly TikrarStepDef[] = ([
   { index: 0, key: 'prep', label: 'Simak Audio Blok A 5x', shortLabel: 'Simak', kind: 'prep', target: PREP_LISTEN_THRESHOLD },
   ...SUB_STEPS.slice(0, 6),
-  meta('1_2', 'Gabung Blok A & B', 'Gab A-B'),
+  meta('1_2', 'Gabung Blok A & B', 'Gab A-B', 10),
   ...SUB_STEPS.slice(6, 9),
-  meta('2_3', 'Gabung Blok B & C', 'Gab B-C'),
-  meta('1_2_3', 'Gabung Blok A–C', 'Gab A-C'),
+  meta('2_3', 'Gabung Blok B & C', 'Gab B-C', 10),
+  meta('1_2_3', 'Gabung Blok A–C', 'Gab A-C', 5),
   ...SUB_STEPS.slice(9, 12),
-  meta('3_4', 'Gabung Blok C & D', 'Gab C-D'),
-  meta('2_3_4', 'Gabung Blok B–D', 'Gab B-D'),
-  meta('1_2_3_4', 'Gabung Seluruh Halaman (A–D)', 'Gab A-D'),
+  meta('3_4', 'Gabung Blok C & D', 'Gab C-D', 10),
+  meta('2_3_4', 'Gabung Blok B–D', 'Gab B-D', 5),
+  meta('1_2_3_4', 'Gabung Seluruh Halaman (A–D)', 'Gab A-D', 5),
   { index: 0, key: 'quiz', label: `Ujian Halaman ${QUIZ_QUESTION_COUNT} Soal`, shortLabel: 'Ujian', kind: 'quiz', target: 1 },
 ] as TikrarStepDef[]).map((s, i) => ({ ...s, index: i }));
 
