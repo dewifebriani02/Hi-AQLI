@@ -1782,9 +1782,9 @@ export function TikrarSystem({
                 Metode Itqan HI Tikrar (Otomatis Tersimpan)
               </span>
               Setiap blok <strong>disimak 5x dulu</strong> (audio per blok + arti per kata &amp; kalimat), lalu dibagi menjadi 2 bagian teks berwarna:{' '}
-              <strong>Bagian 1 (Maroon) 40x</strong> → <strong>Bagian 2 (Hitam) 40x</strong>{' '}
-              → <strong>Gabung Blok 40x</strong>, lalu dilanjutkan{' '}
-              <strong>Sub-Repetisi Gabungan Antar Blok (2 blok min. 10x, 3–4 blok min. 5x, boleh lebih)</strong> secara berurutan. Setiap klik
+              <strong>Bagian 1 (Maroon) min. 40x</strong> → <strong>Bagian 2 (Hitam) min. 40x</strong>{' '}
+              → <strong>Gabung Blok min. 40x</strong>, lalu dilanjutkan{' '}
+              <strong>Sub-Repetisi Gabungan Antar Blok (2 blok min. 10x, 3–4 blok min. 5x)</strong> (seluruhnya boleh lebih sampai berapa saja) secara berurutan. Setiap klik
               hitungan repetisi <strong>otomatis tersimpan ke sistem</strong> &amp; langsung
               memperbarui keaktifan harian serta heatmap grup!
             </div>
@@ -2173,7 +2173,8 @@ function MaqtaCard({
       [id]: {
         ...p[id],
         [part]: {
-          count: Math.max(0, Math.min(PASS_THRESHOLD, (p[id]?.[part]?.count || 0) + delta)),
+          // Boleh lebih sampai berapa saja, minimal 40
+          count: Math.max(0, (p[id]?.[part]?.count || 0) + delta),
         },
       },
     }));
@@ -2388,7 +2389,7 @@ function MaqtaCard({
           >
             <span className="text-[10px] flex items-center gap-1 leading-none opacity-80 mb-1">
               {isCombinedLocked ? <Lock className="w-3 h-3" /> : null} GABUNG {page}
-              {letter} • KETUK +1
+              {letter} • {isDoneG ? '+1 LAGI' : 'KETUK +1'}
             </span>
             <span className="text-2xl leading-none">
               {state.combined.count} <span className="text-sm opacity-70">/ {PASS_THRESHOLD}</span>
@@ -2533,12 +2534,12 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo, 
     <div className="relative">
     <button
       type="button"
-      disabled={isLocked || isDone}
+      disabled={isLocked}
       onClick={() => onInc(1)}
       className={cn(
         'rounded-2xl border-2 flex flex-col items-center justify-center transition-all relative px-2 py-3 min-h-[88px] w-full shadow-sm gap-1 touch-manipulation select-none',
         isLocked ? 'opacity-50 grayscale cursor-not-allowed bg-muted shadow-none' : themes[color],
-        !isLocked && !isDone && 'active:scale-[0.96] cursor-pointer',
+        !isLocked && 'active:scale-[0.96] cursor-pointer',
         stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2'
       )}
     >
@@ -2549,8 +2550,10 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo, 
         <span className="text-3xl font-black">{count}</span>
         <span className="text-xs font-bold opacity-50">/ {threshold}</span>
       </div>
-      {!isLocked && !isDone && (
-        <span className="text-[10px] font-black opacity-60 leading-none">KETUK +1</span>
+      {!isLocked && (
+        <span className="text-[10px] font-black opacity-70 leading-none">
+          {isDone ? '+1 LAGI' : 'KETUK +1'}
+        </span>
       )}
 
       {isLocked && <Lock className="absolute top-2 right-2 w-3.5 h-3.5 text-muted-foreground" />}
