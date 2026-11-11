@@ -91,6 +91,11 @@ import {
   stepValue,
   TIKRAR_STEPS,
 } from '@/lib/tikrar-steps';
+import {
+  splitPageInto4Blocks,
+  splitBlockIntoSubBlocks,
+  SYAAMIL_BLOCK_THEME,
+} from '@/lib/tikrar-blocks';
 import type { TikrarSummary } from '@/lib/tikrar-server';
 import {
   isTikrarSoundEnabled,
@@ -574,7 +579,7 @@ export function TikrarSystem({
 
     if (typeof window !== 'undefined') {
       const savedReciter = localStorage.getItem('aqli_reciter_id');
-      const parsed = parseInt(savedReciter, 10);
+      const parsed = parseInt(savedReciter || "", 10);
       // Migrasi otomatis pengguna dari 21136 (Al-Qarafi surah utuh) ke 21203 (Ayman Suwaid per halaman)
       if (parsed === 21136 || !parsed) {
         setSelectedReciterId(21203);
@@ -897,15 +902,8 @@ export function TikrarSystem({
   }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, juz, loading, user?.id, totalProgress, pageLockReason]);
 
   const blockVerses = useMemo<Record<1 | 2 | 3 | 4, Verse[]>>(() => {
-    if (verses.length === 0) return { 1: [], 2: [], 3: [], 4: [] };
-    const perBlock = Math.max(1, Math.ceil(verses.length / 4));
-    return {
-      1: verses.slice(0, perBlock),
-      2: verses.slice(perBlock, perBlock * 2),
-      3: verses.slice(perBlock * 2, perBlock * 3),
-      4: verses.slice(perBlock * 3),
-    };
-  }, [verses]);
+    return splitPageInto4Blocks(page, verses);
+  }, [page, verses]);
 
   // Active halaqah & consistency metrics
   const activeHalaqah = useMemo(() => {
@@ -2037,19 +2035,43 @@ function MaqtaCard({
     if (closeWordTimer.current) clearTimeout(closeWordTimer.current);
     closeWordTimer.current = setTimeout(() => setOpenWord((cur) => (cur === wid ? null : cur)), 2500);
   };
-  const tokens = useMemo(() => {
-    const items: any[] = [];
-    verses.forEach((v: any) => {
-      v.words.forEach((w: any, idx: number) => {
-        items.push({ type: 'word', data: w, verse_key: v.verse_key, word_idx: idx });
+  const theme = SYAAMIL_BLOCK_THEME[id as 1 | 2 | 3 | 4] || SYAAMIL_BLOCK_THEME[1];
+
+  const subSplit = useMemo(() => {
+    return splitBlockIntoSubBlocks(id as 1 | 2 | 3 | 4, page, verses);
+  }, [id, page, verses]);
+
+  const { tokensA, tokensB } = useMemo(() => {
+    if (subSplit.isSingleVerseSplit) {
+      const items: any[] = [];
+      verses.forEach((v: any) => {
+        v.words.forEach((w: any, idx: number) => {
+          items.push({ type: 'word', data: w, verse_key: v.verse_key, word_idx: idx });
+        });
+        items.push({ type: 'marker', text: `(${v.verse_key.split(':')[1]})`, verse_key: v.verse_key });
       });
-      items.push({ type: 'marker', text: `(${v.verse_key.split(':')[1]})`, verse_key: v.verse_key });
+      const mid = Math.ceil(items.length / 2);
+      return { tokensA: items.slice(0, mid), tokensB: items.slice(mid) };
+    }
+
+    const itemsA: any[] = [];
+    subSplit.subAVerses.forEach((v: any) => {
+      v.words.forEach((w: any, idx: number) => {
+        itemsA.push({ type: 'word', data: w, verse_key: v.verse_key, word_idx: idx });
+      });
+      itemsA.push({ type: 'marker', text: `(${v.verse_key.split(':')[1]})`, verse_key: v.verse_key });
     });
-    return items;
-  }, [verses]);
-  const mid = Math.ceil(tokens.length / 2);
-  const tokensA = tokens.slice(0, mid);
-  const tokensB = tokens.slice(mid);
+
+    const itemsB: any[] = [];
+    subSplit.subBVerses.forEach((v: any) => {
+      v.words.forEach((w: any, idx: number) => {
+        itemsB.push({ type: 'word', data: w, verse_key: v.verse_key, word_idx: idx });
+      });
+      itemsB.push({ type: 'marker', text: `(${v.verse_key.split(':')[1]})`, verse_key: v.verse_key });
+    });
+
+    return { tokensA: itemsA, tokensB: itemsB };
+  }, [verses, subSplit]);
 
   const addSubCount = (part: 'a' | 'b' | 'combined', delta: number) => {
     if (delta > 0) playTikrarCount((state?.[part]?.count || 0) + delta, PASS_THRESHOLD);
@@ -2123,11 +2145,13 @@ function MaqtaCard({
         isLocked && 'opacity-50 grayscale select-none'
       )}
     >
-      <div className="bg-[#800000] py-2 px-4 border-b flex justify-between items-center gap-2 shrink-0">
+      <div className={cn("py-2 px-4 border-b flex justify-between items-center gap-2 shrink-0 text-white", theme.headerBg)}>
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[10px] font-black uppercase tracking-widest text-white truncate">
-            BLOK {letter} ({page}
-            {letter}) {isLocked && '• LOCK'}
+          <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border-none", theme.badgeClass)}>
+            {theme.badgeText}
+          </Badge>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/90 truncate">
+            ({page}{letter}) {isLocked && '• LOCK'}
           </span>
           {rangeLabel && (
             <span className="text-[10px] font-bold text-[#D4AF37] truncate hidden sm:inline">
@@ -2238,7 +2262,7 @@ function MaqtaCard({
 
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox
-            label={`${page}${letter}-1 (Maroon)`}
+            label={`${page}${letter}-1${subSplit.subALabel ? ` • ${subSplit.subALabel}` : ''} (Maroon)`}
             count={state.a.count}
             isLocked={countersLocked}
             onInc={(delta = 1) => addSubCount('a', delta)}
@@ -2248,7 +2272,7 @@ function MaqtaCard({
             threshold={PASS_THRESHOLD}
           />
           <CounterBox
-            label={`${page}${letter}-2 (Hitam)`}
+            label={`${page}${letter}-2${subSplit.subBLabel ? ` • ${subSplit.subBLabel}` : ''} (Hitam)`}
             count={state.b.count}
             isLocked={countersLocked || state.a.count < PASS_THRESHOLD}
             onInc={(delta = 1) => addSubCount('b', delta)}
