@@ -79,7 +79,6 @@ export async function POST(req: NextRequest) {
       [ctx.userId, pageNumber]
     );
     const firstPass = passed && priorPass.length === 0;
-    const stepsBefore = await computeTotalCompletedSteps(client, ctx.userId, cleared);
 
     const { rows: inserted } = await client.query(
       `INSERT INTO public.tikrar_page_quizzes (user_id, juz, page_number, total_questions, correct_answers, score, passed, question_types)
@@ -90,7 +89,9 @@ export async function POST(req: NextRequest) {
 
     let pointsAwarded = 0;
     let activity = null;
-    if (firstPass) {
+    // Hafalan lama: jangan beri poin, jangan catat keaktifan/streak, dan jangan ubah halaman target
+    if (firstPass && !isPriorPage) {
+      const stepsBefore = await computeTotalCompletedSteps(client, ctx.userId, cleared);
       const nextCleared = new Set(cleared);
       nextCleared.add(pageNumber);
       const stepsAfter = await computeTotalCompletedSteps(client, ctx.userId, nextCleared);
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
         pointsAwarded,
         activity,
         isPriorPage,
-        unlockedPage: computeUnlockedPageForTarget(target, cleared),
+        unlockedPage: isPriorPage ? null : computeUnlockedPageForTarget(target, cleared),
       },
       error: null,
     });
