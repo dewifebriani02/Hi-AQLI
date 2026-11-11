@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
 import { getJuzForPage, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
-import { canUndoStep, countTotalClicks, PASS_THRESHOLD } from '@/lib/tikrar-steps';
+import { canUndoStep, countTotalClicks, getStepMinCount, PASS_THRESHOLD } from '@/lib/tikrar-steps';
 import {
   computeTotalCompletedSteps,
   isPagePracticeAllowed,
@@ -137,13 +137,14 @@ export async function POST(req: NextRequest) {
     for (const key of undoKeys) {
       const current = { blocks: finalBlocks, meta_counts: finalMetaCounts };
       if (!canUndoStep(key, current)) continue;
+      const minFloor = getStepMinCount(key, current);
       if (key.startsWith('meta.')) {
         const k = key.slice(5);
-        const wanted = Math.max(0, Math.floor(Number(metaCounts?.[k]) || 0));
+        const wanted = Math.max(minFloor, Math.floor(Number(metaCounts?.[k]) || 0));
         if (wanted < (Number(finalMetaCounts[k]) || 0)) finalMetaCounts[k] = wanted;
       } else {
         const [b, part] = key.split('.');
-        const wanted = Math.max(0, Math.floor(Number(blocks?.[b]?.[part]?.count) || 0));
+        const wanted = Math.max(minFloor, Math.floor(Number(blocks?.[b]?.[part]?.count) || 0));
         const now = Number(finalBlocks?.[b]?.[part]?.count) || 0;
         if (wanted < now) {
           finalBlocks[b] = { ...(finalBlocks[b] || {}), [part]: { count: wanted } };
