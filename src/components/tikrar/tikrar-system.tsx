@@ -1130,10 +1130,9 @@ export function TikrarSystem({
     blocks,
     meta_counts: metaCounts,
   };
-  const stepDates = useMemo(() => {
-    const map: Record<string, string> = {};
-    if (!activeTarget) return map;
-    const sched = generateTikrarStepSchedule({
+  const stepSchedule = useMemo(() => {
+    if (!activeTarget) return null;
+    return generateTikrarStepSchedule({
       juz: activeTarget.juz,
       startPage: activeTarget.startPage,
       endPage: activeTarget.endPage,
@@ -1141,53 +1140,114 @@ export function TikrarSystem({
       durationMonths: activeTarget.durationMonths,
       activeDaysPerWeek: activeTarget.activeDaysPerWeek,
     });
-    for (const d of sched.days) {
+  }, [activeTarget]);
+
+  const stepDates = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (!stepSchedule) return map;
+    for (const d of stepSchedule.days) {
       for (const it of d.items) {
         if (it.page === page) map[TIKRAR_STEPS[it.stepIndex].key] = d.date;
       }
     }
     return map;
-  }, [activeTarget, page]);
+  }, [stepSchedule, page]);
 
-  const todayTargets: { page: number; key: string; label: string }[] = [];
-  if (activeTarget && summary && !summary.today.targetMet) {
-    let remaining = Math.max(0, (summary.today.dailyQuota || activeTarget.dailyQuota) - (summary.today.stepsToday || 0));
-    for (let p = activeTarget.unlockedPage; p <= activeTarget.endPage && remaining > 0; p++) {
-      const done =
-        p === page ? countCompletedSteps(localProgress, clearedPages.has(p)) : summary.stepsByPage?.[p] || 0;
-      for (let i = done; i < STEPS_PER_PAGE && remaining > 0; i++) {
-        todayTargets.push({ page: p, key: TIKRAR_STEPS[i].key, label: TIKRAR_STEPS[i].shortLabel });
-        remaining -= 1;
+  // Jadwal aktif untuk hari ini (atau jadwal hari aktif berikutnya jika hari ini libur/di luar jadwal)
+  const todayScheduleDay = useMemo(() => {
+    if (!stepSchedule) return null;
+    const exact = stepSchedule.days.find((d) => d.date === todayKey);
+    if (exact) return exact;
+    return stepSchedule.days.find((d) => d.date > todayKey) || null;
+  }, [stepSchedule, todayKey]);
+
+  // Target yang dijadwalkan hari ini (pada blok/halaman hari ini) yang belum tuntas
+  const todayTargets: { page: number; key: string; label: string }[] = useMemo(() => {
+    if (!activeTarget || !summary || summary.today.targetMet || !todayScheduleDay) return [];
+    const list: { page: number; key: string; label: string }[] = [];
+    for (const it of todayScheduleDay.items) {
+      const step = TIKRAR_STEPS[it.stepIndex];
+      const isDone =
+        it.page === page
+          ? step.kind === 'quiz'
+            ? clearedPages.has(it.page)
+            : stepValue(step, localProgress) >= step.target
+          : clearedPages.has(it.page) || (summary?.stepsByPage?.[it.page] || 0) > it.stepIndex;
+      if (!isDone) {
+        list.push({ page: it.page, key: step.key, label: step.shortLabel });
       }
     }
-  }
-  const starredKeysOnPage = new Set(todayTargets.filter((t) => t.page === page).map((t) => t.key));
+    return list;
+  }, [activeTarget, summary, todayScheduleDay, page, localProgress, clearedPages]);
 
-  // Progres klik hari ini: klik sudah dilakukan vs perkiraan total klik untuk langkah bertanda bintang
+  // Langkah-langkah dari jadwal lampau yang belum selesai (terlewat)
+  const overdueTargets: { page: number; key: string; label: string; date: string }[] = useMemo(() => {
+    if (!activeTarget || !stepSchedule) return [];
+    const list: { page: number; key: string; label: string; date: string }[] = [];
+    for (const d of stepSchedule.days) {
+      if (d.date >= todayKey) break;
+      for (const it of d.items) {
+        const step = TIKRAR_STEPS[it.stepIndex];
+        const isDone =
+          it.page === page
+            ? step.kind === 'quiz'
+              ? clearedPages.has(it.page)
+              : stepValue(step, localProgress) >= step.target
+            : clearedPages.has(it.page) || (summary?.stepsByPage?.[it.page] || 0) > it.stepIndex;
+        if (!isDone) {
+          list.push({ page: it.page, key: step.key, label: step.shortLabel, date: d.date });
+        }
+      }
+    }
+    return list;
+  }, [activeTarget, stepSchedule, todayKey, page, localProgress, clearedPages, summary?.stepsByPage]);
+
+  const starredKeysOnPage = useMemo(() => {
+    return new Set(todayTargets.filter((t) => t.page === page).map((t) => t.key));
+  }, [todayTargets, page]);
+
+  // Progres klik hari ini: klik sudah dilakukan vs perkiraan total klik untuk target hari ini
   const todayClicks = liveTodayClicks ?? summary?.today.clicks ?? 0;
-  // Rumus sama dengan kartu heatmap grup (estimateClicksForNextSteps), termasuk simak blok berikutnya
-  const remainingTargetClicks =
-    activeTarget && summary && !summary.today.targetMet
-      ? estimateClicksForNextSteps(
-          {
-            [activeTarget.unlockedPage]:
-              activeTarget.unlockedPage === page ? localProgress : summary.unlockedPageProgress || undefined,
-          },
-          activeTarget.unlockedPage,
-          activeTarget.endPage,
-          clearedPages,
-          Math.max(0, (summary.today.dailyQuota || activeTarget.dailyQuota) - (summary.today.stepsToday || 0))
-        )
-      : 0;
+  const remainingTargetClicks = useMemo(() => {
+    if (!activeTarget || !summary || summary.today.targetMet || todayTargets.length === 0) return 0;
+    let clicks = 0;
+    for (const t of todayTargets) {
+      const step = TIKRAR_STEPS.find((s) => s.key === t.key);
+      if (!step || step.kind === 'quiz') continue;
+      if (t.page === page) {
+        const current = Math.min(stepValue(step, localProgress), step.target);
+        clicks += Math.max(0, step.target - current);
+        const block = Number(step.key.split('.')[0]) as 1 | 2 | 3 | 4;
+        if (step.kind === 'sub' && step.key.endsWith('.a') && block > 1 && !isBlockListenDone(localProgress, block)) {
+          clicks += Math.max(0, PREP_LISTEN_THRESHOLD - getBlockListenCount(localProgress, block));
+        }
+      } else {
+        clicks += step.target;
+      }
+    }
+    return clicks;
+  }, [activeTarget, summary, todayTargets, page, localProgress]);
+
   const targetTotalClicks = todayClicks + remainingTargetClicks;
   const todayClicksPct = targetTotalClicks > 0 ? Math.min(100, Math.round((todayClicks / targetTotalClicks) * 100)) : 0;
+
   const stepInfo = (key: string): StepInfo | null => {
     if (!activeTarget || !user) return null;
     const step = TIKRAR_STEPS.find((st) => st.key === key);
     if (!step) return null;
     const done = step.kind === 'quiz' ? clearedPages.has(page) : stepValue(step, localProgress) >= step.target;
-    return { key, isTarget: starredKeysOnPage.has(key) && !done, done, date: stepDates[key] || null, todayKey };
+    const stepDate = stepDates[key] || null;
+    const isOverdue = !done && !!stepDate && stepDate < todayKey;
+    return {
+      key,
+      isTarget: starredKeysOnPage.has(key) && !done && !isOverdue,
+      isOverdue,
+      done,
+      date: stepDate,
+      todayKey,
+    };
   };
+
   const scrollToStep = (key: string) => {
     document.getElementById(`step-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
@@ -1669,6 +1729,27 @@ export function TikrarSystem({
                     </button>
                   ))}
                 </div>
+                {overdueTargets.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-rose-700">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span className="font-bold">
+                      {overdueTargets.length} langkah terlewat dari jadwal sebelumnya:
+                    </span>
+                    {overdueTargets.slice(0, 3).map((ot) => (
+                      <button
+                        key={`overdue-${ot.page}-${ot.key}`}
+                        type="button"
+                        onClick={() => (ot.page === page ? scrollToStep(ot.key) : setPage(ot.page))}
+                        className="px-2 py-0.5 rounded-full bg-rose-100 border border-rose-300 text-[10px] font-black hover:bg-rose-200 text-rose-800"
+                      >
+                        Hal. {ot.page} • {ot.label}
+                      </button>
+                    ))}
+                    {overdueTargets.length > 3 && (
+                      <span className="text-[10px] text-rose-600 font-bold">+{overdueTargets.length - 3} lainnya</span>
+                    )}
+                  </div>
+                )}
               </>
             )}
             {!isActiveStudyDay(todayKey, activeTarget.activeDaysPerWeek) && !summary.today.targetMet && (
@@ -2475,6 +2556,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo, 
 interface StepInfo {
   key: string;
   isTarget: boolean;
+  isOverdue?: boolean;
   done: boolean;
   date: string | null;
   todayKey: string;
@@ -2491,16 +2573,17 @@ function StepTag({ info, className }: { info?: StepInfo | null; className?: stri
         timeZone: 'UTC',
       })
     : null;
+  const isOverdue = info.isOverdue ?? (!info.done && !!info.date && info.date < info.todayKey);
   return (
     <div className={cn('flex flex-wrap items-center gap-1', className)}>
-      {info.isTarget && (
+      {info.isTarget && !isOverdue && (
         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#D4AF37] text-black text-[9px] font-black">
           <Star className="w-2.5 h-2.5 fill-current" /> TARGET HARI INI
         </span>
       )}
       {info.done ? (
         <span className="text-[9px] font-black text-emerald-700">✓ Tuntas</span>
-      ) : pretty && info.date! < info.todayKey ? (
+      ) : isOverdue ? (
         <span className="px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-[9px] font-black text-rose-700">
           Terlewat • {pretty}
         </span>
