@@ -81,6 +81,7 @@ import {
 import {
   canUndoStep,
   countCompletedSteps,
+  getStepMinCount,
   estimateClicksForNextSteps,
   getBlockListenCount,
   getMetaThreshold,
@@ -1117,11 +1118,19 @@ export function TikrarSystem({
       if (!canUndoKey(`meta.${key}`)) return;
       markUndo(`meta.${key}`);
     }
-    setMetaCounts((p) => ({
-      ...p,
-      // Boleh lebih sampai berapa saja, tidak dibatasi nilai maksimum
-      [key]: Math.max(0, (p[key] || 0) + delta),
-    }));
+    setMetaCounts((p) => {
+      const minFloor = getStepMinCount(`meta.${key}`, {
+        prep_listen_count: prepListenCount,
+        prep_translation_done: prepTranslationDone,
+        blocks,
+        meta_counts: p,
+      });
+      return {
+        ...p,
+        // Boleh lebih sampai berapa saja, bila langkah berikutnya sudah berjalan minimal minFloor
+        [key]: Math.max(minFloor, (p[key] || 0) + delta),
+      };
+    });
   };
 
   // ---- Target hari ini per langkah: bintang mengikuti posisi sekarang (N langkah berikutnya),
@@ -1794,6 +1803,7 @@ export function TikrarSystem({
             <MaqtaCard
               id={1}
               canUndo={(part: string) => canUndoKey('1.' + part)}
+              getMinCount={(part: string) => getStepMinCount('1.' + part, localProgress)}
               stepInfoFor={(part: string) => stepInfo('1.' + part)}
               listenCount={getBlockListenCount({ blocks }, 1)}
               listenDone={blockListenDone(1)}
@@ -1816,6 +1826,7 @@ export function TikrarSystem({
             <MaqtaCard
               id={2}
               canUndo={(part: string) => canUndoKey('2.' + part)}
+              getMinCount={(part: string) => getStepMinCount('2.' + part, localProgress)}
               stepInfoFor={(part: string) => stepInfo('2.' + part)}
               listenCount={getBlockListenCount({ blocks }, 2)}
               listenDone={blockListenDone(2)}
@@ -1850,6 +1861,7 @@ export function TikrarSystem({
           <MaqtaCard
             id={3}
               canUndo={(part: string) => canUndoKey('3.' + part)}
+              getMinCount={(part: string) => getStepMinCount('3.' + part, localProgress)}
               stepInfoFor={(part: string) => stepInfo('3.' + part)}
               listenCount={getBlockListenCount({ blocks }, 3)}
               listenDone={blockListenDone(3)}
@@ -1894,6 +1906,7 @@ export function TikrarSystem({
           <MaqtaCard
             id={4}
               canUndo={(part: string) => canUndoKey('4.' + part)}
+              getMinCount={(part: string) => getStepMinCount('4.' + part, localProgress)}
               stepInfoFor={(part: string) => stepInfo('4.' + part)}
               listenCount={getBlockListenCount({ blocks }, 4)}
               listenDone={blockListenDone(4)}
@@ -2101,6 +2114,7 @@ function MaqtaCard({
   playback,
   onPlayAudio,
   onStopAudio,
+  getMinCount,
 }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
   const isPlaying = Boolean(playback);
@@ -2168,16 +2182,19 @@ function MaqtaCard({
       if (!canUndo?.(part)) return;
       onUndo?.(part);
     }
-    onIncrement((p: any) => ({
-      ...p,
-      [id]: {
-        ...p[id],
-        [part]: {
-          // Boleh lebih sampai berapa saja, minimal 40
-          count: Math.max(0, (p[id]?.[part]?.count || 0) + delta),
+    onIncrement((p: any) => {
+      const minFloor = getMinCount ? getMinCount(part) : 0;
+      return {
+        ...p,
+        [id]: {
+          ...p[id],
+          [part]: {
+            // Boleh lebih sampai berapa saja, bila langkah berikutnya sudah dimulai minimal minFloor
+            count: Math.max(minFloor, (p[id]?.[part]?.count || 0) + delta),
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const renderToken = (token: any, colorClass: string) => {
@@ -2559,7 +2576,7 @@ function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo, 
       {isLocked && <Lock className="absolute top-2 right-2 w-3.5 h-3.5 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
     </button>
-    {canUndo && <InlineUndoButton onClick={() => onInc(-1)} className="left-2 bottom-2" />}
+    {canUndo && <InlineUndoButton onClick={() => onInc(-1)} className="left-2 top-1/2 -translate-y-1/2" />}
     </div>
     <StepTag info={stepInfo} className="justify-center" />
     </div>
@@ -2586,7 +2603,16 @@ function StepTag({ info, className }: { info?: StepInfo | null; className?: stri
         timeZone: 'UTC',
       })
     : null;
+  const todayPretty = info.todayKey
+    ? parseDateKeyUTC(info.todayKey).toLocaleDateString('id-ID', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      })
+    : null;
   const isOverdue = info.isOverdue ?? (!info.done && !!info.date && info.date < info.todayKey);
+  const dateLabel = pretty || todayPretty;
   return (
     <div className={cn('flex flex-wrap items-center gap-1', className)}>
       {info.isTarget && !isOverdue && (
@@ -2595,7 +2621,9 @@ function StepTag({ info, className }: { info?: StepInfo | null; className?: stri
         </span>
       )}
       {info.done ? (
-        <span className="text-[9px] font-black text-emerald-700">✓ Tuntas</span>
+        <span className="text-[9px] font-black text-emerald-700">
+          ✓ Tuntas{dateLabel ? ` • ${dateLabel}` : ''}
+        </span>
       ) : isOverdue ? (
         <span className="px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-[9px] font-black text-rose-700">
           Terlewat • {pretty}

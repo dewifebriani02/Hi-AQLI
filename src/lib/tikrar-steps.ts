@@ -173,12 +173,31 @@ export function countTotalClicks(prog: TikrarProgressLike | null | undefined): n
   return total;
 }
 
-/** Langkah boleh dikurangi (-1) bila sudah ada hitungannya dan langkah berikutnya belum dimulai */
+/** Batas minimal yang diizinkan untuk pengurangan (-1):
+ * Bila langkah berikutnya sudah dimulai, batas minimal adalah step.target (tidak boleh di bawah target agar tidak mengunci langkah berikutnya).
+ * Bila langkah berikutnya belum dimulai, batas minimal adalah 0.
+ */
+export function getStepMinCount(key: string, prog: TikrarProgressLike | null | undefined): number {
+  const i = TIKRAR_STEPS.findIndex((s) => s.key === key);
+  const step = TIKRAR_STEPS[i];
+  if (!step) return 0;
+  const next = TIKRAR_STEPS[i + 1];
+  const nextStarted = next && next.kind !== 'quiz' && stepValue(next, prog) > 0;
+  return nextStarted ? step.target : 0;
+}
+
+/** Langkah boleh dikurangi (-1) bila sudah ada hitungannya dan langkah berikutnya belum dimulai,
+ * ATAU bila hitungannya melebihi target minimal (kelebihan klik) */
 export function canUndoStep(key: string, prog: TikrarProgressLike | null | undefined): boolean {
   const i = TIKRAR_STEPS.findIndex((s) => s.key === key);
   const step = TIKRAR_STEPS[i];
   if (!step || step.kind === 'prep' || step.kind === 'quiz') return false;
-  if (stepValue(step, prog) <= 0) return false;
+  const val = stepValue(step, prog);
+  if (val <= 0) return false;
+
+  // Bila kelebihan klik di atas target (misal 45/40 atau 22/10), selalu boleh dikurangi kembali sampai minimal target
+  if (val > step.target) return true;
+
   const next = TIKRAR_STEPS[i + 1];
   return !next || next.kind === 'quiz' || stepValue(next, prog) <= 0;
 }
