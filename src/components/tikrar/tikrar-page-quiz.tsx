@@ -319,7 +319,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
           toast({
             title: 'Alhamdulillah, Lulus Ujian Halaman!',
             description: json.data.isPriorPage
-              ? `+${json.data.pointsAwarded} Poin. Hafalan lama Hal. ${page} tercatat lulus ujian.`
+              ? `Hafalan lama Hal. ${page} tercatat lulus ujian.`
               : `+${json.data.pointsAwarded} Poin. Halaman berikutnya telah terbuka.`,
           });
         }
