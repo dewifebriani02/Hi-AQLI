@@ -414,12 +414,12 @@ export function TikrarDailyReport({
 
     if (tuntasCount === 4) {
       const meta1234 = Number(metaObj['1_2_3_4']) || 0;
-      if (meta1234 < 10) {
+      if (meta1234 < 5) {
         activeSub = {
           stageName: 'Penggabungan 1 Halaman Penuh (Blok A–D)',
-          subBlockLetter: 'Blok A–D (10x)',
+          subBlockLetter: 'Blok A–D (5x)',
           currentCount: meta1234,
-          targetCount: 10,
+          targetCount: 5,
           badgeText: 'Gabung 1 Hal',
           isStarted: true,
         };
