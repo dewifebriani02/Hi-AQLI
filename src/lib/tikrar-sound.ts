@@ -70,7 +70,7 @@ export function playTikrarDone() {
 
 /** Bunyi sesuai hasil klik: "ting" bila klik ini menuntaskan target, selain itu "tik" */
 export function playTikrarCount(nextCount: number, threshold: number) {
-  if (nextCount >= threshold) playTikrarDone();
+  if (nextCount === threshold) playTikrarDone();
   else playTikrarTap();
 }
 
