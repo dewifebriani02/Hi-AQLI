@@ -2597,17 +2597,17 @@ function StepTag({ info, className }: { info?: StepInfo | null; className?: stri
   if (!info) return null;
   const pretty = info.date
     ? parseDateKeyUTC(info.date).toLocaleDateString('id-ID', {
-        weekday: 'short',
         day: 'numeric',
         month: 'short',
+        year: '2-digit',
         timeZone: 'UTC',
       })
     : null;
   const todayPretty = info.todayKey
     ? parseDateKeyUTC(info.todayKey).toLocaleDateString('id-ID', {
-        weekday: 'short',
         day: 'numeric',
         month: 'short',
+        year: '2-digit',
         timeZone: 'UTC',
       })
     : null;
