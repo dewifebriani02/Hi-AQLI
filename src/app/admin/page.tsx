@@ -44,13 +44,14 @@ export default function AdminDashboard() {
   const { data: pendingTikrarSubs } = useCollection("tikrar_submissions", pendingTikrarOptions);
 
   const stats = [
-    { label: "Pendaftaran Baru", value: pending?.length || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "Infaq Menunggu", value: pendingDonations?.length || 0, icon: HeartHandshake, color: "text-[#800000]", bg: "bg-red-50" },
-    { label: "Thalibah Terdaftar", value: users?.length || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Antrean Tasmi' Tikrar", value: pendingTikrarSubs?.length || 0, href: "/admin/tikrar", icon: Repeat, color: "text-[#6D123F]", bg: "bg-pink-50" },
+    { label: "Pendaftaran Baru", value: pending?.length || 0, href: "/admin/registrations", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Infaq Menunggu", value: pendingDonations?.length || 0, href: "/admin/donations", icon: HeartHandshake, color: "text-[#800000]", bg: "bg-red-50" },
+    { label: "Thalibah Terdaftar", value: users?.length || 0, href: "/admin/users", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
   ];
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl mx-auto pb-20">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-20">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 text-[#800000]">
           <ShieldCheck className="w-5 h-5" />
@@ -60,19 +61,21 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground">Kelola operasional, verifikasi setoran, dan pantau keaktifan peserta Sahabat AQLI Digital.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
-          <Card key={i} className="border-none shadow-sm">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{s.label}</p>
-                <p className="text-3xl font-black">{s.value}</p>
-              </div>
-              <div className={cn("p-3 rounded-2xl", s.bg)}>
-                <s.icon className={cn("w-6 h-6", s.color)} />
-              </div>
-            </CardContent>
-          </Card>
+          <Link key={i} href={s.href} className="block group">
+            <Card className="border border-slate-200/80 dark:border-white/10 shadow-sm hover:border-[#6D123F]/40 hover:shadow-md transition-all rounded-2xl">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</p>
+                  <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-[#6D123F] transition-colors">{s.value}</p>
+                </div>
+                <div className={cn("p-3 rounded-2xl shrink-0", s.bg)}>
+                  <s.icon className={cn("w-5 h-5", s.color)} />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 

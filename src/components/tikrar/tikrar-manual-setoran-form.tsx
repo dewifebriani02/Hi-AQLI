@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { authFetch } from '@/db/client';
 import { useToast } from '@/hooks/use-toast';
 import { toDateKeyWIB, TIKRAR_GRADE_LABELS } from '@/lib/tikrar-schedule-generator';
-import { ClipboardCheck, Loader2 } from 'lucide-react';
+import { ClipboardCheck, Loader2, ChevronDown, ChevronUp, PlusCircle } from 'lucide-react';
 
 interface Participant {
   id: string;
@@ -30,6 +30,7 @@ export function TikrarManualSetoranForm({
   prefill?: { userId: string; page: number; name: string; nonce: number } | null;
 }) {
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [userId, setUserId] = useState('');
   const [page, setPage] = useState('');
@@ -42,6 +43,7 @@ export function TikrarManualSetoranForm({
 
   useEffect(() => {
     if (!prefill) return;
+    setIsOpen(true);
     setQuery(prefill.name);
     setUserId(prefill.userId);
     setPage(String(prefill.page));
@@ -89,95 +91,123 @@ export function TikrarManualSetoranForm({
   };
 
   return (
-    <Card className="border border-[#800000]/20 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-black flex items-center gap-2 text-[#800000]">
-          <ClipboardCheck className="w-4 h-4" /> Input Setoran Tasmi&apos; Manual
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Muallimah/admin mengisi hasil tasmi&apos; langsung tanpa menunggu thalibah mendaftar antrean. Halaman yang lulus
-          tercatat sebagai &quot;sudah diuji&quot; di Itqan 30 Juz dan heatmap cokelat.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <label className="text-[11px] font-black uppercase text-stone-600">Cari Thalibah</label>
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nama..." className="h-9 text-xs" />
+    <Card className="rounded-3xl border border-[#6D123F]/20 shadow-sm bg-white dark:bg-slate-900 overflow-hidden">
+      <div
+        onClick={() => setIsOpen((v) => !v)}
+        className="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors select-none"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#6D123F]/10 text-[#6D123F] dark:text-rose-400 flex items-center justify-center">
+            <ClipboardCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-xs sm:text-sm font-black text-[#6D123F] dark:text-rose-400 flex items-center gap-2">
+              Input Setoran Tasmi&apos; Manual (Tanpa Antrean)
+            </h3>
+            <p className="text-[11px] text-slate-500 font-medium">
+              Klik untuk mencatat kelulusan tasmi&apos; peserta secara langsung oleh Muallimah/Admin
+            </p>
+          </div>
         </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-black uppercase text-stone-600">Thalibah</label>
-          <select
-            aria-label="Pilih thalibah"
-            value={userId}
-            onChange={(e) => {
-              setUserId(e.target.value);
-              const p = participants.find((x) => x.id === e.target.value);
-              if (p?.tikrar_current_page && !page) setPage(String(p.tikrar_current_page));
-            }}
-            className="w-full h-9 rounded-md border border-input bg-white px-2 text-xs font-bold"
-          >
-            <option value="">— Pilih —</option>
-            {filtered.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name || p.username || p.id.slice(0, 8)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-black uppercase text-stone-600">Halaman (1–604)</label>
-          <Input type="number" min={1} max={604} value={page} onChange={(e) => setPage(e.target.value)} className="h-9 text-xs" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-black uppercase text-stone-600">Bagian</label>
-          <select
-            aria-label="Bagian setoran"
-            value={range}
-            onChange={(e) => setRange(e.target.value as any)}
-            className="w-full h-9 rounded-md border border-input bg-white px-2 text-xs font-bold"
-          >
-            <option value="blok_1_4">1 Halaman Penuh (A–D)</option>
-            <option value="blok_1_2">1/2 Halaman Pertama (A & B)</option>
-            <option value="blok_3_4">1/2 Halaman Kedua (C & D)</option>
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-black uppercase text-stone-600">Predikat</label>
-          <select
-            aria-label="Predikat"
-            value={grade}
-            onChange={(e) => setGrade(e.target.value as any)}
-            className="w-full h-9 rounded-md border border-input bg-white px-2 text-xs font-bold"
-          >
-            {(['mumtaz', 'jayyid_jiddan', 'perlu_perbaikan'] as const).map((g) => (
-              <option key={g} value={g}>
-                {TIKRAR_GRADE_LABELS[g]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-black uppercase text-stone-600">Tanggal Setoran</label>
-          <Input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} className="h-9 text-xs" />
-        </div>
-        <div className="space-y-1 md:col-span-2">
-          <label className="text-[11px] font-black uppercase text-stone-600">Catatan (opsional)</label>
-          <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} className="text-xs" />
-        </div>
-        <div className="flex flex-col justify-end gap-2">
-          <label className="flex items-center gap-2 text-[11px] font-bold text-stone-600">
-            <Checkbox checked={sendWa} onCheckedChange={(v) => setSendWa(Boolean(v))} /> Kirim notifikasi WhatsApp
-          </label>
-          <Button
-            type="button"
-            onClick={submit}
-            disabled={saving}
-            className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 rounded-xl"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan Hasil Setoran'}
-          </Button>
-        </div>
-      </CardContent>
+        <Button
+          type="button"
+          variant={isOpen ? 'ghost' : 'outline'}
+          size="sm"
+          className="rounded-xl text-xs font-bold h-8 gap-1.5 border-[#6D123F]/20 text-[#6D123F]"
+        >
+          {isOpen ? (
+            <>
+              Tutup Form <ChevronUp className="w-3.5 h-3.5" />
+            </>
+          ) : (
+            <>
+              <PlusCircle className="w-3.5 h-3.5" /> Buka Form Input
+            </>
+          )}
+        </Button>
+      </div>
+
+      {isOpen && (
+        <CardContent className="pt-3 pb-5 px-5 border-t border-slate-100 dark:border-white/5 bg-slate-50/40 dark:bg-slate-800/20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div className="space-y-1">
+            <label className="text-[11px] font-black uppercase text-stone-600 dark:text-slate-300">Cari Thalibah</label>
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ketik nama peserta..." className="h-9 text-xs bg-white dark:bg-slate-900" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-black uppercase text-stone-600 dark:text-slate-300">Pilih Thalibah</label>
+            <select
+              aria-label="Pilih thalibah"
+              value={userId}
+              onChange={(e) => {
+                setUserId(e.target.value);
+                const p = participants.find((x) => x.id === e.target.value);
+                if (p?.tikrar_current_page && !page) setPage(String(p.tikrar_current_page));
+              }}
+              className="w-full h-9 rounded-md border border-input bg-white dark:bg-slate-900 px-2 text-xs font-bold"
+            >
+              <option value="">— Pilih Peserta —</option>
+              {filtered.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name || p.username || p.id.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-black uppercase text-stone-600 dark:text-slate-300">Halaman (1–604)</label>
+            <Input type="number" min={1} max={604} value={page} onChange={(e) => setPage(e.target.value)} className="h-9 text-xs bg-white dark:bg-slate-900" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-black uppercase text-stone-600 dark:text-slate-300">Bagian</label>
+            <select
+              aria-label="Bagian setoran"
+              value={range}
+              onChange={(e) => setRange(e.target.value as any)}
+              className="w-full h-9 rounded-md border border-input bg-white dark:bg-slate-900 px-2 text-xs font-bold"
+            >
+              <option value="blok_1_4">1 Halaman Penuh (Blok 1–4)</option>
+              <option value="blok_1_2">1/2 Halaman Pertama (Blok 1 & 2)</option>
+              <option value="blok_3_4">1/2 Halaman Kedua (Blok 3 & 4)</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-black uppercase text-stone-600 dark:text-slate-300">Predikat</label>
+            <select
+              aria-label="Predikat"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value as any)}
+              className="w-full h-9 rounded-md border border-input bg-white dark:bg-slate-900 px-2 text-xs font-bold"
+            >
+              {(['mumtaz', 'jayyid_jiddan', 'perlu_perbaikan'] as const).map((g) => (
+                <option key={g} value={g}>
+                  {TIKRAR_GRADE_LABELS[g]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-black uppercase text-stone-600 dark:text-slate-300">Tanggal Setoran</label>
+            <Input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} className="h-9 text-xs bg-white dark:bg-slate-900" />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="text-[11px] font-black uppercase text-stone-600 dark:text-slate-300">Catatan Evaluasi (opsional)</label>
+            <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} className="text-xs bg-white dark:bg-slate-900" />
+          </div>
+          <div className="flex flex-col justify-end gap-2">
+            <label className="flex items-center gap-2 text-[11px] font-bold text-stone-600 dark:text-slate-300 cursor-pointer">
+              <Checkbox checked={sendWa} onCheckedChange={(v) => setSendWa(Boolean(v))} /> Kirim notifikasi WhatsApp
+            </label>
+            <Button
+              type="button"
+              onClick={submit}
+              disabled={saving}
+              className="bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs h-9 rounded-xl shadow-sm"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan Hasil Setoran'}
+            </Button>
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 }

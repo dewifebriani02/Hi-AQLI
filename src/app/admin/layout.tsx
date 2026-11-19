@@ -3,10 +3,73 @@
 import { useUser, signOut } from "@/db";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ShieldAlert, Lock, Loader2, Home, LogOut } from "lucide-react";
+import {
+  ShieldAlert,
+  Lock,
+  Loader2,
+  Home,
+  LogOut,
+  LayoutDashboard,
+  Repeat,
+  BookOpen,
+  Users,
+  ClipboardCheck,
+  UserCog,
+  CalendarCheck,
+  HeartHandshake,
+  MessageSquare,
+  Shield,
+  Library,
+  Trophy,
+  Coffee,
+  BarChart3,
+  ShieldCheck,
+  Target,
+  Landmark,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useUserPermissions, getProgramTypeFromPath } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
+
+const ADMIN_NAV_ITEMS = [
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/admin/tikrar', label: 'Hi Tikrar', icon: Repeat, program: 'hi_tikrar' as const },
+  { href: '/admin/mufradat', label: 'Hi Mufradat', icon: BookOpen, program: 'hi_mufradat' as const },
+  { href: '/admin/groups', label: 'Grup & Robot WA', icon: MessageSquare },
+  { href: '/admin/registrations', label: 'Verifikasi Daftar', icon: ClipboardCheck, superOnly: true },
+  { href: '/admin/classes', label: 'Katalog Kelas', icon: Library, superOnly: true },
+  { href: '/admin/users', label: 'Database Peserta', icon: UserCog, superOnly: true },
+  { href: '/admin/mutabaah', label: 'Mutabaah & Muhasabah', icon: CalendarCheck, superOnly: true },
+  { href: '/admin/donations', label: 'Infaq & Kampanye', icon: HeartHandshake, superOnly: true },
+];
+
+const MUFRADAT_SUB_NAV = [
+  { href: '/admin/mufradat', label: 'Monitor & Reminder', icon: BookOpen, exact: true },
+  { href: '/admin/mufradat/groups', label: 'Batch & Grup WA', icon: Users },
+  { href: '/admin/mufradat/juz-access', label: 'Hak Akses Juz', icon: ShieldCheck },
+  { href: '/admin/mufradat/mabar', label: 'Jadwal Mabar', icon: Trophy },
+  { href: '/admin/mufradat/leave', label: 'Kelola Cuti', icon: Coffee },
+  { href: '/admin/mufradat/reports', label: 'Laporan Kinerja', icon: BarChart3 },
+];
+
+const MUTABAAH_SUB_NAV = [
+  { href: '/admin/mutabaah', label: "Laporan Mutaba'ah Yaumiyah", icon: CalendarCheck },
+  { href: '/admin/muhasabah', label: 'Laporan Hi Muhasabah (14 Poin)', icon: Shield },
+];
+
+const USERS_SUB_NAV = [
+  { href: '/admin/users', label: 'Semua Akun & Role', icon: UserCog, exact: true },
+  { href: '/admin/thalibah', label: 'Direktori Thalibah & Blacklist', icon: Users, exact: true },
+];
+
+const INFAQ_SUB_NAV = [
+  { href: '/admin/donations', label: 'Transaksi Infaq', icon: HeartHandshake, exact: true },
+  { href: '/admin/campaigns', label: 'Kampanye Infaq', icon: Target, exact: true },
+  { href: '/admin/finance', label: 'Keuangan & Rekening', icon: Landmark, exact: true },
+  { href: '/admin/finance/reconciliation', label: 'Rekonsiliasi', icon: ClipboardCheck, exact: true },
+  { href: '/admin/vouchers', label: 'Voucher Promo', icon: ShieldCheck, exact: true },
+];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -47,12 +110,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // 2. Not Logged In (Redirect handled in useEffect, but return null to prevent flash)
+  // 2. Not Logged In
   if (!user) {
     return null;
   }
 
-  // 3. Access Denied (Not an Admin / Musyrifah for this program)
+  // 3. Access Denied
   if (!hasAccess) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
@@ -88,6 +151,107 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // 4. Authorized Access
-  return <div>{children}</div>;
+  const visibleNavItems = ADMIN_NAV_ITEMS.filter((item) => {
+    if (isSuperUser) return true;
+    if (item.superOnly) return false;
+    if (item.program) return canAccessProgram(item.program);
+    return true;
+  });
+
+  const isMufradatSection = pathname?.startsWith('/admin/mufradat');
+  const isUsersSection = pathname?.startsWith('/admin/users') || pathname?.startsWith('/admin/thalibah');
+  const isMutabaahSection = pathname?.startsWith('/admin/mutabaah') || pathname?.startsWith('/admin/muhasabah');
+  const isInfaqSection =
+    pathname?.startsWith('/admin/donations') ||
+    pathname?.startsWith('/admin/campaigns') ||
+    pathname?.startsWith('/admin/finance') ||
+    pathname?.startsWith('/admin/vouchers');
+
+  const activeSubNav = isMufradatSection
+    ? MUFRADAT_SUB_NAV
+    : isUsersSection
+    ? USERS_SUB_NAV
+    : isMutabaahSection
+    ? MUTABAAH_SUB_NAV
+    : isInfaqSection
+    ? INFAQ_SUB_NAV
+    : null;
+
+  // 4. Authorized Access with Unified Admin Sub-Navbar
+  return (
+    <div className="space-y-4">
+      <div className="max-w-6xl mx-auto space-y-2">
+        <nav
+          aria-label="Navigasi Cepat Admin"
+          className="flex items-center justify-between gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-1.5 rounded-2xl shadow-sm overflow-x-auto no-scrollbar"
+        >
+          <div className="flex items-center gap-1">
+            {visibleNavItems.map((item) => {
+              const Icon = item.icon;
+              let isActive = item.exact
+                ? pathname === item.href
+                : pathname?.startsWith(item.href);
+
+              if (item.href === '/admin/users' && isUsersSection) isActive = true;
+              if (item.href === '/admin/mutabaah' && isMutabaahSection) isActive = true;
+              if (item.href === '/admin/donations' && isInfaqSection) isActive = true;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all",
+                    isActive
+                      ? "bg-[#6D123F] text-white shadow-sm"
+                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 whitespace-nowrap shrink-0"
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Beranda Aplikasi</span>
+          </Link>
+        </nav>
+
+        {/* Sub-Navigation Bar for Multi-Page Modules (Hi Mufradat, Mutabaah/Muhasabah, Infaq/Kampanye) */}
+        {activeSubNav && (
+          <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-white/5 p-1 rounded-xl overflow-x-auto no-scrollbar w-fit">
+            {activeSubNav.map((sub) => {
+              const SubIcon = sub.icon;
+              const isSubActive = (sub as any).exact
+                ? pathname === sub.href
+                : pathname === sub.href || pathname?.startsWith(`${sub.href}/`);
+              return (
+                <Link
+                  key={sub.href}
+                  href={sub.href}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all",
+                    isSubActive
+                      ? "bg-white dark:bg-slate-900 text-[#6D123F] dark:text-rose-400 shadow-sm font-black"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/50"
+                  )}
+                >
+                  <SubIcon className="w-3 h-3 shrink-0" />
+                  <span>{sub.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div>{children}</div>
+    </div>
+  );
 }

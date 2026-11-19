@@ -209,6 +209,8 @@ export function getVersesForSubBlock<T extends TikrarVerseLike>(
   const actualStart = startIdx !== -1 ? startIdx : 0;
   const actualEnd = endIdx !== -1 ? endIdx : pageVerses.length - 1;
 
+  if (actualStart > actualEnd) return [];
+
   const selectedVerses = pageVerses.slice(actualStart, actualEnd + 1);
 
   return selectedVerses.map((v, i) => {
@@ -239,6 +241,8 @@ export function getVersesForBlockConfig<T extends TikrarVerseLike>(
 
   const actualStart = startIdx !== -1 ? startIdx : 0;
   const actualEnd = endIdx !== -1 ? endIdx : pageVerses.length - 1;
+
+  if (actualStart > actualEnd) return [];
 
   const selected = pageVerses.slice(actualStart, actualEnd + 1);
 
@@ -450,6 +454,7 @@ export function splitBlockIntoSubBlocks<T extends TikrarVerseLike>(
 /**
  * Otomatis menghasilkan draft konfigurasi 4 Blok x 2 Sub-Blok seimbang (TM1..TM4 & TM1-1..TM4-2)
  * untuk digunakan pada fitur "Bagi Rata Otomatis" di Panel Admin.
+ * Hanya menghitung token kata sebenarnya (char_type_name !== 'end').
  */
 export function generateDefaultPageBlockConfig<T extends TikrarVerseLike>(
   pageNumber: number,
@@ -459,7 +464,7 @@ export function generateDefaultPageBlockConfig<T extends TikrarVerseLike>(
     throw new Error('Verses tidak boleh kosong untuk generate config.');
   }
 
-  // Kumpulkan seluruh token kata dalam 1 halaman beserta verse_key dan posisi kata
+  // Kumpulkan seluruh token kata dalam 1 halaman beserta verse_key dan posisi kata (exclude char_type_name === 'end')
   interface TokenMeta {
     verse_key: string;
     word_index: number;
@@ -470,6 +475,7 @@ export function generateDefaultPageBlockConfig<T extends TikrarVerseLike>(
   verses.forEach((v) => {
     if (v.words && v.words.length > 0) {
       v.words.forEach((w: VerseWordLike, idx: number) => {
+        if (w.char_type_name === 'end') return;
         allTokens.push({
           verse_key: v.verse_key,
           word_index: w.position ?? (idx + 1),
@@ -513,10 +519,10 @@ export function generateDefaultPageBlockConfig<T extends TikrarVerseLike>(
     const cut1 = cuts[bIdx * 2];
     const cut2 = cuts[bIdx * 2 + 1];
 
-    const t1Start = allTokens[cut1.start];
-    const t1End = allTokens[cut1.end];
-    const t2Start = allTokens[cut2.start];
-    const t2End = allTokens[cut2.end];
+    const t1Start = allTokens[cut1.start] || allTokens[0];
+    const t1End = allTokens[cut1.end] || t1Start;
+    const t2Start = allTokens[cut2.start] || t1End;
+    const t2End = allTokens[cut2.end] || t2Start;
 
     result[b.id] = {
       block_id: b.id,
