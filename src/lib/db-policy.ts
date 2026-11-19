@@ -61,6 +61,7 @@ const PUBLIC_READ = new Set([
   'tikrar_submissions',
   'tikrar_groups',
   'tikrar_user_schedules',
+  'tikrar_page_block_configs',
 ]);
 
 const ROLE_TABLES = new Set(['roles_admin', 'roles_superadmin', 'roles_musyrifah']);

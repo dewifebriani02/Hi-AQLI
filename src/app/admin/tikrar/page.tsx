@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { TikrarGroupHeatmap } from '@/components/tikrar/tikrar-group-heatmap';
 import { TikrarManualSetoranForm } from '@/components/tikrar/tikrar-manual-setoran-form';
 import { TikrarPriorHafalanAdmin } from '@/components/tikrar/tikrar-prior-hafalan-admin';
+import { TikrarBlockAdmin } from '@/components/tikrar/tikrar-block-admin';
 import { getJuzPageRange, TIKRAR_GRADE_LABELS, TIKRAR_WA_SALUTATION } from '@/lib/tikrar-schedule-generator';
 import {
   AlertCircle,
@@ -709,6 +710,12 @@ export default function AdminTikrarPage() {
             className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
           >
             Pengingat WhatsApp
+          </TabsTrigger>
+          <TabsTrigger
+            value="blocks"
+            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2 gap-1.5"
+          >
+            Atur Blok &amp; Ayat
           </TabsTrigger>
           <TabsTrigger
             value="participants"
@@ -1764,6 +1771,10 @@ export default function AdminTikrarPage() {
               })}
             </div>
           )}
+        </TabsContent>
+        {/* TAB 7: Manajemen Pembagian 4 Blok & 8 Sub-Blok (Ayat & Potongan Kata) */}
+        <TabsContent value="blocks" className="space-y-4 outline-none">
+          <TikrarBlockAdmin />
         </TabsContent>
       </Tabs>
     </div>

@@ -3,13 +3,13 @@
  * 
  * Standar Syaamil Quran Tikrar:
  * - 1 halaman = 4 Blok Warna:
- *     Blok 1 (A): Warna Hijau
- *     Blok 2 (B): Warna Kuning
- *     Blok 3 (C): Warna Biru
- *     Blok 4 (D): Warna Merah
+ *     Blok 1 (A / TM1): Warna Hijau
+ *     Blok 2 (B / TM2): Warna Kuning
+ *     Blok 3 (C / TM3): Warna Biru
+ *     Blok 4 (D / TM4): Warna Merah
  * - Setiap Blok Warna dibagi menjadi 2 Maqta' (Sub-blok -1 dan -2):
- *     Total 8 Maqta' per halaman (A-1, A-2, B-1, B-2, C-1, C-2, D-1, D-2).
- * - Pembagian selalu memprioritaskan batas ayat (wakaf / akhir ayat).
+ *     Total 8 Maqta' per halaman (TM1-1, TM1-2, TM2-1, TM2-2, TM3-1, TM3-2, TM4-1, TM4-2).
+ * - Mendukung pemotongan level ayat maupun potongan ayat panjang (level kata / word index).
  */
 
 export interface VerseWordLike {
@@ -33,6 +33,39 @@ export interface TikrarVerseLike {
   [key: string]: any;
 }
 
+export interface SubBlockConfig {
+  sub_id: string; // e.g. "TM1-1", "TM1-2"
+  label_alt?: string; // e.g. "Blok A-1", "Blok A-2"
+  start_verse_key: string; // e.g. "2:282"
+  start_word_index: number; // 1-indexed position in verse.words
+  end_verse_key: string; // e.g. "2:282"
+  end_word_index: number; // 1-indexed position in verse.words
+  preview_text?: string;
+  notes?: string;
+}
+
+export interface BlockConfig {
+  block_id: 1 | 2 | 3 | 4;
+  label_primary?: string; // "TM1", "TM2", "TM3", "TM4"
+  label_alt?: string; // "Blok A", "Blok B", "Blok C", "Blok D"
+  color_name?: string; // "Hijau", "Kuning", "Biru", "Merah"
+  sub_1: SubBlockConfig;
+  sub_2: SubBlockConfig;
+  custom_label?: string;
+}
+
+export type PageBlockConfig = Record<1 | 2 | 3 | 4, BlockConfig>;
+
+export interface TikrarPageBlockRecord {
+  page_number: number;
+  blocks: PageBlockConfig;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+}
+
 export interface SyaamilBlockConfig {
   verseKeys: string[];
   subAVerseKeys: string[];
@@ -40,14 +73,10 @@ export interface SyaamilBlockConfig {
 }
 
 /**
- * Pemetaan eksplisit Syaamil Quran Tikrar untuk halaman-halaman tertentu.
+ * Pemetaan eksplisit bawaan Syaamil Quran Tikrar untuk halaman-halaman tertentu.
  */
 export const SYAAMIL_PAGE_BLOCKS: Record<number, Record<1 | 2 | 3 | 4, SyaamilBlockConfig>> = {
   // Halaman 511 (Surah Al-Fath 48:1–9)
-  // Blok A: ayat 1–3 (A-1: ayat 1, A-2: ayat 2–3)
-  // Blok B: ayat 4–5 (B-1: ayat 4, B-2: ayat 5)
-  // Blok C: ayat 6–7 (C-1: ayat 6, C-2: ayat 7)
-  // Blok D: ayat 8–9 (D-1: ayat 8, D-2: ayat 9)
   511: {
     1: {
       verseKeys: ['48:1', '48:2', '48:3'],
@@ -78,8 +107,9 @@ export const SYAAMIL_PAGE_BLOCKS: Record<number, Record<1 | 2 | 3 | 4, SyaamilBl
 export const SYAAMIL_BLOCK_THEME = {
   1: {
     letter: 'A',
+    tmLabel: 'TM1',
     colorName: 'Hijau',
-    badgeText: 'BLOK A • HIJAU',
+    badgeText: 'BLOK A (TM1) • HIJAU',
     badgeClass: 'bg-emerald-700 text-white',
     cardBorder: 'border-emerald-600/30',
     headerBg: 'bg-emerald-800',
@@ -87,8 +117,9 @@ export const SYAAMIL_BLOCK_THEME = {
   },
   2: {
     letter: 'B',
+    tmLabel: 'TM2',
     colorName: 'Kuning',
-    badgeText: 'BLOK B • KUNING',
+    badgeText: 'BLOK B (TM2) • KUNING',
     badgeClass: 'bg-amber-500 text-black',
     cardBorder: 'border-amber-500/30',
     headerBg: 'bg-[#996515]',
@@ -96,8 +127,9 @@ export const SYAAMIL_BLOCK_THEME = {
   },
   3: {
     letter: 'C',
+    tmLabel: 'TM3',
     colorName: 'Biru',
-    badgeText: 'BLOK C • BIRU',
+    badgeText: 'BLOK C (TM3) • BIRU',
     badgeClass: 'bg-blue-600 text-white',
     cardBorder: 'border-blue-600/30',
     headerBg: 'bg-[#0f4c81]',
@@ -105,8 +137,9 @@ export const SYAAMIL_BLOCK_THEME = {
   },
   4: {
     letter: 'D',
+    tmLabel: 'TM4',
     colorName: 'Merah',
-    badgeText: 'BLOK D • MERAH',
+    badgeText: 'BLOK D (TM4) • MERAH',
     badgeClass: 'bg-rose-700 text-white',
     cardBorder: 'border-rose-600/30',
     headerBg: 'bg-[#800000]',
@@ -127,17 +160,122 @@ export function formatVerseRange<T extends { verse_key: string }>(verses: T[]): 
 }
 
 /**
- * Membagi seluruh ayat dalam 1 halaman menjadi 4 Blok (A, B, C, D)
+ * Filter kata-kata di dalam suatu ayat berdasarkan rentang start_word_index dan end_word_index (1-based)
+ */
+export function sliceVerseWords<T extends TikrarVerseLike>(
+  verse: T,
+  startWordIdx?: number,
+  endWordIdx?: number
+): T {
+  if (!verse.words || verse.words.length === 0) return verse;
+
+  const start = startWordIdx && startWordIdx > 1 ? startWordIdx : 1;
+  const end = endWordIdx && endWordIdx > 0 ? endWordIdx : verse.words.length;
+
+  const slicedWords = verse.words.filter((w: VerseWordLike, idx: number) => {
+    const pos = w.position ?? (idx + 1);
+    return pos >= start && pos <= end;
+  });
+
+  const slicedText = slicedWords
+    .map((w: VerseWordLike) => w.text_uthmani || '')
+    .filter(Boolean)
+    .join(' ');
+
+  return {
+    ...verse,
+    words: slicedWords,
+    text_uthmani: slicedText || verse.text_uthmani,
+  };
+}
+
+/**
+ * Ambil ayat-ayat dan potongan kata untuk suatu SubBlockConfig
+ */
+export function getVersesForSubBlock<T extends TikrarVerseLike>(
+  pageVerses: T[],
+  subConfig: SubBlockConfig
+): T[] {
+  if (!pageVerses || pageVerses.length === 0 || !subConfig) return [];
+
+  const startV = subConfig.start_verse_key;
+  const endV = subConfig.end_verse_key;
+
+  const startIdx = pageVerses.findIndex((v) => v.verse_key === startV);
+  const endIdx = pageVerses.findIndex((v) => v.verse_key === endV);
+
+  if (startIdx === -1 && endIdx === -1) return [];
+
+  const actualStart = startIdx !== -1 ? startIdx : 0;
+  const actualEnd = endIdx !== -1 ? endIdx : pageVerses.length - 1;
+
+  const selectedVerses = pageVerses.slice(actualStart, actualEnd + 1);
+
+  return selectedVerses.map((v, i) => {
+    const isStart = i === 0;
+    const isEnd = i === selectedVerses.length - 1;
+
+    const startWord = isStart ? subConfig.start_word_index : 1;
+    const endWord = isEnd ? subConfig.end_word_index : (v.words?.length || 9999);
+
+    return sliceVerseWords(v, startWord, endWord);
+  });
+}
+
+/**
+ * Mengambil ayat-ayat untuk 1 Blok utuh (Sub 1 + Sub 2)
+ */
+export function getVersesForBlockConfig<T extends TikrarVerseLike>(
+  pageVerses: T[],
+  blockConfig: BlockConfig
+): T[] {
+  if (!blockConfig || !blockConfig.sub_1 || !blockConfig.sub_2) return [];
+
+  const startV = blockConfig.sub_1.start_verse_key;
+  const endV = blockConfig.sub_2.end_verse_key;
+
+  const startIdx = pageVerses.findIndex((v) => v.verse_key === startV);
+  const endIdx = pageVerses.findIndex((v) => v.verse_key === endV);
+
+  const actualStart = startIdx !== -1 ? startIdx : 0;
+  const actualEnd = endIdx !== -1 ? endIdx : pageVerses.length - 1;
+
+  const selected = pageVerses.slice(actualStart, actualEnd + 1);
+
+  return selected.map((v, i) => {
+    const isStart = i === 0;
+    const isEnd = i === selected.length - 1;
+
+    const startWord = isStart ? blockConfig.sub_1.start_word_index : 1;
+    const endWord = isEnd ? blockConfig.sub_2.end_word_index : (v.words?.length || 9999);
+
+    return sliceVerseWords(v, startWord, endWord);
+  });
+}
+
+/**
+ * Membagi seluruh ayat dalam 1 halaman menjadi 4 Blok (A/TM1, B/TM2, C/TM3, D/TM4)
  */
 export function splitPageInto4Blocks<T extends TikrarVerseLike>(
   pageNumber: number,
-  verses: T[]
+  verses: T[],
+  customConfig?: PageBlockConfig | null
 ): Record<1 | 2 | 3 | 4, T[]> {
   if (!verses || verses.length === 0) {
     return { 1: [], 2: [], 3: [], 4: [] };
   }
 
-  // 1. Cek pemetaan eksplisit Syaamil jika tersedia
+  // 1. Cek konfigurasi kustom dari database
+  if (customConfig && customConfig[1] && customConfig[2] && customConfig[3] && customConfig[4]) {
+    return {
+      1: getVersesForBlockConfig(verses, customConfig[1]),
+      2: getVersesForBlockConfig(verses, customConfig[2]),
+      3: getVersesForBlockConfig(verses, customConfig[3]),
+      4: getVersesForBlockConfig(verses, customConfig[4]),
+    };
+  }
+
+  // 2. Cek pemetaan eksplisit Syaamil bawaan
   const override = SYAAMIL_PAGE_BLOCKS[pageNumber];
   if (override) {
     return {
@@ -155,7 +293,6 @@ export function splitPageInto4Blocks<T extends TikrarVerseLike>(
   if (n === 3) return { 1: [verses[0]], 2: [verses[1]], 3: [verses[2]], 4: [verses[2]] };
 
   // n >= 4: Partisi dinamis seimbang berdasarkan bobot kata/baris
-  // Memastikan SETIAP blok (1, 2, 3, 4) minimal mendapat 1 ayat utuh
   const weights = verses.map((v) => Math.max(1, (v.words || []).length));
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const targetW = totalWeight / 4;
@@ -202,12 +339,14 @@ export interface SubBlockSplit<T> {
 }
 
 /**
- * Membagi ayat-ayat di dalam 1 blok menjadi Sub-blok 1 (-1 / A) dan Sub-blok 2 (-2 / B)
+ * Membagi ayat-ayat di dalam 1 blok menjadi Sub-blok 1 (-1 / A / Maroon) dan Sub-blok 2 (-2 / B / Hitam)
  */
 export function splitBlockIntoSubBlocks<T extends TikrarVerseLike>(
   blockNumber: 1 | 2 | 3 | 4,
   pageNumber: number,
-  blockVerses: T[]
+  blockVerses: T[],
+  customConfig?: PageBlockConfig | null,
+  rawPageVerses?: T[]
 ): SubBlockSplit<T> {
   if (!blockVerses || blockVerses.length === 0) {
     return {
@@ -219,7 +358,28 @@ export function splitBlockIntoSubBlocks<T extends TikrarVerseLike>(
     };
   }
 
-  // 1. Cek pemetaan eksplisit
+  // 1. Cek konfigurasi kustom
+  const blockCfg = customConfig?.[blockNumber];
+  if (blockCfg && blockCfg.sub_1 && blockCfg.sub_2) {
+    const sourceVerses = rawPageVerses && rawPageVerses.length > 0 ? rawPageVerses : blockVerses;
+    const subAVerses = getVersesForSubBlock(sourceVerses, blockCfg.sub_1);
+    const subBVerses = getVersesForSubBlock(sourceVerses, blockCfg.sub_2);
+
+    const isSingle =
+      blockCfg.sub_1.start_verse_key === blockCfg.sub_2.end_verse_key &&
+      subAVerses.length <= 1 &&
+      subBVerses.length <= 1;
+
+    return {
+      subAVerses,
+      subBVerses,
+      subALabel: blockCfg.sub_1.label_alt || blockCfg.sub_1.sub_id,
+      subBLabel: blockCfg.sub_2.label_alt || blockCfg.sub_2.sub_id,
+      isSingleVerseSplit: isSingle,
+    };
+  }
+
+  // 2. Cek pemetaan eksplisit bawaan
   const override = SYAAMIL_PAGE_BLOCKS[pageNumber]?.[blockNumber];
   if (override && override.subAVerseKeys?.length && override.subBVerseKeys?.length) {
     const subAVerses = blockVerses.filter((v) => override.subAVerseKeys.includes(v.verse_key));
@@ -233,7 +393,7 @@ export function splitBlockIntoSubBlocks<T extends TikrarVerseLike>(
     };
   }
 
-  // 2. Jika blok hanya terdiri dari 1 ayat, dipenggal berdasarkan kata
+  // 3. Jika blok hanya terdiri dari 1 ayat, dipenggal berdasarkan kata
   if (blockVerses.length === 1) {
     const v = blockVerses[0];
     const aNum = v.verse_key.split(':')[1] || '';
@@ -246,7 +406,7 @@ export function splitBlockIntoSubBlocks<T extends TikrarVerseLike>(
     };
   }
 
-  // 3. Jika blok terdiri dari 2 ayat: ayat 1 = sub A, ayat 2 = sub B
+  // 4. Jika blok terdiri dari 2 ayat: ayat 1 = sub A, ayat 2 = sub B
   if (blockVerses.length === 2) {
     const subA = [blockVerses[0]];
     const subB = [blockVerses[1]];
@@ -259,7 +419,7 @@ export function splitBlockIntoSubBlocks<T extends TikrarVerseLike>(
     };
   }
 
-  // 4. Jika blok terdiri dari >= 3 ayat: partisi seimbang antar ayat
+  // 5. Jika blok terdiri dari >= 3 ayat: partisi seimbang antar ayat
   const weights = blockVerses.map((v) => Math.max(1, (v.words || []).length));
   const total = weights.reduce((a, b) => a + b, 0);
   const target = total / 2;
@@ -285,4 +445,104 @@ export function splitBlockIntoSubBlocks<T extends TikrarVerseLike>(
     subBLabel: formatVerseRange(subB),
     isSingleVerseSplit: false,
   };
+}
+
+/**
+ * Otomatis menghasilkan draft konfigurasi 4 Blok x 2 Sub-Blok seimbang (TM1..TM4 & TM1-1..TM4-2)
+ * untuk digunakan pada fitur "Bagi Rata Otomatis" di Panel Admin.
+ */
+export function generateDefaultPageBlockConfig<T extends TikrarVerseLike>(
+  pageNumber: number,
+  verses: T[]
+): PageBlockConfig {
+  if (!verses || verses.length === 0) {
+    throw new Error('Verses tidak boleh kosong untuk generate config.');
+  }
+
+  // Kumpulkan seluruh token kata dalam 1 halaman beserta verse_key dan posisi kata
+  interface TokenMeta {
+    verse_key: string;
+    word_index: number;
+    text: string;
+  }
+  const allTokens: TokenMeta[] = [];
+
+  verses.forEach((v) => {
+    if (v.words && v.words.length > 0) {
+      v.words.forEach((w: VerseWordLike, idx: number) => {
+        allTokens.push({
+          verse_key: v.verse_key,
+          word_index: w.position ?? (idx + 1),
+          text: w.text_uthmani || '',
+        });
+      });
+    } else {
+      // Fallback jika kata per ayat belum diurai
+      allTokens.push({
+        verse_key: v.verse_key,
+        word_index: 1,
+        text: v.text_uthmani || '',
+      });
+    }
+  });
+
+  const totalTokens = allTokens.length;
+  // 8 potongan (TM1-1, TM1-2, TM2-1, TM2-2, TM3-1, TM3-2, TM4-1, TM4-2)
+  const cuts: { start: number; end: number }[] = [];
+  for (let i = 0; i < 8; i++) {
+    const start = Math.floor((i * totalTokens) / 8);
+    const end = i === 7 ? totalTokens - 1 : Math.floor(((i + 1) * totalTokens) / 8) - 1;
+    cuts.push({ start, end: Math.max(start, end) });
+  }
+
+  const blockNames: Array<{
+    id: 1 | 2 | 3 | 4;
+    tm: string;
+    letter: string;
+    color: string;
+  }> = [
+    { id: 1, tm: 'TM1', letter: 'Blok A', color: 'Hijau' },
+    { id: 2, tm: 'TM2', letter: 'Blok B', color: 'Kuning' },
+    { id: 3, tm: 'TM3', letter: 'Blok C', color: 'Biru' },
+    { id: 4, tm: 'TM4', letter: 'Blok D', color: 'Merah' },
+  ];
+
+  const result: Partial<PageBlockConfig> = {};
+
+  blockNames.forEach((b, bIdx) => {
+    const cut1 = cuts[bIdx * 2];
+    const cut2 = cuts[bIdx * 2 + 1];
+
+    const t1Start = allTokens[cut1.start];
+    const t1End = allTokens[cut1.end];
+    const t2Start = allTokens[cut2.start];
+    const t2End = allTokens[cut2.end];
+
+    result[b.id] = {
+      block_id: b.id,
+      label_primary: b.tm,
+      label_alt: b.letter,
+      color_name: b.color,
+      sub_1: {
+        sub_id: `${b.tm}-1`,
+        label_alt: `${b.letter}-1`,
+        start_verse_key: t1Start.verse_key,
+        start_word_index: t1Start.word_index,
+        end_verse_key: t1End.verse_key,
+        end_word_index: t1End.word_index,
+        preview_text: `${t1Start.text} ... ${t1End.text}`,
+      },
+      sub_2: {
+        sub_id: `${b.tm}-2`,
+        label_alt: `${b.letter}-2`,
+        start_verse_key: t2Start.verse_key,
+        start_word_index: t2Start.word_index,
+        end_verse_key: t2End.verse_key,
+        end_word_index: t2End.word_index,
+        preview_text: `${t2Start.text} ... ${t2End.text}`,
+      },
+    };
+  });
+
+  return result as PageBlockConfig;
 }

@@ -97,6 +97,8 @@ import {
   splitPageInto4Blocks,
   splitBlockIntoSubBlocks,
   SYAAMIL_BLOCK_THEME,
+  PageBlockConfig,
+  BlockConfig,
 } from '@/lib/tikrar-blocks';
 import type { TikrarSummary } from '@/lib/tikrar-server';
 import {
@@ -214,13 +216,18 @@ function getSurahNameForPage(page: number): string {
   return QURAN_CHAPTERS.find((c) => c.id === surahId)?.name_simple || "Al-Qur'an";
 }
 
-function formatBlockRangeLabel(verses: Verse[]): string {
+function formatBlockRangeLabel(verses: Verse[], blockCfg?: BlockConfig | null): string {
   if (!verses || verses.length === 0) return 'Memuat ayat...';
   const first = verses[0].verse_key;
   const last = verses[verses.length - 1].verse_key;
   const [s1, a1] = first.split(':');
   const [s2, a2] = last.split(':');
   const surah1 = QURAN_CHAPTERS.find((c) => c.id === Number(s1))?.name_simple || `QS ${s1}`;
+  if (blockCfg?.sub_1 && blockCfg?.sub_2) {
+    if (s1 === s2 && a1 === a2) {
+      return `${surah1}: ${a1} (Kata #${blockCfg.sub_1.start_word_index}–#${blockCfg.sub_2.end_word_index})`;
+    }
+  }
   if (s1 === s2) {
     return a1 === a2 ? `${surah1}: ${a1}` : `${surah1}: ${a1}–${a2}`;
   }
@@ -255,8 +262,26 @@ export function TikrarSystem({
 
   const [juz, setJuz] = useState<number>(targetJuz || 30);
   const [page, setPage] = useState<number>(targetPage || 582);
+  const [customPageConfig, setCustomPageConfig] = useState<PageBlockConfig | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/tikrar/blocks?page=${page}`)
+      .then((r) => r.json())
+      .then((res) => {
+        if (active) {
+          setCustomPageConfig(res?.success && res?.config ? res.config : null);
+        }
+      })
+      .catch(() => {
+        if (active) setCustomPageConfig(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [page]);
   const { fontSize } = useFontSize();
   const [hasInitializedPage, setHasInitializedPage] = useState(false);
   const [isRequestingExam, setIsRequestingExam] = useState(false);
@@ -904,8 +929,8 @@ export function TikrarSystem({
   }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, juz, loading, user?.id, totalProgress, pageLockReason]);
 
   const blockVerses = useMemo<Record<1 | 2 | 3 | 4, Verse[]>>(() => {
-    return splitPageInto4Blocks(page, verses);
-  }, [page, verses]);
+    return splitPageInto4Blocks(page, verses, customPageConfig);
+  }, [page, verses, customPageConfig]);
 
   // Active halaqah & consistency metrics
   const activeHalaqah = useMemo(() => {
@@ -1815,7 +1840,9 @@ export function TikrarSystem({
               page={page}
               state={blocks[1]}
               verses={blockVerses[1]}
-              rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[1])}
+              rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[1], customPageConfig?.[1])}
+              customConfig={customPageConfig}
+              allPageVerses={verses}
               isSavedInDb={completedBlocksAllTime.has(1)}
               isScheduledToday={scheduledBlockSetOnPage.has(1)}
               isLocked={false}
@@ -1838,7 +1865,9 @@ export function TikrarSystem({
               page={page}
               state={blocks[2]}
               verses={blockVerses[2]}
-              rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[2])}
+              rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[2], customPageConfig?.[2])}
+              customConfig={customPageConfig}
+              allPageVerses={verses}
               isSavedInDb={completedBlocksAllTime.has(2)}
               isScheduledToday={scheduledBlockSetOnPage.has(2)}
               isLocked={!isTuntasTM(1)}
@@ -1873,7 +1902,9 @@ export function TikrarSystem({
             page={page}
             state={blocks[3]}
             verses={blockVerses[3]}
-            rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[3])}
+            rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[3], customPageConfig?.[3])}
+            customConfig={customPageConfig}
+            allPageVerses={verses}
             isSavedInDb={completedBlocksAllTime.has(3)}
             isScheduledToday={scheduledBlockSetOnPage.has(3)}
             isLocked={!isMetaTuntas('1_2')}
@@ -1918,7 +1949,9 @@ export function TikrarSystem({
             page={page}
             state={blocks[4]}
             verses={blockVerses[4]}
-            rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[4])}
+            rangeLabel={loading ? 'Memuat...' : formatBlockRangeLabel(blockVerses[4], customPageConfig?.[4])}
+            customConfig={customPageConfig}
+            allPageVerses={verses}
             isSavedInDb={completedBlocksAllTime.has(4)}
             isScheduledToday={scheduledBlockSetOnPage.has(4)}
             isLocked={!isMetaTuntas('1_2_3')}
@@ -2115,6 +2148,8 @@ function MaqtaCard({
   onPlayAudio,
   onStopAudio,
   getMinCount,
+  customConfig,
+  allPageVerses,
 }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
   const isPlaying = Boolean(playback);
@@ -2141,8 +2176,8 @@ function MaqtaCard({
   const theme = SYAAMIL_BLOCK_THEME[id as 1 | 2 | 3 | 4] || SYAAMIL_BLOCK_THEME[1];
 
   const subSplit = useMemo(() => {
-    return splitBlockIntoSubBlocks(id as 1 | 2 | 3 | 4, page, verses);
-  }, [id, page, verses]);
+    return splitBlockIntoSubBlocks(id as 1 | 2 | 3 | 4, page, verses, customConfig, allPageVerses);
+  }, [id, page, verses, customConfig, allPageVerses]);
 
   const { tokensA, tokensB } = useMemo(() => {
     if (subSplit.isSingleVerseSplit) {
