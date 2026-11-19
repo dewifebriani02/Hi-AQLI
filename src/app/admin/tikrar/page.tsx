@@ -25,9 +25,11 @@ import {
   Award,
   BellRing,
   BookOpen,
+  CalendarDays,
   CheckCircle2,
   Clock,
   ExternalLink,
+  Layers,
   Link2,
   Loader2,
   MessageCircle,
@@ -558,172 +560,158 @@ export default function AdminTikrarPage() {
   const selectedHalaqahObj = sessionFilter !== 'all' ? halaqahMap.get(sessionFilter) : null;
 
   return (
-    <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="flex flex-col gap-5 max-w-6xl mx-auto pb-20">
+      {/* Header + Quick KPI Strip */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[#800000]">
+          <div className="flex items-center gap-2 text-[#6D123F]">
             <Repeat className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Portal Musyrifah &amp; Administrator HI Tikrar
             </span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
-            Verifikasi Tasmi&apos; Live Zoom &amp; Monitoring Grup
+          <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            Manajemen Tasmi&apos; Live Zoom, Blok Mushaf &amp; Monitoring
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Simak antrean setoran 1/2 halaman &amp; 1 halaman via Live Zoom, buka kunci halaman
-            berikutnya, pantau heatmap grup, dan kelola tautan Zoom serta pengingat WhatsApp.
+          <p className="text-xs text-muted-foreground">
+            Simak antrean setoran Live Zoom, atur potongan 4 Blok (8 Sub-Blok) Mushaf, pantau heatmap grup, dan kelola pengingat WA.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start flex-wrap">
-          <Button asChild variant="outline" className="font-bold border-slate-200">
-            <Link href="/tikrar">
-              <BookOpen className="w-4 h-4 mr-2 text-[#800000]" /> Halaman Peserta
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="font-bold border-slate-200">
-            <Link href="/admin">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Dashboard Admin
-            </Link>
-          </Button>
+        {/* Compact KPI Pills */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('participants')}
+            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 text-left hover:border-[#6D123F]/40 transition-colors"
+          >
+            <div className="p-2 rounded-xl bg-[#6D123F]/10 text-[#6D123F]">
+              <Users className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Peserta Aktif</p>
+              <p className="text-lg font-black text-slate-900 dark:text-white leading-none mt-0.5">{kpis.activeCount}</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('submissions');
+              setSubStatusFilter('pending');
+            }}
+            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 text-left hover:border-amber-400 transition-colors"
+          >
+            <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-wider text-amber-800">Antrean Zoom</p>
+              <p className="text-lg font-black text-amber-700 leading-none mt-0.5">{kpis.pendingSubCount}</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('submissions');
+              setSubStatusFilter('passed');
+            }}
+            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 text-left hover:border-emerald-400 transition-colors"
+          >
+            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-wider text-emerald-800">Setoran Lulus</p>
+              <p className="text-lg font-black text-emerald-700 leading-none mt-0.5">{kpis.passedSubCount}</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('submissions');
+              setSubStatusFilter('needs_revision');
+            }}
+            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 text-left hover:border-rose-400 transition-colors"
+          >
+            <div className="p-2 rounded-xl bg-rose-100 text-rose-700">
+              <Award className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-wider text-rose-800">Perlu Perbaikan</p>
+              <p className="text-lg font-black text-rose-700 leading-none mt-0.5">{kpis.revisionSubCount}</p>
+            </div>
+          </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Peserta Tikrar Aktif
-              </p>
-              <p className="text-3xl font-black text-slate-900 mt-1">{kpis.activeCount}</p>
-            </div>
-            <div className="p-3 rounded-2xl bg-red-50 text-[#800000]">
-              <Users className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Antrean Tasmi&apos; Zoom
-              </p>
-              <p className="text-3xl font-black text-amber-600 mt-1">{kpis.pendingSubCount}</p>
-            </div>
-            <div className="p-3 rounded-2xl bg-amber-50 text-amber-600">
-              <Clock className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Setoran Lulus
-              </p>
-              <p className="text-3xl font-black text-emerald-600 mt-1">{kpis.passedSubCount}</p>
-            </div>
-            <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Perlu Perbaikan
-              </p>
-              <p className="text-3xl font-black text-rose-600 mt-1">{kpis.revisionSubCount}</p>
-            </div>
-            <div className="p-3 rounded-2xl bg-rose-50 text-rose-600">
-              <Award className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search Bar */}
-      <Card className="border-none shadow-sm bg-white">
-        <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari nama thalibah, email, nomor WhatsApp, atau nomor halaman..."
-              className="pl-9 bg-slate-50 border-slate-200"
-            />
-          </div>
-          {searchTerm && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSearchTerm('')}
-              className="text-xs font-bold"
-            >
-              Reset
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
-        <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-auto flex flex-wrap gap-1 w-fit">
-          <TabsTrigger
-            value="submissions"
-            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
-          >
-            Antrean Tasmi&apos; Live Zoom ({kpis.pendingSubCount})
-          </TabsTrigger>
-          <TabsTrigger
-            value="sessions"
-            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2 gap-1.5"
-          >
-            Sesi &amp; Link Zoom ({tikrarHalaqahs.length})
-            {placeholderZoomCount > 0 && (
-              <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-black">
-                {placeholderZoomCount} Placeholder
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger
-            value="prior"
-            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
-          >
-            Hafalan Lama
-          </TabsTrigger>
-          <TabsTrigger
-            value="heatmap"
-            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
-          >
-            Heatmap Grup
-          </TabsTrigger>
-          <TabsTrigger
-            value="reminders"
-            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
-          >
-            Pengingat WhatsApp
-          </TabsTrigger>
-          <TabsTrigger
-            value="blocks"
-            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2 gap-1.5"
-          >
-            Atur Blok &amp; Ayat
-          </TabsTrigger>
-          <TabsTrigger
-            value="participants"
-            className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#800000] data-[state=active]:text-white px-4 py-2"
-          >
-            Peserta &amp; Akses Juz ({filteredParticipants.length})
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-1.5 rounded-2xl h-auto flex flex-wrap gap-1 w-full sm:w-fit shadow-sm">
+            <TabsTrigger
+              value="submissions"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+            >
+              <Video className="w-3.5 h-3.5" />
+              Antrean Tasmi&apos; ({kpis.pendingSubCount})
+            </TabsTrigger>
+            <TabsTrigger
+              value="blocks"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Atur Blok &amp; Ayat
+            </TabsTrigger>
+            <TabsTrigger
+              value="prior"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Hafalan Lama
+            </TabsTrigger>
+            <TabsTrigger
+              value="heatmap"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              Heatmap Grup
+            </TabsTrigger>
+            <TabsTrigger
+              value="participants"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+            >
+              <Users className="w-3.5 h-3.5" />
+              Peserta &amp; Juz ({kpis.activeCount})
+            </TabsTrigger>
+            <TabsTrigger
+              value="sessions"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              Sesi &amp; Link Zoom
+              {placeholderZoomCount > 0 && (
+                <span className="ml-0.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-black">
+                  {placeholderZoomCount}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="reminders"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+            >
+              <BellRing className="w-3.5 h-3.5" />
+              Robot WA
+            </TabsTrigger>
+          </TabsList>
+
+          <Button asChild variant="outline" size="sm" className="rounded-xl font-bold text-xs border-slate-200 shrink-0 self-start sm:self-center">
+            <Link href="/tikrar">
+              <BookOpen className="w-3.5 h-3.5 mr-1.5 text-[#6D123F]" /> Lihat Halaman Peserta
+            </Link>
+          </Button>
+        </div>
 
         {/* TAB 1: Verifikasi Kelas Setoran Live Zoom (Fase 5) */}
         <TabsContent value="submissions" className="space-y-4 outline-none">
@@ -752,7 +740,7 @@ export default function AdminTikrarPage() {
                 type="button"
                 size="sm"
                 onClick={() => setActiveTab('sessions')}
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs shrink-0"
+                className="bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs shrink-0 rounded-xl"
               >
                 <Settings2 className="w-3.5 h-3.5 mr-1.5" />
                 Perbarui Link Zoom
@@ -760,92 +748,98 @@ export default function AdminTikrarPage() {
             </div>
           )}
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200">
-            <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                Filter Sesi Halaqah Live Zoom
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSessionFilter('all')}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-bold border transition-colors',
-                    sessionFilter === 'all'
-                      ? 'bg-[#800000] text-white border-[#800000]'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+          {/* Filter Sesi + Search Bar + Status Filter dalam 1 Panel Rapi */}
+          <Card className="rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm bg-white dark:bg-slate-900">
+            <CardContent className="p-4 space-y-3.5">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    Filter Sesi Halaqah Live Zoom
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSessionFilter('all')}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors',
+                        sessionFilter === 'all'
+                          ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      )}
+                    >
+                      Semua Sesi
+                    </button>
+                    {tikrarHalaqahs.map((h: any) => (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => setSessionFilter(h.id)}
+                        className={cn(
+                          'px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors',
+                          sessionFilter === h.id
+                            ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        )}
+                      >
+                        {String(h.title || '').replace('Hi Tikrar - ', '')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap shrink-0">
+                  {selectedHalaqahObj?.zoom_link && (
+                    <Button
+                      asChild
+                      className="bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs h-9 rounded-xl shrink-0"
+                    >
+                      <a href={selectedHalaqahObj.zoom_link} target="_blank" rel="noopener noreferrer">
+                        <Video className="w-4 h-4 mr-1.5 text-[#D4AF37]" />
+                        Buka Zoom Sesi Ini
+                        <ExternalLink className="w-3 h-3 ml-1.5" />
+                      </a>
+                    </Button>
                   )}
-                >
-                  Semua Sesi
-                </button>
-                {tikrarHalaqahs.map((h: any) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    onClick={() => setSessionFilter(h.id)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-bold border transition-colors',
-                      sessionFilter === h.id
-                        ? 'bg-[#800000] text-white border-[#800000]'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    )}
-                  >
-                    {String(h.title || '').replace('Hi Tikrar - ', '')}
-                  </button>
-                ))}
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2 flex-wrap shrink-0">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveTab('sessions')}
-                className="font-bold text-xs h-10 border-slate-200"
-              >
-                <Link2 className="w-3.5 h-3.5 mr-1.5 text-[#800000]" />
-                Kelola Link Zoom
-              </Button>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {(
+                    [
+                      { key: 'pending', label: `Menunggu Simak (${kpis.pendingSubCount})` },
+                      { key: 'needs_revision', label: `Perlu Perbaikan (${kpis.revisionSubCount})` },
+                      { key: 'passed', label: `Lulus Tasmi' (${kpis.passedSubCount})` },
+                      { key: 'all', label: 'Semua Riwayat' },
+                    ] as const
+                  ).map((st) => (
+                    <Button
+                      key={st.key}
+                      size="sm"
+                      variant={subStatusFilter === st.key ? 'default' : 'outline'}
+                      onClick={() => setSubStatusFilter(st.key)}
+                      className={cn(
+                        'text-[11px] font-black rounded-xl h-8',
+                        subStatusFilter === st.key && 'bg-[#6D123F] hover:bg-[#580e33] text-white'
+                      )}
+                    >
+                      {st.label}
+                    </Button>
+                  ))}
+                </div>
 
-              {selectedHalaqahObj?.zoom_link && (
-                <Button
-                  asChild
-                  className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 shrink-0"
-                >
-                  <a href={selectedHalaqahObj.zoom_link} target="_blank" rel="noopener noreferrer">
-                    <Video className="w-4 h-4 mr-2 text-[#D4AF37]" />
-                    Buka Ruang Zoom Sesi Ini
-                    <ExternalLink className="w-3 h-3 ml-1.5" />
-                  </a>
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {(
-              [
-                { key: 'pending', label: `Menunggu Simak (${kpis.pendingSubCount})` },
-                { key: 'needs_revision', label: `Perlu Perbaikan (${kpis.revisionSubCount})` },
-                { key: 'passed', label: `Lulus Tasmi' (${kpis.passedSubCount})` },
-                { key: 'all', label: 'Semua Riwayat' },
-              ] as const
-            ).map((st) => (
-              <Button
-                key={st.key}
-                size="sm"
-                variant={subStatusFilter === st.key ? 'default' : 'outline'}
-                onClick={() => setSubStatusFilter(st.key)}
-                className={cn(
-                  'text-[11px] font-black uppercase tracking-wider rounded-full h-8',
-                  subStatusFilter === st.key && 'bg-[#800000] hover:bg-[#800000]/90 text-white'
-                )}
-              >
-                {st.label}
-              </Button>
-            ))}
-          </div>
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Cari nama peserta atau halaman..."
+                    className="pl-8 h-8 text-xs bg-slate-50 border-slate-200 rounded-xl"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {loadingSubmissions ? (
             <Card className="border-none shadow-sm bg-white">
@@ -1545,17 +1539,9 @@ export default function AdminTikrarPage() {
         </TabsContent>
 
         {/* TAB 5: Peserta, Target Juz & Ujian Halaman */}
-        <TabsContent value="participants" className="space-y-6 outline-none">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="space-y-0.5">
-              <h3 className="text-sm font-black text-slate-900">
-                Penyaringan Peserta Hi Tikrar vs Akun Lain
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Secara default hanya menampilkan peserta resmi Hi Tikrar agar tidak bercampur dengan pendaftar Hi Mufradat / akun umum.
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+        <TabsContent value="participants" className="space-y-4 outline-none">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-fit">
               <Button
                 type="button"
                 size="sm"
@@ -1563,7 +1549,7 @@ export default function AdminTikrarPage() {
                 onClick={() => setParticipantScope('registered')}
                 className={cn(
                   'text-xs font-bold h-8 rounded-lg',
-                  participantScope === 'registered' && 'bg-[#800000] text-white shadow-sm hover:bg-[#800000]/90'
+                  participantScope === 'registered' && 'bg-[#6D123F] text-white shadow-sm hover:bg-[#580e33]'
                 )}
               >
                 Hanya Peserta Tikrar ({kpis.activeCount})
@@ -1575,11 +1561,21 @@ export default function AdminTikrarPage() {
                 onClick={() => setParticipantScope('all')}
                 className={cn(
                   'text-xs font-bold h-8 rounded-lg',
-                  participantScope === 'all' && 'bg-[#800000] text-white shadow-sm hover:bg-[#800000]/90'
+                  participantScope === 'all' && 'bg-[#6D123F] text-white shadow-sm hover:bg-[#580e33]'
                 )}
               >
                 Semua Akun Sistem ({(users || []).length})
               </Button>
+            </div>
+
+            <div className="relative w-full md:w-80">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Cari nama, email, atau nomor WA..."
+                className="pl-8 h-9 text-xs bg-slate-50 border-slate-200 rounded-xl"
+              />
             </div>
           </div>
           {loadingUsers ? (
