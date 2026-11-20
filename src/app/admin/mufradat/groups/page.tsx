@@ -1,55 +1,47 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { useCollection, authFetch } from "@/db";
-import {db } from "@/db";
-import { useUser } from "@/db";
+import { useCollection, authFetch, db, useUser } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
-import { 
-  Loader2, 
-  Users, 
-  Plus, 
-  Link as LinkIcon, 
-  ArrowLeft, 
-  Save, 
+import {
+  Loader2,
+  Users,
+  Plus,
+  Link as LinkIcon,
+  ArrowLeft,
+  Save,
   ExternalLink,
   Search,
   CheckCircle2,
   Zap,
   Eye,
   UserMinus,
-  X,
   UserPlus,
-  ChevronRight,
   Trash2,
   AlertTriangle,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Edit3,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -63,70 +55,85 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
+interface GroupFormState {
+  name: string;
+  whatsapp_link: string;
+  start_date: string;
+  musyrifah_name: string;
+  musyrifah_phone: string;
+  muallimah_name: string;
+  muallimah_phone: string;
+  fonnte_group_id: string;
+}
+
+const EMPTY_FORM: GroupFormState = {
+  name: "",
+  whatsapp_link: "",
+  start_date: new Date().toISOString().split("T")[0],
+  musyrifah_name: "",
+  musyrifah_phone: "",
+  muallimah_name: "",
+  muallimah_phone: "",
+  fonnte_group_id: "",
+};
+
 export default function MufradatGroupsPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const { canDelete } = useUserPermissions(user?.id);
+
   const [search, setSearch] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<{
-    name: string, 
-    whatsapp_link: string, 
-    start_date: string,
-    musyrifah_name: string,
-    musyrifah_phone: string,
-    muallimah_name: string,
-    muallimah_phone: string,
-    fonnte_group_id: string
-  }>({ 
-    name: "", 
-    whatsapp_link: "", 
-    start_date: "",
-    musyrifah_name: "",
-    musyrifah_phone: "",
-    muallimah_name: "",
-    muallimah_phone: "",
-    fonnte_group_id: ""
-  });
+  const [capacityFilter, setCapacityFilter] = useState<"all" | "available" | "full">("all");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Create / Edit Group Dialog
+  const [dialogMode, setDialogMode] = useState<"create" | "edit" | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [formState, setFormState] = useState<GroupFormState>(EMPTY_FORM);
+
+  // View Members Dialog
   const [viewingGroupId, setViewingGroupId] = useState<string | null>(null);
   const [isViewMembersOpen, setIsViewMembersOpen] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [userSearch, setUserSearch] = useState("");
-  
-  // NEW CRUD STATES
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newGroup, setNewGroup] = useState({
-    name: "",
-    start_date: new Date().toISOString().split('T')[0],
-    musyrifah_name: "",
-    musyrifah_phone: "",
-    muallimah_name: "",
-    muallimah_phone: "",
-    whatsapp_link: "",
-    fonnte_group_id: ""
-  });
+
+  // Delete Confirmation
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const [fonnteGroups, setFonnteGroups] = useState<any[]>([]); // WatZap groups
+  // WatZap group fetcher
+  const [fonnteGroups, setFonnteGroups] = useState<any[]>([]);
   const [isFetchingFonnte, setIsFetchingFonnte] = useState(false);
 
-  const { data: groups, isLoading, refresh } = useCollection("mufradat_groups", {
-    orderBy: { column: 'created_at', ascending: true }
-  });
+  const groupsOptions = useMemo(
+    () => ({ orderBy: { column: "created_at", ascending: true } }),
+    []
+  );
+  const {
+    data: groups,
+    isLoading,
+    refresh: refreshGroups,
+  } = useCollection("mufradat_groups", groupsOptions);
+  const { data: allUsers, refresh: refreshUsers } = useCollection("users");
 
-  const { data: allUsers } = useCollection("users");
+  // Live accurate member counts per group from users table
+  const liveMemberCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (allUsers || []).forEach((u: any) => {
+      if (u.mufradat_group_id) {
+        map.set(u.mufradat_group_id, (map.get(u.mufradat_group_id) || 0) + 1);
+      }
+    });
+    return map;
+  }, [allUsers]);
 
-  // Filter Muallimah and Musyrifah for dropdowns
   const muallimahList = useMemo(() => {
     if (!allUsers) return [];
     return allUsers
-      .filter(u => u.role_id === 'muallimah')
-      .map(u => ({
+      .filter((u) => u.role_id === "muallimah")
+      .map((u) => ({
         id: u.id,
-        username: u.username,
-        displayName: u.full_name || u.username,
-        phone: u.whatsapp || u.phone || ''
+        displayName: u.full_name || u.username || "Muallimah",
+        phone: u.whatsapp || u.phone || "",
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [allUsers]);
@@ -134,231 +141,289 @@ export default function MufradatGroupsPage() {
   const musyrifahList = useMemo(() => {
     if (!allUsers) return [];
     return allUsers
-      .filter(u => u.role_id === 'musyrifah')
-      .map(u => ({
+      .filter((u) => u.role_id === "musyrifah")
+      .map((u) => ({
         id: u.id,
-        username: u.username,
-        displayName: u.full_name || u.username,
-        phone: u.whatsapp || u.phone || ''
+        displayName: u.full_name || u.username || "Musyrifah",
+        phone: u.whatsapp || u.phone || "",
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [allUsers]);
 
   const groupMembers = useMemo(() => {
     if (!viewingGroupId || !allUsers) return [];
-    return allUsers.filter(u => u.mufradat_group_id === viewingGroupId);
+    return allUsers
+      .filter((u) => u.mufradat_group_id === viewingGroupId)
+      .sort((a, b) =>
+        String(a.full_name || a.username || "").localeCompare(
+          String(b.full_name || b.username || "")
+        )
+      );
   }, [viewingGroupId, allUsers]);
 
-  const availableUsers = useMemo(() => {
+  const ungroupedUsers = useMemo(() => {
     if (!allUsers) return [];
-    const s = userSearch.toLowerCase();
-    return allUsers.filter(u => 
-      !u.mufradat_group_id && 
-      (u.username?.toLowerCase().includes(s) || u.email?.toLowerCase().includes(s))
+    return allUsers.filter((u) => !u.mufradat_group_id);
+  }, [allUsers]);
+
+  const availableUsers = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    return ungroupedUsers.filter((u) => {
+      if (!q) return true;
+      return (
+        String(u.full_name || "").toLowerCase().includes(q) ||
+        String(u.username || "").toLowerCase().includes(q) ||
+        String(u.email || "").toLowerCase().includes(q) ||
+        String(u.whatsapp || u.phone || "").toLowerCase().includes(q)
+      );
+    });
+  }, [ungroupedUsers, userSearch]);
+
+  const enrichedGroups = useMemo(() => {
+    return (groups || []).map((g: any) => {
+      const liveCount = liveMemberCountMap.get(g.id) ?? g.member_count ?? 0;
+      return { ...g, liveCount };
+    });
+  }, [groups, liveMemberCountMap]);
+
+  const kpis = useMemo(() => {
+    const totalBatches = enrichedGroups.length;
+    const totalMembers = enrichedGroups.reduce((acc, g) => acc + g.liveCount, 0);
+    const totalSlots = enrichedGroups.reduce(
+      (acc, g) => acc + Math.max(0, 50 - g.liveCount),
+      0
     );
-  }, [allUsers, userSearch]);
+    const fullBatches = enrichedGroups.filter((g) => g.liveCount >= 50).length;
+    return { totalBatches, totalMembers, totalSlots, fullBatches };
+  }, [enrichedGroups]);
 
   const filteredGroups = useMemo(() => {
-    if (!groups) return [];
-    const s = search.toLowerCase();
-    return groups.filter(g => g.name.toLowerCase().includes(s));
-  }, [groups, search]);
+    const q = search.trim().toLowerCase();
+    return enrichedGroups.filter((g) => {
+      if (capacityFilter === "full" && g.liveCount < 50) return false;
+      if (capacityFilter === "available" && g.liveCount >= 50) return false;
+      if (!q) return true;
+      return (
+        String(g.name || "").toLowerCase().includes(q) ||
+        String(g.musyrifah_name || "").toLowerCase().includes(q) ||
+        String(g.muallimah_name || "").toLowerCase().includes(q)
+      );
+    });
+  }, [enrichedGroups, search, capacityFilter]);
 
-  const handleStartEdit = (group: any) => {
-    setEditingId(group.id);
-    setEditValues({ 
-      name: group.name, 
+  const openCreateDialog = () => {
+    setDialogMode("create");
+    setEditingGroupId(null);
+    setFormState({
+      ...EMPTY_FORM,
+      start_date: new Date().toISOString().split("T")[0],
+    });
+  };
+
+  const openEditDialog = (group: any) => {
+    setDialogMode("edit");
+    setEditingGroupId(group.id);
+    setFormState({
+      name: group.name || "",
       whatsapp_link: group.whatsapp_link || "",
-      start_date: group.start_date || "",
+      start_date: group.start_date ? String(group.start_date).slice(0, 10) : "",
       musyrifah_name: group.musyrifah_name || "",
       musyrifah_phone: group.musyrifah_phone || "",
       muallimah_name: group.muallimah_name || "",
       muallimah_phone: group.muallimah_phone || "",
-      fonnte_group_id: group.fonnte_group_id || ""
+      fonnte_group_id: group.fonnte_group_id || "",
     });
   };
 
-  const handleSave = async (id: string) => {
+  const handleSubmitGroupForm = async () => {
+    if (!formState.name.trim()) {
+      toast({ variant: "destructive", title: "Nama batch/grup wajib diisi" });
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      const { error } = await db
-        .from('mufradat_groups')
-        .update({
-          name: editValues.name,
-          whatsapp_link: editValues.whatsapp_link,
-          start_date: editValues.start_date || null,
-          musyrifah_name: editValues.musyrifah_name,
-          musyrifah_phone: editValues.musyrifah_phone,
-          muallimah_name: editValues.muallimah_name,
-          muallimah_phone: editValues.muallimah_phone,
-          fonnte_group_id: editValues.fonnte_group_id
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({ title: "Grup Diperbarui", description: "Perubahan berhasil disimpan." });
-      setEditingId(null);
-      refresh();
+      if (dialogMode === "create") {
+        const { error } = await db.from("mufradat_groups").insert({
+          name: formState.name.trim(),
+          whatsapp_link: formState.whatsapp_link.trim() || null,
+          member_count: 0,
+          start_date: formState.start_date || null,
+          musyrifah_name: formState.musyrifah_name.trim() || null,
+          musyrifah_phone: formState.musyrifah_phone.trim() || null,
+          muallimah_name: formState.muallimah_name.trim() || null,
+          muallimah_phone: formState.muallimah_phone.trim() || null,
+          fonnte_group_id: formState.fonnte_group_id.trim() || null,
+        });
+        if (error) throw error;
+        toast({
+          title: "Batch Baru Dibuat",
+          description: `${formState.name} berhasil ditambahkan.`,
+        });
+      } else if (dialogMode === "edit" && editingGroupId) {
+        const { error } = await db
+          .from("mufradat_groups")
+          .update({
+            name: formState.name.trim(),
+            whatsapp_link: formState.whatsapp_link.trim() || null,
+            start_date: formState.start_date || null,
+            musyrifah_name: formState.musyrifah_name.trim() || null,
+            musyrifah_phone: formState.musyrifah_phone.trim() || null,
+            muallimah_name: formState.muallimah_name.trim() || null,
+            muallimah_phone: formState.muallimah_phone.trim() || null,
+            fonnte_group_id: formState.fonnte_group_id.trim() || null,
+          })
+          .eq("id", editingGroupId);
+        if (error) throw error;
+        toast({
+          title: "Batch Diperbarui",
+          description: `Detail ${formState.name} berhasil disimpan.`,
+        });
+      }
+      setDialogMode(null);
+      await refreshGroups();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: e.message });
+      toast({
+        variant: "destructive",
+        title: "Gagal menyimpan batch",
+        description: e.message,
+      });
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const syncGroupMemberCount = async (groupId: string) => {
+    const { data: members } = await db
+      .from("users")
+      .select("id")
+      .eq("mufradat_group_id", groupId);
+    await db
+      .from("mufradat_groups")
+      .update({ member_count: members?.length || 0 })
+      .eq("id", groupId);
   };
 
   const handleRemoveMember = async (userId: string, groupId: string) => {
     setIsProcessing(true);
     try {
       const { error } = await db
-        .from('users')
+        .from("users")
         .update({ mufradat_group_id: null })
-        .eq('id', userId);
-      
+        .eq("id", userId);
       if (error) throw error;
 
-      // Recount members
-      const { data: members } = await db
-        .from('users')
-        .select('id')
-        .eq('mufradat_group_id', groupId);
-      
-      await db
-        .from('mufradat_groups')
-        .update({ member_count: members?.length || 0 })
-        .eq('id', groupId);
-
-      toast({ title: "Peserta Dikeluarkan", description: "Peserta telah berhasil dikeluarkan dari grup." });
-      refresh();
+      await syncGroupMemberCount(groupId);
+      await Promise.all([refreshGroups(), refreshUsers()]);
+      toast({
+        title: "Peserta Dikeluarkan",
+        description: "Peserta berhasil dikeluarkan dari batch ini.",
+      });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal mengeluarkan peserta", description: e.message });
+      toast({
+        variant: "destructive",
+        title: "Gagal mengeluarkan peserta",
+        description: e.message,
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleJoinGroup = async (userId: string, groupId: string) => {
-    const group = groups?.find(g => g.id === groupId);
-    if (group && (group.member_count || 0) >= 50) {
-      toast({ variant: "destructive", title: "Grup Penuh", description: "Maksimal 50 thalibah per grup." });
+    const group = enrichedGroups.find((g) => g.id === groupId);
+    if (group && group.liveCount >= 50) {
+      toast({
+        variant: "destructive",
+        title: "Batch Penuh",
+        description: "Maksimal 50 thalibah per batch.",
+      });
       return;
     }
 
     setIsProcessing(true);
     try {
       const { error } = await db
-        .from('users')
+        .from("users")
         .update({ mufradat_group_id: groupId })
-        .eq('id', userId);
-      
+        .eq("id", userId);
       if (error) throw error;
 
-      // Recount members
-      const { data: members } = await db
-        .from('users')
-        .select('id')
-        .eq('mufradat_group_id', groupId);
-      
-      await db
-        .from('mufradat_groups')
-        .update({ member_count: members?.length || 0 })
-        .eq('id', groupId);
-
-      toast({ title: "Peserta Ditambahkan", description: "Peserta telah berhasil dimasukkan ke dalam grup." });
-      refresh();
+      await syncGroupMemberCount(groupId);
+      await Promise.all([refreshGroups(), refreshUsers()]);
+      toast({
+        title: "Peserta Ditambahkan",
+        description: "Peserta berhasil dimasukkan ke batch ini.",
+      });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal menambahkan peserta", description: e.message });
+      toast({
+        variant: "destructive",
+        title: "Gagal menambahkan peserta",
+        description: e.message,
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleFillGroupGaps = async () => {
-    if (!groups || groups.length === 0) {
-      toast({ variant: "destructive", title: "Gagal Proses", description: "Buat minimal satu grup terlebih dahulu." });
+    if (!enrichedGroups.length) {
+      toast({
+        variant: "destructive",
+        title: "Belum Ada Batch",
+        description: "Buat minimal satu batch terlebih dahulu.",
+      });
       return;
     }
 
     setIsProcessing(true);
     try {
-      const { data: ungroupedUsers, error: fetchErr } = await db
-        .from('users')
-        .select('id')
-        .is('mufradat_group_id', null);
-      
+      const { data: ungrouped, error: fetchErr } = await db
+        .from("users")
+        .select("id")
+        .is("mufradat_group_id", null);
+
       if (fetchErr) throw fetchErr;
-      
-      if (!ungroupedUsers || ungroupedUsers.length === 0) {
-        toast({ title: "Optimasi Selesai", description: "Tidak ada thalibah tanpa grup yang ditemukan." });
+      if (!ungrouped || ungrouped.length === 0) {
+        toast({
+          title: "Semua Sudah Terdistribusi",
+          description: "Tidak ada thalibah tanpa batch yang ditemukan.",
+        });
         return;
       }
 
-      let remainingUsers = [...ungroupedUsers];
+      const remainingUsers = [...ungrouped];
       let updatedCount = 0;
 
-      for (const group of groups) {
+      for (const group of enrichedGroups) {
         if (remainingUsers.length === 0) break;
-        
-        const spaceAvailable = 50 - (group.member_count || 0);
+        const spaceAvailable = 50 - group.liveCount;
         if (spaceAvailable > 0) {
           const batchToMove = remainingUsers.splice(0, spaceAvailable);
-          const userIds = batchToMove.map(u => u.id);
-          
+          const userIds = batchToMove.map((u: any) => u.id);
+
           const { error: moveErr } = await db
-            .from('users')
+            .from("users")
             .update({ mufradat_group_id: group.id })
-            .in('id', userIds);
-          
+            .in("id", userIds);
           if (moveErr) throw moveErr;
 
-          const { data: memberCount } = await db.from('users').select('id', { count: 'exact', head: true }).eq('mufradat_group_id', group.id);
-          await db.from('mufradat_groups').update({ member_count: memberCount?.length || 0 }).eq('id', group.id);
-          
+          await syncGroupMemberCount(group.id);
           updatedCount += userIds.length;
         }
       }
 
-      toast({ 
-        title: "Optimasi Berhasil", 
-        description: `Masyallah, ${updatedCount} thalibah telah dipindahkan untuk mengisi kekosongan grup.` 
+      await Promise.all([refreshGroups(), refreshUsers()]);
+      toast({
+        title: "Optimasi Slot Berhasil",
+        description: `${updatedCount} thalibah telah dimasukkan ke slot batch yang masih kosong.`,
       });
-      refresh();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal Optimasi", description: e.message });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleCreateGroup = async () => {
-    if (!newGroup.name) {
-      toast({ variant: "destructive", title: "Nama grup wajib diisi" });
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const { error } = await db
-        .from('mufradat_groups')
-        .insert({
-          name: newGroup.name,
-          whatsapp_link: newGroup.whatsapp_link,
-          member_count: 0,
-          start_date: newGroup.start_date || null,
-          musyrifah_name: newGroup.musyrifah_name,
-          musyrifah_phone: newGroup.musyrifah_phone,
-          muallimah_name: newGroup.muallimah_name,
-          muallimah_phone: newGroup.muallimah_phone,
-          fonnte_group_id: newGroup.fonnte_group_id
-        });
-
-      if (error) throw error;
-
-      toast({ title: "Grup Berhasil Dibuat", description: `Masyallah, ${newGroup.name} telah siap!` });
-      setIsCreateDialogOpen(false);
-      refresh();
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal membuat grup", description: e.message });
+      toast({
+        variant: "destructive",
+        title: "Gagal Optimasi",
+        description: e.message,
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -367,27 +432,30 @@ export default function MufradatGroupsPage() {
   const handleDeleteGroup = async (id: string) => {
     setIsProcessing(true);
     try {
-      // 1. Set mufradat_group_id to null for all members
       const { error: memberErr } = await db
-        .from('users')
+        .from("users")
         .update({ mufradat_group_id: null })
-        .eq('mufradat_group_id', id);
-      
+        .eq("mufradat_group_id", id);
       if (memberErr) throw memberErr;
 
-      // 2. Delete the group
       const { error: groupErr } = await db
-        .from('mufradat_groups')
+        .from("mufradat_groups")
         .delete()
-        .eq('id', id);
-
+        .eq("id", id);
       if (groupErr) throw groupErr;
 
-      toast({ title: "Grup Dihapus", description: "Grup dan relasi peserta telah dihapus." });
       setConfirmDeleteId(null);
-      refresh();
+      await Promise.all([refreshGroups(), refreshUsers()]);
+      toast({
+        title: "Batch Dihapus",
+        description: "Batch telah dihapus dan anggotanya dilepas dari grup.",
+      });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal menghapus", description: e.message });
+      toast({
+        variant: "destructive",
+        title: "Gagal menghapus batch",
+        description: e.message,
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -396,676 +464,758 @@ export default function MufradatGroupsPage() {
   const fetchFonnteGroups = async () => {
     setIsFetchingFonnte(true);
     try {
-      const res = await authFetch('/api/admin/reminders', { 
-        method: 'POST', 
-        body: JSON.stringify({ action: 'fetch_groups' }) 
+      const res = await authFetch("/api/admin/reminders", {
+        method: "POST",
+        body: JSON.stringify({ action: "fetch_groups" }),
       });
       const data = await res.json();
       if (data.success) {
         setFonnteGroups(data.groups || []);
-        toast({ title: "Berhasil!", description: `${data.groups?.length || 0} grup WhatsApp ditemukan.` });
-      } else throw new Error(data.error);
+        toast({
+          title: "Daftar Grup WatZap Dimuat",
+          description: `${data.groups?.length || 0} grup WhatsApp ditemukan.`,
+        });
+      } else {
+        throw new Error(data.error);
+      }
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal ambil grup", description: e.message });
+      toast({
+        variant: "destructive",
+        title: "Gagal menarik grup WatZap",
+        description: e.message,
+      });
     } finally {
       setIsFetchingFonnte(false);
     }
   };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
-        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Memuat Daftar Grup...</p>
+        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          Memuat Daftar Batch Hi Mufradat...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-5xl space-y-8 pb-32">
-      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-        <Link href="/admin" className="hover:text-[#800000] transition-colors">Admin</Link>
-        <ChevronRight className="w-3 h-3" />
-        <Link href="/admin/mufradat" className="hover:text-[#800000] transition-colors">Hi Mufradat</Link>
-        <ChevronRight className="w-3 h-3" />
-        <span className="text-[#800000]">Kelola Group</span>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tighter text-[#800000] truncate uppercase">MANAJEMEN GRUP</h1>
-            <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-widest font-bold">Hi Mufradat • Batch 50 Thalibah</p>
+    <div className="flex flex-col gap-5 max-w-6xl mx-auto pb-20">
+      {/* Header + KPI Strip */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[#6D123F]">
+            <Layers className="w-4 h-4" />
+            <span className="text-[11px] font-black uppercase tracking-widest">
+              Manajemen Batch &amp; Grup WA Hi Mufradat
+            </span>
           </div>
+          <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            Daftar Batch, Musyrifah &amp; Tautan Grup WA
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Kelola kapasitas 50 thalibah per batch, tautan grup WhatsApp monitoring, serta penempatan peserta.
+          </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#800000] hover:bg-[#800000]/90 font-black h-12 px-6 rounded-xl shadow-lg gap-2 w-full sm:w-auto">
-          <Plus className="w-5 h-5" />
-          TAMBAH GRUP BARU
-        </Button>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <Card className="col-span-1 lg:col-span-1 bg-amber-50 border-amber-200">
-           <CardHeader className="pb-2">
-             <CardTitle className="text-sm font-black flex items-center gap-2 text-amber-900">
-                <Users className="w-4 h-4" /> INFO KAPASITAS
-             </CardTitle>
-           </CardHeader>
-           <CardContent>
-              <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                Setiap grup dibatasi maksimal 50 thalibah. Fitur di bawah akan mengisi slot kosong grup sebelumnya secara otomatis.
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setCapacityFilter("all")}
+            className={cn(
+              "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border text-left transition-all",
+              capacityFilter === "all"
+                ? "bg-[#6D123F]/5 border-[#6D123F]/40"
+                : "bg-slate-50 border-slate-200 hover:border-[#6D123F]/40"
+            )}
+          >
+            <div className="p-2 rounded-xl bg-[#6D123F]/10 text-[#6D123F]">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase text-slate-500">Total Batch</p>
+              <p className="text-lg font-black text-slate-900 leading-none mt-0.5">
+                {kpis.totalBatches}
               </p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleFillGroupGaps}
-                disabled={isProcessing}
-                className="mt-3 w-full border-amber-300 text-amber-900 bg-white/50 hover:bg-white font-black text-[9px] h-8 gap-1.5 uppercase transition-all active:scale-95"
-              >
-                <Zap className="w-3 h-3" /> Tutup Lubang & Isi Grup
-              </Button>
-           </CardContent>
-        </Card>
-        
-        <div className="col-span-1 md:col-span-2 lg:col-span-3 flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Cari nama grup..." 
-              className="pl-10 h-12 border-2 bg-white/50 rounded-xl w-full"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            </div>
+          </button>
+
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border bg-blue-50/70 border-blue-200/80">
+            <div className="p-2 rounded-xl bg-blue-100 text-blue-700">
+              <Users className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase text-blue-800">Total Anggota</p>
+              <p className="text-lg font-black text-blue-700 leading-none mt-0.5">
+                {kpis.totalMembers}
+              </p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setCapacityFilter("available")}
+            className={cn(
+              "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border text-left transition-all",
+              capacityFilter === "available"
+                ? "bg-emerald-50 border-emerald-400"
+                : "bg-emerald-50/70 border-emerald-200/80 hover:border-emerald-400"
+            )}
+          >
+            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase text-emerald-800">Slot Tersedia</p>
+              <p className="text-lg font-black text-emerald-700 leading-none mt-0.5">
+                {kpis.totalSlots}
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCapacityFilter("full")}
+            className={cn(
+              "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border text-left transition-all",
+              capacityFilter === "full"
+                ? "bg-amber-50 border-amber-400"
+                : "bg-amber-50/70 border-amber-200/80 hover:border-amber-400"
+            )}
+          >
+            <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase text-amber-800">Batch Penuh</p>
+              <p className="text-lg font-black text-amber-700 leading-none mt-0.5">
+                {kpis.fullBatches}
+              </p>
+            </div>
+          </button>
         </div>
       </div>
 
-      <Card className="border-none shadow-2xl overflow-hidden bg-white/90 backdrop-blur-md">
-        <CardHeader className="bg-muted/30 border-b">
-          <CardTitle className="text-lg font-black font-headline text-[#800000]">DAFTAR BATCH & LINK WHATSAPP</CardTitle>
-        </CardHeader>
+      {/* Action & Filter Toolbar */}
+      <Card className="rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm bg-white dark:bg-slate-900">
+        <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {(
+              [
+                { key: "all", label: `Semua (${kpis.totalBatches})` },
+                {
+                  key: "available",
+                  label: `Masih Ada Slot (${kpis.totalBatches - kpis.fullBatches})`,
+                },
+                { key: "full", label: `Penuh (${kpis.fullBatches})` },
+              ] as const
+            ).map((f) => (
+              <Button
+                key={f.key}
+                size="sm"
+                variant={capacityFilter === f.key ? "default" : "outline"}
+                onClick={() => setCapacityFilter(f.key)}
+                className={cn(
+                  "h-8 rounded-xl text-[11px] font-black",
+                  capacityFilter === f.key && "bg-[#6D123F] hover:bg-[#580e33] text-white"
+                )}
+              >
+                {f.label}
+              </Button>
+            ))}
+
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                placeholder="Cari batch, musyrifah, muallimah..."
+                className="pl-8 h-8 text-xs bg-slate-50 border-slate-200 rounded-xl"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFillGroupGaps}
+              disabled={isProcessing}
+              className="h-9 rounded-xl text-xs font-bold border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100 gap-1.5"
+              title="Isi otomatis slot kosong pada batch lama dari peserta yang belum masuk grup"
+            >
+              <Zap className="w-3.5 h-3.5" /> Tutup Lubang Slot
+            </Button>
+            <Button
+              size="sm"
+              onClick={openCreateDialog}
+              className="h-9 rounded-xl text-xs font-black bg-[#6D123F] hover:bg-[#580e33] text-white shadow-sm gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> Tambah Batch Baru
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Groups Table */}
+      <Card className="rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[800px] md:min-w-full">
-              <TableHeader className="bg-muted/10">
-                <TableRow className="hover:bg-transparent border-none">
-                  <TableHead className="w-[180px] text-[10px] font-black uppercase tracking-widest py-4 pl-6">Nama Grup</TableHead>
-                  <TableHead className="w-[120px] text-[10px] font-black uppercase tracking-widest">Mulai</TableHead>
-                  <TableHead className="w-[120px] text-[10px] font-black uppercase tracking-widest">Peserta</TableHead>
-                  <TableHead className="w-[150px] text-[10px] font-black uppercase tracking-widest">Musyrifah</TableHead>
-                  <TableHead className="w-[150px] text-[10px] font-black uppercase tracking-widest">Muallimah</TableHead>
-                  <TableHead className="min-w-[200px] text-[10px] font-black uppercase tracking-widest">Link WhatsApp Monitoring</TableHead>
-                  <TableHead className="text-right pr-6 w-[200px] text-[10px] font-black uppercase tracking-widest">Aksi</TableHead>
+            <Table>
+              <TableHeader className="bg-slate-50/80">
+                <TableRow>
+                  <TableHead className="pl-6 text-[10px] font-black uppercase tracking-wider">
+                    Nama Batch
+                  </TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider">
+                    Kapasitas
+                  </TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider">
+                    Musyrifah &amp; Muallimah
+                  </TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider">
+                    WhatsApp &amp; Bot ID
+                  </TableHead>
+                  <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-wider">
+                    Aksi
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGroups.map((group) => {
-                  const isEditing = editingId === group.id;
-                  const isFull = group.member_count >= 50;
-
-                  return (
-                    <TableRow key={group.id} className="hover:bg-[#800000]/5 transition-colors group">
-                      <TableCell className="py-4 pl-6">
-                        {isEditing ? (
-                          <Input 
-                            value={editValues.name} 
-                            onChange={e => setEditValues(v => ({ ...v, name: e.target.value }))}
-                            className="h-9 font-bold text-xs"
-                          />
-                        ) : (
-                          <span className="font-black text-[#800000]">{group.name}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <Input 
-                            type="date"
-                            value={editValues.start_date}
-                            onChange={e => setEditValues(v => ({ ...v, start_date: e.target.value }))}
-                            className="h-9 text-[10px] font-bold"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                             <Calendar className="w-3 h-3" />
-                             <span className="text-[11px] font-bold">
-                                {group.start_date ? new Date(group.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                             </span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm">{group.member_count || 0}</span>
-                          <div className="w-16 sm:w-20 h-2 bg-muted rounded-full overflow-hidden shrink-0">
-                             <div 
-                                className={`h-full transition-all ${isFull ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                                style={{ width: `${Math.min((group.member_count / 50) * 100, 100)}%` }} 
-                             />
-                          </div>
-                          <span className="text-[10px] font-bold text-muted-foreground shrink-0">/ 50</span>
-                          {isFull && <CheckCircle2 className="w-3 h-3 text-amber-500 shrink-0" />}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <div className="space-y-2">
-                            <Select
-                              value={editValues.musyrifah_name}
-                              onValueChange={(value) => {
-                                const selected = musyrifahList.find(m => m.displayName === value);
-                                setEditValues(v => ({
-                                  ...v,
-                                  musyrifah_name: value,
-                                  musyrifah_phone: selected?.phone || ''
-                                }));
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-[10px] bg-white">
-                                <SelectValue placeholder="Pilih Musyrifah" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {musyrifahList.length === 0 ? (
-                                  <div className="p-2 text-[9px] text-muted-foreground text-center">
-                                    Tidak ada musyrifah
-                                  </div>
-                                ) : (
-                                  musyrifahList.map((musyrifah) => (
-                                    <SelectItem key={musyrifah.id} value={musyrifah.displayName} className="text-[10px]">
-                                      {musyrifah.displayName}
-                                    </SelectItem>
-                                  ))
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              placeholder="No. WA"
-                              value={editValues.musyrifah_phone}
-                              onChange={e => setEditValues(v => ({ ...v, musyrifah_phone: e.target.value }))}
-                              className="h-8 text-[10px]"
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-700">{group.musyrifah_name || '-'}</span>
-                            <span className="text-[10px] text-muted-foreground">{group.musyrifah_phone || '-'}</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <div className="space-y-2">
-                            <Select
-                              value={editValues.muallimah_name}
-                              onValueChange={(value) => {
-                                const selected = muallimahList.find(m => m.displayName === value);
-                                setEditValues(v => ({
-                                  ...v,
-                                  muallimah_name: value,
-                                  muallimah_phone: selected?.phone || ''
-                                }));
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-[10px] bg-white">
-                                <SelectValue placeholder="Pilih Muallimah" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {muallimahList.length === 0 ? (
-                                  <div className="p-2 text-[9px] text-muted-foreground text-center">
-                                    Tidak ada muallimah
-                                  </div>
-                                ) : (
-                                  muallimahList.map((muallimah) => (
-                                    <SelectItem key={muallimah.id} value={muallimah.displayName} className="text-[10px]">
-                                      {muallimah.displayName}
-                                    </SelectItem>
-                                  ))
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              placeholder="No. WA"
-                              value={editValues.muallimah_phone}
-                              onChange={e => setEditValues(v => ({ ...v, muallimah_phone: e.target.value }))}
-                              className="h-8 text-[10px]"
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-[#800000]">{group.muallimah_name || '-'}</span>
-                            <span className="text-[10px] text-muted-foreground">{group.muallimah_phone || '-'}</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell tabIndex={0}>
-                        {isEditing ? (
-                          <div className="flex items-center gap-2">
-                            <LinkIcon className="w-3 h-3 text-muted-foreground shrink-0" />
-                            <Input 
-                              placeholder="https://chat.whatsapp.com/..."
-                              value={editValues.whatsapp_link} 
-                              onChange={e => setEditValues(v => ({ ...v, whatsapp_link: e.target.value }))}
-                              className="h-9 text-xs"
-                            />
-                            <div className="flex flex-col gap-2 w-full">
-                              <div className="flex gap-2">
-                                <Input 
-                                  placeholder="WhatsApp Group ID (e.g. 120363...@g.us)"
-                                  value={editValues.fonnte_group_id} 
-                                  onChange={e => setEditValues(v => ({ ...v, fonnte_group_id: e.target.value }))}
-                                  className="h-9 text-[10px] font-mono flex-1"
-                                />
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={fetchFonnteGroups}
-                                  className="h-9 text-[9px] font-black border-2 px-2"
-                                >
-                                  {isFetchingFonnte ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                </Button>
-                              </div>
-                              {fonnteGroups.length > 0 && (
-                                <Select onValueChange={(val) => setEditValues(v => ({ ...v, fonnte_group_id: val }))}>
-                                  <SelectTrigger className="h-8 text-[9px]">
-                                    <SelectValue placeholder="Pilih dari daftar grup WatZap..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {fonnteGroups.map(fg => (
-                                      <SelectItem key={fg.id} value={fg.id} className="text-[9px]">
-                                        {fg.name} ({fg.id.substring(0,8)}...)
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <LinkIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                            <span className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">
-                              {group.whatsapp_link || 'Belum diatur'}
+                {filteredGroups.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="h-28 text-center text-xs text-muted-foreground"
+                    >
+                      Tidak ada batch yang cocok dengan filter ini.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredGroups.map((group) => {
+                    const isFull = group.liveCount >= 50;
+                    const pct = Math.min((group.liveCount / 50) * 100, 100);
+                    return (
+                      <TableRow key={group.id} className="hover:bg-slate-50/70">
+                        <TableCell className="py-4 pl-6">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-black text-sm text-[#6D123F]">
+                              {group.name}
                             </span>
-                            {group.whatsapp_link && (
-                              <a href={group.whatsapp_link} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#800000]/10 rounded-full text-[#800000]">
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </a>
+                            <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {group.start_date
+                                ? new Date(group.start_date).toLocaleDateString("id-ID", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  })
+                                : "Tanggal mulai belum diatur"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-sm text-slate-800">
+                              {group.liveCount}
+                            </span>
+                            <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className={cn(
+                                  "h-full transition-all",
+                                  isFull ? "bg-amber-500" : "bg-emerald-500"
+                                )}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400">/ 50</span>
+                            {isFull && (
+                              <Badge className="bg-amber-100 text-amber-800 border-none text-[9px] font-black">
+                                PENUH
+                              </Badge>
                             )}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        {isEditing ? (
-                          <div className="flex items-center justify-end gap-2">
-                             <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-muted-foreground text-[10px] font-bold h-8" 
-                              onClick={() => setEditingId(null)}
-                             >
-                              Batal
-                             </Button>
-                             <Button 
-                              size="sm" 
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 gap-1.5 font-bold text-[10px]"
-                              onClick={() => handleSave(group.id)}
-                              disabled={isProcessing}
-                             >
-                               <Save className="w-3.5 h-3.5" /> Simpan
-                             </Button>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-xs">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase text-slate-400">
+                                Musyrifah:{" "}
+                              </span>
+                              <span className="font-bold text-slate-700">
+                                {group.musyrifah_name || "-"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase text-slate-400">
+                                Muallimah:{" "}
+                              </span>
+                              <span className="font-bold text-[#6D123F]">
+                                {group.muallimah_name || "-"}
+                              </span>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3 border-2" 
-                                onClick={() => {
-                                  setViewingGroupId(group.id);
-                                  setIsViewMembersOpen(true);
-                                  setIsAddingMember(false);
-                                }}
-                              >
-                                 <Eye className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Lihat Peserta</span>
-                              </Button>
-                             <Button asChild variant="ghost" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase text-[#800000] px-2 sm:px-3">
-                                <Link href={`/admin/mufradat?groupId=${group.id}`}>Monitor</Link>
-                             </Button>
-                             <Button variant="outline" size="sm" className="h-8 text-[9px] sm:text-[10px] font-black uppercase px-2 sm:px-3 border-2" onClick={() => handleStartEdit(group)}>
-                                 Edit
-                              </Button>
-                              {canDelete() && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 text-[9px] sm:text-[10px] font-black uppercase text-rose-600 hover:bg-rose-50 px-2 sm:px-3"
-                                  onClick={() => setConfirmDeleteId(group.id)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <LinkIcon className="w-3 h-3 text-slate-400 shrink-0" />
+                              {group.whatsapp_link ? (
+                                <a
+                                  href={group.whatsapp_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1 truncate max-w-[180px]"
                                 >
-                                   <Trash2 className="w-3.5 h-3.5 mr-1" /> Hapus
-                                </Button>
+                                  Buka Grup WA <ExternalLink className="w-3 h-3 shrink-0" />
+                                </a>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">
+                                  Link belum diatur
+                                </span>
                               )}
+                            </div>
+                            {group.fonnte_group_id && (
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] font-mono text-slate-500 max-w-[180px] truncate"
+                              >
+                                Bot: {group.fonnte_group_id}
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-[11px] font-bold rounded-xl"
+                              onClick={() => {
+                                setViewingGroupId(group.id);
+                                setIsViewMembersOpen(true);
+                                setIsAddingMember(false);
+                                setUserSearch("");
+                              }}
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1" /> Anggota
+                            </Button>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-[11px] font-black text-[#6D123F] hover:bg-[#6D123F]/10 rounded-xl"
+                            >
+                              <Link href={`/admin/mufradat?groupId=${group.id}`}>Monitor</Link>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-[11px] font-bold rounded-xl"
+                              onClick={() => openEditDialog(group)}
+                            >
+                              <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
+                            </Button>
+                            {canDelete() && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-rose-600 hover:bg-rose-50 rounded-xl"
+                                onClick={() => setConfirmDeleteId(group.id)}
+                                title="Hapus Batch"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
-      {/* CREATE GROUP DIALOG */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-           <DialogHeader className="p-8 bg-[#800000] text-white">
-              <DialogTitle className="text-2xl font-black font-headline uppercase">Tambah Grup Baru</DialogTitle>
-              <DialogDescription className="text-white/60 text-xs font-medium">
-                Lengkapi detail grup thalibah Hi Mufradat Anda.
-              </DialogDescription>
-           </DialogHeader>
-           <CardContent className="p-8 space-y-4">
+      {/* CREATE / EDIT GROUP DIALOG */}
+      <Dialog
+        open={dialogMode !== null}
+        onOpenChange={(open) => {
+          if (!open) setDialogMode(null);
+        }}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0 rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="p-6 bg-[#6D123F] text-white">
+            <DialogTitle className="text-xl font-black uppercase">
+              {dialogMode === "edit" ? "Edit Detail Batch" : "Tambah Batch Baru"}
+            </DialogTitle>
+            <DialogDescription className="text-white/75 text-xs">
+              Lengkapi nama batch, pengajar, link invite WhatsApp, dan ID Grup WatZap.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 space-y-4">
+            <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                 <label className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Nama Grup</label>
-                 <Input 
-                   placeholder="Contoh: Batch 5 - Ummahat" 
-                   value={newGroup.name}
-                   onChange={e => setNewGroup(v => ({ ...v, name: e.target.value }))}
-                   className="h-12 rounded-xl focus:border-[#800000]/30"
-                 />
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+                  Nama Batch *
+                </label>
+                <Input
+                  placeholder="Contoh: Batch 5 - Ummahat"
+                  value={formState.name}
+                  onChange={(e) => setFormState((v) => ({ ...v, name: e.target.value }))}
+                  className="h-10 rounded-xl text-xs font-bold"
+                />
               </div>
-
               <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">WhatsApp Group ID (WatZap)</label>
-                  <div className="flex gap-2">
-                    <Input 
-                      placeholder="Contoh: 1203630239485@g.us" 
-                      value={newGroup.fonnte_group_id}
-                      onChange={e => setNewGroup(v => ({ ...v, fonnte_group_id: e.target.value }))}
-                      className="h-10 rounded-xl focus:border-[#800000]/30 font-mono text-[10px] flex-1"
-                    />
-                    <Button 
-                      type="button"
-                      variant="outline"
-                      onClick={fetchFonnteGroups}
-                      className="h-10 px-3 border-2 rounded-xl"
-                    >
-                      {isFetchingFonnte ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                  {fonnteGroups.length > 0 && (
-                    <Select onValueChange={(val) => setNewGroup(v => ({ ...v, fonnte_group_id: val }))}>
-                      <SelectTrigger className="h-9 text-[10px] rounded-lg mt-1">
-                        <SelectValue placeholder="Pilih dari daftar grup WatZap..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fonnteGroups.map(fg => (
-                          <SelectItem key={fg.id} value={fg.id} className="text-[10px]">
-                            {fg.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+                  Tanggal Mulai
+                </label>
+                <Input
+                  type="date"
+                  value={formState.start_date}
+                  onChange={(e) =>
+                    setFormState((v) => ({ ...v, start_date: e.target.value }))
+                  }
+                  className="h-10 rounded-xl text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+                Link Invite Grup WhatsApp
+              </label>
+              <Input
+                placeholder="https://chat.whatsapp.com/..."
+                value={formState.whatsapp_link}
+                onChange={(e) =>
+                  setFormState((v) => ({ ...v, whatsapp_link: e.target.value }))
+                }
+                className="h-10 rounded-xl text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+                WhatsApp Group ID (WatZap Bot)
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Contoh: 1203630239485@g.us"
+                  value={formState.fonnte_group_id}
+                  onChange={(e) =>
+                    setFormState((v) => ({ ...v, fonnte_group_id: e.target.value }))
+                  }
+                  className="h-10 rounded-xl font-mono text-xs flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={fetchFonnteGroups}
+                  className="h-10 px-3 rounded-xl"
+                  title="Tarik daftar grup dari WatZap"
+                >
+                  {isFetchingFonnte ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
                   )}
-                  <p className="text-[8px] text-muted-foreground italic">Klik icon refresh untuk menarik daftar grup dari WhatsApp.</p>
-               </div>
-
-              {/* Musyrifah Selection */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Musyrifah</label>
+                </Button>
+              </div>
+              {fonnteGroups.length > 0 && (
                 <Select
-                  value={newGroup.musyrifah_name}
+                  onValueChange={(val) =>
+                    setFormState((v) => ({ ...v, fonnte_group_id: val }))
+                  }
+                >
+                  <SelectTrigger className="h-9 text-xs rounded-xl mt-1">
+                    <SelectValue placeholder="Pilih dari daftar grup WatZap..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fonnteGroups.map((fg) => (
+                      <SelectItem key={fg.id} value={fg.id} className="text-xs">
+                        {fg.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              {/* Musyrifah */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+                  Musyrifah
+                </label>
+                <Select
+                  value={formState.musyrifah_name}
                   onValueChange={(value) => {
-                    const selected = musyrifahList.find(m => m.displayName === value);
-                    setNewGroup(v => ({
+                    const selected = musyrifahList.find((m) => m.displayName === value);
+                    setFormState((v) => ({
                       ...v,
                       musyrifah_name: value,
-                      musyrifah_phone: selected?.phone || ''
+                      musyrifah_phone: selected?.phone || v.musyrifah_phone,
                     }));
                   }}
                 >
-                  <SelectTrigger className="h-11 text-xs bg-white">
+                  <SelectTrigger className="h-10 text-xs rounded-xl bg-white">
                     <SelectValue placeholder="Pilih Musyrifah" />
                   </SelectTrigger>
                   <SelectContent>
                     {musyrifahList.length === 0 ? (
                       <div className="p-2 text-xs text-muted-foreground text-center">
-                        Tidak ada musyrifah tersedia
+                        Tidak ada musyrifah
                       </div>
                     ) : (
-                      musyrifahList.map((musyrifah) => (
-                        <SelectItem key={musyrifah.id} value={musyrifah.displayName}>
-                          {musyrifah.displayName}
+                      musyrifahList.map((m) => (
+                        <SelectItem key={m.id} value={m.displayName}>
+                          {m.displayName}
                         </SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
-                {newGroup.musyrifah_name && (
-                  <Input
-                    placeholder="No. WA Musyrifah (auto)"
-                    value={newGroup.musyrifah_phone}
-                    onChange={e => setNewGroup(v => ({ ...v, musyrifah_phone: e.target.value }))}
-                    className="h-10 text-xs"
-                  />
-                )}
+                <Input
+                  placeholder="No. WA Musyrifah"
+                  value={formState.musyrifah_phone}
+                  onChange={(e) =>
+                    setFormState((v) => ({ ...v, musyrifah_phone: e.target.value }))
+                  }
+                  className="h-9 text-xs rounded-xl"
+                />
               </div>
 
-              {/* Muallimah Selection */}
+              {/* Muallimah */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Muallimah</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+                  Muallimah
+                </label>
                 <Select
-                  value={newGroup.muallimah_name}
+                  value={formState.muallimah_name}
                   onValueChange={(value) => {
-                    const selected = muallimahList.find(m => m.displayName === value);
-                    setNewGroup(v => ({
+                    const selected = muallimahList.find((m) => m.displayName === value);
+                    setFormState((v) => ({
                       ...v,
                       muallimah_name: value,
-                      muallimah_phone: selected?.phone || ''
+                      muallimah_phone: selected?.phone || v.muallimah_phone,
                     }));
                   }}
                 >
-                  <SelectTrigger className="h-11 text-xs bg-white">
+                  <SelectTrigger className="h-10 text-xs rounded-xl bg-white">
                     <SelectValue placeholder="Pilih Muallimah" />
                   </SelectTrigger>
                   <SelectContent>
                     {muallimahList.length === 0 ? (
                       <div className="p-2 text-xs text-muted-foreground text-center">
-                        Tidak ada muallimah tersedia
+                        Tidak ada muallimah
                       </div>
                     ) : (
-                      muallimahList.map((muallimah) => (
-                        <SelectItem key={muallimah.id} value={muallimah.displayName}>
-                          {muallimah.displayName}
+                      muallimahList.map((m) => (
+                        <SelectItem key={m.id} value={m.displayName}>
+                          {m.displayName}
                         </SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
-                {newGroup.muallimah_name && (
-                  <Input
-                    placeholder="No. WA Muallimah (auto)"
-                    value={newGroup.muallimah_phone}
-                    onChange={e => setNewGroup(v => ({ ...v, muallimah_phone: e.target.value }))}
-                    className="h-10 text-xs"
-                  />
-                )}
+                <Input
+                  placeholder="No. WA Muallimah"
+                  value={formState.muallimah_phone}
+                  onChange={(e) =>
+                    setFormState((v) => ({ ...v, muallimah_phone: e.target.value }))
+                  }
+                  className="h-9 text-xs rounded-xl"
+                />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tanggal Mulai</label>
-                 <Input 
-                   type="date"
-                   value={newGroup.start_date}
-                   onChange={e => setNewGroup(v => ({ ...v, start_date: e.target.value }))}
-                   className="h-11"
-                 />
-              </div>
-              <Button 
-                onClick={handleCreateGroup} 
-                className="w-full h-14 bg-[#800000] hover:bg-[#800000]/90 font-black text-lg rounded-2xl shadow-xl mt-4"
-                disabled={isProcessing}
-              >
-                {isProcessing ? <Loader2 className="animate-spin w-5 h-5" /> : 'SIMPAN GRUP BARU'}
-              </Button>
-           </CardContent>
+            <Button
+              onClick={handleSubmitGroupForm}
+              className="w-full h-11 bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md mt-2"
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <Loader2 className="animate-spin w-4 h-4 mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {dialogMode === "edit" ? "Simpan Perubahan" : "Simpan Batch Baru"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* DELETE CONFIRMATION DIALOG */}
       <Dialog open={!!confirmDeleteId} onOpenChange={() => setConfirmDeleteId(null)}>
-        <DialogContent className="max-w-sm p-8 text-center rounded-3xl border-none shadow-2xl">
-           <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8" />
-           </div>
-           <DialogHeader>
-              <DialogTitle className="text-xl font-black text-slate-900 leading-tight">HAPUS GRUP INI?</DialogTitle>
-              <DialogDescription className="text-xs font-medium text-slate-500 mt-2 px-4">
-                Masyallah, apakah Ukhti yakin? Peserta di dalam grup ini akan menjadi 'Tanpa Grup' (Ungrouped).
-              </DialogDescription>
-           </DialogHeader>
-           <div className="flex flex-col gap-3 mt-8">
-              <Button 
-                variant="destructive" 
-                className="h-12 rounded-2xl font-black text-sm shadow-lg bg-rose-600 hover:bg-rose-700" 
-                onClick={() => confirmDeleteId && handleDeleteGroup(confirmDeleteId)}
-                disabled={isProcessing}
-              >
-                YA, HAPUS GRUP
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="h-10 text-slate-400 font-bold" 
-                onClick={() => setConfirmDeleteId(null)}
-              >
-                TIDAK, BATALKAN
-              </Button>
-           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* VIEW MEMBERS MODAL */}
-      <Dialog open={isViewMembersOpen} onOpenChange={setIsViewMembersOpen}>
-        <DialogContent className="max-w-xl max-h-[80vh] flex flex-col p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
-          <DialogHeader className="p-6 bg-[#800000]/5 border-b">
-            <div className="flex flex-row items-center justify-between space-y-0">
-              <DialogTitle className="flex items-center gap-2 text-[#800000] font-black uppercase tracking-tight">
-                <Users className="w-5 h-5 text-[#D4AF37]" /> 
-                {isAddingMember ? 'Tambah Peserta' : `Peserta ${groups?.find(g => g.id === viewingGroupId)?.name}`}
-              </DialogTitle>
-              <Button 
-                 variant={isAddingMember ? "ghost" : "outline"} 
-                 size="sm" 
-                 onClick={() => setIsAddingMember(!isAddingMember)}
-                 className={cn(
-                   "h-8 font-black uppercase text-[10px] gap-2 border-2 rounded-xl",
-                   isAddingMember ? "text-muted-foreground" : "border-[#800000]/20 text-[#800000]"
-                 )}
-              >
-                 {isAddingMember ? <ArrowLeft className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                 {isAddingMember ? 'Kembali' : 'Tambah Manual'}
-              </Button>
-            </div>
-            <DialogDescription className="text-[10px] font-medium text-muted-foreground mt-1">
-              Atur thalibah dalam grup ini untuk pemantauan hafalan yang lebih efektif.
+        <DialogContent className="max-w-sm p-6 text-center rounded-3xl border-none shadow-2xl">
+          <div className="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 mx-auto mb-3">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-slate-900">
+              Hapus Batch Ini?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              Peserta di dalam batch ini tidak akan dihapus, namun statusnya akan menjadi tanpa grup.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
-             {isAddingMember ? (
-               <div className="space-y-4">
-                 <div className="relative">
-                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                   <Input 
-                      placeholder="Cari thalibah tanpa grup..." 
-                      className="pl-10 h-11 border-2 bg-white rounded-xl shadow-sm focus:border-[#800000]/30 transition-all"
-                      value={userSearch}
-                      onChange={(e) => setUserSearch(e.target.value)}
-                   />
-                 </div>
-                 <div className="space-y-2">
-                   {availableUsers.length > 0 ? availableUsers.map(user => (
-                     <Card key={user.id} className="border shadow-sm hover:border-[#800000]/30 transition-all bg-white group rounded-xl overflow-hidden">
-                       <CardContent className="p-3 flex items-center justify-between">
-                         <div className="flex items-center gap-3">
-                           <Avatar className="h-9 w-9 border-2 border-white shadow-md">
-                             <AvatarImage src={user.avatar_url} />
-                             <AvatarFallback className="text-[10px] font-black bg-[#800000] text-white">
-                               {(user.username || 'U').charAt(0)}
-                             </AvatarFallback>
-                           </Avatar>
-                           <div className="flex flex-col">
-                             <span className="text-sm font-black text-slate-800">{user.username || 'Tanpa Nama'}</span>
-                             <span className="text-[10px] text-muted-foreground font-medium">{user.email}</span>
-                           </div>
-                         </div>
-                         <Button 
-                           size="sm" 
-                           onClick={() => handleJoinGroup(user.id, viewingGroupId!)}
-                           disabled={isProcessing}
-                           className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase text-[9px] h-8 px-4 rounded-lg shadow-md active:scale-95 transition-all"
-                         >
-                           Tambah
-                         </Button>
-                       </CardContent>
-                     </Card>
-                   )) : (
-                     <div className="text-center py-12 bg-white border-2 border-dashed rounded-2xl">
-                        <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                        <p className="text-muted-foreground italic text-xs">Tidak ada thalibah tanpa grup yang ditemukan.</p>
-                     </div>
-                   )}
-                 </div>
-               </div>
-             ) : (
-               <div className="space-y-3">
-                 {groupMembers.length > 0 ? groupMembers.map(member => (
-                   <Card key={member.id} className="border shadow-sm group hover:border-[#800000]/30 transition-all bg-white rounded-xl overflow-hidden">
-                     <CardContent className="p-4 flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border-2 border-white shadow-md">
-                             <AvatarImage src={member.avatar_url} />
-                             <AvatarFallback className="bg-[#800000] text-white text-xs font-black uppercase">
-                                {(member.username || 'U').charAt(0)}
-                             </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col">
-                             <span className="text-sm font-black text-slate-800">{member.username || 'Tanpa Nama'}</span>
-                             <span className="text-[10px] text-muted-foreground font-medium">{member.email}</span>
-                          </div>
-                       </div>
-                       <Button 
-                         variant="ghost" 
-                         size="sm" 
-                         className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-bold text-[10px] uppercase gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                         onClick={() => handleRemoveMember(member.id, viewingGroupId!)}
-                         disabled={isProcessing}
-                       >
-                         <UserMinus className="w-3.5 h-3.5" /> Keluarkan
-                       </Button>
-                     </CardContent>
-                   </Card>
-                 )) : (
-                   <div className="text-center py-12 bg-white border-2 border-dashed rounded-2xl">
-                        <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                        <p className="text-muted-foreground italic text-xs">Belum ada thalibah di grup ini.</p>
-                   </div>
-                 )}
-               </div>
-             )}
+          <div className="flex flex-col gap-2 mt-5">
+            <Button
+              variant="destructive"
+              className="h-10 rounded-xl font-black text-xs bg-rose-600 hover:bg-rose-700"
+              onClick={() => confirmDeleteId && handleDeleteGroup(confirmDeleteId)}
+              disabled={isProcessing}
+            >
+              Ya, Hapus Batch
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-9 text-slate-500 font-bold text-xs"
+              onClick={() => setConfirmDeleteId(null)}
+            >
+              Batalkan
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <div className="bg-[#800000]/5 p-6 rounded-2xl border-2 border-dashed border-[#800000]/20">
-         <h4 className="flex items-center gap-2 font-black text-[#800000] mb-2 uppercase tracking-tight">
-           Catatan Sistem:
-         </h4>
-         <ul className="text-xs space-y-2 text-muted-foreground font-medium leading-relaxed list-disc pl-4">
-           <li>Grup dengan tanda <CheckCircle2 className="w-3 h-3 text-amber-500 inline" /> berarti sudah mencapai kapasitas maksimal (50 peserta).</li>
-           <li>Musyrifah menyalin link WhatsApp Monitoring di sini agar sistem bisa mengatur pendaftaran Thalibah baru dengan tepat.</li>
-           <li>Tombol "Monitor" akan mengarahkan Anda ke dashboard progress khusus thalibah di grup tersebut.</li>
-         </ul>
-      </div>
+      {/* VIEW & MANAGE MEMBERS MODAL */}
+      <Dialog open={isViewMembersOpen} onOpenChange={setIsViewMembersOpen}>
+        <DialogContent className="max-w-xl max-h-[82vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="p-5 bg-slate-50 border-b">
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="flex items-center gap-2 text-[#6D123F] font-black text-base">
+                <Users className="w-5 h-5" />
+                {isAddingMember
+                  ? "Tambah Peserta ke Batch"
+                  : `Anggota ${enrichedGroups.find((g) => g.id === viewingGroupId)?.name || ""} (${groupMembers.length}/50)`}
+              </DialogTitle>
+              <Button
+                variant={isAddingMember ? "ghost" : "outline"}
+                size="sm"
+                onClick={() => setIsAddingMember(!isAddingMember)}
+                className="h-8 font-bold text-xs gap-1.5 rounded-xl"
+              >
+                {isAddingMember ? (
+                  <>
+                    <ArrowLeft className="w-3.5 h-3.5" /> Kembali
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-3.5 h-3.5" /> Tambah Manual
+                  </>
+                )}
+              </Button>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Perubahan anggota otomatis menyinkronkan kapasitas batch.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-5 bg-slate-50/40">
+            {isAddingMember ? (
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari nama, WA, atau email peserta tanpa batch..."
+                    className="pl-9 h-10 bg-white rounded-xl text-xs"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  {availableUsers.length > 0 ? (
+                    availableUsers.slice(0, 50).map((u) => (
+                      <div
+                        key={u.id}
+                        className="p-3 bg-white border border-slate-200 rounded-2xl flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={u.photo_url || u.avatar_url} />
+                            <AvatarFallback className="text-xs font-black bg-[#6D123F] text-white">
+                              {(u.full_name || u.username || "U").charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold text-slate-900 truncate">
+                              {u.full_name || u.username || "Tanpa Nama"}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground truncate">
+                              {u.whatsapp || u.phone || u.email}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleJoinGroup(u.id, viewingGroupId!)}
+                          disabled={isProcessing}
+                          className="bg-[#6D123F] hover:bg-[#580e33] text-white font-bold text-xs h-8 px-3 rounded-xl shrink-0"
+                        >
+                          Tambah
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 bg-white border border-dashed rounded-2xl text-xs text-muted-foreground">
+                      Tidak ada peserta tanpa batch yang cocok.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {groupMembers.length > 0 ? (
+                  groupMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="p-3 bg-white border border-slate-200 rounded-2xl flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={member.photo_url || member.avatar_url} />
+                          <AvatarFallback className="bg-[#6D123F] text-white text-xs font-black">
+                            {(member.full_name || member.username || "U")
+                              .charAt(0)
+                              .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-bold text-slate-900 truncate">
+                            {member.full_name || member.username || "Tanpa Nama"}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground truncate">
+                            {member.whatsapp || member.phone || member.email}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-bold text-xs h-8 rounded-xl gap-1 shrink-0"
+                        onClick={() => handleRemoveMember(member.id, viewingGroupId!)}
+                        disabled={isProcessing}
+                      >
+                        <UserMinus className="w-3.5 h-3.5" /> Keluarkan
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-10 bg-white border border-dashed rounded-2xl text-xs text-muted-foreground">
+                    Belum ada thalibah di batch ini. Klik &ldquo;Tambah Manual&rdquo; untuk memasukkan peserta.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
