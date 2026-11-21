@@ -352,7 +352,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center py-20 gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#6D123F]" />
         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Menyusun 30 soal…</p>
       </div>
     );
@@ -383,7 +383,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
             <Trophy className={cn('w-10 h-10', passed ? 'text-black' : 'text-stone-500')} />
           </div>
           <div>
-            <p className="text-5xl font-black text-[#800000]">{score}%</p>
+            <p className="text-5xl font-black text-[#6D123F]">{score}%</p>
             <p className="text-sm font-bold text-stone-600 mt-1">
               {correct} dari {questions.length} soal benar • batas lulus {QUIZ_PASS_PERCENT}%
             </p>
@@ -395,13 +395,13 @@ export function TikrarPageQuiz({ page }: { page: number }) {
                 : `Lulus! ${result?.unlockedPage && result.unlockedPage !== page ? `Halaman ${result.unlockedPage} kini terbuka.` : ''}`
               : 'Belum lulus. Ulangi murajaah halaman ini lalu coba ujian lagi.'}
           </p>
-          {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#800000]" />}
+          {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#6D123F]" />}
           {submitError && <p className="text-xs font-bold text-red-600">{submitError}</p>}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={start} variant="outline" className="rounded-xl font-black border-[#800000]/30 text-[#800000]">
+            <Button onClick={start} variant="outline" className="rounded-xl font-black border-[#6D123F]/30 text-[#6D123F]">
               <RotateCcw className="w-4 h-4 mr-2" /> Ulangi Ujian
             </Button>
-            <Button asChild className="rounded-xl font-black bg-[#800000] hover:bg-[#800000]/90 text-white">
+            <Button asChild className="rounded-xl font-black bg-[#6D123F] hover:bg-[#6D123F]/90 text-white">
               <Link href="/tikrar">
                 Kembali ke Mushaf <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
@@ -417,12 +417,12 @@ export function TikrarPageQuiz({ page }: { page: number }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <Badge className="bg-[#D4AF37] text-black font-black">{TYPE_LABELS[q.type]}</Badge>
-        <span className="text-xs font-black text-[#800000]">
+        <span className="text-xs font-black text-[#6D123F]">
           Soal {idx + 1}/{questions.length} • Benar {correct}
         </span>
       </div>
-      <Progress value={((idx + 1) / questions.length) * 100} className="h-2 [&>div]:bg-[#800000]" />
-      <Card className="border-2 border-[#800000]/10 shadow-md">
+      <Progress value={((idx + 1) / questions.length) * 100} className="h-2 [&>div]:bg-[#6D123F]" />
+      <Card className="border-2 border-[#6D123F]/10 shadow-md">
         <CardContent className="p-6 space-y-5">
           <p className="text-xs font-black uppercase tracking-wider text-stone-500">{q.prompt}</p>
           {q.arabic && (
@@ -444,7 +444,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
                   className={cn(
                     'w-full rounded-xl border-2 px-4 py-3 transition-all flex items-center justify-between gap-3',
                     q.optionsArabic ? 'font-arabic text-2xl leading-loose' : 'text-sm font-bold text-left',
-                    !selected && 'border-stone-200 hover:border-[#800000]/40 hover:bg-[#800000]/5',
+                    !selected && 'border-stone-200 hover:border-[#6D123F]/40 hover:bg-[#6D123F]/5',
                     selected && isAnswer && 'border-emerald-500 bg-emerald-50',
                     selected && isChosen && !isAnswer && 'border-red-400 bg-red-50',
                     selected && !isAnswer && !isChosen && 'border-stone-100 opacity-60'

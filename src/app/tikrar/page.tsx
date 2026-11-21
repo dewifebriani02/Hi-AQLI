@@ -45,6 +45,8 @@ export default function TikrarPage() {
   const { summary, isLoading: isSummaryLoading, refresh: refreshSummary } = useTikrarSummary(refreshSignal);
   const activeTarget = summary?.target || null;
   const hasExistingSchedule = Boolean(activeTarget);
+  // Jangan unmount tab jika data sudah pernah dimuat (mencegah reset posisi halaman / reload saat refresh background)
+  const isInitialSummaryLoading = isSummaryLoading && !summary;
   const isSchedulesLoading = isSummaryLoading;
 
   // Halaman aktif = halaman target yang sedang terbuka (belum lulus ujian 30 soal)
@@ -66,9 +68,9 @@ export default function TikrarPage() {
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-32">
       <div className="flex flex-col gap-2 mt-4 px-1">
-        <div className="flex items-center gap-2 text-[#800000] mb-1">
+        <div className="flex items-center gap-2 text-[#6D123F] mb-1">
           <RotateCcw className="w-5 h-5" />
-          <span className="text-xs font-bold uppercase tracking-widest text-[#800000]">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#6D123F]">
             Hi Tikrar • Pusat Itqan HI AQLI
           </span>
         </div>
@@ -92,22 +94,22 @@ export default function TikrarPage() {
                 });
               }
             }}
-            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
+            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#6D123F] data-[state=active]:text-white rounded-lg text-xs transition-all"
           >
             <BookOpen className="w-4 h-4 shrink-0" /> Mushaf &amp; Audio
           </TabsTrigger>
           <TabsTrigger
             value="daily-report"
-            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
+            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#6D123F] data-[state=active]:text-white rounded-lg text-xs transition-all"
           >
             <Users className="w-4 h-4 shrink-0" /> Rekap &amp; Grup
           </TabsTrigger>
           <TabsTrigger
             value="schedule"
-            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all relative"
+            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#6D123F] data-[state=active]:text-white rounded-lg text-xs transition-all relative"
           >
             <CalendarDays className="w-4 h-4 shrink-0" /> Target &amp; Jadwal
-            {user && !hasExistingSchedule && !isSchedulesLoading && (
+            {user && !hasExistingSchedule && !isInitialSummaryLoading && (
               <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black bg-amber-400 text-stone-950 rounded-full animate-pulse">
                 Pengaturan
               </span>
@@ -115,7 +117,7 @@ export default function TikrarPage() {
           </TabsTrigger>
           <TabsTrigger
             value="progress"
-            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#800000] data-[state=active]:text-white rounded-lg text-xs transition-all"
+            className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#6D123F] data-[state=active]:text-white rounded-lg text-xs transition-all"
           >
             <BarChart3 className="w-4 h-4 shrink-0" /> Itqan 30 Juz
           </TabsTrigger>
@@ -123,11 +125,11 @@ export default function TikrarPage() {
 
         {/* Tab 1: Mushaf Per Kata, Audio 5x Simak, Gabungan Sub-Repetisi & Auto-Sync Laporan */}
         <TabsContent value="mushaf" className="outline-none space-y-4">
-          {user && isSchedulesLoading ? (
+          {user && isInitialSummaryLoading ? (
             <div className="flex justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#6D123F]" />
             </div>
-          ) : user && !hasExistingSchedule ? (
+          ) : user && !hasExistingSchedule && !isInitialSummaryLoading ? (
             <Card className="border-2 border-dashed border-amber-300 bg-amber-50">
               <CardContent className="py-12 flex flex-col items-center text-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-amber-200 text-amber-900 flex items-center justify-center">
@@ -146,7 +148,7 @@ export default function TikrarPage() {
                 <Button
                   size="sm"
                   onClick={() => setActiveTab('schedule')}
-                  className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 px-5 rounded-xl"
+                  className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-10 px-5 rounded-xl"
                 >
                   <CalendarDays className="w-4 h-4 mr-1.5" /> Isi Target &amp; Jadwal
                 </Button>
@@ -186,7 +188,7 @@ export default function TikrarPage() {
               <Button
                 size="sm"
                 onClick={() => setActiveTab('schedule')}
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
+                className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
               >
                 <CalendarDays className="w-3.5 h-3.5 mr-1.5" /> Atur Jadwal Sekarang
               </Button>
@@ -254,7 +256,7 @@ export default function TikrarPage() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
             <div className="md:col-span-8 space-y-8">
               <Card className="border-none shadow-xl bg-card overflow-hidden">
-                <CardHeader className="bg-[#800000]/5 border-b border-[#800000]/10">
+                <CardHeader className="bg-[#6D123F]/5 border-b border-[#6D123F]/10">
                   <div className="flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-[#D4AF37]" />
                     <CardTitle className="text-lg font-headline">
@@ -269,8 +271,8 @@ export default function TikrarPage() {
             </div>
 
             <div className="md:col-span-4">
-              <Card className="border-[#800000]/10 shadow-lg sticky top-24">
-                <CardHeader className="bg-[#800000] text-white">
+              <Card className="border-[#6D123F]/10 shadow-lg sticky top-24">
+                <CardHeader className="bg-[#6D123F] text-white">
                   <CardTitle className="text-lg font-headline">Uji Teori Tajwid</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">

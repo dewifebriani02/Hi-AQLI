@@ -819,7 +819,7 @@ export function TikrarSystem({
     return () => {
       isCancelled = true;
     };
-  }, [page, completedBlocksKey, isSelectedPageCleared, user?.id]);
+  }, [page, isSelectedPageCleared, user?.id]);
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
@@ -912,7 +912,10 @@ export function TikrarSystem({
             if (awarded > 0 || stepsToday !== lastStepsTodayRef.current) {
               lastStepsTodayRef.current = stepsToday;
               await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
-              onDataChanged?.();
+              // Hanya panggil onDataChanged jika target harian baru saja tercapai untuk mencegah refresh berulang
+              if (act?.justMetTarget) {
+                onDataChanged?.();
+              }
             }
           }
         } catch (e) {
@@ -1072,6 +1075,9 @@ export function TikrarSystem({
           title: `Simak Blok ${BLOCK_LETTERS[block]} Tuntas 5x`,
           description: 'Counter blok ini sudah terbuka. Bismillah, mulai menghafal!',
         });
+        setTimeout(() => {
+          document.getElementById(`step-${block}.a`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 250);
       }
       return;
     }
@@ -1143,6 +1149,14 @@ export function TikrarSystem({
       if (!canUndoKey(`meta.${key}`)) return;
       markUndo(`meta.${key}`);
     }
+    const currentCount = metaCounts[key] || 0;
+    const nextCount = currentCount + delta;
+    const threshold = getMetaThreshold(key);
+
+    if (delta > 0) {
+      playTikrarCount(nextCount, threshold);
+    }
+
     setMetaCounts((p) => {
       const minFloor = getStepMinCount(`meta.${key}`, {
         prep_listen_count: prepListenCount,
@@ -1156,6 +1170,24 @@ export function TikrarSystem({
         [key]: Math.max(minFloor, (p[key] || 0) + delta),
       };
     });
+
+    // Auto-advance / smooth scroll ke step berikutnya saat tuntas meta repetisi
+    if (delta > 0 && currentCount < threshold && nextCount >= threshold) {
+      const nextMetaMap: Record<string, string> = {
+        '1_2': 'step-3.listen',
+        '2_3': 'step-meta.1_2_3',
+        '1_2_3': 'step-4.listen',
+        '3_4': 'step-meta.2_3_4',
+        '2_3_4': 'step-meta.1_2_3_4',
+        '1_2_3_4': 'step-quiz',
+      };
+      const nextTargetId = nextMetaMap[key];
+      if (nextTargetId) {
+        setTimeout(() => {
+          document.getElementById(nextTargetId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 250);
+      }
+    }
   };
 
   // ---- Target hari ini per langkah: bintang mengikuti posisi sekarang (N langkah berikutnya),
@@ -1285,7 +1317,10 @@ export function TikrarSystem({
   };
 
   const scrollToStep = (key: string) => {
-    document.getElementById(`step-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    let el = document.getElementById(`step-${key}`);
+    if (!el && key === '1.listen') el = document.getElementById('step-prep');
+    if (!el && key === 'prep') el = document.getElementById('step-1.listen') || document.getElementById('step-prep');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
   // Blocks that have reached TUNTAS (40x on A-1, A-2, and Gabung A)
@@ -1339,7 +1374,7 @@ export function TikrarSystem({
   if (isUserDataLoading) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="animate-spin text-[#800000]" />
+        <Loader2 className="animate-spin text-[#6D123F]" />
       </div>
     );
   }
@@ -1361,7 +1396,7 @@ export function TikrarSystem({
   return (
     <div className="space-y-6 pb-32">
       {/* Header Program, Halaqah Live Zoom & Progres Halaman */}
-      <Card className="border-none bg-[#800000] text-white shadow-xl overflow-hidden relative border-b-4 border-[#D4AF37]">
+      <Card className="border-none bg-[#6D123F] text-white shadow-xl overflow-hidden relative border-b-4 border-[#D4AF37]">
         <div className="absolute right-[-20px] top-[-20px] opacity-10 pointer-events-none">
           <CalendarDays className="w-40 h-40 text-[#D4AF37]" />
         </div>
@@ -1464,7 +1499,7 @@ export function TikrarSystem({
       </Card>
 
       {/* Bar Navigasi Juz, Halaman & Font Size */}
-      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-[#800000]/10">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-[#6D123F]/10">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <select
             aria-label="Pilih Juz"
@@ -1475,7 +1510,7 @@ export function TikrarSystem({
               setJuz(j);
               setPage(JUZ_PAGES[j - 1] || 1);
             }}
-            className="h-10 rounded-xl border-2 border-[#800000]/20 bg-white px-2.5 text-xs sm:text-sm font-black text-[#800000]"
+            className="h-10 rounded-xl border-2 border-[#6D123F]/20 bg-white px-2.5 text-xs sm:text-sm font-black text-[#6D123F]"
           >
             {JUZ_PAGES.map((_, i) => (
               <option key={i + 1} value={i + 1}>
@@ -1489,9 +1524,9 @@ export function TikrarSystem({
             size="icon"
             onClick={() => setPage((p) => Math.max(startPage, p - 1))}
             disabled={loading || page <= startPage}
-            className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5"
+            className="rounded-xl h-10 w-10 border-[#6D123F]/20 hover:bg-[#6D123F]/5"
           >
-            <ChevronLeft className="h-5 w-5 text-[#800000]" />
+            <ChevronLeft className="h-5 w-5 text-[#6D123F]" />
           </Button>
 
           <select
@@ -1499,7 +1534,7 @@ export function TikrarSystem({
             value={page}
             disabled={loading}
             onChange={(e) => setPage(Number(e.target.value))}
-            className="h-10 rounded-xl border-2 border-[#800000]/20 bg-stone-50 px-2.5 text-xs sm:text-sm font-black text-[#800000]"
+            className="h-10 rounded-xl border-2 border-[#6D123F]/20 bg-stone-50 px-2.5 text-xs sm:text-sm font-black text-[#6D123F]"
           >
             {Array.from({ length: endPage - startPage + 1 }, (_, idx) => {
               const pNum = startPage + idx;
@@ -1525,9 +1560,9 @@ export function TikrarSystem({
             size="icon"
             onClick={() => setPage((p) => Math.min(endPage, p + 1))}
             disabled={loading || page >= endPage}
-            className="rounded-xl h-10 w-10 border-[#800000]/20 hover:bg-[#800000]/5"
+            className="rounded-xl h-10 w-10 border-[#6D123F]/20 hover:bg-[#6D123F]/5"
           >
-            <ChevronRight className="h-5 w-5 text-[#800000]" />
+            <ChevronRight className="h-5 w-5 text-[#6D123F]" />
           </Button>
 
           {page !== recommendedPage && (
@@ -1537,7 +1572,7 @@ export function TikrarSystem({
                 variant="ghost"
                 size="sm"
                 onClick={() => setPage(recommendedPage)}
-                className="h-9 text-xs font-extrabold text-[#800000]"
+                className="h-9 text-xs font-extrabold text-[#6D123F]"
               >
                 Ke Halaman Aktif (Hal. {recommendedPage})
               </Button>
@@ -1551,7 +1586,7 @@ export function TikrarSystem({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-xl h-9 gap-2 font-bold border-[#800000]/20 text-[#800000]"
+                  className="rounded-xl h-9 gap-2 font-bold border-[#6D123F]/20 text-[#6D123F]"
                 >
                   <Mic2 className="w-4 h-4" />
                   <span className="max-w-[140px] truncate text-xs">
@@ -1561,7 +1596,7 @@ export function TikrarSystem({
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-[#800000] font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
+                  <DialogTitle className="text-[#6D123F] font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground">
                     Pilih qari untuk audio simak per blok.
                   </DialogDescription>
@@ -1582,8 +1617,8 @@ export function TikrarSystem({
                         className={cn(
                           'justify-between items-center p-3 h-auto font-bold rounded-2xl text-left transition-all',
                           isSelected
-                            ? 'bg-[#800000] text-white hover:bg-[#6b0000] hover:text-white border-[#800000]'
-                            : 'border-muted-foreground/20 hover:border-[#800000]/30 hover:bg-[#800000]/5'
+                            ? 'bg-[#6D123F] text-white hover:bg-[#6b0000] hover:text-white border-[#6D123F]'
+                            : 'border-muted-foreground/20 hover:border-[#6D123F]/30 hover:bg-[#6D123F]/5'
                         )}
                       >
                         <div className="flex items-center gap-3">
@@ -1591,8 +1626,8 @@ export function TikrarSystem({
                             className={cn(
                               'w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
                               isSelected
-                                ? 'bg-white text-[#800000]'
-                                : 'bg-[#800000]/10 text-[#800000]'
+                                ? 'bg-white text-[#6D123F]'
+                                : 'bg-[#6D123F]/10 text-[#6D123F]'
                             )}
                           >
                             {isSelected ? <Check className="w-4 h-4" /> : <Mic2 className="w-3.5 h-3.5" />}
@@ -1667,7 +1702,7 @@ export function TikrarSystem({
               setSoundOn(next);
               if (next) playTikrarTap();
             }}
-            className="h-9 text-xs font-bold border-[#800000]/20 text-[#800000]"
+            className="h-9 text-xs font-bold border-[#6D123F]/20 text-[#6D123F]"
             title={soundOn ? 'Matikan bunyi counter' : 'Nyalakan bunyi counter'}
           >
             {soundOn ? <Volume2 className="w-3.5 h-3.5 mr-1.5" /> : <VolumeX className="w-3.5 h-3.5 mr-1.5" />}
@@ -1679,7 +1714,7 @@ export function TikrarSystem({
               variant="outline"
               size="sm"
               onClick={onOpenScheduleTab}
-              className="h-9 text-xs font-bold border-[#800000]/20 text-[#800000] hidden sm:inline-flex"
+              className="h-9 text-xs font-bold border-[#6D123F]/20 text-[#6D123F] hidden sm:inline-flex"
             >
               <Settings2 className="w-3.5 h-3.5 mr-1.5" /> Atur Target
             </Button>
@@ -1701,7 +1736,7 @@ export function TikrarSystem({
               type="button"
               size="sm"
               onClick={() => setPage(activeTarget.unlockedPage)}
-              className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
+              className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
             >
               Ke Halaman {activeTarget.unlockedPage}
             </Button>
@@ -1711,7 +1746,7 @@ export function TikrarSystem({
                 type="button"
                 size="sm"
                 onClick={onOpenScheduleTab}
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
+                className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
               >
                 Isi Target &amp; Jadwal
               </Button>
@@ -1736,14 +1771,14 @@ export function TikrarSystem({
               <p className="text-sm font-black text-stone-800">Semua langkah target sudah tuntas. Masya Allah!</p>
             ) : (
               <>
-                <p className="text-xs font-black uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                <p className="text-xs font-black uppercase tracking-wider text-[#6D123F] flex items-center gap-1.5">
                   <Star className="w-4 h-4 fill-[#D4AF37] text-[#D4AF37]" /> Target hari ini •{' '}
                   {summary.today.stepsToday}/{summary.today.dailyQuota} langkah tuntas
                 </p>
                 <div className="space-y-1 max-w-md">
                   <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-stone-700">
                     <span>
-                      Hari ini: <span className="font-black text-[#800000]">{todayClicks}/{targetTotalClicks} klik</span>
+                      Hari ini: <span className="font-black text-[#6D123F]">{todayClicks}/{targetTotalClicks} klik</span>
                     </span>
                     {remainingTargetClicks > 0 && (
                       <span className="text-stone-500">±{remainingTargetClicks} klik lagi untuk hijau pekat</span>
@@ -1797,7 +1832,7 @@ export function TikrarSystem({
               type="button"
               size="sm"
               onClick={() => (todayTargets[0].page === page ? scrollToStep(todayTargets[0].key) : setPage(todayTargets[0].page))}
-              className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 px-4 rounded-xl shrink-0"
+              className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-10 px-4 rounded-xl shrink-0"
             >
               {todayTargets[0].page === page ? 'Ke Counter Target ↓' : `Buka Hal. ${todayTargets[0].page}`}
             </Button>
@@ -1809,7 +1844,7 @@ export function TikrarSystem({
       <TooltipProvider delayDuration={0}>
         {/* Alur Kunci Berurutan: Blok A..D & Sub-Repetisi Gabungan (Opsi B) */}
         <div className="flex flex-col gap-8 mt-8">
-          <div className="bg-[#800000] text-white p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 shadow-lg">
+          <div className="bg-[#6D123F] text-white p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 shadow-lg">
             <Info className="w-5 h-5 shrink-0 mt-0.5 text-[#D4AF37]" />
             <div className="text-[11px] leading-relaxed font-bold">
               <span className="uppercase tracking-wider text-[#D4AF37] block mb-0.5">
@@ -1878,6 +1913,7 @@ export function TikrarSystem({
           </div>
 
           <MetaStep
+            stepKey="1_2"
             label="GABUNG BLOK A & B (SYARAT SETORAN 1/2 HALAMAN PERTAMA)"
             count={metaCounts['1_2']}
             threshold={10}
@@ -1915,6 +1951,7 @@ export function TikrarSystem({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <MetaStep
+              stepKey="2_3"
               label="GABUNG BLOK B & C"
               count={metaCounts['2_3']}
               threshold={10}
@@ -1924,6 +1961,7 @@ export function TikrarSystem({
               stepInfo={stepInfo('meta.2_3')}
             />
             <MetaStep
+              stepKey="1_2_3"
               label="GABUNG BLOK A s/d C"
               count={metaCounts['1_2_3']}
               threshold={5}
@@ -1962,6 +2000,7 @@ export function TikrarSystem({
 
           <div className="space-y-4">
             <MetaStep
+              stepKey="3_4"
               label="GABUNG BLOK C & D"
               count={metaCounts['3_4']}
               threshold={10}
@@ -1971,6 +2010,7 @@ export function TikrarSystem({
               stepInfo={stepInfo('meta.3_4')}
             />
             <MetaStep
+              stepKey="2_3_4"
               label="GABUNG BLOK B s/d D"
               count={metaCounts['2_3_4']}
               threshold={5}
@@ -1980,6 +2020,7 @@ export function TikrarSystem({
               stepInfo={stepInfo('meta.2_3_4')}
             />
             <MetaStep
+              stepKey="1_2_3_4"
               label="GABUNG SELURUH HALAMAN (A - D)"
               count={metaCounts['1_2_3_4']}
               threshold={5}
@@ -2017,7 +2058,7 @@ export function TikrarSystem({
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in duration-500">
-                  <Card className="border-none bg-[#800000] text-white shadow-xl overflow-hidden border-b-4 border-[#D4AF37]">
+                  <Card className="border-none bg-[#6D123F] text-white shadow-xl overflow-hidden border-b-4 border-[#D4AF37]">
                     <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                       <div className="space-y-2">
                         <div className="w-12 h-12 rounded-2xl bg-[#D4AF37] flex items-center justify-center mb-4">
@@ -2054,17 +2095,17 @@ export function TikrarSystem({
                     className={cn(
                       'border-none shadow-xl overflow-hidden transition-all border-b-4',
                       activeExam
-                        ? 'bg-[#800000] text-white border-white'
-                        : 'bg-white text-[#800000] border-[#D4AF37] border-2'
+                        ? 'bg-[#6D123F] text-white border-white'
+                        : 'bg-white text-[#6D123F] border-[#D4AF37] border-2'
                     )}
                   >
                     <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                       <div className="space-y-2">
-                        <div className="w-12 h-12 rounded-2xl bg-[#800000]/10 flex items-center justify-center mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-[#6D123F]/10 flex items-center justify-center mb-4">
                           {activeExam ? (
                             <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" />
                           ) : (
-                            <MessageSquare className="w-6 h-6 text-[#800000]" />
+                            <MessageSquare className="w-6 h-6 text-[#6D123F]" />
                           )}
                         </div>
                         <h5 className="text-lg font-black leading-tight uppercase">
@@ -2084,7 +2125,7 @@ export function TikrarSystem({
                         <Button
                           onClick={handleRequestExam}
                           disabled={isRequestingExam}
-                          className="bg-[#800000] text-white font-black w-full rounded-xl hover:bg-[#800000]/90 h-12 shadow-lg"
+                          className="bg-[#6D123F] text-white font-black w-full rounded-xl hover:bg-[#6D123F]/90 h-12 shadow-lg"
                         >
                           {isRequestingExam ? (
                             <Loader2 className="animate-spin" />
@@ -2112,7 +2153,7 @@ export function TikrarSystem({
               <Button
                 type="button"
                 onClick={() => setPage(page + 1)}
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
+                className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
               >
                 Lanjut ke Halaman {page + 1} <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
@@ -2212,7 +2253,9 @@ function MaqtaCard({
   }, [verses, subSplit]);
 
   const addSubCount = (part: 'a' | 'b' | 'combined', delta: number) => {
-    if (delta > 0) playTikrarCount((state?.[part]?.count || 0) + delta, PASS_THRESHOLD);
+    const currentCount = state?.[part]?.count || 0;
+    const nextCount = currentCount + delta;
+    if (delta > 0) playTikrarCount(nextCount, PASS_THRESHOLD);
     if (delta < 0) {
       if (!canUndo?.(part)) return;
       onUndo?.(part);
@@ -2230,6 +2273,28 @@ function MaqtaCard({
         },
       };
     });
+
+    // Auto-advance / smooth scroll ke step berikutnya saat tuntas
+    if (delta > 0 && currentCount < PASS_THRESHOLD && nextCount >= PASS_THRESHOLD) {
+      if (part === 'a') {
+        setTimeout(() => {
+          document.getElementById(`step-${id}.b`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 250);
+      } else if (part === 'b') {
+        setTimeout(() => {
+          document.getElementById(`step-${id}.combined`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 250);
+      } else if (part === 'combined') {
+        const nextTargetId =
+          id === 1 ? 'step-2.listen' :
+          id === 2 ? 'step-meta.1_2' :
+          id === 3 ? 'step-meta.2_3' :
+          'step-meta.3_4';
+        setTimeout(() => {
+          document.getElementById(nextTargetId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 250);
+      }
+    }
   };
 
   const renderToken = (token: any, colorClass: string) => {
@@ -2260,7 +2325,7 @@ function MaqtaCard({
             </span>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent className="bg-[#800000] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+            <TooltipContent className="bg-[#6D123F] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
               <p className="text-xs font-bold">{token.data.translation?.text || '...'}</p>
             </TooltipContent>
           </TooltipPortal>
@@ -2270,7 +2335,7 @@ function MaqtaCard({
     return (
       <span
         key={`${token.verse_key}-m`}
-        className="inline-flex items-center justify-center px-2 rounded-full border border-[#800000]/20 text-[10px] font-bold mx-1 bg-white translate-y-[-2px]"
+        className="inline-flex items-center justify-center px-2 rounded-full border border-[#6D123F]/20 text-[10px] font-bold mx-1 bg-white translate-y-[-2px]"
       >
         {token.text}
       </span>
@@ -2283,7 +2348,7 @@ function MaqtaCard({
     <Card
       className={cn(
         'border-2 transition-all shadow-md overflow-hidden flex flex-col h-full',
-        isDoneG ? 'border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10' : 'border-[#800000]/20',
+        isDoneG ? 'border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10' : 'border-[#6D123F]/20',
         isLocked && 'opacity-50 grayscale select-none'
       )}
     >
@@ -2322,10 +2387,10 @@ function MaqtaCard({
       <CardContent className="p-4 flex flex-col flex-1 gap-4 overflow-hidden">
         {/* Simak audio per blok (wajib 5x sebelum counter blok terbuka) */}
         <div
-          id={listenStepInfo ? 'step-prep' : undefined}
+          id={id === 1 ? 'step-prep' : `step-${id}.listen`}
           className={cn(
-            'rounded-2xl border-2 p-3 space-y-2',
-            listenDone ? 'border-[#D4AF37]/50 bg-[#D4AF37]/5' : 'border-[#800000]/20 bg-white',
+            'rounded-2xl border-2 p-3 space-y-2 scroll-mt-24',
+            listenDone ? 'border-[#D4AF37]/50 bg-[#D4AF37]/5' : 'border-[#6D123F]/20 bg-white',
             listenStepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2'
           )}
         >
@@ -2336,10 +2401,10 @@ function MaqtaCard({
             className={cn(
               'w-full h-12 rounded-xl font-black text-xs uppercase tracking-wider gap-2 touch-manipulation',
               isPlaying
-                ? 'bg-[#800000] text-white hover:bg-[#800000]/90'
+                ? 'bg-[#6D123F] text-white hover:bg-[#6D123F]/90'
                 : listenDone
                 ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90'
-                : 'bg-[#800000] text-white hover:bg-[#800000]/90'
+                : 'bg-[#6D123F] text-white hover:bg-[#6D123F]/90'
             )}
           >
             {isPlaying ? (
@@ -2362,11 +2427,11 @@ function MaqtaCard({
         </div>
 
         <div
-          className="bg-white p-4 rounded-xl border-2 border-[#800000]/5 flex-1 overflow-y-auto no-scrollbar"
+          className="bg-white p-4 rounded-xl border-2 border-[#6D123F]/5 flex-1 overflow-y-auto no-scrollbar"
           dir="rtl"
         >
           <div className="flex flex-wrap justify-center gap-x-1 gap-y-2">
-            {tokensA.map((t) => renderToken(t, 'text-[#800000]'))}
+            {tokensA.map((t) => renderToken(t, 'text-[#6D123F]'))}
             {tokensB.map((t) => renderToken(t, 'text-black'))}
           </div>
         </div>
@@ -2375,10 +2440,10 @@ function MaqtaCard({
         {playingVerse && (
           <div className="rounded-2xl border-2 border-[#D4AF37]/60 bg-amber-50/60 p-3 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <Badge variant="outline" className="text-[9px] font-black border-[#800000]/20 text-[#800000] bg-white">
+              <Badge variant="outline" className="text-[9px] font-black border-[#6D123F]/20 text-[#6D123F] bg-white">
                 Ayat {playingVerse.verse_key}
               </Badge>
-              <span className="text-[10px] font-black text-[#800000]">Putaran {playback.loop + 1}/5</span>
+              <span className="text-[10px] font-black text-[#6D123F]">Putaran {playback.loop + 1}/5</span>
             </div>
             <div className="flex flex-wrap justify-start gap-1.5" dir="rtl">
               {playingVerse.words
@@ -2387,16 +2452,16 @@ function MaqtaCard({
                   <div
                     key={wIdx}
                     dir="ltr"
-                    className="bg-white border border-[#800000]/10 rounded-xl px-2.5 py-1 flex flex-col items-center gap-0.5 min-w-[52px]"
+                    className="bg-white border border-[#6D123F]/10 rounded-xl px-2.5 py-1 flex flex-col items-center gap-0.5 min-w-[52px]"
                   >
                     <span className="font-arabic text-black text-sm font-bold leading-none">{word.text_uthmani}</span>
-                    <span className="text-[9px] font-medium text-[#800000] leading-none text-center">
+                    <span className="text-[9px] font-medium text-[#6D123F] leading-none text-center">
                       {word.translation?.text || '-'}
                     </span>
                   </div>
                 ))}
             </div>
-            <p className="text-sm text-black leading-relaxed italic font-medium bg-white rounded-xl p-3 border-l-4 border-[#800000]">
+            <p className="text-sm text-black leading-relaxed italic font-medium bg-white rounded-xl p-3 border-l-4 border-[#6D123F]">
               &ldquo;{playingVerse.translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...'}&rdquo;
             </p>
           </div>
@@ -2404,6 +2469,7 @@ function MaqtaCard({
 
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox
+            id={`step-${id}.a`}
             label={`${page}${letter}-1${subSplit.subALabel ? ` • ${subSplit.subALabel}` : ''} (Maroon)`}
             count={state.a.count}
             isLocked={countersLocked}
@@ -2414,6 +2480,7 @@ function MaqtaCard({
             threshold={PASS_THRESHOLD}
           />
           <CounterBox
+            id={`step-${id}.b`}
             label={`${page}${letter}-2${subSplit.subBLabel ? ` • ${subSplit.subBLabel}` : ''} (Hitam)`}
             count={state.b.count}
             isLocked={countersLocked || state.a.count < PASS_THRESHOLD}
@@ -2425,7 +2492,7 @@ function MaqtaCard({
           />
         </div>
 
-        <div id={`step-${id}.combined`} className="flex flex-col gap-1.5 shrink-0">
+        <div id={`step-${id}.combined`} className="flex flex-col gap-1.5 shrink-0 scroll-mt-24">
           <div className="relative">
           <Button
             type="button"
@@ -2436,7 +2503,7 @@ function MaqtaCard({
               stepInfoFor?.('combined')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
               isDoneG
                 ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg'
-                : 'bg-[#800000] text-white hover:bg-[#800000]/90'
+                : 'bg-[#6D123F] text-white hover:bg-[#6D123F]/90'
             )}
           >
             <span className="text-[10px] flex items-center gap-1 leading-none opacity-80 mb-1">
@@ -2484,15 +2551,16 @@ function InlineUndoButton({ onClick, className }: { onClick: () => void; classNa
   );
 }
 
-function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, stepInfo, threshold = 10 }: any) {
+function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, highlight, canUndo, stepInfo, threshold = 10 }: any) {
   const isDone = count >= threshold;
+  const elementId = customId || (stepKey ? `step-meta.${stepKey}` : (stepInfo ? `step-${stepInfo.key}` : undefined));
   return (
     <div
-      id={stepInfo ? `step-${stepInfo.key}` : undefined}
+      id={elementId}
       className={cn(
-        'relative p-4 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between transition-all gap-3',
-        isDone ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'bg-white border-[#800000]/10',
-        highlight && !isDone && 'border-[#800000] bg-[#800000]/5',
+        'relative p-4 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between transition-all gap-3 scroll-mt-24',
+        isDone ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'bg-white border-[#6D123F]/10',
+        highlight && !isDone && 'border-[#6D123F] bg-[#6D123F]/5',
         isLocked && 'opacity-40 grayscale select-none'
       )}
     >
@@ -2503,8 +2571,8 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
             isDone
               ? 'bg-[#D4AF37] text-black shadow-md'
               : highlight
-              ? 'bg-[#800000] text-white'
-              : 'bg-[#800000]/10 text-[#800000]'
+              ? 'bg-[#6D123F] text-white'
+              : 'bg-[#6D123F]/10 text-[#6D123F]'
           )}
         >
           {isLocked ? <Lock className="w-4 h-4" /> : <Zap className="w-4 h-4 fill-current" />}
@@ -2516,7 +2584,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
           <span
             className={cn(
               'text-[11px] font-black uppercase tracking-tight truncate',
-              highlight ? 'text-[#800000]' : 'text-black'
+              highlight ? 'text-[#6D123F]' : 'text-black'
             )}
           >
             {label}
@@ -2552,7 +2620,7 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
                 stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
                 isDone
                   ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 border-none'
-                  : 'bg-[#800000] text-white hover:bg-[#800000]/90'
+                  : 'bg-[#6D123F] text-white hover:bg-[#6D123F]/90'
               )}
             >
               <span className="flex items-center justify-center gap-1.5">
@@ -2571,18 +2639,19 @@ function MetaStep({ label, count, isLocked, onIncrement, highlight, canUndo, ste
   );
 }
 
-function CounterBox({ label, count, isLocked, onInc, color, threshold, canUndo, stepInfo }: any) {
+function CounterBox({ id: customId, label, count, isLocked, onInc, color, threshold, canUndo, stepInfo }: any) {
   const isDone = count >= threshold;
   const themes: any = {
     maroon: isDone
-      ? 'bg-[#800000] text-white border-[#800000]'
-      : 'bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5',
+      ? 'bg-[#6D123F] text-white border-[#6D123F]'
+      : 'bg-white border-[#6D123F]/20 text-[#6D123F] hover:bg-[#6D123F]/5',
     darkMaroon: isDone
-      ? 'bg-[#4d0000] text-white border-[#4d0000]'
-      : 'bg-white border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5',
+      ? 'bg-[#4A0C2B] text-white border-[#4A0C2B]'
+      : 'bg-white border-[#6D123F]/20 text-[#6D123F] hover:bg-[#6D123F]/5',
   };
+  const elementId = customId || (stepInfo ? `step-${stepInfo.key}` : undefined);
   return (
-    <div id={stepInfo ? `step-${stepInfo.key}` : undefined} className="flex flex-col gap-1.5">
+    <div id={elementId} className="flex flex-col gap-1.5 scroll-mt-24">
     <div className="relative">
     <button
       type="button"
