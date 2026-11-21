@@ -76,6 +76,7 @@ import {
   JUZ_PAGES,
   parseDateKeyUTC,
   TIKRAR_GRADE_LABELS,
+  TIKRAR_PACE_OPTIONS,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
 import {
@@ -952,16 +953,13 @@ export function TikrarSystem({
     return computeTikrarStreakAndWeekly(dates, todayKey);
   }, [userLogs, todayKey]);
 
-  const targetDaysPerWeek = Number(userData?.tikrar_active_days_per_week) || 5;
-  const durationMonths = Number(userData?.tikrar_target_duration_months) || 2;
-  const targetLabelPerDay =
-    durationMonths === 1
-      ? 'Target: 1 Halaman (4 Blok) / Hari'
-      : durationMonths === 2
-      ? 'Target: 1/2 Halaman (2 Blok) / Hari'
-      : durationMonths === 3
-      ? 'Target: 1–2 Blok / Hari'
-      : 'Target: 1 Blok / Hari';
+  const targetDaysPerWeek = activeTarget?.activeDaysPerWeek || Number(userData?.tikrar_active_days_per_week) || 5;
+  const durationMonths = activeTarget?.durationMonths || Number(userData?.tikrar_target_duration_months) || 2;
+  const activePace = useMemo(
+    () => TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) || TIKRAR_PACE_OPTIONS[0],
+    [durationMonths]
+  );
+  const targetLabelPerDay = `Target: ${activePace.monthlyPagesLabel} (${activePace.dailyPortionLabel})`;
 
   const scheduledBlockSetOnPage = useMemo(() => {
     const s = new Set<number>();
@@ -1772,7 +1770,7 @@ export function TikrarSystem({
             ) : (
               <>
                 <p className="text-xs font-black uppercase tracking-wider text-[#6D123F] flex items-center gap-1.5">
-                  <Star className="w-4 h-4 fill-[#D4AF37] text-[#D4AF37]" /> Target hari ini •{' '}
+                  <Star className="w-4 h-4 fill-[#D4AF37] text-[#D4AF37]" /> Target hari ini ({activePace.dailyPortionLabel}) •{' '}
                   {summary.today.stepsToday}/{summary.today.dailyQuota} langkah tuntas
                 </p>
                 <div className="space-y-1 max-w-md">

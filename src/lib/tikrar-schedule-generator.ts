@@ -36,42 +36,59 @@ export interface TikrarPaceOption {
   name: string;
   badge: string;
   targetLabel: string;
+  monthlyPagesLabel: string;
+  dailyPortionLabel: string;
+  estimatedTimePerDay: string;
   description: string;
   tikrarLevel: number;
+  isRecommended?: boolean;
 }
 
 export const TIKRAR_PACE_OPTIONS: readonly TikrarPaceOption[] = [
   {
-    durationMonths: 1,
-    name: 'Intensif (1 Bulan)',
-    badge: '4 Blok / Hari',
-    targetLabel: '1 Halaman Penuh / Hari Aktif',
-    description: '4 pekan × 5 hari aktif (~20–23 hari kerja). Cocok untuk fokus mutqin cepat.',
-    tikrarLevel: 1,
-  },
-  {
     durationMonths: 2,
-    name: 'Reguler (2 Bulan)',
-    badge: '2 Blok / Hari',
+    name: '10 Halaman / Bulan',
+    badge: '⭐ Rekomendasi',
     targetLabel: '1/2 Halaman (2 Blok) / Hari Aktif',
-    description: '8 pekan × 5 hari aktif (~40–46 hari kerja). Ritme standar paling seimbang.',
+    monthlyPagesLabel: '10 Hal / Bulan',
+    dailyPortionLabel: '1/2 Halaman (2 Blok) / hari',
+    estimatedTimePerDay: '~45–60 mnt/hari',
+    description: 'Paling seimbang & mutqin. Target 1 Juz tuntas dalam 2 bulan (~40–46 hari aktif).',
     tikrarLevel: 2,
-  },
-  {
-    durationMonths: 3,
-    name: 'Santai Terukur (3 Bulan)',
-    badge: '1–2 Blok / Hari',
-    targetLabel: '7 Blok / Pekan (~1,4 Blok / Hari)',
-    description: '12 pekan × 5 hari aktif (~58 hari kerja). Nyaman untuk ibu rumah tangga & pekerja.',
-    tikrarLevel: 3,
+    isRecommended: true,
   },
   {
     durationMonths: 4,
-    name: 'Santai Pemula (4 Bulan)',
-    badge: '1 Blok / Hari',
+    name: '5 Halaman / Bulan',
+    badge: 'Santai Pemula',
     targetLabel: '1/4 Halaman (1 Blok) / Hari Aktif',
-    description: '16 pekan × 5 hari aktif (~80–92 hari kerja). Ringan & bertahap setiap hari.',
+    monthlyPagesLabel: '5 Hal / Bulan',
+    dailyPortionLabel: '1/4 Halaman (1 Blok) / hari',
+    estimatedTimePerDay: '~20–30 mnt/hari',
+    description: 'Sangat ringan & bertahap. Cocok untuk ibu rumah tangga & pekerja yang sibuk.',
     tikrarLevel: 4,
+  },
+  {
+    durationMonths: 3,
+    name: '7 Halaman / Bulan',
+    badge: 'Santai Terukur',
+    targetLabel: '7 Blok / Pekan (~1,4 Blok / Hari)',
+    monthlyPagesLabel: '7 Hal / Bulan',
+    dailyPortionLabel: '~1–2 Blok / hari',
+    estimatedTimePerDay: '~30–45 mnt/hari',
+    description: 'Ritme santai berkesinambungan. Target 1 Juz tuntas dalam 3 bulan (~58 hari aktif).',
+    tikrarLevel: 3,
+  },
+  {
+    durationMonths: 1,
+    name: '20 Halaman / Bulan',
+    badge: 'Intensif Mutqin',
+    targetLabel: '1 Halaman Penuh / Hari Aktif',
+    monthlyPagesLabel: '20 Hal / Bulan',
+    dailyPortionLabel: '1 Halaman Penuh / hari',
+    estimatedTimePerDay: '~1,5–2,5 jam/hari',
+    description: 'Fokus intensif mutqin cepat. Target 1 Juz tuntas dalam 1 bulan (~20–23 hari aktif).',
+    tikrarLevel: 1,
   },
 ];
 
