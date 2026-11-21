@@ -96,6 +96,7 @@ import {
   TIKRAR_STEPS,
 } from '@/lib/tikrar-steps';
 import {
+  formatVerseRange,
   splitPageInto4Blocks,
   splitBlockIntoSubBlocks,
   SYAAMIL_BLOCK_THEME,
@@ -2248,6 +2249,22 @@ function MaqtaCard({
     return splitBlockIntoSubBlocks(id as 1 | 2 | 3 | 4, page, verses, customConfig, allPageVerses);
   }, [id, page, verses, customConfig, allPageVerses]);
 
+  const part1Range = useMemo(() => {
+    if (subSplit.isSingleVerseSplit) {
+      const aNum = verses[0]?.verse_key?.split(':')[1] || '';
+      return aNum ? `Ayat ${aNum} (Bag. 1)` : 'Bagian 1';
+    }
+    return formatVerseRange(subSplit.subAVerses) || 'Bagian 1';
+  }, [subSplit, verses]);
+
+  const part2Range = useMemo(() => {
+    if (subSplit.isSingleVerseSplit) {
+      const aNum = verses[0]?.verse_key?.split(':')[1] || '';
+      return aNum ? `Ayat ${aNum} (Bag. 2)` : 'Bagian 2';
+    }
+    return formatVerseRange(subSplit.subBVerses) || 'Bagian 2';
+  }, [subSplit, verses]);
+
   const { tokensA, tokensB } = useMemo(() => {
     if (subSplit.isSingleVerseSplit) {
       const items: any[] = [];
@@ -2376,23 +2393,18 @@ function MaqtaCard({
     <Card
       className={cn(
         'border-2 transition-all shadow-md overflow-hidden flex flex-col h-full',
-        isDoneG ? 'border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10' : 'border-[#6D123F]/20',
+        isDoneG ? 'border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10' : theme.cardBorder,
         isLocked && 'opacity-50 grayscale select-none'
       )}
     >
-      <div className={cn("py-2 px-4 border-b flex justify-between items-center gap-2 shrink-0 text-white", theme.headerBg)}>
+      <div className={cn("py-2.5 px-4 border-b flex justify-between items-center gap-2 shrink-0", theme.softHeaderBg)}>
         <div className="flex items-center gap-2 min-w-0">
-          <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border-none", theme.badgeClass)}>
+          <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 border-none shrink-0", theme.badgeClass)}>
             {theme.badgeText}
           </Badge>
-          <span className="text-[10px] font-black uppercase tracking-widest text-white/90 truncate">
-            (Hal. {page} • TM {id} / {letter}) {isLocked && '• LOCK'}
+          <span className="text-[10px] font-black uppercase tracking-wider opacity-80 truncate">
+            Hal. {page} {rangeLabel ? `• ${rangeLabel}` : ''} {isLocked && '• TERKUNCI'}
           </span>
-          {rangeLabel && (
-            <span className="text-[10px] font-bold text-[#D4AF37] truncate hidden sm:inline">
-              • {rangeLabel}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {(['a', 'b', 'combined'] as const).some((part) => stepInfoFor?.(part)?.isTarget) && (
@@ -2455,13 +2467,42 @@ function MaqtaCard({
         </div>
 
         <div
-          className="bg-white p-4 rounded-xl border-2 border-[#6D123F]/5 flex-1 overflow-y-auto no-scrollbar"
-          dir="rtl"
+          className={cn(
+            "p-3 sm:p-4 rounded-2xl border-2 flex-1 overflow-y-auto no-scrollbar space-y-3",
+            theme.verseBg
+          )}
         >
-          <div className="flex flex-wrap justify-center gap-x-1 gap-y-2">
-            {tokensA.map((t) => renderToken(t, 'text-[#6D123F]'))}
-            {tokensB.map((t) => renderToken(t, 'text-black'))}
+          {/* Part 1 */}
+          <div className="bg-white/40 rounded-xl p-3 border border-white/60 border-r-4 border-r-[#B91C1C] shadow-sm space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#B91C1C] text-white text-[10px] font-black tracking-wide">
+                PART 1 • {letter}-1
+              </span>
+              <span className="text-[11px] font-extrabold text-[#991B1B]">
+                {part1Range}
+              </span>
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-1 gap-y-2" dir="rtl">
+              {tokensA.map((t) => renderToken(t, 'text-[#991B1B]'))}
+            </div>
           </div>
+
+          {/* Part 2 */}
+          {tokensB.length > 0 && (
+            <div className="bg-white/25 rounded-xl p-3 border border-white/50 border-r-4 border-r-stone-900 shadow-sm space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-900 text-white text-[10px] font-black tracking-wide">
+                  PART 2 • {letter}-2
+                </span>
+                <span className="text-[11px] font-extrabold text-stone-800">
+                  {part2Range}
+                </span>
+              </div>
+              <div className="flex flex-wrap justify-center gap-x-1 gap-y-2" dir="rtl">
+                {tokensB.map((t) => renderToken(t, 'text-stone-950'))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Arti per kata & terjemahan kalimat ayat yang sedang diputar */}
@@ -2498,7 +2539,7 @@ function MaqtaCard({
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox
             id={`step-${id}.a`}
-            label={`TM ${id}-1 (${letter}-1)${subSplit.subALabel ? ` • ${subSplit.subALabel}` : ''} (Maroon)`}
+            label={`PART 1 (${letter}-1) • ${part1Range}`}
             count={state.a.count}
             isLocked={countersLocked}
             onInc={(delta = 1) => addSubCount('a', delta)}
@@ -2509,7 +2550,7 @@ function MaqtaCard({
           />
           <CounterBox
             id={`step-${id}.b`}
-            label={`TM ${id}-2 (${letter}-2)${subSplit.subBLabel ? ` • ${subSplit.subBLabel}` : ''} (Hitam)`}
+            label={`PART 2 (${letter}-2) • ${part2Range}`}
             count={state.b.count}
             isLocked={countersLocked || state.a.count < PASS_THRESHOLD}
             onInc={(delta = 1) => addSubCount('b', delta)}
@@ -2670,11 +2711,11 @@ function CounterBox({ id: customId, label, count, isLocked, onInc, color, thresh
   const isDone = count >= threshold;
   const themes: any = {
     maroon: isDone
-      ? 'bg-[#6D123F] text-white border-[#6D123F]'
-      : 'bg-white border-[#6D123F]/20 text-[#6D123F] hover:bg-[#6D123F]/5',
+      ? 'bg-[#991B1B] text-white border-[#991B1B]'
+      : 'bg-white border-[#B91C1C]/35 text-[#991B1B] hover:bg-rose-50/70',
     darkMaroon: isDone
-      ? 'bg-[#4A0C2B] text-white border-[#4A0C2B]'
-      : 'bg-white border-[#6D123F]/20 text-[#6D123F] hover:bg-[#6D123F]/5',
+      ? 'bg-stone-900 text-white border-stone-900'
+      : 'bg-white border-stone-800/35 text-stone-900 hover:bg-stone-100/70',
   };
   const elementId = customId || (stepInfo ? `step-${stepInfo.key}` : undefined);
   return (
