@@ -104,7 +104,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (isUserLoading || isAuthorizing) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 text-[#800000] animate-spin" />
+        <Loader2 className="w-10 h-10 text-[#6D123F] animate-spin" />
         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memasuki Area Terbatas...</p>
       </div>
     );
@@ -132,7 +132,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-          <Button asChild className="flex-1 bg-[#800000] hover:bg-[#800000]/90 font-black uppercase text-[10px] tracking-widest h-14 rounded-2xl shadow-lg">
+          <Button asChild className="flex-1 bg-[#6D123F] hover:bg-[#6D123F]/90 font-black uppercase text-[10px] tracking-widest h-14 rounded-2xl shadow-lg">
             <Link href="/"><Home className="w-4 h-4 mr-2" /> KEMBALI KE BERANDA</Link>
           </Button>
           <Button 
