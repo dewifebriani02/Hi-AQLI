@@ -180,9 +180,10 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || 'Gagal menyimpan target.');
+      const targetPaceSaved = TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) || paceMeta;
       toast({
         title: 'Target & Jadwal Tersimpan',
-        description: `Juz ${selectedJuz} • Hal. ${startPage}–${endPage} • ${preview.dailyQuota} langkah/hari. Membuka Mushaf Hal. ${startPage}...`,
+        description: `Juz ${selectedJuz} • Hal. ${startPage}–${endPage} • ${targetPaceSaved.monthlyPagesLabel} (${targetPaceSaved.dailyPortionLabel}). Membuka Mushaf Hal. ${startPage}...`,
       });
       setIsEditing(false);
       onScheduleSaved?.({ page: json.data?.summary?.target?.unlockedPage || startPage, juz: selectedJuz });
@@ -193,7 +194,14 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
     }
   };
 
-  const paceMeta = TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) || TIKRAR_PACE_OPTIONS[1];
+  const paceMeta = TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) || TIKRAR_PACE_OPTIONS[0];
+  const targetPace = useMemo(() => {
+    if (!target) return null;
+    return (
+      TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === target.durationMonths) ||
+      TIKRAR_PACE_OPTIONS[0]
+    );
+  }, [target]);
   const totalPagesSelected = endPage - startPage + 1;
 
   return (
@@ -267,8 +275,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                   Juz {target.juz} • Hal. {target.startPage}–{target.endPage}
                 </CardTitle>
                 <CardDescription className="text-white/80 text-xs mt-0.5">
-                  {formatDate(target.startDate)} – {formatDate(target.endDate, true)} • {target.activeDaysPerWeek} hari
-                  aktif/pekan • {target.dailyQuota} langkah/hari
+                  Target: {targetPace?.monthlyPagesLabel} ({targetPace?.dailyPortionLabel}) • {target.activeDaysPerWeek} hari aktif/pekan • Periode {formatDate(target.startDate)} – {formatDate(target.endDate, true)}
                 </CardDescription>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
@@ -296,6 +303,9 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 <p className="text-[10px] font-black uppercase text-stone-500">Target Hari Ini</p>
                 <p className="text-sm font-black text-stone-900">
                   {summary?.today.stepsToday || 0} / {target.dailyQuota} Langkah
+                </p>
+                <p className="text-[11px] text-stone-600 font-bold">
+                  Porsi: {targetPace?.dailyPortionLabel || `${target.dailyQuota} langkah`}
                 </p>
                 <p className={cn('text-[11px] font-bold', summary?.today.targetMet ? 'text-emerald-700' : 'text-amber-700')}>
                   {summary?.today.targetMet ? '✓ Tercapai' : 'Belum tercapai'}
@@ -516,8 +526,15 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-wider text-stone-700">7. Durasi Periode</label>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <label className="text-xs font-black uppercase tracking-wider text-stone-700">
+                  7. Target Hafalan / Bulan &amp; Ritme Harian
+                </label>
+                <span className="text-[11px] text-stone-500 font-medium">
+                  Pilih porsi yang paling realistis untuk istiqomah
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {TIKRAR_PACE_OPTIONS.map((opt) => {
                   const sched = generateTikrarStepSchedule({
                     juz: selectedJuz,
@@ -534,24 +551,70 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                       type="button"
                       onClick={() => setDurationMonths(opt.durationMonths)}
                       className={cn(
-                        'text-left rounded-xl border-2 p-3 transition-all',
-                        isSel ? 'border-[#6D123F] bg-[#6D123F]/5' : 'border-stone-200 hover:border-stone-300'
+                        "relative text-left rounded-2xl border-2 p-3.5 transition-all flex flex-col justify-between gap-2.5",
+                        isSel
+                          ? "border-[#6D123F] bg-[#6D123F]/5 shadow-sm ring-1 ring-[#6D123F]/20"
+                          : "border-stone-200 hover:border-stone-300 bg-white"
                       )}
                     >
-                      <p className="text-sm font-black text-stone-900">{opt.durationMonths} Bulan</p>
-                      <p className="text-[11px] font-bold text-[#6D123F]">{sched.dailyQuota} langkah / hari aktif</p>
-                      <p className="text-[10px] text-stone-500">{sched.activeDays} hari aktif</p>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <Badge
+                            className={cn(
+                              "text-[10px] font-black border-none px-2 py-0.5",
+                              opt.isRecommended
+                                ? "bg-[#6D123F] text-[#D4AF37]"
+                                : isSel
+                                ? "bg-[#6D123F]/15 text-[#6D123F]"
+                                : "bg-stone-100 text-stone-600"
+                            )}
+                          >
+                            {opt.badge}
+                          </Badge>
+                          <span className="text-[11px] font-bold text-stone-400">
+                            {opt.durationMonths} Bulan
+                          </span>
+                        </div>
+                        <p className="text-base font-black text-stone-900 pt-0.5">
+                          {opt.monthlyPagesLabel}
+                        </p>
+                        <p className="text-xs font-bold text-[#6D123F]">
+                          {opt.dailyPortionLabel}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-stone-100 space-y-0.5 text-[11px] text-stone-500">
+                        <p className="font-semibold text-stone-700">⏱️ {opt.estimatedTimePerDay}</p>
+                        <p>{sched.activeDays} hari aktif • {sched.dailyQuota} langkah/hari</p>
+                      </div>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-4 text-xs text-stone-700 leading-relaxed">
-              <strong className="text-[#6D123F]">Ringkasan:</strong> {totalPagesSelected} halaman × {STEPS_PER_PAGE} langkah ={' '}
-              <strong>{preview.totalSteps} langkah</strong>, dibagi ke {preview.activeDays} hari aktif ({paceMeta.durationMonths}{' '}
-              bulan) → <strong>{preview.dailyQuota} langkah per hari</strong>. Periode {formatDate(startDateKey)} –{' '}
-              {formatDate(preview.endDate, true)}.
+            <div className="bg-[#fdfbf7] border border-[#6D123F]/20 rounded-xl p-4 text-xs text-stone-700 leading-relaxed space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-black text-sm text-[#6D123F]">
+                  Ringkasan Target: {paceMeta.monthlyPagesLabel} ({paceMeta.durationMonths} Bulan)
+                </span>
+                {paceMeta.isRecommended && (
+                  <Badge className="bg-[#6D123F] text-[#D4AF37] border-none text-[10px] font-black">
+                    Rekomendasi Utama
+                  </Badge>
+                )}
+              </div>
+              <p className="text-stone-700">
+                Total <strong>{totalPagesSelected} halaman</strong> diselesaikan dalam waktu{" "}
+                <strong>{paceMeta.durationMonths} bulan</strong> ({preview.activeDays} hari aktif belajar). Porsi harian:{" "}
+                <strong className="text-stone-900">{paceMeta.dailyPortionLabel}</strong> (setara{" "}
+                <span className="text-[#6D123F] font-bold">{preview.dailyQuota} langkah sistematis/hari</span>).
+              </p>
+              <p className="text-[11px] text-stone-500">
+                📅 Periode estimasi: <strong>{formatDate(startDateKey)}</strong> s.d.{" "}
+                <strong>{formatDate(preview.endDate, true)}</strong> dengan komitmen{" "}
+                <strong>{activeDaysPerWeek} hari aktif per pekan</strong>.
+              </p>
             </div>
           </CardContent>
         </Card>
