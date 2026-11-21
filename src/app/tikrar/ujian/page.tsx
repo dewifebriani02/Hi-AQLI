@@ -16,13 +16,13 @@ function UjianContent() {
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 space-y-6 pb-32">
       <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="icon" className="rounded-xl text-[#800000] hover:bg-[#800000]/5">
+        <Button asChild variant="ghost" size="icon" className="rounded-xl text-[#6D123F] hover:bg-[#6D123F]/5">
           <Link href="/tikrar">
             <ChevronLeft className="w-6 h-6" />
           </Link>
         </Button>
         <div>
-          <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#800000]">
+          <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#6D123F]">
             <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
             Hi Tikrar • Ujian Itqan Halaman
           </div>
@@ -42,7 +42,7 @@ export default function TikrarUjianPage() {
     <Suspense
       fallback={
         <div className="flex justify-center py-20">
-          <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+          <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
         </div>
       }
     >

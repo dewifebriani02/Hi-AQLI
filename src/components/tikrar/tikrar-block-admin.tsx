@@ -1125,7 +1125,7 @@ export function TikrarBlockAdmin() {
                         setActiveTarget(ALL_SUB_BLOCK_TARGETS[bIdx * 2]);
                         setClickStep('start');
                       }}
-                      className="text-[#800000] dark:text-rose-400 font-semibold cursor-pointer hover:underline"
+                      className="text-[#6D123F] dark:text-rose-400 font-semibold cursor-pointer hover:underline"
                       title={`TM${bId}-1 (Sub 1 Maroon)`}
                     >
                       {wordsSub1.map((w) => w.text_uthmani).join(' ')}
