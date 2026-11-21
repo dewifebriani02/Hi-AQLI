@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useCollection } from "@/db";
-import {db } from "@/db";
+import { db } from "@/db";
 import {
   Card,
   CardContent,
@@ -24,20 +24,29 @@ import { Input } from "@/components/ui/input";
 import {
   Loader2,
   ChevronRight,
-  ArrowLeft,
   CheckCircle2,
   AlertCircle,
   Upload,
   FileSpreadsheet,
   XCircle,
-  Zap,
   Building2,
   Search,
+  Check,
+  ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Types for BSI Statement Entry
 interface BsiTransaction {
@@ -52,6 +61,10 @@ export default function MufradatReconciliationPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Dialog confirmation states
+  const [showReconDialog, setShowReconDialog] = useState(false);
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
 
   // Fetch pending registrations
   const { data: pendingRegs, isLoading: isRegLoading, refresh: refreshRegs } = useCollection("halaqah_registrations", {
@@ -72,20 +85,14 @@ export default function MufradatReconciliationPage() {
         const parsed: BsiTransaction[] = [];
 
         // Simple CSV Parser (Skip header, try to find Date, Desc, Amount)
-        // Expected BSI format logic (Flexible for Tanggal, Keterangan, Nominal)
         lines.slice(1).forEach((line) => {
-          const columns = line.split(/[,;]/); // Support comma or semicolon
+          const columns = line.split(/[,;]/);
           if (columns.length < 3) return;
 
-          // Cleaning amount (BSI often uses dots as thousands separators and commas as decimals, or vice versa)
-          // We'll try to find the numeric column
           let rawAmount = "";
           let description = "";
           let date = columns[0].trim();
 
-          // Search logic for amount and description
-          // BSI usually: Date, Desc, DB/CR, Amount
-          // or simple: Date, Desc, Amount
           description = columns[1].trim();
           rawAmount = columns[columns.length - 1].trim().replace(/[Rp.\s]/g, "").replace(",", ".");
           
@@ -95,7 +102,7 @@ export default function MufradatReconciliationPage() {
             parsed.push({
               date,
               description,
-              amount: Math.round(amount), // We deal with whole numbers in IDR
+              amount: Math.round(amount),
             });
           }
         });
@@ -135,6 +142,7 @@ export default function MufradatReconciliationPage() {
   }, [pendingRegs, bsiData]);
 
   const matchedCount = useMemo(() => matches.filter(m => m.bsiEntry).length, [matches]);
+  const unmatchedCount = useMemo(() => matches.filter(m => !m.bsiEntry).length, [matches]);
 
   // 3. Apply Actions
   const handleApplyReconciliation = async () => {
@@ -143,13 +151,10 @@ export default function MufradatReconciliationPage() {
       return;
     }
 
-    if (!confirm(`Konfirmasi Verifikasi Masa: ${matchedCount} Thalibah akan diaktifkan secara permanen. Lanjutkan?`)) return;
-
     setIsApplying(true);
     try {
       const matchEntries = matches.filter(m => m.bsiEntry);
       
-      // We'll perform updates in batches or sequence
       const results = await Promise.all(matchEntries.map(async (m) => {
         const reg = m.registration;
         
@@ -170,9 +175,6 @@ export default function MufradatReconciliationPage() {
           .eq("id", reg.id);
 
         if (regError) throw regError;
-
-        // 2. We don't need to update mufradat_status because of "Grace Period" logic 
-        // (they are already active), but we keep it verified for records.
         return true;
       }));
 
@@ -190,14 +192,13 @@ export default function MufradatReconciliationPage() {
       });
     } finally {
       setIsApplying(false);
+      setShowReconDialog(false);
     }
   };
 
   const handleRevokeUnmatched = async () => {
     const unmatchEntries = matches.filter(m => !m.bsiEntry);
     if (unmatchEntries.length === 0) return;
-
-    if (!confirm(`TINDAKAN TEGAS: ${unmatchEntries.length} thalibah tidak ditemukan di mutasi BSI. Akses mereka akan dicabut. Lanjutkan?`)) return;
 
     setIsApplying(true);
     try {
@@ -226,7 +227,7 @@ export default function MufradatReconciliationPage() {
       }));
 
       toast({
-        title: "Selesai",
+        title: "Pencabutan Selesai",
         description: `${unmatchEntries.length} akses thalibah telah dicabut karena tidak ditemukan bukti transfer.`,
       });
       refreshRegs();
@@ -234,32 +235,28 @@ export default function MufradatReconciliationPage() {
       toast({ variant: "destructive", title: "Gagal pencabutan", description: err.message });
     } finally {
       setIsApplying(false);
+      setShowRevokeDialog(false);
     }
   };
 
   if (isRegLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
-        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Memuat Antrean Pendaftaran...</p>
+        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Antrean Pendaftaran...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8 pb-32">
-      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-        <Link href="/admin" className="hover:text-[#800000] transition-colors">Admin</Link>
-        <ChevronRight className="w-3 h-3" />
-        <Link href="/admin/finance" className="hover:text-[#800000] transition-colors">Keuangan</Link>
-        <ChevronRight className="w-3 h-3" />
-        <span className="text-[#800000]">Rekonsiliasi BSI</span>
-      </div>
-
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="max-w-6xl mx-auto space-y-8 pb-32">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-1 mt-2">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black font-headline tracking-tighter text-[#800000] uppercase italic">REKONSILIASI BSI</h1>
-          <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+          <h1 className="text-2xl font-black font-headline tracking-tight text-[#6D123F] uppercase">
+            Rekonsiliasi BSI
+          </h1>
+          <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2">
             <Building2 className="w-4 h-4 text-emerald-600" /> Pencocokan Mutasi Bank Otomatis
           </p>
         </div>
@@ -275,163 +272,221 @@ export default function MufradatReconciliationPage() {
           <Button 
             disabled={isProcessing}
             onClick={() => document.getElementById('bsi-upload')?.click()}
-            className="bg-white border-2 border-[#800000] text-[#800000] hover:bg-[#800000]/5 font-black h-12 rounded-xl shadow-sm gap-2"
+            className="bg-white border-2 border-[#6D123F] text-[#6D123F] hover:bg-[#6D123F]/5 font-black h-11 px-5 rounded-xl shadow-sm gap-2 text-xs"
           >
             {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             UNGGAH MUTASI BSI
           </Button>
 
           {bsiData.length > 0 && (
-             <>
-               <Button 
-                onClick={handleApplyReconciliation}
+            <>
+              <Button 
+                onClick={() => setShowReconDialog(true)}
                 disabled={isApplying || matchedCount === 0}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 rounded-xl shadow-lg gap-2"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-11 px-5 rounded-xl shadow-md gap-2 text-xs uppercase"
               >
                 {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 VERIFIKASI ({matchedCount})
               </Button>
               <Button 
                 variant="destructive"
-                onClick={handleRevokeUnmatched}
+                onClick={() => setShowRevokeDialog(true)}
                 disabled={isApplying || matches.length === matchedCount}
-                className="font-black h-12 rounded-xl shadow-lg gap-2"
+                className="font-black h-11 px-5 rounded-xl shadow-md gap-2 text-xs uppercase"
               >
                 <XCircle className="w-4 h-4" /> CABUT AKSES SISANYA
               </Button>
-             </>
+            </>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-1">
         {/* Stats Column */}
         <div className="lg:col-span-1 space-y-6">
-          <Card className="border-none shadow-xl bg-slate-900 text-white rounded-3xl overflow-hidden">
-             <CardHeader className="p-8">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Ringkasan Antrean</CardTitle>
-                <div className="flex items-end gap-3 mt-4">
-                  <span className="text-5xl font-black">{pendingRegs?.length || 0}</span>
-                  <span className="text-sm font-bold text-slate-400 uppercase mb-2">Pendaftar</span>
+          <Card className="border-none shadow-xl bg-slate-900 text-white rounded-2xl overflow-hidden">
+            <CardHeader className="p-6">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Ringkasan Antrean</CardTitle>
+              <div className="flex items-end gap-3 mt-3">
+                <span className="text-4xl font-black">{pendingRegs?.length || 0}</span>
+                <span className="text-xs font-bold text-slate-400 uppercase mb-1">Pendaftar Menunggu</span>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6 space-y-3">
+              <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold">Terdeteksi Cocok</span>
                 </div>
-             </CardHeader>
-             <CardContent className="px-8 pb-8 space-y-4">
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
-                        <CheckCircle2 className="w-5 h-5" />
-                      </div>
-                      <span className="text-sm font-bold">Terdeteksi Cocok</span>
-                   </div>
-                   <span className="text-xl font-black text-emerald-500">{matchedCount}</span>
+                <span className="text-lg font-black text-emerald-400">{matchedCount}</span>
+              </div>
+              <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold">Belum Ada Mutasi</span>
                 </div>
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-500 flex items-center justify-center">
-                        <AlertCircle className="w-5 h-5" />
-                      </div>
-                      <span className="text-sm font-bold">Belum Ada Mutasi</span>
-                   </div>
-                   <span className="text-xl font-black text-rose-500">{(pendingRegs?.length || 0) - matchedCount}</span>
-                </div>
-             </CardContent>
+                <span className="text-lg font-black text-rose-400">{(pendingRegs?.length || 0) - matchedCount}</span>
+              </div>
+            </CardContent>
           </Card>
 
-          <Card className="border-none shadow-xl rounded-3xl bg-amber-50 border-2 border-amber-100">
-            <CardHeader>
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-amber-700">Panduan BSI</CardTitle>
+          <Card className="border-none shadow-sm rounded-2xl bg-amber-50/80 border border-amber-200">
+            <CardHeader className="p-5 pb-2">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-amber-800">
+                Panduan Mutasi BSI
+              </CardTitle>
             </CardHeader>
-            <CardContent className="text-[11px] text-amber-900 leading-relaxed font-medium space-y-3">
-              <p>1. Ekspor mutasi rekening dari BSI Online / Mobile dalam format **CSV** atau **TXT**.</p>
-              <p>2. Pastikan file berisi kolom minimal: **Tanggal, Keterangan, Nominal**.</p>
-              <p>3. Sistem akan mencocokkan **Nominal Persis** (termasuk kode unik) dengan antrean pendaftaran.</p>
-              <p>4. Tekan **Verifikasi** untuk mengaktifkan thalibah yang datanya ditemukan di mutasi.</p>
-              <p>5. Tekan **Cabut Akses** untuk memberhentikan thalibah yang nominal transfernya tidak masuk di rekening yayasan.</p>
+            <CardContent className="p-5 pt-2 text-xs text-amber-900 leading-relaxed font-medium space-y-2">
+              <p>1. Ekspor mutasi rekening dari BSI Mobile / Net Banking dalam format <strong>CSV</strong> atau <strong>TXT</strong>.</p>
+              <p>2. Pastikan file berisi kolom: <strong>Tanggal, Keterangan, Nominal</strong>.</p>
+              <p>3. Sistem otomatis mencocokkan nominal persis termasuk <strong>kode unik</strong> transfer pendaftar.</p>
+              <p>4. Tekan <strong>Verifikasi</strong> untuk menyetujui akses secara permanen.</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Data Column */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
-            <CardHeader className="bg-slate-50 border-b flex flex-row items-center justify-between">
+          <Card className="border-none shadow-xl rounded-2xl overflow-hidden bg-white">
+            <CardHeader className="bg-slate-50 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5">
               <div>
-                <CardTitle className="text-lg font-black text-[#800000]">ANTREAN VS MUTASI</CardTitle>
-                <CardDescription className="text-[10px] font-bold uppercase">Hasil analisis sistem</CardDescription>
+                <CardTitle className="text-base font-black text-[#6D123F] uppercase">
+                  Antrean vs Mutasi Bank
+                </CardTitle>
+                <CardDescription className="text-xs font-medium">
+                  {bsiData.length > 0 ? `${bsiData.length} data mutasi dianalisis` : "Unggah file mutasi BSI untuk memulai pencocokan"}
+                </CardDescription>
               </div>
-              <div className="relative w-64">
+              <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
-                  placeholder="Cari thalibah..." 
-                  className="rounded-xl pl-10 border-none bg-slate-100 h-10 text-xs font-bold"
+                  placeholder="Cari nama thalibah..." 
+                  className="rounded-xl pl-9 border-slate-200 bg-white h-10 text-xs font-bold"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </CardHeader>
             <CardContent className="p-0">
-               <Table>
-                 <TableHeader className="bg-slate-50/50">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-slate-50/50">
                     <TableRow>
-                      <TableHead className="pl-8 text-[10px] font-black uppercase tracking-widest">Thalibah</TableHead>
+                      <TableHead className="pl-6 text-[10px] font-black uppercase tracking-widest">Thalibah</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest">Tagihan</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest">Status Pencocokan</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-8">Aksi</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">Status</TableHead>
                     </TableRow>
-                 </TableHeader>
-                 <TableBody>
+                  </TableHeader>
+                  <TableBody>
                     {matches.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="py-20 text-center">
-                          <div className="flex flex-col items-center gap-3 opacity-20">
-                            <FileSpreadsheet className="w-16 h-16" />
-                            <p className="font-black uppercase text-sm">Belum ada file mutasi yang diunggah</p>
+                          <div className="flex flex-col items-center gap-2 text-slate-400">
+                            <FileSpreadsheet className="w-12 h-12 text-slate-300" />
+                            <p className="font-black uppercase text-xs text-slate-600">Belum ada file mutasi yang diunggah</p>
+                            <p className="text-[11px] text-muted-foreground">Silakan klik tombol &quot;Unggah Mutasi BSI&quot; di kanan atas</p>
                           </div>
                         </TableCell>
                       </TableRow>
                     ) : matches
                       .filter(m => m.registration.user_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-                      .map((m, idx) => (
-                      <TableRow key={m.registration.id} className={cn("transition-colors", m.isMatched ? "bg-emerald-50/30" : "bg-white")}>
-                        <TableCell className="pl-8 py-5">
+                      .map((m) => (
+                      <TableRow key={m.registration.id} className={cn("transition-colors", m.isMatched ? "bg-emerald-50/40" : "bg-white")}>
+                        <TableCell className="pl-6 py-4">
                           <div className="flex flex-col">
-                            <span className="font-black text-[#800000] text-sm">{m.registration.user_name}</span>
+                            <span className="font-black text-[#6D123F] text-xs">{m.registration.user_name}</span>
                             <span className="text-[10px] font-bold text-slate-400">{m.registration.halaqah_title}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                           <div className="flex flex-col">
-                              <span className="font-black text-slate-800">Rp {m.registration.amount?.toLocaleString('id-ID')}</span>
-                              <span className="text-[10px] font-black text-[#800000]">Kode: {m.registration.unique_code || 0}</span>
-                           </div>
+                          <div className="flex flex-col">
+                            <span className="font-black text-slate-800 text-xs">Rp {m.registration.amount?.toLocaleString('id-ID')}</span>
+                            <span className="text-[9px] font-black text-[#6D123F]">Kode: {m.registration.unique_code || 0}</span>
+                          </div>
                         </TableCell>
                         <TableCell>
-                           {m.isMatched ? (
-                             <div className="flex flex-col gap-1">
-                                <Badge className="bg-emerald-600 text-white border-none w-fit text-[9px] font-black tracking-widest">COCOK</Badge>
-                                <span className="text-[9px] text-emerald-800 font-bold truncate max-w-[200px]">
-                                   {m.bsiEntry?.date}: {m.bsiEntry?.description}
-                                </span>
-                             </div>
-                           ) : (
-                             <Badge variant="outline" className="text-slate-400 border-slate-200 text-[9px] font-black tracking-widest">TIDAK DITEMUKAN</Badge>
-                           )}
+                          {m.isMatched ? (
+                            <div className="flex flex-col gap-1">
+                              <Badge className="bg-emerald-600 text-white border-none w-fit text-[9px] font-black tracking-widest px-2 py-0.5">COCOK</Badge>
+                              <span className="text-[9px] text-emerald-800 font-bold truncate max-w-[220px]">
+                                {m.bsiEntry?.date}: {m.bsiEntry?.description}
+                              </span>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-400 border-slate-200 text-[9px] font-bold tracking-widest px-2 py-0.5">TIDAK DITEMUKAN</Badge>
+                          )}
                         </TableCell>
-                        <TableCell className="text-right pr-8">
-                           {m.isMatched ? (
-                             <CheckCircle2 className="w-6 h-6 text-emerald-500 ml-auto" />
-                           ) : (
-                             <XCircle className="w-6 h-6 text-slate-100 ml-auto" />
-                           )}
+                        <TableCell className="text-right pr-6">
+                          {m.isMatched ? (
+                            <div className="flex items-center justify-end text-emerald-600 font-bold text-xs gap-1">
+                              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end text-slate-300">
+                              <XCircle className="w-5 h-5" />
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
-                 </TableBody>
-               </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* AlertDialog for Mass Verification */}
+      <AlertDialog open={showReconDialog} onOpenChange={setShowReconDialog}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-black text-emerald-700 uppercase flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5" /> Konfirmasi Verifikasi Massal
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed">
+              Sebanyak <strong className="text-emerald-700 font-black">{matchedCount} thalibah</strong> yang nominal transfernya cocok dengan rekening koran BSI akan diaktifkan secara permanen. Lanjutkan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl text-xs font-bold">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleApplyReconciliation}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+            >
+              Ya, Verifikasi ({matchedCount})
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog for Revoking Unmatched Access */}
+      <AlertDialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-black text-rose-600 uppercase flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5" /> Konfirmasi Pencabutan Akses
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed">
+              Sebanyak <strong className="text-rose-600 font-black">{unmatchedCount} thalibah</strong> yang tidak ditemukan di mutasi BSI akan dicabut akses pembelajarannya dan status pendaftarannya diubah menjadi ditolak.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl text-xs font-bold">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRevokeUnmatched}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold"
+            >
+              Ya, Cabut Akses
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

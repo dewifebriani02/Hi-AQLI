@@ -19,6 +19,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -81,6 +91,8 @@ export default function MufradatFinancePage() {
   const { toast } = useToast();
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [isCairkanLoading, setIsCairkanLoading] = useState(false);
+  const [payoutDeleteTarget, setPayoutDeleteTarget] = useState<string | null>(null);
+  const [regDeleteTarget, setRegDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Preview States
@@ -550,13 +562,9 @@ export default function MufradatFinancePage() {
     setIsPreviewOpen(true);
   };
 
-  const handleDeletePayout = async (month: string) => {
-    if (
-      !confirm(
-        `Apakah Anda yakin ingin membatalkan pencairan bulan ${month}? Status akan kembali menjadi 'Menunggu Cair'.`,
-      )
-    )
-      return;
+  const confirmDeletePayout = async () => {
+    if (!payoutDeleteTarget) return;
+    const month = payoutDeleteTarget;
 
     setIsCairkanLoading(true);
     try {
@@ -579,22 +587,18 @@ export default function MufradatFinancePage() {
       });
     } finally {
       setIsCairkanLoading(false);
+      setPayoutDeleteTarget(null);
     }
   };
 
-  const handleDeleteRegistration = async (regId: string, userName: string) => {
-    if (
-      !confirm(
-        `Hapus transaksi atas nama ${userName}? Perubahan ini akan langsung memengaruhi total omset.`,
-      )
-    )
-      return;
+  const confirmDeleteRegistration = async () => {
+    if (!regDeleteTarget) return;
 
     try {
       const { error } = await db
         .from("halaqah_registrations")
         .delete()
-        .eq("id", regId);
+        .eq("id", regDeleteTarget.id);
       if (error) throw error;
       toast({ title: "Transaksi Dihapus" });
       refreshRegs();
@@ -604,6 +608,8 @@ export default function MufradatFinancePage() {
         title: "Gagal menghapus",
         description: e.message,
       });
+    } finally {
+      setRegDeleteTarget(null);
     }
   };
 
@@ -675,7 +681,7 @@ export default function MufradatFinancePage() {
   if (isGroupsLoading || isRegLoading || isDonationsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#800000]" />
+        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
         <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
           Menghitung Data Keuangan...
         </p>
@@ -687,23 +693,23 @@ export default function MufradatFinancePage() {
     <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8 pb-32">
       {/* HEADER */}
       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-        <Link href="/admin" className="hover:text-[#800000] transition-colors">
+        <Link href="/admin" className="hover:text-[#6D123F] transition-colors">
           Admin
         </Link>
         <ChevronRight className="w-3 h-3" />
         <Link
           href="/admin/mufradat"
-          className="hover:text-[#800000] transition-colors"
+          className="hover:text-[#6D123F] transition-colors"
         >
           Hi Mufradat
         </Link>
         <ChevronRight className="w-3 h-3" />
-        <span className="text-[#800000]">Laporan Keuangan</span>
+        <span className="text-[#6D123F]">Laporan Keuangan</span>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black font-headline tracking-tighter text-[#800000] uppercase italic">
+          <h1 className="text-3xl sm:text-4xl font-black font-headline tracking-tighter text-[#6D123F] uppercase italic">
             MONITOR KEUANGAN
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
@@ -715,13 +721,13 @@ export default function MufradatFinancePage() {
         <div className="flex items-center gap-3">
           <Dialog open={isManualOpen} onOpenChange={setIsManualOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-12 rounded-xl shadow-lg gap-2">
+              <Button className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black h-12 rounded-xl shadow-lg gap-2">
                 <Plus className="w-5 h-5" />
                 <span className="hidden sm:inline">TRANSAKSI MANUAL</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
-              <DialogHeader className="p-8 bg-[#800000] text-white">
+              <DialogHeader className="p-8 bg-[#6D123F] text-white">
                 <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
                   <Plus className="w-5 h-5" /> Input Transaksi Manual
                 </DialogTitle>
@@ -827,11 +833,11 @@ export default function MufradatFinancePage() {
 
                 {manualType === 'initial' && (
                   <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <Label className="text-[10px] font-black uppercase text-[#800000] tracking-widest">
+                    <Label className="text-[10px] font-black uppercase text-[#6D123F] tracking-widest">
                       Uang Pendaftaran (Registration Fee)
                     </Label>
                     <Select value={manualRegFee} onValueChange={setManualRegFee}>
-                      <SelectTrigger className="h-12 border-2 border-[#800000]/30 rounded-xl font-black">
+                      <SelectTrigger className="h-12 border-2 border-[#6D123F]/30 rounded-xl font-black">
                         <SelectValue placeholder="Pilih Nominal" />
                       </SelectTrigger>
                       <SelectContent>
@@ -864,7 +870,7 @@ export default function MufradatFinancePage() {
                   Batal
                 </Button>
                 <Button
-                  className="flex-[2] bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-12 rounded-xl shadow-lg"
+                  className="flex-[2] bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black h-12 rounded-xl shadow-lg"
                   onClick={handleSubmitManualTransaction}
                   disabled={isManualLoading}
                 >
@@ -920,7 +926,7 @@ export default function MufradatFinancePage() {
                       type="number"
                       value={editAmount}
                       onChange={(e) => setEditAmount(e.target.value)}
-                      className="h-12 border-2 rounded-xl font-black text-[#800000]"
+                      className="h-12 border-2 rounded-xl font-black text-[#6D123F]"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1080,7 +1086,7 @@ export default function MufradatFinancePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-xl bg-[#800000] text-white overflow-hidden">
+        <Card className="border-none shadow-xl bg-[#6D123F] text-white overflow-hidden">
           <CardContent className="p-6 flex flex-col justify-between h-full">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] mb-1">
@@ -1279,7 +1285,7 @@ export default function MufradatFinancePage() {
                         <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">
                           Infaq Bulanan Bersih
                         </p>
-                        <p className="text-sm font-black text-[#800000]">
+                        <p className="text-sm font-black text-[#6D123F]">
                           {FORMATTER.format(splits.baseInfaq)}
                         </p>
                       </div>
@@ -1327,7 +1333,7 @@ export default function MufradatFinancePage() {
 
                     {/* RECIPIENT TABLE */}
                     <div className="space-y-3">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-[#800000] flex items-center gap-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6D123F] flex items-center gap-2">
                         <Wallet className="w-4 h-4" /> Rincian Distribusi Fee
                         per Group
                       </h4>
@@ -1546,7 +1552,7 @@ export default function MufradatFinancePage() {
                             variant="ghost"
                             size="sm"
                             className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold text-[10px] uppercase tracking-wider"
-                            onClick={() => handleDeletePayout(monthData.month)}
+                            onClick={() => setPayoutDeleteTarget(monthData.month)}
                             disabled={isCairkanLoading}
                           >
                             Batal Cairkan (Edit Data)
@@ -1554,7 +1560,7 @@ export default function MufradatFinancePage() {
                         </div>
                       ) : (
                         <Button
-                          className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black uppercase text-xs h-14 px-10 rounded-2xl shadow-xl shadow-[#800000]/20 gap-3 active:scale-95 transition-all"
+                          className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black uppercase text-xs h-14 px-10 rounded-2xl shadow-xl shadow-[#6D123F]/20 gap-3 active:scale-95 transition-all"
                           onClick={() => handleOpenPreview(monthData)}
                           disabled={isCairkanLoading}
                         >
@@ -1583,7 +1589,7 @@ export default function MufradatFinancePage() {
               <CardTitle className="text-lg font-black text-slate-800 uppercase tracking-tighter">
                 Daftar Seluruh Transaksi
               </CardTitle>
-              <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-[#800000]">
+              <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-[#6D123F]">
                 Histori Pendapatan Mufradat
               </CardDescription>
             </div>
@@ -1592,7 +1598,7 @@ export default function MufradatFinancePage() {
               <input
                 type="text"
                 placeholder="Cari nama atau kelas..."
-                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-all"
+                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#6D123F]/20 focus:border-[#6D123F] outline-none transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -1701,7 +1707,7 @@ export default function MufradatFinancePage() {
                         <div className="flex flex-col">
                           <span className={cn(
                             "text-xs font-black",
-                            (Number(reg.amount) || 0) === 0 ? "text-rose-500 animate-pulse" : "text-[#800000]"
+                            (Number(reg.amount) || 0) === 0 ? "text-rose-500 animate-pulse" : "text-[#6D123F]"
                           )}>
                             {FORMATTER.format(Number(reg.amount) || 0)}
                           </span>
@@ -1732,7 +1738,7 @@ export default function MufradatFinancePage() {
                                 variant="ghost"
                                 className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 transition-all"
                                 onClick={() =>
-                                  handleDeleteRegistration(reg.id, reg.user_name)
+                                  setRegDeleteTarget({ id: reg.id, name: reg.user_name })
                                 }
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -1849,8 +1855,8 @@ export default function MufradatFinancePage() {
       </Card>
 
       {/* FOOTER TIPS */}
-      <div className="bg-[#800000]/5 p-6 rounded-2xl border-2 border-dashed border-[#800000]/20 max-w-2xl mx-auto">
-        <h4 className="flex items-center gap-2 font-black text-[#800000] mb-2 uppercase tracking-tight text-sm">
+      <div className="bg-[#6D123F]/5 p-6 rounded-2xl border-2 border-dashed border-[#6D123F]/20 max-w-2xl mx-auto">
+        <h4 className="flex items-center gap-2 font-black text-[#6D123F] mb-2 uppercase tracking-tight text-sm">
           Informasi Pencairan:
         </h4>
         <ul className="text-[11px] space-y-2 text-muted-foreground font-medium leading-relaxed list-disc pl-4 italic">
@@ -1872,7 +1878,7 @@ export default function MufradatFinancePage() {
       {/* PAYOUT PREVIEW MODAL */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0 border-none shadow-2xl rounded-3xl">
-          <DialogHeader className="p-8 bg-[#800000] text-white">
+          <DialogHeader className="p-8 bg-[#6D123F] text-white">
             <DialogTitle className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
               <ShieldCheck className="w-8 h-8 text-amber-400" /> Review Pencairan Dana
             </DialogTitle>
@@ -1927,7 +1933,7 @@ export default function MufradatFinancePage() {
                               {hasBank ? (
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-[11px] font-black text-slate-700">{userProfile.bank_name}</span>
-                                  <span className="text-[10px] font-bold text-[#800000]">{userProfile.bank_account_number}</span>
+                                  <span className="text-[10px] font-bold text-[#6D123F]">{userProfile.bank_account_number}</span>
                                   <span className="text-[9px] font-medium text-slate-400 italic">a.n. {userProfile.bank_account_holder}</span>
                                 </div>
                               ) : (
@@ -1959,7 +1965,7 @@ export default function MufradatFinancePage() {
                           {data.bank?.no ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[11px] font-black text-slate-700">{data.bank.name}</span>
-                              <span className="text-[10px] font-bold text-[#800000]">{data.bank.no}</span>
+                              <span className="text-[10px] font-bold text-[#6D123F]">{data.bank.no}</span>
                               <span className="text-[9px] font-medium text-slate-400 italic">a.n. {data.bank.holder}</span>
                             </div>
                           ) : (
@@ -2004,7 +2010,7 @@ export default function MufradatFinancePage() {
               Batal
             </Button>
             <Button 
-               className="flex-[2] bg-[#800000] hover:bg-[#800000]/90 text-white font-black h-12 rounded-xl shadow-xl shadow-[#800000]/20 gap-3"
+               className="flex-[2] bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black h-12 rounded-xl shadow-xl shadow-[#6D123F]/20 gap-3"
                onClick={() => handleCairkan(previewMonthData)}
                disabled={isCairkanLoading}
             >
@@ -2018,6 +2024,54 @@ export default function MufradatFinancePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AlertDialog for Payout Cancellation */}
+      <AlertDialog open={!!payoutDeleteTarget} onOpenChange={(open) => !open && setPayoutDeleteTarget(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-black text-rose-600 uppercase">
+              Batalkan Pencairan?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed">
+              Apakah Anda yakin ingin membatalkan pencairan bulan <strong className="text-slate-900">{payoutDeleteTarget}</strong>?
+              Status laporan akan dikembalikan menjadi &apos;Menunggu Cair&apos;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl text-xs font-bold">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePayout}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold"
+            >
+              Ya, Batalkan Pencairan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog for Registration Deletion */}
+      <AlertDialog open={!!regDeleteTarget} onOpenChange={(open) => !open && setRegDeleteTarget(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-black text-rose-600 uppercase">
+              Hapus Transaksi?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed">
+              Hapus transaksi atas nama <strong className="text-slate-900">{regDeleteTarget?.name}</strong>?
+              Perubahan ini akan langsung memengaruhi total omset dan rekonsiliasi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl text-xs font-bold">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteRegistration}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold"
+            >
+              Ya, Hapus Transaksi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
