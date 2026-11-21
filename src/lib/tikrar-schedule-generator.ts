@@ -20,6 +20,13 @@ export const BLOCK_LETTERS: Record<number, 'A' | 'B' | 'C' | 'D'> = {
   4: 'D',
 };
 
+export const BLOCK_TM_LABELS: Record<number, string> = {
+  1: 'TM 1 (A)',
+  2: 'TM 2 (B)',
+  3: 'TM 3 (C)',
+  4: 'TM 4 (D)',
+};
+
 /** Semua peserta Hi Tikrar perempuan: sapaan & doa baku untuk pesan WhatsApp otomatis */
 export const TIKRAR_WA_SALUTATION = 'Kak';
 export const TIKRAR_WA_DOA_BARAKAH = 'Barakallahu fiiki';
@@ -49,9 +56,9 @@ export const TIKRAR_PACE_OPTIONS: readonly TikrarPaceOption[] = [
     durationMonths: 2,
     name: '10 Halaman / Bulan',
     badge: '⭐ Rekomendasi',
-    targetLabel: '1/2 Halaman (2 Blok) / Hari Aktif',
+    targetLabel: '1/2 Halaman (TM 1 & 2) / Hari Aktif',
     monthlyPagesLabel: '10 Hal / Bulan',
-    dailyPortionLabel: '1/2 Halaman (2 Blok) / hari',
+    dailyPortionLabel: '1/2 Halaman (TM 1 & 2) / hari',
     estimatedTimePerDay: '~45–60 mnt/hari',
     description: 'Paling seimbang & mutqin. Target 1 Juz tuntas dalam 2 bulan (~40–46 hari aktif).',
     tikrarLevel: 2,
@@ -61,9 +68,9 @@ export const TIKRAR_PACE_OPTIONS: readonly TikrarPaceOption[] = [
     durationMonths: 4,
     name: '5 Halaman / Bulan',
     badge: 'Santai Pemula',
-    targetLabel: '1/4 Halaman (1 Blok) / Hari Aktif',
+    targetLabel: '1/4 Halaman (TM 1) / Hari Aktif',
     monthlyPagesLabel: '5 Hal / Bulan',
-    dailyPortionLabel: '1/4 Halaman (1 Blok) / hari',
+    dailyPortionLabel: '1/4 Halaman (TM 1) / hari',
     estimatedTimePerDay: '~20–30 mnt/hari',
     description: 'Sangat ringan & bertahap. Cocok untuk ibu rumah tangga & pekerja yang sibuk.',
     tikrarLevel: 4,
@@ -72,9 +79,9 @@ export const TIKRAR_PACE_OPTIONS: readonly TikrarPaceOption[] = [
     durationMonths: 3,
     name: '7 Halaman / Bulan',
     badge: 'Santai Terukur',
-    targetLabel: '7 Blok / Pekan (~1,4 Blok / Hari)',
+    targetLabel: '7 TM / Pekan (~1,4 TM / Hari)',
     monthlyPagesLabel: '7 Hal / Bulan',
-    dailyPortionLabel: '~1–2 Blok / hari',
+    dailyPortionLabel: '~1–2 TM / hari',
     estimatedTimePerDay: '~30–45 mnt/hari',
     description: 'Ritme santai berkesinambungan. Target 1 Juz tuntas dalam 3 bulan (~58 hari aktif).',
     tikrarLevel: 3,
@@ -83,9 +90,9 @@ export const TIKRAR_PACE_OPTIONS: readonly TikrarPaceOption[] = [
     durationMonths: 1,
     name: '20 Halaman / Bulan',
     badge: 'Intensif Mutqin',
-    targetLabel: '1 Halaman Penuh / Hari Aktif',
+    targetLabel: '1 Halaman (TM 1–4) / Hari Aktif',
     monthlyPagesLabel: '20 Hal / Bulan',
-    dailyPortionLabel: '1 Halaman Penuh / hari',
+    dailyPortionLabel: '1 Halaman (TM 1–4) / hari',
     estimatedTimePerDay: '~1,5–2,5 jam/hari',
     description: 'Fokus intensif mutqin cepat. Target 1 Juz tuntas dalam 1 bulan (~20–23 hari aktif).',
     tikrarLevel: 1,

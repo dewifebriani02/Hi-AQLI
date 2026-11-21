@@ -63,9 +63,9 @@ function getSurahNameForPage(page: number): string {
 }
 
 function formatRangeLabel(range?: string | null): string {
-  if (range === 'blok_1_4') return '1 Halaman Penuh (Blok A–D)';
-  if (range === 'blok_3_4') return '1/2 Halaman Kedua (Blok C & D)';
-  return '1/2 Halaman Pertama (Blok A & B)';
+  if (range === 'blok_1_4') return '1 Halaman Penuh (TM 1–4 / Blok A–D)';
+  if (range === 'blok_3_4') return '1/2 Halaman Akhir (TM 3 & 4 / Blok C & D)';
+  return '1/2 Halaman Pertama (TM 1 & 2 / Blok A & B)';
 }
 
 export function TikrarDailyReport({
@@ -359,21 +359,21 @@ export function TikrarDailyReport({
 
       if (combCount > 0) {
         activeSub = {
-          stageName: `Penggabungan Blok ${letter} (Sub-blok A & B)`,
-          subBlockLetter: `Blok ${letter} Gabung`,
+          stageName: `Penggabungan TM ${b} (Blok ${letter})`,
+          subBlockLetter: `Gabung TM ${b}`,
           currentCount: combCount,
           targetCount: 40,
-          badgeText: `Blok ${letter}`,
+          badgeText: `TM ${b}`,
           isStarted: true,
         };
         break;
       } else if (bCount > 0) {
         activeSub = {
-          stageName: `Blok ${letter}-2 (Sub-blok Bagian Kedua)`,
-          subBlockLetter: `Blok ${letter}-2`,
+          stageName: `TM ${b}-2 (Blok ${letter}-2 Hitam)`,
+          subBlockLetter: `TM ${b}-2`,
           currentCount: bCount,
           targetCount: 40,
-          badgeText: `Blok ${letter}-2`,
+          badgeText: `TM ${b}-2`,
           isStarted: true,
         };
         break;
@@ -381,31 +381,31 @@ export function TikrarDailyReport({
         // Simak audio blok 5x sebelum counter blok terbuka
         const listen = getBlockListenCount(matched, b);
         activeSub = {
-          stageName: `Simak Audio Blok ${letter} 5x`,
-          subBlockLetter: `Simak Blok ${letter}`,
+          stageName: `Simak Audio TM ${b} (Blok ${letter}) 5x`,
+          subBlockLetter: `Simak TM ${b}`,
           currentCount: listen,
           targetCount: 5,
-          badgeText: `Simak ${letter}`,
+          badgeText: `Simak TM ${b}`,
           isStarted: listen > 0,
         };
         break;
       } else if (aCount > 0) {
         activeSub = {
-          stageName: `Blok ${letter}-1 (Sub-blok Bagian Pertama)`,
-          subBlockLetter: `Blok ${letter}-1`,
+          stageName: `TM ${b}-1 (Blok ${letter}-1 Maroon)`,
+          subBlockLetter: `TM ${b}-1`,
           currentCount: aCount,
           targetCount: 40,
-          badgeText: `Blok ${letter}-1`,
+          badgeText: `TM ${b}-1`,
           isStarted: true,
         };
         break;
       } else if (!activeSub) {
         activeSub = {
-          stageName: `Blok ${letter}-1 (Sub-blok Bagian Pertama)`,
-          subBlockLetter: `Blok ${letter}-1`,
+          stageName: `TM ${b}-1 (Blok ${letter}-1 Maroon)`,
+          subBlockLetter: `TM ${b}-1`,
           currentCount: 0,
           targetCount: 40,
-          badgeText: `Blok ${letter}-1`,
+          badgeText: `TM ${b}-1`,
           isStarted: false,
         };
         break;
@@ -416,11 +416,11 @@ export function TikrarDailyReport({
       const meta1234 = Number(metaObj['1_2_3_4']) || 0;
       if (meta1234 < 5) {
         activeSub = {
-          stageName: 'Penggabungan 1 Halaman Penuh (Blok A–D)',
-          subBlockLetter: 'Blok A–D (5x)',
+          stageName: 'Penggabungan 1 Halaman Penuh (TM 1–4 / Blok A–D)',
+          subBlockLetter: 'TM 1–4 (5x)',
           currentCount: meta1234,
           targetCount: 5,
-          badgeText: 'Gabung 1 Hal',
+          badgeText: 'Gabung TM 1–4',
           isStarted: true,
         };
       } else if (!(summary?.quizPassedPages || []).includes(pageNumber)) {
@@ -445,11 +445,11 @@ export function TikrarDailyReport({
     }
 
     const stage = activeSub || {
-      stageName: 'Blok A-1 (Sub-blok Bagian Pertama)',
-      subBlockLetter: 'Blok A-1',
+      stageName: 'TM 1-1 (Blok A-1 Maroon)',
+      subBlockLetter: 'TM 1-1',
       currentCount: 0,
       targetCount: 40,
-      badgeText: 'Blok A-1',
+      badgeText: 'TM 1-1',
       isStarted: false,
     };
 
@@ -691,7 +691,7 @@ export function TikrarDailyReport({
                   ) : (
                     <Lock className="w-3 h-3 mr-1 opacity-50" />
                   )}
-                  {recommendedPage}{letter}
+                  TM {b} ({letter})
                   {inProgress && (
                     <span className="ml-1 text-[10px] font-extrabold text-amber-700">
                       ({repCount}/40)

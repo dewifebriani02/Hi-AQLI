@@ -1070,7 +1070,7 @@ export function TikrarSystem({
         stopBlockAudio();
         playTikrarDone();
         toast({
-          title: `Simak Blok ${BLOCK_LETTERS[block]} Tuntas 5x`,
+          title: `Simak TM ${block} (Blok ${BLOCK_LETTERS[block]}) Tuntas 5x`,
           description: 'Counter blok ini sudah terbuka. Bismillah, mulai menghafal!',
         });
         setTimeout(() => {
@@ -1912,7 +1912,7 @@ export function TikrarSystem({
 
           <MetaStep
             stepKey="1_2"
-            label="GABUNG BLOK A & B (SYARAT SETORAN 1/2 HALAMAN PERTAMA)"
+            label="GABUNG TM 1 & TM 2 (BLOK A & B) • SYARAT SETORAN 1/2 HALAMAN PERTAMA"
             count={metaCounts['1_2']}
             threshold={10}
             isLocked={!isTuntasTM(1) || !isTuntasTM(2)}
@@ -1950,7 +1950,7 @@ export function TikrarSystem({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <MetaStep
               stepKey="2_3"
-              label="GABUNG BLOK B & C"
+              label="GABUNG TM 2 & TM 3 (BLOK B & C)"
               count={metaCounts['2_3']}
               threshold={10}
               isLocked={!isTuntasTM(3)}
@@ -1960,7 +1960,7 @@ export function TikrarSystem({
             />
             <MetaStep
               stepKey="1_2_3"
-              label="GABUNG BLOK A s/d C"
+              label="GABUNG TM 1–3 (BLOK A–C)"
               count={metaCounts['1_2_3']}
               threshold={5}
               isLocked={!isMetaTuntas('2_3')}
@@ -1999,7 +1999,7 @@ export function TikrarSystem({
           <div className="space-y-4">
             <MetaStep
               stepKey="3_4"
-              label="GABUNG BLOK C & D"
+              label="GABUNG TM 3 & TM 4 (BLOK C & D)"
               count={metaCounts['3_4']}
               threshold={10}
               isLocked={!isTuntasTM(4)}
@@ -2009,7 +2009,7 @@ export function TikrarSystem({
             />
             <MetaStep
               stepKey="2_3_4"
-              label="GABUNG BLOK B s/d D"
+              label="GABUNG TM 2–4 (BLOK B–D)"
               count={metaCounts['2_3_4']}
               threshold={5}
               isLocked={!isMetaTuntas('3_4')}
@@ -2019,7 +2019,7 @@ export function TikrarSystem({
             />
             <MetaStep
               stepKey="1_2_3_4"
-              label="GABUNG SELURUH HALAMAN (A - D)"
+              label="GABUNG SELURUH HALAMAN (TM 1–4 / BLOK A–D)"
               count={metaCounts['1_2_3_4']}
               threshold={5}
               isLocked={!isMetaTuntas('2_3_4')}
@@ -2356,7 +2356,7 @@ function MaqtaCard({
             {theme.badgeText}
           </Badge>
           <span className="text-[10px] font-black uppercase tracking-widest text-white/90 truncate">
-            ({page}{letter}) {isLocked && '• LOCK'}
+            (Hal. {page} • TM {id} / {letter}) {isLocked && '• LOCK'}
           </span>
           {rangeLabel && (
             <span className="text-[10px] font-bold text-[#D4AF37] truncate hidden sm:inline">
@@ -2412,7 +2412,7 @@ function MaqtaCard({
             ) : (
               <>
                 <Headphones className="w-5 h-5" />
-                {listenDone ? `Ulangi Simak Blok ${letter}` : `Simak Blok ${letter} (${listenCount}/5)`}
+                {listenDone ? `Ulangi Simak TM ${id} (Blok ${letter})` : `Simak TM ${id} (${listenCount}/5)`}
               </>
             )}
           </Button>
@@ -2468,7 +2468,7 @@ function MaqtaCard({
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox
             id={`step-${id}.a`}
-            label={`${page}${letter}-1${subSplit.subALabel ? ` • ${subSplit.subALabel}` : ''} (Maroon)`}
+            label={`TM ${id}-1 (${letter}-1)${subSplit.subALabel ? ` • ${subSplit.subALabel}` : ''} (Maroon)`}
             count={state.a.count}
             isLocked={countersLocked}
             onInc={(delta = 1) => addSubCount('a', delta)}
@@ -2479,7 +2479,7 @@ function MaqtaCard({
           />
           <CounterBox
             id={`step-${id}.b`}
-            label={`${page}${letter}-2${subSplit.subBLabel ? ` • ${subSplit.subBLabel}` : ''} (Hitam)`}
+            label={`TM ${id}-2 (${letter}-2)${subSplit.subBLabel ? ` • ${subSplit.subBLabel}` : ''} (Hitam)`}
             count={state.b.count}
             isLocked={countersLocked || state.a.count < PASS_THRESHOLD}
             onInc={(delta = 1) => addSubCount('b', delta)}
@@ -2505,8 +2505,7 @@ function MaqtaCard({
             )}
           >
             <span className="text-[10px] flex items-center gap-1 leading-none opacity-80 mb-1">
-              {isCombinedLocked ? <Lock className="w-3 h-3" /> : null} GABUNG {page}
-              {letter} • {isDoneG ? '+1 LAGI' : 'KETUK +1'}
+              {isCombinedLocked ? <Lock className="w-3 h-3" /> : null} GABUNG TM {id} (BLOK {letter}) • {isDoneG ? '+1 LAGI' : 'KETUK +1'}
             </span>
             <span className="text-2xl leading-none">
               {state.combined.count} <span className="text-sm opacity-70">/ {PASS_THRESHOLD}</span>
