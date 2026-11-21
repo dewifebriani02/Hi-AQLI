@@ -42,10 +42,10 @@ import {
   Edit3, 
   Filter,
   Layers,
-  ArrowLeft,
   Video,
   Sparkles,
-  BookOpen
+  BookOpen,
+  GraduationCap
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -131,11 +131,37 @@ Semoga Allah Subhanahu wa Ta'ala memudahkan setiap lisan dan hati kita dalam men
 _Wassalamu'alaikum Warahmatullahi Wabarakatuh_
 — *Tim Musyrifah & Admin Hi Tikrar AQLI* 🌷`;
 
+const TEMPLATE_PANDUAN_MUFRADAT = `*BISMILLAHIRRAHMANIRRAHIM* 📙✨
+*PANDUAN RESMI PROGRAM HI MUFRADAT*
+_AQLI Digital - Memahami Kosa Kata Al-Qur'an dengan Menyenangkan_
+
+Assalamu'alaikum Warahmatullahi Wabarakatuh, Ukhti Fillah 🌸
+
+Selamat datang di *Hi Mufradat*! Mari maksimalkan pemahaman kosa kata Al-Qur'an agar tadabbur tilawah semakin mendalam:
+
+━━━━━━━━━━━━━━━━━━━
+✨ *LANGKAH BELAJAR:*
+━━━━━━━━━━━━━━━━━━━
+1. Kunjungi platform: https://hiaqli.pro/mufradat
+2. Pilih Juz aktif dan target halaman pekan ini.
+3. Kerjakan Kuis Makna Kata per ayat (tersedia pilihan ganda, susun kata, & tebak terjemah).
+4. Target minimal: Tuntaskan *1 Halaman per pekan* untuk menjaga ritme belajar.
+5. Panjat Leaderboard Papan Juara dan ikuti sesi *Mabar Al-Qur'an* bersama thalibah lainnya!
+
+_Barakallahu fiikum wa jazakillahu khairan._
+— *Tim Musyrifah Hi Mufradat AQLI* 🌿`;
+
+const TEMPLATE_PENGINGAT_HARIAN = `Assalamu'alaikum Warahmatullahi Wabarakatuh Ukhti fillah 🌸
+
+Pengingat latihan hafalan hari ini di https://hiaqli.pro/tikrar . Yuk luangkan 10-15 menit untuk murajaah dan simak audio makhraj hari ini.
+
+Istiqomah walau satu ayat, semoga menjadi amal jariyah yang terus mengalir. Semangat! ✨`;
+
 export default function AdminGroupsPage() {
   const { user } = useUser();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'groups' | 'logs' | 'direct'>('groups');
+  const [activeTab, setActiveTab] = useState<'groups' | 'logs'>('groups');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'tikrar' | 'mufradat' | 'ngaji'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -145,6 +171,7 @@ export default function AdminGroupsPage() {
   const [watzapStatus, setWatzapStatus] = useState<any>(null);
   const [watzapGroups, setWatzapGroups] = useState<any[]>([]);
   const [recentLogs, setRecentLogs] = useState<LogItem[]>([]);
+  const [logSearch, setLogSearch] = useState('');
 
   // Modals state
   const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
@@ -152,7 +179,6 @@ export default function AdminGroupsPage() {
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [customWatzapId, setCustomWatzapId] = useState('');
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
-  const [copiedText, setCopiedText] = useState(false);
 
   // Members modal
   const [membersModalOpen, setMembersModalOpen] = useState(false);
@@ -236,18 +262,37 @@ export default function AdminGroupsPage() {
 
   // Counts
   const counts = useMemo(() => {
+    const totalMembers = groups.reduce((sum, g) => sum + (g.member_count || 0), 0);
     return {
       all: groups.length,
       tikrar: groups.filter(g => g.program_category === 'tikrar').length,
       mufradat: groups.filter(g => g.program_category === 'mufradat').length,
       ngaji: groups.filter(g => g.program_category === 'ngaji').length,
+      members: totalMembers
     };
   }, [groups]);
+
+  // Filtered Logs
+  const filteredLogs = useMemo(() => {
+    if (!logSearch.trim()) return recentLogs;
+    const q = logSearch.toLowerCase();
+    return recentLogs.filter(l => 
+      l.recipient?.toLowerCase().includes(q) ||
+      l.message?.toLowerCase().includes(q) ||
+      l.type?.toLowerCase().includes(q)
+    );
+  }, [recentLogs, logSearch]);
 
   // Open Broadcast Modal
   const handleOpenBroadcast = (group: GroupItem) => {
     setSelectedGroup(group);
-    setBroadcastMessage(group.program_category === 'tikrar' ? TEMPLATE_PANDUAN_TIKRAR : '');
+    setBroadcastMessage(
+      group.program_category === 'tikrar' 
+        ? TEMPLATE_PANDUAN_TIKRAR 
+        : group.program_category === 'mufradat' 
+        ? TEMPLATE_PANDUAN_MUFRADAT 
+        : ''
+    );
     setCustomWatzapId(group.whatsapp_group_id || '');
     setBroadcastModalOpen(true);
   };
@@ -290,7 +335,7 @@ export default function AdminGroupsPage() {
           description: `Pesan sukses terkirim ke WhatsApp ${selectedGroup.name}.`
         });
         setBroadcastModalOpen(false);
-        loadData(); // refresh logs
+        loadData();
       } else {
         toast({
           title: "Gagal Mengirim Broadcast",
@@ -439,36 +484,31 @@ export default function AdminGroupsPage() {
     }
   };
 
-  // Helper copy text
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedText(true);
-    setTimeout(() => setCopiedText(false), 2000);
     toast({ title: "Disalin!", description: "Teks berhasil disalin ke clipboard." });
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 space-y-6">
-      {/* Top Breadcrumb & Status */}
+    <div className="max-w-6xl mx-auto pb-28 space-y-6">
+      {/* Header & Breadcrumb */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link href="/admin" className="text-xs font-bold text-muted-foreground hover:text-[#800000] flex items-center gap-1">
-              <ArrowLeft className="w-3.5 h-3.5" /> Dashboard Admin
-            </Link>
-            <span className="text-xs text-muted-foreground">/</span>
-            <span className="text-xs font-bold text-[#800000]">Manajemen Grup & Monitor WhatsApp</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Link href="/admin" className="hover:text-[#6D123F] font-bold">Dashboard Admin</Link>
+            <span>/</span>
+            <span className="text-[#6D123F] font-bold">Grup & Robot WhatsApp</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-slate-900 flex items-center gap-2.5">
             <MessageSquare className="w-7 h-7 text-emerald-600" />
-            Daftar Grup & Monitor Pesan
+            Daftar Grup & Robot WhatsApp
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
-            Pastikan pesan broadcast tepat sasaran (Hi Tikrar vs Hi Mufradat), pantau log pesan, dan kirim japri ke thalibah.
+            Kirim pengumuman resmi ke grup peserta (Hi Tikrar vs Hi Mufradat), kirim pesan japri via gateway, dan pantau log pengiriman.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-center">
           {/* WatZap Gateway Status */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-slate-50 text-xs font-medium">
             <Radio className={cn("w-3.5 h-3.5 animate-pulse", watzapStatus?.configured ? "text-emerald-500" : "text-amber-500")} />
@@ -494,16 +534,91 @@ export default function AdminGroupsPage() {
         </div>
       </div>
 
+      {/* KPI Stats Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <button
+          onClick={() => { setCategoryFilter('all'); setActiveTab('groups'); }}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all",
+            categoryFilter === 'all' && activeTab === 'groups'
+              ? "bg-[#6D123F]/5 border-[#6D123F] shadow-sm"
+              : "bg-white hover:bg-slate-50 border-slate-200"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Semua Grup</span>
+            <Layers className="w-3.5 h-3.5 text-[#6D123F]" />
+          </div>
+          <p className="text-xl font-black text-slate-900 mt-1">{counts.all}</p>
+        </button>
+
+        <button
+          onClick={() => { setCategoryFilter('tikrar'); setActiveTab('groups'); }}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all",
+            categoryFilter === 'tikrar' && activeTab === 'groups'
+              ? "bg-emerald-50 border-emerald-500 shadow-sm"
+              : "bg-white hover:bg-slate-50 border-slate-200"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Hi Tikrar</span>
+            <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+          </div>
+          <p className="text-xl font-black text-emerald-900 mt-1">{counts.tikrar}</p>
+        </button>
+
+        <button
+          onClick={() => { setCategoryFilter('mufradat'); setActiveTab('groups'); }}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all",
+            categoryFilter === 'mufradat' && activeTab === 'groups'
+              ? "bg-amber-50 border-amber-500 shadow-sm"
+              : "bg-white hover:bg-slate-50 border-slate-200"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">Hi Mufradat</span>
+            <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+          </div>
+          <p className="text-xl font-black text-amber-900 mt-1">{counts.mufradat}</p>
+        </button>
+
+        <button
+          onClick={() => { setCategoryFilter('ngaji'); setActiveTab('groups'); }}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all",
+            categoryFilter === 'ngaji' && activeTab === 'groups'
+              ? "bg-blue-50 border-blue-500 shadow-sm"
+              : "bg-white hover:bg-slate-50 border-slate-200"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">Hi Ngaji</span>
+            <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+          </div>
+          <p className="text-xl font-black text-blue-900 mt-1">{counts.ngaji}</p>
+        </button>
+
+        <div className="p-3 rounded-2xl border bg-white border-slate-200 text-left col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Anggota</span>
+            <Users className="w-3.5 h-3.5 text-slate-400" />
+          </div>
+          <p className="text-xl font-black text-slate-900 mt-1">{counts.members} <span className="text-xs font-normal text-slate-400">orang</span></p>
+        </div>
+      </div>
+
       {/* Safety Alert Banner */}
-      <div className="bg-gradient-to-r from-amber-50 via-emerald-50 to-blue-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+      <div className="bg-gradient-to-r from-emerald-50 via-amber-50 to-blue-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-amber-500 text-white rounded-xl shadow-sm mt-0.5 sm:mt-0">
+          <div className="p-2 bg-[#6D123F] text-white rounded-xl shadow-sm mt-0.5 sm:mt-0">
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <h4 className="text-sm font-bold text-slate-900">Perhatian Khusus Sasaran Grup</h4>
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Perhatian Sasaran Broadcast WhatsApp</h4>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Program <strong className="text-emerald-800">Hi Tikrar</strong> (Target Hafalan & Setoran Harian) memiliki grup terpisah dari <strong className="text-amber-800">Hi Mufradat</strong> (Kuis Kosa Kata). Selalu pastikan memilih tombol broadcast pada grup yang tepat.
+              Program <strong className="text-emerald-800">Hi Tikrar</strong> (Target Hafalan Harian) memiliki grup terpisah dari <strong className="text-amber-800">Hi Mufradat</strong> (Kuis Kosa Kata). Pastikan selalu memilih template dan grup yang sesuai agar informasi tepat sasaran.
             </p>
           </div>
         </div>
@@ -521,7 +636,7 @@ export default function AdminGroupsPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all",
             activeTab === 'groups'
-              ? "border-emerald-600 text-emerald-700 bg-emerald-50/50"
+              ? "border-[#6D123F] text-[#6D123F] bg-[#6D123F]/5 rounded-t-xl"
               : "border-transparent text-slate-500 hover:text-slate-800"
           )}
         >
@@ -534,7 +649,7 @@ export default function AdminGroupsPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all",
             activeTab === 'logs'
-              ? "border-emerald-600 text-emerald-700 bg-emerald-50/50"
+              ? "border-[#6D123F] text-[#6D123F] bg-[#6D123F]/5 rounded-t-xl"
               : "border-transparent text-slate-500 hover:text-slate-800"
           )}
         >
@@ -547,64 +662,49 @@ export default function AdminGroupsPage() {
       {activeTab === 'groups' && (
         <div className="space-y-6">
           {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl">
-              <button
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border shadow-sm">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Button
+                variant={categoryFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => setCategoryFilter('all')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                  categoryFilter === 'all'
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                )}
+                className={cn("h-8 px-3 rounded-xl text-xs font-bold", categoryFilter === 'all' && "bg-[#6D123F] hover:bg-[#6D123F]/90 text-white")}
               >
                 Semua ({counts.all})
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={categoryFilter === 'tikrar' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => setCategoryFilter('tikrar')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
-                  categoryFilter === 'tikrar'
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-emerald-800 hover:bg-emerald-100/50"
-                )}
+                className={cn("h-8 px-3 rounded-xl text-xs font-bold", categoryFilter === 'tikrar' && "bg-emerald-700 hover:bg-emerald-800 text-white")}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                 Hi Tikrar ({counts.tikrar})
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={categoryFilter === 'mufradat' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => setCategoryFilter('mufradat')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
-                  categoryFilter === 'mufradat'
-                    ? "bg-amber-600 text-white shadow-sm"
-                    : "text-amber-800 hover:bg-amber-100/50"
-                )}
+                className={cn("h-8 px-3 rounded-xl text-xs font-bold", categoryFilter === 'mufradat' && "bg-amber-700 hover:bg-amber-800 text-white")}
               >
-                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
                 Hi Mufradat ({counts.mufradat})
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={categoryFilter === 'ngaji' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => setCategoryFilter('ngaji')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
-                  categoryFilter === 'ngaji'
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-blue-800 hover:bg-blue-100/50"
-                )}
+                className={cn("h-8 px-3 rounded-xl text-xs font-bold", categoryFilter === 'ngaji' && "bg-blue-700 hover:bg-blue-800 text-white")}
               >
-                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                Hi Ngaji & Lainnya ({counts.ngaji})
-              </button>
+                Hi Ngaji ({counts.ngaji})
+              </Button>
             </div>
 
-            <div className="relative w-full sm:w-64">
+            <div className="relative flex-1 sm:max-w-xs">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
-                placeholder="Cari grup atau musyrifah..."
+                placeholder="Cari nama grup atau musyrifah..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 text-xs rounded-xl bg-white"
+                className="pl-9 h-9 text-xs rounded-xl bg-slate-50 border-slate-200"
               />
             </div>
           </div>
@@ -612,11 +712,11 @@ export default function AdminGroupsPage() {
           {/* Group List Grid */}
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3">
-              <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
+              <RefreshCw className="w-8 h-8 animate-spin text-[#6D123F]" />
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Memuat data grup...</p>
             </div>
           ) : filteredGroups.length === 0 ? (
-            <div className="py-16 text-center border-2 border-dashed rounded-2xl bg-slate-50/50">
+            <div className="py-16 text-center border-2 border-dashed rounded-3xl bg-white">
               <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-2" />
               <p className="text-sm font-bold text-slate-700">Tidak ada grup ditemukan</p>
               <p className="text-xs text-slate-400">Coba ubah filter kategori atau kata kunci pencarian.</p>
@@ -631,37 +731,37 @@ export default function AdminGroupsPage() {
                   <Card 
                     key={group.id} 
                     className={cn(
-                      "border overflow-hidden transition-all hover:shadow-md flex flex-col justify-between",
-                      isTikrar && "border-emerald-200/80 bg-gradient-to-b from-emerald-50/40 to-white",
-                      isMufradat && "border-amber-200/80 bg-gradient-to-b from-amber-50/40 to-white",
-                      !isTikrar && !isMufradat && "border-slate-200 bg-white"
+                      "border rounded-2xl overflow-hidden transition-all hover:shadow-md flex flex-col justify-between bg-white",
+                      isTikrar && "border-emerald-200/80 bg-gradient-to-b from-emerald-50/30 to-white",
+                      isMufradat && "border-amber-200/80 bg-gradient-to-b from-amber-50/30 to-white",
+                      !isTikrar && !isMufradat && "border-slate-200"
                     )}
                   >
                     <CardHeader className="p-5 pb-3">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1 flex-1">
+                        <div className="space-y-1 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             {isTikrar ? (
-                              <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] tracking-wide">
+                              <Badge className="bg-emerald-600 text-white font-black text-[9px] border-none">
                                 📖 HI TIKRAR
                               </Badge>
                             ) : isMufradat ? (
-                              <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] tracking-wide">
+                              <Badge className="bg-amber-600 text-white font-black text-[9px] border-none">
                                 📙 HI MUFRADAT
                               </Badge>
                             ) : (
-                              <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] tracking-wide">
+                              <Badge className="bg-blue-600 text-white font-black text-[9px] border-none">
                                 📚 HI NGAJI
                               </Badge>
                             )}
 
                             <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                              <Users className="w-3.5 h-3.5 text-slate-400" />
+                              <Users className="w-3 h-3 text-slate-400" />
                               {group.member_count} Thalibah
                             </span>
                           </div>
 
-                          <CardTitle className="text-base font-black font-headline text-slate-900 leading-snug pt-1">
+                          <CardTitle className="text-base font-bold text-slate-900 leading-snug pt-1 truncate">
                             {group.name}
                           </CardTitle>
                         </div>
@@ -670,11 +770,11 @@ export default function AdminGroupsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleOpenEdit(group)}
-                          className="h-8 px-2.5 text-xs font-bold text-slate-700 hover:text-slate-900 border-slate-300 rounded-xl gap-1.5 shrink-0 bg-white shadow-xs"
+                          className="h-8 px-2.5 text-xs font-bold text-slate-700 hover:text-slate-900 border-slate-200 rounded-xl gap-1 shrink-0 bg-white"
                           title="Edit Pengaturan & Jadwal Grup"
                         >
-                          <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Edit Jadwal</span>
+                          <Edit3 className="w-3 h-3 text-slate-500" />
+                          <span>Atur</span>
                         </Button>
                       </div>
 
@@ -691,8 +791,8 @@ export default function AdminGroupsPage() {
                     </CardHeader>
 
                     <CardContent className="p-5 pt-2 space-y-3">
-                      {/* WhatsApp Info & IDs */}
-                      <div className="bg-white/80 border rounded-xl p-2.5 text-[11px] space-y-1.5">
+                      {/* WhatsApp Info */}
+                      <div className="bg-slate-50 border rounded-xl p-2.5 text-[11px] space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-slate-500 font-medium">Link Grup WA:</span>
                           {group.whatsapp_group_link ? (
@@ -700,51 +800,47 @@ export default function AdminGroupsPage() {
                               href={group.whatsapp_group_link} 
                               target="_blank" 
                               rel="noreferrer"
-                              className="text-emerald-700 hover:underline font-bold flex items-center gap-1"
+                              className="font-bold text-emerald-700 hover:underline flex items-center gap-1 truncate max-w-[200px]"
                             >
-                              Buka di WhatsApp <ExternalLink className="w-3 h-3" />
+                              Buka Link <ExternalLink className="w-3 h-3" />
                             </a>
                           ) : (
-                            <span className="text-slate-400 italic">Belum ada link</span>
+                            <span className="text-slate-400 italic">Belum diisi</span>
                           )}
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-500 font-medium">WatZap Group ID:</span>
-                          {group.whatsapp_group_id ? (
-                            <span className="font-mono text-slate-800 font-bold bg-slate-100 px-1.5 py-0.5 rounded">
-                              {group.whatsapp_group_id}
-                            </span>
-                          ) : (
-                            <span className="text-amber-600 font-medium flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3" /> Belum diatur
-                            </span>
-                          )}
+                          <span className="text-slate-500 font-medium">WatZap ID:</span>
+                          <span className="font-mono text-[10px] text-slate-700 bg-white px-1.5 py-0.5 rounded border truncate max-w-[220px]">
+                            {group.whatsapp_group_id || 'Belum di-mapping'}
+                          </span>
                         </div>
                       </div>
 
                       {/* Action Buttons */}
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenMembers(group)}
+                          className="rounded-xl font-bold text-xs h-9 border-slate-200 hover:bg-slate-50 gap-1.5"
+                        >
+                          <Users className="w-3.5 h-3.5 text-slate-600" />
+                          Lihat Anggota
+                        </Button>
+
+                        <Button
+                          size="sm"
                           onClick={() => handleOpenBroadcast(group)}
                           className={cn(
-                            "w-full text-xs font-bold h-9 rounded-xl gap-1.5 text-white shadow-sm",
+                            "rounded-xl font-bold text-xs h-9 text-white gap-1.5 shadow-xs",
                             isTikrar && "bg-emerald-700 hover:bg-emerald-800",
-                            isMufradat && "bg-amber-600 hover:bg-amber-700",
-                            !isTikrar && !isMufradat && "bg-slate-800 hover:bg-slate-900"
+                            isMufradat && "bg-amber-700 hover:bg-amber-800",
+                            !isTikrar && !isMufradat && "bg-[#6D123F] hover:bg-[#6D123F]/90"
                           )}
                         >
                           <Send className="w-3.5 h-3.5" />
                           Broadcast Pesan
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={() => handleOpenMembers(group)}
-                          className="w-full text-xs font-bold h-9 rounded-xl gap-1.5 border-slate-300 hover:bg-slate-100"
-                        >
-                          <Users className="w-3.5 h-3.5" />
-                          Anggota ({group.member_count})
                         </Button>
                       </div>
                     </CardContent>
@@ -758,64 +854,59 @@ export default function AdminGroupsPage() {
 
       {/* TAB 2: LOGS MONITOR */}
       {activeTab === 'logs' && (
-        <Card className="border-none shadow-sm overflow-hidden">
-          <CardHeader className="bg-slate-50/80 border-b pb-4">
+        <Card className="border rounded-2xl shadow-sm bg-white overflow-hidden">
+          <CardHeader className="p-5 border-b bg-slate-50/60">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-lg font-bold font-headline flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-emerald-600" />
-                  Audit Log Pengiriman WhatsApp
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-emerald-600" />
+                  Monitor Pengiriman Pesan WhatsApp
                 </CardTitle>
-                <CardDescription>
-                  Semua pesan yang diproses ke WhatsApp grup maupun pesan japri peserta dicatat di sini.
+                <CardDescription className="text-xs">
+                  Riwayat pesan broadcast dan pesan japri yang dikirimkan oleh sistem atau robot WA.
                 </CardDescription>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadData}
-                disabled={refreshing}
-                className="rounded-xl font-bold text-xs h-8 gap-1.5 self-start sm:self-auto"
-              >
-                <RefreshCw className={cn("w-3 h-3", refreshing && "animate-spin")} />
-                Refresh Log
-              </Button>
+              <div className="relative sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  placeholder="Cari penerima atau isi..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="pl-8 h-8 text-xs rounded-xl bg-white"
+                />
+              </div>
             </div>
           </CardHeader>
+
           <CardContent className="p-0">
-            {recentLogs.length === 0 ? (
-              <div className="py-12 text-center">
-                <Clock className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-bold text-slate-600">Belum ada riwayat log pengiriman</p>
-                <p className="text-xs text-slate-400">Pesan yang dikirim melalui sistem akan muncul otomatis di sini.</p>
+            {filteredLogs.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-400 italic">
+                Belum ada data pengiriman pesan tercatat.
               </div>
             ) : (
-              <div className="divide-y overflow-x-auto">
-                {recentLogs.map((log) => {
-                  const isSuccess = log.status === 'sent';
-                  const isTikrar = log.type?.includes('tikrar');
-                  const isMufradat = log.type?.includes('mufradat');
-
+              <div className="divide-y max-h-[600px] overflow-y-auto">
+                {filteredLogs.map((log) => {
+                  const isSuccess = log.status === 'sent' || log.status === 'success';
                   return (
                     <div key={log.id} className="p-4 hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs">
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           {isSuccess ? (
-                            <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[10px] gap-1">
+                            <Badge className="bg-emerald-100 text-emerald-800 border-none font-bold text-[9px] gap-1">
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Terkirim
                             </Badge>
                           ) : (
-                            <Badge className="bg-red-100 text-red-800 border border-red-300 font-bold text-[10px] gap-1">
-                              <AlertTriangle className="w-3 h-3 text-red-600" /> Gagal
+                            <Badge className="bg-rose-100 text-rose-800 border-none font-bold text-[9px] gap-1">
+                              <AlertTriangle className="w-3 h-3 text-rose-600" /> Gagal
                             </Badge>
                           )}
 
-                          <Badge variant="outline" className="text-[10px] font-mono">
+                          <Badge variant="outline" className="text-[9px] font-mono">
                             {log.type}
                           </Badge>
 
-                          <span className="text-slate-400 text-[11px]">
+                          <span className="text-slate-400 text-[10px]">
                             {new Date(log.created_at).toLocaleString('id-ID', {
                               dateStyle: 'medium',
                               timeStyle: 'short'
@@ -824,13 +915,13 @@ export default function AdminGroupsPage() {
                         </div>
 
                         <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                          <span>Tujuan:</span>
-                          <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-900">
+                          <span className="text-slate-400">Tujuan:</span>
+                          <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-900 text-xs">
                             {log.recipient}
                           </span>
                         </div>
 
-                        <p className="text-slate-600 line-clamp-2 bg-slate-50 p-2 rounded-lg border font-mono text-[11px] whitespace-pre-wrap">
+                        <p className="text-slate-600 line-clamp-2 bg-slate-50 p-2.5 rounded-xl border font-sans text-xs whitespace-pre-wrap leading-relaxed">
                           {log.message}
                         </p>
                       </div>
@@ -855,36 +946,34 @@ export default function AdminGroupsPage() {
         </Card>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 1: BROADCAST PESAN KE GRUP (WITH PROMINENT SAFETY TARGET BANNER)   */}
-      {/* ========================================================================= */}
+      {/* MODAL: BROADCAST KE GRUP */}
       <Dialog open={broadcastModalOpen} onOpenChange={setBroadcastModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-headline font-black flex items-center gap-2 text-slate-900">
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-slate-900">
               <Send className="w-5 h-5 text-emerald-600" />
               Kirim Broadcast Pesan ke Grup
             </DialogTitle>
             <DialogDescription>
-              Tinjau target grup dan format pesan sebelum mengirim.
+              Tinjau target grup dan pilih template pesan sebelum mengirim ke WhatsApp.
             </DialogDescription>
           </DialogHeader>
 
           {selectedGroup && (
             <div className="space-y-4 pt-2">
-              {/* Target Banner */}
+              {/* Target Confirmation Banner */}
               <div className={cn(
-                "p-4 rounded-2xl border-2 flex flex-col gap-2",
-                selectedGroup.program_category === 'tikrar' && "bg-emerald-50 border-emerald-400 text-emerald-950",
-                selectedGroup.program_category === 'mufradat' && "bg-amber-50 border-amber-400 text-amber-950",
-                selectedGroup.program_category !== 'tikrar' && selectedGroup.program_category !== 'mufradat' && "bg-slate-50 border-slate-300 text-slate-900"
+                "p-4 rounded-2xl border flex flex-col gap-2",
+                selectedGroup.program_category === 'tikrar' && "bg-emerald-50/80 border-emerald-300 text-emerald-950",
+                selectedGroup.program_category === 'mufradat' && "bg-amber-50/80 border-amber-300 text-amber-950",
+                selectedGroup.program_category !== 'tikrar' && selectedGroup.program_category !== 'mufradat' && "bg-slate-50 border-slate-200 text-slate-900"
               )}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-black uppercase tracking-wider opacity-75">
+                  <span className="text-[10px] font-black uppercase tracking-wider opacity-75">
                     KONFIRMASI SASARAN GRUP:
                   </span>
                   <Badge className={cn(
-                    "font-black text-[10px]",
+                    "font-black text-[9px] border-none",
                     selectedGroup.program_category === 'tikrar' && "bg-emerald-700 text-white",
                     selectedGroup.program_category === 'mufradat' && "bg-amber-700 text-white"
                   )}>
@@ -892,14 +981,14 @@ export default function AdminGroupsPage() {
                   </Badge>
                 </div>
 
-                <div className="text-base font-black">
+                <div className="text-base font-bold text-slate-900">
                   {selectedGroup.name}
                 </div>
 
-                <p className="text-xs opacity-80">
+                <p className="text-xs opacity-80 leading-relaxed">
                   {selectedGroup.program_category === 'tikrar' 
-                    ? '✅ Ini adalah grup Hi Tikrar (Target Hafalan & Setoran). Pesan panduan hafalan cocok dikirim ke sini.'
-                    : '⚠️ Ini adalah grup Hi Mufradat (Kuis Kosa Kata harian). Jangan kirim panduan Tikrar ke grup ini.'}
+                    ? '✅ Ini adalah grup Hi Tikrar (Target Hafalan & Setoran). Gunakan panduan hafalan untuk grup ini.'
+                    : '⚠️ Ini adalah grup Hi Mufradat (Kuis Kosa Kata harian). Gunakan panduan kosa kata untuk grup ini.'}
                 </p>
               </div>
 
@@ -936,16 +1025,13 @@ export default function AdminGroupsPage() {
                   onChange={(e) => setCustomWatzapId(e.target.value)}
                   className="font-mono text-xs rounded-xl"
                 />
-                <p className="text-[11px] text-slate-500">
-                  Group ID diperoleh dari gateway WatZap saat nomor bot bergabung ke dalam grup WhatsApp.
-                </p>
               </div>
 
               {/* Quick Template Picker */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  Template Cepat
+                  Pilihan Template Cepat
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -955,26 +1041,34 @@ export default function AdminGroupsPage() {
                     onClick={() => setBroadcastMessage(TEMPLATE_PANDUAN_TIKRAR)}
                     className="text-xs font-bold rounded-xl h-8 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
                   >
-                    📖 Sisipkan Panduan Resmi Hi Tikrar
+                    📖 Panduan Hi Tikrar
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setBroadcastMessage(`Assalamu'alaikum Warahmatullahi Wabarakatuh Ukhti fillah 🌸\n\nPengingat latihan hafalan hari ini di https://hiaqli.pro/tikrar . Yuk luangkan 10-15 menit untuk murajaah dan simak audio makhraj.\n\nSemangat istiqomah! ✨`)}
+                    onClick={() => setBroadcastMessage(TEMPLATE_PANDUAN_MUFRADAT)}
+                    className="text-xs font-bold rounded-xl h-8 border-amber-300 text-amber-800 hover:bg-amber-50"
+                  >
+                    📙 Panduan Hi Mufradat
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBroadcastMessage(TEMPLATE_PENGINGAT_HARIAN)}
                     className="text-xs font-bold rounded-xl h-8"
                   >
                     ⏰ Pengingat Latihan Harian
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => copyToClipboard(broadcastMessage)}
-                    className="text-xs font-bold rounded-xl h-8 gap-1 ml-auto"
+                    className="text-xs font-bold rounded-xl h-8 gap-1 ml-auto text-slate-500"
                   >
-                    <Copy className="w-3 h-3" />
-                    Salin Teks Saja
+                    <Copy className="w-3 h-3" /> Salin Teks
                   </Button>
                 </div>
               </div>
@@ -983,7 +1077,7 @@ export default function AdminGroupsPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">Isi Pesan Broadcast</Label>
                 <Textarea
-                  rows={10}
+                  rows={9}
                   value={broadcastMessage}
                   onChange={(e) => setBroadcastMessage(e.target.value)}
                   placeholder="Ketik pesan broadcast di sini..."
@@ -991,7 +1085,6 @@ export default function AdminGroupsPage() {
                 />
               </div>
 
-              {/* Quick link to open in WhatsApp Web as alternative */}
               {selectedGroup.whatsapp_group_link && (
                 <div className="p-3 bg-slate-50 border rounded-xl flex items-center justify-between text-xs">
                   <span className="text-slate-600">Atau kirim manual lewat WhatsApp Web:</span>
@@ -1039,17 +1132,15 @@ export default function AdminGroupsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ========================================================================= */}
-      {/* MODAL 2: DAFTAR ANGGOTA & JAPRI PESERTA                                  */}
-      {/* ========================================================================= */}
+      {/* MODAL: DAFTAR ANGGOTA */}
       <Dialog open={membersModalOpen} onOpenChange={setMembersModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-headline font-black flex items-center gap-2 text-slate-900">
+            <DialogTitle className="text-base font-bold flex items-center gap-2 text-slate-900">
               <Users className="w-5 h-5 text-emerald-600" />
               Anggota Grup: {selectedGroup?.name}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               Daftar thalibah yang terdaftar dalam grup ini. Anda dapat mengirim pesan japri langsung.
             </DialogDescription>
           </DialogHeader>
@@ -1080,7 +1171,7 @@ export default function AdminGroupsPage() {
                   const rawPhone = member.whatsapp || member.phone || '';
                   const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
                   const waUrl = cleanPhone 
-                    ? `https://wa.me/${cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone}`
+                    ? `https://wa.me/${cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone}?text=${encodeURIComponent(`Assalamu'alaikum Ukhti ${member.full_name || member.username} 🌸`)}`
                     : null;
 
                   return (
@@ -1108,7 +1199,7 @@ export default function AdminGroupsPage() {
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-bold text-[11px]"
                           >
                             <Phone className="w-3 h-3" />
-                            Japri WA Web
+                            Chat WA
                           </a>
                         ) : (
                           <span className="text-[10px] text-slate-400 italic">No phone</span>
@@ -1133,17 +1224,15 @@ export default function AdminGroupsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ========================================================================= */}
-      {/* MODAL 3: JAPRI PESERTA VIA GATEWAY                                      */}
-      {/* ========================================================================= */}
+      {/* MODAL: JAPRI PESERTA VIA GATEWAY */}
       <Dialog open={directModalOpen} onOpenChange={setDirectModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-headline font-black flex items-center gap-2 text-slate-900">
+            <DialogTitle className="text-base font-bold flex items-center gap-2 text-slate-900">
               <Send className="w-4 h-4 text-emerald-600" />
               Kirim Pesan Japri: {directRecipient?.full_name || directRecipient?.username}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               Pesan akan dikirim langsung ke nomor WhatsApp peserta melalui WatZap Gateway.
             </DialogDescription>
           </DialogHeader>
@@ -1161,7 +1250,7 @@ export default function AdminGroupsPage() {
                 value={directMessageText}
                 onChange={(e) => setDirectMessageText(e.target.value)}
                 placeholder="Tulis pesan japri..."
-                className="text-xs rounded-xl"
+                className="text-xs rounded-xl font-sans"
               />
             </div>
           </div>
@@ -1183,89 +1272,82 @@ export default function AdminGroupsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ========================================================================= */}
-      {/* MODAL 4: EDIT GROUP DETAILS                                              */}
-      {/* ========================================================================= */}
+      {/* MODAL: EDIT GROUP DETAILS */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-headline font-black flex items-center gap-2 text-slate-900">
+            <DialogTitle className="text-base font-bold flex items-center gap-2 text-slate-900">
               <Edit3 className="w-4 h-4 text-emerald-600" />
               Atur Data Grup: {editingGroupValues.name}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               Perbarui link WhatsApp, WatZap Group ID, nama musyrifah, atau jadwal.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 pt-2">
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">Nama Grup</Label>
+          <div className="space-y-3 py-2 text-xs">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Nama Grup / Kelas</Label>
               <Input
                 value={editingGroupValues.name}
-                onChange={(e) => setEditingGroupValues(prev => ({ ...prev, name: e.target.value }))}
-                className="text-xs rounded-xl"
+                onChange={(e) => setEditingGroupValues({ ...editingGroupValues, name: e.target.value })}
+                className="rounded-xl text-xs"
               />
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold text-slate-700">Jadwal Sesi (Ditentukan Admin)</Label>
-                <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50">
-                  Setting Jadwal
-                </Badge>
-              </div>
-              <Input
-                placeholder="Contoh: Senin - Jumat (Ditentukan Admin) atau 05:30 - 06:30 WIB"
-                value={editingGroupValues.schedule}
-                onChange={(e) => setEditingGroupValues(prev => ({ ...prev, schedule: e.target.value }))}
-                className="text-xs rounded-xl font-bold text-slate-900"
-              />
-              <p className="text-[11px] text-slate-500">
-                Jadwal yang diatur di sini akan otomatis tampil pada jadwal belajar peserta dan kartu informasi grup.
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">Musyrifah Pengampu</Label>
-              <Input
-                value={editingGroupValues.musyrifah}
-                onChange={(e) => setEditingGroupValues(prev => ({ ...prev, musyrifah: e.target.value }))}
-                className="text-xs rounded-xl"
-              />
-            </div>
-
-            {editingGroupValues.sourceTable === 'halaqahs' && (
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-700">Link Zoom Live Meeting (Opsional)</Label>
-                <Input
-                  placeholder="https://zoom.us/j/..."
-                  value={editingGroupValues.zoom_link}
-                  onChange={(e) => setEditingGroupValues(prev => ({ ...prev, zoom_link: e.target.value }))}
-                  className="text-xs rounded-xl"
-                />
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">Link Grup WhatsApp</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Link Undangan Grup WhatsApp</Label>
               <Input
                 placeholder="https://chat.whatsapp.com/..."
                 value={editingGroupValues.whatsapp_group_link}
-                onChange={(e) => setEditingGroupValues(prev => ({ ...prev, whatsapp_group_link: e.target.value }))}
-                className="text-xs rounded-xl"
+                onChange={(e) => setEditingGroupValues({ ...editingGroupValues, whatsapp_group_link: e.target.value })}
+                className="rounded-xl text-xs"
               />
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">WatZap Group ID (Untuk Broadcast API)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">WatZap Group ID (Untuk Gateway Robot)</Label>
               <Input
                 placeholder="e.g. 120363028192839123@g.us"
                 value={editingGroupValues.whatsapp_group_id}
-                onChange={(e) => setEditingGroupValues(prev => ({ ...prev, whatsapp_group_id: e.target.value }))}
-                className="text-xs font-mono rounded-xl"
+                onChange={(e) => setEditingGroupValues({ ...editingGroupValues, whatsapp_group_id: e.target.value })}
+                className="font-mono text-xs rounded-xl"
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Musyrifah</Label>
+                <Input
+                  placeholder="Nama Musyrifah"
+                  value={editingGroupValues.musyrifah}
+                  onChange={(e) => setEditingGroupValues({ ...editingGroupValues, musyrifah: e.target.value })}
+                  className="rounded-xl text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Jadwal</Label>
+                <Input
+                  placeholder="Contoh: Setiap Hari / Senin-Jumat"
+                  value={editingGroupValues.schedule}
+                  onChange={(e) => setEditingGroupValues({ ...editingGroupValues, schedule: e.target.value })}
+                  className="rounded-xl text-xs"
+                />
+              </div>
+            </div>
+
+            {editingGroupValues.sourceTable === 'halaqahs' && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Link Zoom / Google Meet</Label>
+                <Input
+                  placeholder="https://zoom.us/j/..."
+                  value={editingGroupValues.zoom_link}
+                  onChange={(e) => setEditingGroupValues({ ...editingGroupValues, zoom_link: e.target.value })}
+                  className="rounded-xl text-xs"
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0 pt-2">
@@ -1276,9 +1358,9 @@ export default function AdminGroupsPage() {
               size="sm"
               onClick={handleSaveEdit}
               disabled={isSavingEdit}
-              className="rounded-xl font-bold text-xs bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5"
+              className="rounded-xl font-bold text-xs bg-emerald-700 hover:bg-emerald-800 text-white"
             >
-              {isSavingEdit ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              {isSavingEdit ? <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
               Simpan Perubahan
             </Button>
           </DialogFooter>
