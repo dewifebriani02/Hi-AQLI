@@ -314,43 +314,60 @@ export function listActiveDaysInPeriod(startDate: string, durationMonths: number
   return days;
 }
 
+export function getDailyQuotaForPace(durationMonths: number): number {
+  const m = Math.max(1, Math.min(4, Math.floor(durationMonths) || 2));
+  if (m === 1) return 20; // 1 halaman (20 langkah) / hari aktif
+  if (m === 2) return 10; // 1/2 halaman (10 langkah) / hari aktif
+  if (m === 3) return 7;  // ~1.4 TM (7 langkah) / hari aktif
+  return 5;               // 1/4 halaman (5 langkah) / hari aktif
+}
+
 export function generateTikrarStepSchedule(params: TikrarTargetParams): TikrarStepSchedule {
   const { startPage, endPage } = normalizeTargetRange(params.juz, params.startPage, params.endPage);
   const activeDaysPerWeek = Math.max(1, Math.min(7, Math.floor(params.activeDaysPerWeek) || 5));
   const startDate = toDateKeyWIB(params.startDate || new Date());
   const totalSteps = (endPage - startPage + 1) * STEPS_PER_PAGE;
-  const periodDays = listActiveDaysInPeriod(startDate, params.durationMonths, activeDaysPerWeek);
-  const dailyQuota = Math.max(1, Math.ceil(totalSteps / Math.max(1, periodDays.length)));
-  const endDate = addCalendarDays(addMonthsToDateKey(startDate, Math.max(1, Math.min(4, Math.floor(params.durationMonths) || 2))), -1);
+  const dailyQuota = getDailyQuotaForPace(params.durationMonths);
 
   const days: TikrarScheduleDay[] = [];
+  let cursorDate = startDate;
   let cursor = 0;
-  periodDays.forEach((date, i) => {
-    if (cursor >= totalSteps) return;
-    const fromStep = cursor;
-    const toStep = Math.min(totalSteps, cursor + dailyQuota);
-    const items = [];
-    for (let g = fromStep; g < toStep; g++) {
-      const { page, step } = getStepByGlobalIndex(startPage, g);
-      items.push({ page, stepIndex: step.index, label: step.label, shortLabel: step.shortLabel });
+  let dayIdx = 0;
+
+  for (let guard = 0; guard < 2000 && cursor < totalSteps; guard++) {
+    if (isActiveStudyDay(cursorDate, activeDaysPerWeek)) {
+      dayIdx += 1;
+      const fromStep = cursor;
+      const toStep = Math.min(totalSteps, cursor + dailyQuota);
+      const items = [];
+      for (let g = fromStep; g < toStep; g++) {
+        const { page, step } = getStepByGlobalIndex(startPage, g);
+        items.push({ page, stepIndex: step.index, label: step.label, shortLabel: step.shortLabel });
+      }
+      days.push({
+        date: cursorDate,
+        dayIndex: dayIdx,
+        weekNumber: Math.floor((dayIdx - 1) / activeDaysPerWeek) + 1,
+        fromStep,
+        toStep,
+        items,
+      });
+      cursor = toStep;
     }
-    days.push({
-      date,
-      dayIndex: i + 1,
-      weekNumber: Math.floor(i / activeDaysPerWeek) + 1,
-      fromStep,
-      toStep,
-      items,
-    });
-    cursor = toStep;
-  });
+    if (cursor < totalSteps) {
+      cursorDate = addCalendarDays(cursorDate, 1);
+    }
+  }
+
+  const estimatedFinishDate = days[days.length - 1]?.date || startDate;
+  const endDate = estimatedFinishDate;
 
   return {
     totalSteps,
-    activeDays: periodDays.length,
+    activeDays: days.length,
     dailyQuota,
     endDate,
-    estimatedFinishDate: days[days.length - 1]?.date || startDate,
+    estimatedFinishDate,
     days,
   };
 }

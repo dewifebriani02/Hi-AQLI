@@ -1,6 +1,6 @@
 import type { PoolClient } from 'pg';
 import { pool } from '@/lib/db';
-import { addCalendarDays, getJuzForPage, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
+import { addCalendarDays, getJuzForPage, getJuzPageRange, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
 import {
   buildClearedPageSet,
   computeTargetStreak,
@@ -124,6 +124,10 @@ export function isPagePracticeAllowed(
     return { allowed: false, reason: 'Isi Target & Jadwal terlebih dahulu sebelum mulai berlatih.' };
   }
   if (cleared.has(page)) return { allowed: true };
+  const juzRange = getJuzPageRange(target.juz);
+  if (page < target.startPage && page >= juzRange.startPage) {
+    return { allowed: true };
+  }
   const unlockedPage = computeUnlockedPage(target.startPage, target.endPage, cleared);
   if (page < target.startPage || page > target.endPage) {
     return {
