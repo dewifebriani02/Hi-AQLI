@@ -111,7 +111,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-[#800000]" />
+              <Users className="w-5 h-5 text-[#6D123F]" />
               <h3 className="text-base sm:text-lg font-black text-stone-900">
                 Pantau Progres Anggota Grup
               </h3>
@@ -138,7 +138,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
           <button
             type="button"
             onClick={() => shiftMonth(-1)}
-            className="h-9 w-9 rounded-lg flex items-center justify-center text-[#800000] hover:bg-white"
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-[#6D123F] hover:bg-white"
             aria-label="Bulan sebelumnya"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -148,7 +148,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
             type="button"
             onClick={() => shiftMonth(1)}
             disabled={!shownMonth || shownMonth >= currentMonth}
-            className="h-9 w-9 rounded-lg flex items-center justify-center text-[#800000] hover:bg-white disabled:opacity-30"
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-[#6D123F] hover:bg-white disabled:opacity-30"
             aria-label="Bulan berikutnya"
           >
             <ChevronRight className="w-5 h-5" />
@@ -161,7 +161,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
             onClick={() => setSelectedHalaqahFilter('all')}
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-extrabold transition-colors',
-              selectedHalaqahFilter === 'all' ? 'bg-[#800000] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              selectedHalaqahFilter === 'all' ? 'bg-[#6D123F] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
             )}
           >
             Semua Sesi Tikrar
@@ -173,7 +173,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
               onClick={() => setSelectedHalaqahFilter(h.id)}
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-extrabold transition-colors',
-                selectedHalaqahFilter === h.id ? 'bg-[#800000] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                selectedHalaqahFilter === h.id ? 'bg-[#6D123F] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
               )}
             >
               {String(h.title || '').replace('Hi Tikrar - ', '')}
@@ -183,7 +183,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
 
         {isLoading ? (
           <div className="py-12 flex flex-col items-center justify-center gap-2 text-stone-500">
-            <Loader2 className="w-6 h-6 animate-spin text-[#800000]" />
+            <Loader2 className="w-6 h-6 animate-spin text-[#6D123F]" />
             <span className="text-xs font-bold">Memuat heatmap keaktifan grup...</span>
           </div>
         ) : members.length === 0 ? (
@@ -209,7 +209,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                           {index + 1}. {member.name}
                         </span>
                         {member.isMe && (
-                          <Badge className="bg-[#800000] text-white hover:bg-[#800000] text-[9px] font-black h-4 px-1.5">
+                          <Badge className="bg-[#6D123F] text-white hover:bg-[#6D123F] text-[9px] font-black h-4 px-1.5">
                             Anda
                           </Badge>
                         )}
@@ -260,7 +260,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                                   <span
                                     className={cn(
                                       'text-[8px] leading-none font-bold tabular-nums',
-                                      isToday ? 'text-[#800000] font-black' : isWeekend ? 'text-stone-400' : 'text-stone-500'
+                                      isToday ? 'text-[#6D123F] font-black' : isWeekend ? 'text-stone-400' : 'text-stone-500'
                                     )}
                                   >
                                     {Number(d.date.slice(8))}
@@ -269,7 +269,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                                     style={{ backgroundColor: HEATMAP_COLORS[d.level] }}
                                     className={cn(
                                       'w-3.5 h-3.5 rounded-[3px] border border-stone-200 transition-transform hover:scale-125 flex items-center justify-center',
-                                      isToday && 'ring-1 ring-[#800000] ring-offset-1'
+                                      isToday && 'ring-1 ring-[#6D123F] ring-offset-1'
                                     )}
                                   >
                                     {d.level === 'tasmi' && <Star className="w-2.5 h-2.5 text-white fill-white" />}
@@ -291,7 +291,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                     </div>
 
                     <div className="lg:w-[88px] shrink-0 text-left lg:text-right">
-                      <span className="font-black text-xs sm:text-sm text-[#800000]">{member.points} Poin</span>
+                      <span className="font-black text-xs sm:text-sm text-[#6D123F]">{member.points} Poin</span>
                     </div>
                   </div>
                 );

@@ -131,9 +131,9 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
   };
 
   return (
-    <div className="space-y-4 bg-white border-2 border-[#800000]/10 rounded-3xl p-5">
+    <div className="space-y-4 bg-white border-2 border-[#6D123F]/10 rounded-3xl p-5">
       <div className="space-y-1">
-        <h4 className="text-sm font-black font-headline uppercase text-[#800000] flex items-center gap-2">
+        <h4 className="text-sm font-black font-headline uppercase text-[#6D123F] flex items-center gap-2">
           <History className="w-4 h-4 text-[#D4AF37]" /> Hafalan Sebelum Bergabung
         </h4>
         <p className="text-xs text-muted-foreground leading-relaxed">
@@ -151,7 +151,7 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
             onClick={() => setMode(m)}
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-extrabold',
-              mode === m ? 'bg-[#800000] text-white' : 'bg-stone-100 text-stone-600'
+              mode === m ? 'bg-[#6D123F] text-white' : 'bg-stone-100 text-stone-600'
             )}
           >
             {m === 'juz' ? 'Per Juz' : 'Per Halaman'}
@@ -213,7 +213,7 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
             onClick={() => setStatus(st)}
             className={cn(
               'text-left rounded-2xl border-2 p-3 min-h-[56px]',
-              status === st ? 'border-[#800000] bg-[#800000]/5' : 'border-stone-200'
+              status === st ? 'border-[#6D123F] bg-[#6D123F]/5' : 'border-stone-200'
             )}
           >
             <p className="text-sm font-black text-stone-900">{STATUS_LABEL[st]}</p>
@@ -242,7 +242,7 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
         type="button"
         onClick={submit}
         disabled={saving}
-        className="w-full h-12 rounded-xl bg-[#800000] hover:bg-[#800000]/90 text-white font-black"
+        className="w-full h-12 rounded-xl bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black"
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan Hafalan Lama'}
       </Button>
@@ -250,7 +250,7 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
       <div className="space-y-2">
         <p className="text-[11px] font-black uppercase text-stone-500">Tersimpan</p>
         {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-[#800000]" />
+          <Loader2 className="w-4 h-4 animate-spin text-[#6D123F]" />
         ) : ranges.length === 0 ? (
           <p className="text-xs text-muted-foreground">Belum ada hafalan lama yang diisi.</p>
         ) : (
@@ -274,7 +274,7 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
                 <Button
                   asChild
                   size="sm"
-                  className="h-10 bg-[#800000] hover:bg-[#800000]/90 text-white text-[11px] font-black rounded-xl"
+                  className="h-10 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-[11px] font-black rounded-xl"
                 >
                   <Link href={`/tikrar/ujian?page=${r.nextQuizPage}`}>
                     <ClipboardCheck className="w-3.5 h-3.5 mr-1" /> Ujian Hal. {r.nextQuizPage}

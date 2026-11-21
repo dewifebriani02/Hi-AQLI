@@ -201,7 +201,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
       <Dialog open={showIstiqomah} onOpenChange={setShowIstiqomah}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#800000] font-black">Istiqomah Lebih Utama</DialogTitle>
+            <DialogTitle className="text-[#6D123F] font-black">Istiqomah Lebih Utama</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               {recentChanges >= 2
                 ? `Ukhti sudah mengubah target ${recentChanges} kali dalam 30 hari terakhir. Sering berganti target bisa membuat hafalan tidak kokoh.`
@@ -209,7 +209,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-2xl bg-[#800000]/5 border border-[#800000]/10 p-4 space-y-2">
+            <div className="rounded-2xl bg-[#6D123F]/5 border border-[#6D123F]/10 p-4 space-y-2">
               <p dir="rtl" className="font-arabic text-2xl leading-loose text-right text-stone-900">
                 أَحَبُّ الْأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ
               </p>
@@ -236,7 +236,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             <Button
               type="button"
               onClick={() => setShowIstiqomah(false)}
-              className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black rounded-xl h-11"
+              className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black rounded-xl h-11"
             >
               Tetap dengan Target Sekarang
             </Button>
@@ -257,7 +257,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
 
       {!showForm && target ? (
         <Card className="border border-stone-200 shadow-md rounded-2xl overflow-hidden bg-white">
-          <CardHeader className="bg-[#800000] text-white border-b-4 border-[#D4AF37] p-5 sm:p-6">
+          <CardHeader className="bg-[#6D123F] text-white border-b-4 border-[#D4AF37] p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest mb-1">
@@ -303,7 +303,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               </div>
               <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-3.5 space-y-1">
                 <p className="text-[10px] font-black uppercase text-stone-500">Progres Target</p>
-                <p className="text-sm font-black text-[#800000]">
+                <p className="text-sm font-black text-[#6D123F]">
                   {target.completedSteps} / {target.totalSteps} Langkah
                 </p>
                 <Progress value={(target.completedSteps / Math.max(1, target.totalSteps)) * 100} className="h-1.5" />
@@ -333,7 +333,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
 
             <div className="bg-amber-50/70 border border-amber-200/90 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#800000] text-white flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#6D123F] text-white flex items-center justify-center shrink-0">
                   <BookOpen className="w-5 h-5 text-[#D4AF37]" />
                 </div>
                 <div>
@@ -352,7 +352,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               <Button
                 type="button"
                 onClick={() => onOpenMushafTarget?.({ page: target.unlockedPage, juz: target.juz })}
-                className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-10 px-5 rounded-xl gap-2 shrink-0"
+                className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-10 px-5 rounded-xl gap-2 shrink-0"
               >
                 <BookOpen className="w-4 h-4 text-[#D4AF37]" /> Buka Mushaf <ArrowRight className="w-3.5 h-3.5" />
               </Button>
@@ -361,7 +361,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
         </Card>
       ) : (
         <Card className="border border-stone-200 shadow-md rounded-2xl overflow-hidden bg-white">
-          <CardHeader className="bg-[#800000] text-white border-b-4 border-[#D4AF37]">
+          <CardHeader className="bg-[#6D123F] text-white border-b-4 border-[#D4AF37]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest mb-1">
@@ -427,7 +427,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                     setStartPage(r.startPage);
                     setEndPage(r.endPage);
                   }}
-                  className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-black text-[#800000]"
+                  className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-black text-[#6D123F]"
                 >
                   {Array.from({ length: 30 }, (_, idx) => {
                     const r = getJuzPageRange(idx + 1);
@@ -535,11 +535,11 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                       onClick={() => setDurationMonths(opt.durationMonths)}
                       className={cn(
                         'text-left rounded-xl border-2 p-3 transition-all',
-                        isSel ? 'border-[#800000] bg-[#800000]/5' : 'border-stone-200 hover:border-stone-300'
+                        isSel ? 'border-[#6D123F] bg-[#6D123F]/5' : 'border-stone-200 hover:border-stone-300'
                       )}
                     >
                       <p className="text-sm font-black text-stone-900">{opt.durationMonths} Bulan</p>
-                      <p className="text-[11px] font-bold text-[#800000]">{sched.dailyQuota} langkah / hari aktif</p>
+                      <p className="text-[11px] font-bold text-[#6D123F]">{sched.dailyQuota} langkah / hari aktif</p>
                       <p className="text-[10px] text-stone-500">{sched.activeDays} hari aktif</p>
                     </button>
                   );
@@ -548,7 +548,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             </div>
 
             <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-4 text-xs text-stone-700 leading-relaxed">
-              <strong className="text-[#800000]">Ringkasan:</strong> {totalPagesSelected} halaman × {STEPS_PER_PAGE} langkah ={' '}
+              <strong className="text-[#6D123F]">Ringkasan:</strong> {totalPagesSelected} halaman × {STEPS_PER_PAGE} langkah ={' '}
               <strong>{preview.totalSteps} langkah</strong>, dibagi ke {preview.activeDays} hari aktif ({paceMeta.durationMonths}{' '}
               bulan) → <strong>{preview.dailyQuota} langkah per hari</strong>. Periode {formatDate(startDateKey)} –{' '}
               {formatDate(preview.endDate, true)}.
@@ -561,7 +561,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
       <Card className="border border-stone-200 shadow-sm rounded-2xl overflow-hidden bg-white">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-[#800000]" />
+            <CalendarDays className="w-5 h-5 text-[#6D123F]" />
             <CardTitle className="text-base font-black">
               {showForm ? 'Pratinjau Jadwal' : 'Jadwal Per Langkah'} ({activeSchedule.days.length} hari aktif)
             </CardTitle>

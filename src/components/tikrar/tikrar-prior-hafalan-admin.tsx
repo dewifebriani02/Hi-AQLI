@@ -115,7 +115,7 @@ export function TikrarPriorHafalanAdmin({
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base font-black flex items-center gap-2 text-[#800000]">
+            <CardTitle className="text-base font-black flex items-center gap-2 text-[#6D123F]">
               <History className="w-4 h-4" /> Hafalan Sebelum Bergabung
             </CardTitle>
             <CardDescription className="text-xs">
@@ -146,7 +146,7 @@ export function TikrarPriorHafalanAdmin({
       <CardContent className="space-y-3">
         {loading ? (
           <div className="py-10 flex justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-[#800000]" />
+            <Loader2 className="w-6 h-6 animate-spin text-[#6D123F]" />
           </div>
         ) : error ? (
           <p className="text-sm font-bold text-red-600">{error}</p>
@@ -170,7 +170,7 @@ export function TikrarPriorHafalanAdmin({
                 </div>
                 <span className="text-[11px] font-bold text-slate-500">
                   {u.total} hal. hafalan lama •{' '}
-                  <span className={u.untested > 0 ? 'text-[#800000]' : 'text-emerald-700'}>
+                  <span className={u.untested > 0 ? 'text-[#6D123F]' : 'text-emerald-700'}>
                     {u.untested > 0 ? `${u.untested} belum diuji AQLI` : 'semua sudah diuji AQLI'}
                   </span>
                 </span>
@@ -203,7 +203,7 @@ export function TikrarPriorHafalanAdmin({
                           type="button"
                           size="sm"
                           onClick={() => onTestPage(u.userId, r.untestedPages[0], u.name)}
-                          className="h-9 bg-[#800000] hover:bg-[#800000]/90 text-white text-xs font-black rounded-lg shrink-0"
+                          className="h-9 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-xs font-black rounded-lg shrink-0"
                         >
                           <ClipboardCheck className="w-3.5 h-3.5 mr-1.5" /> Uji Tasmi&apos; Hal. {r.untestedPages[0]}
                         </Button>
