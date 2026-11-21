@@ -2472,11 +2472,11 @@ function MaqtaCard({
             theme.verseBg
           )}
         >
-          {/* Part 1 */}
+          {/* Sub-blok 1 (TM x-1) */}
           <div className="bg-white/40 rounded-xl p-3 border border-white/60 border-r-4 border-r-[#B91C1C] shadow-sm space-y-2">
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#B91C1C] text-white text-[10px] font-black tracking-wide">
-                PART 1 • {letter}-1
+                TM {id}-1 ({letter}-1)
               </span>
               <span className="text-[11px] font-extrabold text-[#991B1B]">
                 {part1Range}
@@ -2487,12 +2487,12 @@ function MaqtaCard({
             </div>
           </div>
 
-          {/* Part 2 */}
+          {/* Sub-blok 2 (TM x-2) */}
           {tokensB.length > 0 && (
             <div className="bg-white/25 rounded-xl p-3 border border-white/50 border-r-4 border-r-stone-900 shadow-sm space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-900 text-white text-[10px] font-black tracking-wide">
-                  PART 2 • {letter}-2
+                  TM {id}-2 ({letter}-2)
                 </span>
                 <span className="text-[11px] font-extrabold text-stone-800">
                   {part2Range}
@@ -2539,7 +2539,7 @@ function MaqtaCard({
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox
             id={`step-${id}.a`}
-            label={`PART 1 (${letter}-1) • ${part1Range}`}
+            label={`TM ${id}-1 (${letter}-1) • ${part1Range}`}
             count={state.a.count}
             isLocked={countersLocked}
             onInc={(delta = 1) => addSubCount('a', delta)}
@@ -2550,7 +2550,7 @@ function MaqtaCard({
           />
           <CounterBox
             id={`step-${id}.b`}
-            label={`PART 2 (${letter}-2) • ${part2Range}`}
+            label={`TM ${id}-2 (${letter}-2) • ${part2Range}`}
             count={state.b.count}
             isLocked={countersLocked || state.a.count < PASS_THRESHOLD}
             onInc={(delta = 1) => addSubCount('b', delta)}
