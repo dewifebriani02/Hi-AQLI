@@ -1466,30 +1466,30 @@ export function TikrarSystem({
               </div>
             </div>
 
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 self-start md:self-center">
-              <div className="bg-white/10 backdrop-blur-sm px-3.5 py-2.5 rounded-2xl border border-white/15 flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-white/75">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full md:w-auto md:flex md:items-center self-start md:self-center">
+              <div className="bg-white/10 backdrop-blur-sm px-3 sm:px-3.5 py-2.5 rounded-2xl border border-white/15 flex flex-col justify-center min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/75 truncate">
                   Target Hari Ini
                 </span>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-sm font-black text-[#D4AF37]">
-                    {summary?.today.stepsToday || 0}/{summary?.today.dailyQuota || activeTarget?.dailyQuota || 1} Langkah
+                <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                  <span className="text-xs sm:text-sm font-black text-[#D4AF37] truncate">
+                    {summary?.today.stepsToday || 0}/{summary?.today.dailyQuota || activeTarget?.dailyQuota || 1} Lgkh
                     {summary?.today.targetMet ? ' ✓' : ''}
                   </span>
-                  <span className="inline-flex items-center gap-0.5 text-xs font-extrabold text-orange-300">
+                  <span className="inline-flex items-center gap-0.5 text-[11px] sm:text-xs font-extrabold text-orange-300 shrink-0">
                     <Flame className="w-3.5 h-3.5 fill-orange-400 text-orange-300" />
                     {summary?.streak ?? consistency.streak}h
                   </span>
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2.5 rounded-2xl border border-white/15 flex flex-col items-end">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white/75">
-                  <Clock className="w-3 h-3 text-[#D4AF37]" /> Progres Halaman
+              <div className="bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-2.5 rounded-2xl border border-white/15 flex flex-col justify-center items-end text-right min-w-0">
+                <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-white/75 truncate">
+                  <Clock className="w-3 h-3 text-[#D4AF37] shrink-0" /> Progres Halaman
                 </div>
-                <div className="text-lg font-black">
+                <div className="text-base sm:text-lg font-black truncate">
                   {Math.round(totalProgress)}%{' '}
-                  <span className="text-xs font-medium opacity-75">
+                  <span className="text-[11px] sm:text-xs font-medium opacity-75">
                     ({tuntasBlockNumbers.length}/4 Blok)
                   </span>
                 </div>
@@ -1501,9 +1501,10 @@ export function TikrarSystem({
         </CardContent>
       </Card>
 
-      {/* Bar Navigasi Juz, Halaman & Font Size */}
-      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-[#6D123F]/10">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+      {/* Bar Navigasi Juz, Halaman & Audio */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 bg-white p-2.5 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-[#6D123F]/10">
+        {/* Baris 1: Kontrol Halaman Terkunci 1 Baris (Juz, <, Hal, >) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full md:w-auto flex-nowrap min-w-0">
           <select
             aria-label="Pilih Juz"
             value={juz}
@@ -1513,7 +1514,7 @@ export function TikrarSystem({
               setJuz(j);
               setPage(JUZ_PAGES[j - 1] || 1);
             }}
-            className="h-10 rounded-xl border-2 border-[#6D123F]/20 bg-white px-2.5 text-xs sm:text-sm font-black text-[#6D123F]"
+            className="h-10 rounded-xl border-2 border-[#6D123F]/20 bg-white px-2 sm:px-2.5 text-xs sm:text-sm font-black text-[#6D123F] shrink-0 w-[78px] sm:w-auto"
           >
             {JUZ_PAGES.map((_, i) => (
               <option key={i + 1} value={i + 1}>
@@ -1527,7 +1528,7 @@ export function TikrarSystem({
             size="icon"
             onClick={() => setPage((p) => Math.max(juzPageRange.startPage, p - 1))}
             disabled={loading || page <= juzPageRange.startPage}
-            className="rounded-xl h-10 w-10 border-[#6D123F]/20 hover:bg-[#6D123F]/5"
+            className="rounded-xl h-10 w-9 sm:w-10 shrink-0 border-[#6D123F]/20 hover:bg-[#6D123F]/5"
           >
             <ChevronLeft className="h-5 w-5 text-[#6D123F]" />
           </Button>
@@ -1537,7 +1538,7 @@ export function TikrarSystem({
             value={page}
             disabled={loading}
             onChange={(e) => setPage(Number(e.target.value))}
-            className="h-10 rounded-xl border-2 border-[#6D123F]/20 bg-stone-50 px-2.5 text-xs sm:text-sm font-black text-[#6D123F]"
+            className="h-10 rounded-xl border-2 border-[#6D123F]/20 bg-stone-50 px-2 sm:px-2.5 text-xs sm:text-sm font-black text-[#6D123F] flex-1 min-w-0 truncate"
           >
             {Array.from({ length: juzPageRange.endPage - juzPageRange.startPage + 1 }, (_, idx) => {
               const pNum = juzPageRange.startPage + idx;
@@ -1566,27 +1567,27 @@ export function TikrarSystem({
             size="icon"
             onClick={() => setPage((p) => Math.min(juzPageRange.endPage, p + 1))}
             disabled={loading || page >= juzPageRange.endPage}
-            className="rounded-xl h-10 w-10 border-[#6D123F]/20 hover:bg-[#6D123F]/5"
+            className="rounded-xl h-10 w-9 sm:w-10 shrink-0 border-[#6D123F]/20 hover:bg-[#6D123F]/5"
           >
             <ChevronRight className="h-5 w-5 text-[#6D123F]" />
           </Button>
-
-          {page !== recommendedPage && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setPage(recommendedPage)}
-                className="h-9 text-xs font-extrabold text-[#6D123F]"
-              >
-                Ke Halaman Aktif (Hal. {recommendedPage})
-              </Button>
-            </div>
-          )}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Baris 2 Audio & Quick Action */}
+        <div className="flex items-center justify-between md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 flex-nowrap min-w-0">
+          {page !== recommendedPage && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setPage(recommendedPage)}
+              className="h-9 px-2 sm:px-2.5 text-[11px] sm:text-xs font-black text-[#6D123F] hover:bg-[#6D123F]/10 truncate"
+            >
+              Ke Hal. {recommendedPage} →
+            </Button>
+          )}
+
+          <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
             <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
               <DialogTrigger asChild>
                 <Button
@@ -1600,14 +1601,14 @@ export function TikrarSystem({
                   </span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
+              <DialogContent className="max-w-md w-[calc(100%-2rem)] max-h-[85dvh] flex flex-col p-0 overflow-hidden rounded-2xl">
+                <DialogHeader className="p-5 pb-2 shrink-0 border-b border-stone-100">
                   <DialogTitle className="text-[#6D123F] font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground">
                     Pilih qari untuk audio simak per blok.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-2 py-3 max-h-[60vh] overflow-y-auto pr-1">
+                <div className="grid gap-2 p-4 overflow-y-auto flex-1">
                   {RECITERS.filter((r) => r.provider !== 'mp3quran').map((r) => {
                     const isSelected = selectedReciterId === r.id;
                     return (
@@ -1725,7 +1726,7 @@ export function TikrarSystem({
               <Settings2 className="w-3.5 h-3.5 mr-1.5" /> Atur Target
             </Button>
           )}
-
+          </div>
         </div>
       </div>
 

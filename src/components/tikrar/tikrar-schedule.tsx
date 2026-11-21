@@ -213,8 +213,8 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
   return (
     <div className="space-y-8 pb-20">
       <Dialog open={showIstiqomah} onOpenChange={setShowIstiqomah}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] max-h-[88dvh] flex flex-col p-0 overflow-hidden rounded-2xl">
+          <DialogHeader className="p-5 pb-3 shrink-0 border-b border-stone-100">
             <DialogTitle className="text-[#6D123F] font-black">Istiqomah Lebih Utama</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               {recentChanges >= 2
@@ -222,35 +222,35 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 : 'Sebelum mengubah target, renungkan sejenak pesan berikut.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-2xl bg-[#6D123F]/5 border border-[#6D123F]/10 p-4 space-y-2">
-              <p dir="rtl" className="font-arabic text-2xl leading-loose text-right text-stone-900">
+          <div className="space-y-3.5 p-5 overflow-y-auto flex-1">
+            <div className="rounded-2xl bg-[#6D123F]/5 border border-[#6D123F]/10 p-3.5 space-y-1.5">
+              <p dir="rtl" className="font-arabic text-xl sm:text-2xl leading-relaxed text-right text-stone-900">
                 أَحَبُّ الْأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ
               </p>
-              <p className="text-sm font-semibold text-stone-800">
+              <p className="text-xs sm:text-sm font-semibold text-stone-800">
                 &ldquo;Amalan yang paling dicintai Allah adalah yang paling rutin dikerjakan, meskipun sedikit.&rdquo;
               </p>
-              <p className="text-[11px] font-bold text-stone-500">HR. Al-Bukhari dan Muslim</p>
+              <p className="text-[10px] font-bold text-stone-500">HR. Al-Bukhari dan Muslim</p>
             </div>
-            <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 space-y-2">
-              <p dir="rtl" className="font-arabic text-2xl leading-loose text-right text-stone-900">
+            <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3.5 space-y-1.5">
+              <p dir="rtl" className="font-arabic text-xl sm:text-2xl leading-relaxed text-right text-stone-900">
                 فَاسْتَقِمْ كَمَا أُمِرْتَ
               </p>
-              <p className="text-sm font-semibold text-stone-800">
+              <p className="text-xs sm:text-sm font-semibold text-stone-800">
                 &ldquo;Maka tetaplah (istiqomahlah) engkau sebagaimana telah diperintahkan kepadamu.&rdquo;
               </p>
-              <p className="text-[11px] font-bold text-stone-500">QS. Hud: 112</p>
+              <p className="text-[10px] font-bold text-stone-500">QS. Hud: 112</p>
             </div>
             <p className="text-xs text-stone-600 leading-relaxed">
               Lebih baik sedikit tapi terus-menerus daripada banyak lalu berhenti. Ubah target bila memang perlu,
               misalnya jadwal tidak sesuai kondisi Ukhti, bukan karena ingin berpindah-pindah.
             </p>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="p-4 bg-stone-50 border-t border-stone-200/60 shrink-0 flex-col sm:flex-row gap-2">
             <Button
               type="button"
               onClick={() => setShowIstiqomah(false)}
-              className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black rounded-xl h-11"
+              className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black rounded-xl h-10 sm:h-11 text-xs sm:text-sm"
             >
               Tetap dengan Target Sekarang
             </Button>
@@ -261,7 +261,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 setShowIstiqomah(false);
                 setIsEditing(true);
               }}
-              className="font-bold rounded-xl h-11 border-stone-300"
+              className="font-bold rounded-xl h-10 sm:h-11 text-xs sm:text-sm border-stone-300"
             >
               Saya Tetap Ingin Mengubah
             </Button>
