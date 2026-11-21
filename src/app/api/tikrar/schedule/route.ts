@@ -148,11 +148,11 @@ export async function POST(req: NextRequest) {
           `INSERT INTO public.tikrar_page_quizzes (
              user_id, juz, page_number, total_questions, correct_answers, score, passed, question_types, created_at
            )
-           SELECT $1, $2, $3, 30, 30, 100, true, '{"source":"prior_hafalan"}'::jsonb, now()
+           SELECT $1, $2, $3, 30, 30, 100, true, $4::jsonb, now()
            WHERE NOT EXISTS (
              SELECT 1 FROM public.tikrar_page_quizzes WHERE user_id = $1 AND page_number = $3 AND passed = true
            )`,
-          [ctx.userId, juz, p]
+          [ctx.userId, juz, p, JSON.stringify({ source: "prior_hafalan" })]
         );
 
         await client.query(
