@@ -19,6 +19,8 @@ import { useCollection, useUser } from '@/db';
 import { authFetch } from '@/db/client';
 import { cn } from '@/lib/utils';
 import {
+  DAY_NAMES_ID,
+  formatDateID,
   getDayOfWeekFromKey,
   getJuzPageRange,
   parseDateKeyUTC,
@@ -48,15 +50,8 @@ export interface TikrarScheduleProps {
   summary?: TikrarSummary | null;
 }
 
-const DAY_NAMES_ID = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-
-function formatDate(dateKey: string, withYear = false) {
-  return parseDateKeyUTC(dateKey).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    ...(withYear ? { year: 'numeric' } : {}),
-    timeZone: 'UTC',
-  });
+function formatDate(dateKey: string, withYear = false, withDay = false) {
+  return formatDateID(dateKey, { withDay, withYear, shortYear: !withYear });
 }
 
 export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }: TikrarScheduleProps) {
@@ -281,7 +276,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                   Juz {target.juz} • Hal. {target.startPage}–{target.endPage}
                 </CardTitle>
                 <CardDescription className="text-white/80 text-xs mt-0.5">
-                  Target: {targetPace?.monthlyPagesLabel} ({targetPace?.dailyPortionLabel}) • {target.activeDaysPerWeek} hari aktif/pekan • Periode {formatDate(target.startDate)} – {formatDate(target.endDate, true)}
+                  Target: {targetPace?.monthlyPagesLabel} ({targetPace?.dailyPortionLabel}) • {target.activeDaysPerWeek} hari aktif/pekan • Periode {formatDate(target.startDate, false, true)} – {formatDate(target.endDate, true, true)}
                 </CardDescription>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
@@ -650,8 +645,8 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 <span className="text-[#6D123F] font-bold">{preview.dailyQuota} langkah sistematis/hari</span>).
               </p>
               <p className="text-[11px] text-stone-500">
-                📅 Periode estimasi: <strong>{formatDate(startDateKey)}</strong> s.d.{" "}
-                <strong>{formatDate(preview.endDate, true)}</strong> dengan komitmen{" "}
+                📅 Periode estimasi: <strong>{formatDate(startDateKey, false, true)}</strong> s.d.{" "}
+                <strong>{formatDate(preview.endDate, true, true)}</strong> dengan komitmen{" "}
                 <strong>{activeDaysPerWeek} hari aktif per pekan</strong>.
               </p>
             </div>
@@ -684,7 +679,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                   className="w-full flex items-center justify-between px-4 py-2.5 bg-stone-50 hover:bg-stone-100 text-left"
                 >
                   <span className="text-xs font-black text-stone-800">
-                    Pekan {week} • {formatDate(days[0].date)} – {formatDate(days[days.length - 1].date)}
+                    Pekan {week} • {formatDate(days[0].date, false, true)} – {formatDate(days[days.length - 1].date, false, true)}
                   </span>
                   <span className="flex items-center gap-2">
                     {weekDone && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}

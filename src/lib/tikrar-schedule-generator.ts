@@ -176,6 +176,31 @@ export function addCalendarDays(dateKey: string, deltaDays: number): string {
   return formatDateKeyUTC(d);
 }
 
+export const DAY_NAMES_ID = ["Ahad", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"] as const;
+
+export function formatDateID(
+  dateKey: string,
+  opts?: { withDay?: boolean; withYear?: boolean; shortYear?: boolean }
+): string {
+  const d = parseDateKeyUTC(dateKey);
+  const withDay = opts?.withDay ?? true;
+  const withYear = opts?.withYear ?? true;
+  const shortYear = opts?.shortYear ?? true;
+
+  const dateFormatted = d.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    ...(withYear ? { year: shortYear ? "2-digit" : "numeric" } : {}),
+    timeZone: "UTC",
+  });
+
+  if (withDay) {
+    const dayName = DAY_NAMES_ID[d.getUTCDay()];
+    return `${dayName}, ${dateFormatted}`;
+  }
+  return dateFormatted;
+}
+
 /** 0 = Sunday, 1 = Monday, ..., 6 = Saturday */
 export function getDayOfWeekFromKey(dateKey: string): number {
   return parseDateKeyUTC(dateKey).getUTCDay();
