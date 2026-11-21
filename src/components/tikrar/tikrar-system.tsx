@@ -74,6 +74,7 @@ import {
   isActiveStudyDay,
   isPageSubmissionCleared,
   JUZ_PAGES,
+  formatDateID,
   parseDateKeyUTC,
   TIKRAR_GRADE_LABELS,
   TIKRAR_PACE_OPTIONS,
@@ -2725,22 +2726,8 @@ interface StepInfo {
 /** Bintang "target hari ini" + keterangan tanggal jadwal langkah */
 function StepTag({ info, className }: { info?: StepInfo | null; className?: string }) {
   if (!info) return null;
-  const pretty = info.date
-    ? parseDateKeyUTC(info.date).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: '2-digit',
-        timeZone: 'UTC',
-      })
-    : null;
-  const todayPretty = info.todayKey
-    ? parseDateKeyUTC(info.todayKey).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: '2-digit',
-        timeZone: 'UTC',
-      })
-    : null;
+  const pretty = info.date ? formatDateID(info.date, { withDay: true, shortYear: true }) : null;
+  const todayPretty = info.todayKey ? formatDateID(info.todayKey, { withDay: true, shortYear: true }) : null;
   const isOverdue = info.isOverdue ?? (!info.done && !!info.date && info.date < info.todayKey);
   const dateLabel = pretty || todayPretty;
   return (
@@ -2760,7 +2747,7 @@ function StepTag({ info, className }: { info?: StepInfo | null; className?: stri
         </span>
       ) : pretty ? (
         <span className="text-[9px] font-bold text-stone-500">
-          Jadwal: {info.date === info.todayKey ? 'hari ini' : pretty}
+          Jadwal: {info.date === info.todayKey ? `hari ini (${pretty})` : pretty}
         </span>
       ) : null}
     </div>

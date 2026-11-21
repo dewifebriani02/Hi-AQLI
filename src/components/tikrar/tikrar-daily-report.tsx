@@ -16,6 +16,7 @@ import {
   getJuzForPage,
   getJuzPageRange,
   isPageSubmissionCleared,
+  formatDateID,
   parseDateKeyUTC,
   TIKRAR_GRADE_LABELS,
   toDateKeyWIB,
@@ -781,12 +782,7 @@ export function TikrarDailyReport({
                     className="flex items-center justify-between gap-2 text-xs p-2 rounded-lg bg-stone-50 border border-stone-200/80"
                   >
                     <span className="font-bold text-stone-800">
-                      {parseDateKeyUTC(a.date).toLocaleDateString('id-ID', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short',
-                        timeZone: 'UTC',
-                      })}
+                      {formatDateID(a.date, { withDay: true, withYear: false })}
                     </span>
                     <span className="text-[11px] text-stone-600">
                       {a.clicks} klik • {a.stepsToday} langkah
@@ -820,12 +816,7 @@ export function TikrarDailyReport({
               <div className="space-y-2">
                 {recentLogs.map((log: any) => {
                   const dk = toDateKeyWIB(log.log_date);
-                  const prettyDate = parseDateKeyUTC(dk).toLocaleDateString('id-ID', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    timeZone: 'UTC',
-                  });
+                  const prettyDate = formatDateID(dk, { withDay: true, shortYear: false });
                   const blocksArr: number[] = Array.isArray(log.blocks_completed)
                     ? log.blocks_completed
                     : [];
