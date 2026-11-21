@@ -107,9 +107,9 @@ export const SYAAMIL_PAGE_BLOCKS: Record<number, Record<1 | 2 | 3 | 4, SyaamilBl
 export const SYAAMIL_BLOCK_THEME = {
   1: {
     letter: 'A',
-    tmLabel: 'TM1',
+    tmLabel: 'TM 1',
     colorName: 'Hijau',
-    badgeText: 'BLOK A (TM1) • HIJAU',
+    badgeText: 'TM 1 (BLOK A) • HIJAU',
     badgeClass: 'bg-emerald-700 text-white',
     cardBorder: 'border-emerald-600/30',
     headerBg: 'bg-emerald-800',
@@ -117,9 +117,9 @@ export const SYAAMIL_BLOCK_THEME = {
   },
   2: {
     letter: 'B',
-    tmLabel: 'TM2',
+    tmLabel: 'TM 2',
     colorName: 'Kuning',
-    badgeText: 'BLOK B (TM2) • KUNING',
+    badgeText: 'TM 2 (BLOK B) • KUNING',
     badgeClass: 'bg-amber-500 text-black',
     cardBorder: 'border-amber-500/30',
     headerBg: 'bg-[#996515]',
@@ -127,9 +127,9 @@ export const SYAAMIL_BLOCK_THEME = {
   },
   3: {
     letter: 'C',
-    tmLabel: 'TM3',
+    tmLabel: 'TM 3',
     colorName: 'Biru',
-    badgeText: 'BLOK C (TM3) • BIRU',
+    badgeText: 'TM 3 (BLOK C) • BIRU',
     badgeClass: 'bg-blue-600 text-white',
     cardBorder: 'border-blue-600/30',
     headerBg: 'bg-[#0f4c81]',
@@ -137,9 +137,9 @@ export const SYAAMIL_BLOCK_THEME = {
   },
   4: {
     letter: 'D',
-    tmLabel: 'TM4',
+    tmLabel: 'TM 4',
     colorName: 'Merah',
-    badgeText: 'BLOK D (TM4) • MERAH',
+    badgeText: 'TM 4 (BLOK D) • MERAH',
     badgeClass: 'bg-rose-700 text-white',
     cardBorder: 'border-rose-600/30',
     headerBg: 'bg-[#6D123F]',

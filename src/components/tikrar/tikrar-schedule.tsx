@@ -380,7 +380,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 <CardTitle className="text-xl font-headline font-black">Target Hafalan &amp; Jadwal Per Langkah</CardTitle>
                 <CardDescription className="text-white/80 text-xs mt-1">
                   Pilih Juz, halaman mulai sampai halaman akhir, dan durasi periode. Jadwal disusun mengikuti urutan
-                  mushaf: Simak → A1 → A2 → Gabung A → … → Gabung A–D → Ujian. Progres yang sudah tercatat tidak hilang
+                  mushaf: Simak → TM 1-1 → TM 1-2 → Gabung TM 1 → … → Gabung TM 1–4 → Ujian. Progres yang sudah tercatat tidak hilang
                   saat target diubah.
                 </CardDescription>
               </div>

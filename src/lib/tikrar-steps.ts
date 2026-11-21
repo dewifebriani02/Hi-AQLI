@@ -55,13 +55,27 @@ const SUB_STEPS: TikrarStepDef[] = [];
 (['A', 'B', 'C', 'D'] as const).forEach((letter, i) => {
   const blockNo = (i + 1) as 1 | 2 | 3 | 4;
   SUB_STEPS.push(
-    { index: 0, key: `${blockNo}.a`, label: `Blok ${letter}-1`, shortLabel: `${letter}1`, kind: 'sub', target: PASS_THRESHOLD },
-    { index: 0, key: `${blockNo}.b`, label: `Blok ${letter}-2`, shortLabel: `${letter}2`, kind: 'sub', target: PASS_THRESHOLD },
+    {
+      index: 0,
+      key: `${blockNo}.a`,
+      label: `TM ${blockNo}-1 (Blok ${letter}-1)`,
+      shortLabel: `TM${blockNo}-1`,
+      kind: 'sub',
+      target: PASS_THRESHOLD,
+    },
+    {
+      index: 0,
+      key: `${blockNo}.b`,
+      label: `TM ${blockNo}-2 (Blok ${letter}-2)`,
+      shortLabel: `TM${blockNo}-2`,
+      kind: 'sub',
+      target: PASS_THRESHOLD,
+    },
     {
       index: 0,
       key: `${blockNo}.combined`,
-      label: `Gabung Blok ${letter}`,
-      shortLabel: `Gab ${letter}`,
+      label: `Gabung TM ${blockNo} (Blok ${letter})`,
+      shortLabel: `Gab TM${blockNo}`,
       kind: 'sub',
       target: PASS_THRESHOLD,
       completesBlock: blockNo,
@@ -79,16 +93,16 @@ const meta = (key: string, label: string, shortLabel: string, target = getMetaTh
 });
 
 export const TIKRAR_STEPS: readonly TikrarStepDef[] = ([
-  { index: 0, key: 'prep', label: 'Simak Audio Blok A 5x', shortLabel: 'Simak', kind: 'prep', target: PREP_LISTEN_THRESHOLD },
+  { index: 0, key: 'prep', label: 'Simak Audio TM 1 (Blok A) 5x', shortLabel: 'Simak TM1', kind: 'prep', target: PREP_LISTEN_THRESHOLD },
   ...SUB_STEPS.slice(0, 6),
-  meta('1_2', 'Gabung Blok A & B', 'Gab A-B', 10),
+  meta('1_2', 'Gabung TM 1 & 2 (Blok A & B)', 'Gab TM1-2', 10),
   ...SUB_STEPS.slice(6, 9),
-  meta('2_3', 'Gabung Blok B & C', 'Gab B-C', 10),
-  meta('1_2_3', 'Gabung Blok A–C', 'Gab A-C', 5),
+  meta('2_3', 'Gabung TM 2 & 3 (Blok B & C)', 'Gab TM2-3', 10),
+  meta('1_2_3', 'Gabung TM 1–3 (Blok A–C)', 'Gab TM1-3', 5),
   ...SUB_STEPS.slice(9, 12),
-  meta('3_4', 'Gabung Blok C & D', 'Gab C-D', 10),
-  meta('2_3_4', 'Gabung Blok B–D', 'Gab B-D', 5),
-  meta('1_2_3_4', 'Gabung Seluruh Halaman (A–D)', 'Gab A-D', 5),
+  meta('3_4', 'Gabung TM 3 & 4 (Blok C & D)', 'Gab TM3-4', 10),
+  meta('2_3_4', 'Gabung TM 2–4 (Blok B–D)', 'Gab TM2-4', 5),
+  meta('1_2_3_4', 'Gabung Seluruh Halaman (TM 1–4)', 'Gab TM1-4', 5),
   { index: 0, key: 'quiz', label: `Ujian Halaman ${QUIZ_QUESTION_COUNT} Soal`, shortLabel: 'Ujian', kind: 'quiz', target: 1 },
 ] as TikrarStepDef[]).map((s, i) => ({ ...s, index: i }));
 
