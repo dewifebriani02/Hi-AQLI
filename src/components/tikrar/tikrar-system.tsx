@@ -421,12 +421,16 @@ export function TikrarSystem({
   const todayKey = useMemo(() => toDateKeyWIB(), []);
   // Target aktif dari Target & Jadwal: menentukan rentang halaman & gerbang ujian 30 soal
   const activeTarget = summary?.target || null;
+  const juzPageRange = useMemo(
+    () => getJuzPageRange(activeTarget?.juz ?? juz),
+    [activeTarget, juz]
+  );
   const { startPage, endPage } = useMemo(
     () =>
       activeTarget
         ? { startPage: activeTarget.startPage, endPage: activeTarget.endPage }
-        : getJuzPageRange(juz),
-    [activeTarget, juz]
+        : juzPageRange,
+    [activeTarget, juzPageRange]
   );
   const clearedPages = useMemo(
     () => new Set<number>([...(summary?.quizPassedPages || []), ...(summary?.tasmiPassedPages || [])]),
@@ -437,11 +441,12 @@ export function TikrarSystem({
     if (!user) return null;
     if (!activeTarget) return 'Isi Target & Jadwal terlebih dahulu sebelum mulai berlatih.';
     if (clearedPages.has(page)) return null;
+    if (page < activeTarget.startPage && page >= juzPageRange.startPage) return null;
     if (page > activeTarget.unlockedPage) {
       return `Halaman ${page} masih terkunci. Luluskan ujian ${QUIZ_QUESTION_COUNT} soal Halaman ${activeTarget.unlockedPage} terlebih dahulu.`;
     }
     return null;
-  }, [user, activeTarget, clearedPages, page]);
+  }, [user, activeTarget, clearedPages, page, juzPageRange]);
   const lastQuizOnPage = useMemo(
     () => (summary?.recentQuizzes || []).find((q) => q.page === page) || null,
     [summary?.recentQuizzes, page]
@@ -1520,8 +1525,8 @@ export function TikrarSystem({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setPage((p) => Math.max(startPage, p - 1))}
-            disabled={loading || page <= startPage}
+            onClick={() => setPage((p) => Math.max(juzPageRange.startPage, p - 1))}
+            disabled={loading || page <= juzPageRange.startPage}
             className="rounded-xl h-10 w-10 border-[#6D123F]/20 hover:bg-[#6D123F]/5"
           >
             <ChevronLeft className="h-5 w-5 text-[#6D123F]" />
@@ -1534,17 +1539,20 @@ export function TikrarSystem({
             onChange={(e) => setPage(Number(e.target.value))}
             className="h-10 rounded-xl border-2 border-[#6D123F]/20 bg-stone-50 px-2.5 text-xs sm:text-sm font-black text-[#6D123F]"
           >
-            {Array.from({ length: endPage - startPage + 1 }, (_, idx) => {
-              const pNum = startPage + idx;
+            {Array.from({ length: juzPageRange.endPage - juzPageRange.startPage + 1 }, (_, idx) => {
+              const pNum = juzPageRange.startPage + idx;
               const pCleared = clearedPages.has(pNum);
-              const pLocked = Boolean(activeTarget) && !pCleared && pNum > (activeTarget?.unlockedPage || 0);
+              const isPriorPage = Boolean(activeTarget) && pNum < activeTarget!.startPage;
+              const pLocked = Boolean(activeTarget) && !pCleared && !isPriorPage && pNum > (activeTarget?.unlockedPage || 0);
               return (
                 <option key={pNum} value={pNum}>
-                  {pCleared ? '★ ' : pLocked ? '🔒 ' : ''}Hal. {pNum}
+                  {pCleared ? '★ ' : isPriorPage ? '✓ ' : pLocked ? '🔒 ' : ''}Hal. {pNum}
                   {pNum === recommendedPage
                     ? ' (Halaman Aktif)'
                     : pCleared
                     ? ' (Lulus Ujian)'
+                    : isPriorPage
+                    ? ' (Hafalan Awal)'
                     : pLocked
                     ? ' (Terkunci)'
                     : ''}
@@ -1556,8 +1564,8 @@ export function TikrarSystem({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setPage((p) => Math.min(endPage, p + 1))}
-            disabled={loading || page >= endPage}
+            onClick={() => setPage((p) => Math.min(juzPageRange.endPage, p + 1))}
+            disabled={loading || page >= juzPageRange.endPage}
             className="rounded-xl h-10 w-10 border-[#6D123F]/20 hover:bg-[#6D123F]/5"
           >
             <ChevronRight className="h-5 w-5 text-[#6D123F]" />
@@ -1722,6 +1730,26 @@ export function TikrarSystem({
       </div>
 
       
+
+      {activeTarget && page < activeTarget.startPage && page >= juzPageRange.startPage && (
+        <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <p className="text-xs font-bold text-emerald-950">
+              Halaman {page} adalah bagian awal Juz {activeTarget.juz} (sebelum target aktif Hal. {activeTarget.startPage}–{activeTarget.endPage}). Boleh dibaca dan dimurajaah kapan saja.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setPage(activeTarget.unlockedPage)}
+            className="border-emerald-300 text-emerald-900 hover:bg-emerald-100 font-bold text-xs h-8 px-3 rounded-xl shrink-0"
+          >
+            Ke Halaman Aktif ({activeTarget.unlockedPage}) <ArrowRight className="w-3.5 h-3.5 ml-1" />
+          </Button>
+        </div>
+      )}
 
       {pageLockReason && (
         <div className="bg-stone-100 border-2 border-stone-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

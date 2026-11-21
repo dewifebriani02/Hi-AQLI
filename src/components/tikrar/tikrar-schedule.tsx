@@ -86,6 +86,11 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
   const [hasInitializedForm, setHasInitializedForm] = useState(false);
   const [showIstiqomah, setShowIstiqomah] = useState(false);
   const recentChanges = summary?.targetChangesLast30Days || 0;
+  const [markPriorPagesDone, setMarkPriorPagesDone] = useState(true);
+
+  useEffect(() => {
+    setMarkPriorPagesDone(true);
+  }, [selectedJuz, startPage]);
 
   // Isi form dari target aktif (sekali)
   useEffect(() => {
@@ -176,6 +181,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
           active_days_per_week: activeDaysPerWeek,
           start_date: startDateKey,
           halaqah_id: selectedHalaqahId || null,
+          mark_prior_pages_done: startPage > juzRange.startPage ? markPriorPagesDone : false,
         }),
       });
       const json = await res.json();
@@ -525,6 +531,36 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               </div>
             </div>
 
+            {startPage > juzRange.startPage && (
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 sm:p-5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black text-amber-950">
+                      Mulai dari Pertengahan Juz {selectedJuz} (Hal. {startPage})
+                    </h4>
+                    <p className="text-xs text-amber-900 leading-relaxed">
+                      Ukhti memulai hafalan dari Hal. {startPage}, melewati {startPage - juzRange.startPage} halaman awal Juz {selectedJuz} (Hal. {juzRange.startPage}–{startPage - 1}).
+                      Tandai semua langkah pada halaman-halaman awal ini sebagai sudah tuntas agar tersimpan rapi di progres dan tidak terkunci saat murajaah.
+                    </p>
+                  </div>
+                </div>
+                <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-amber-200 cursor-pointer hover:bg-amber-100/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={markPriorPagesDone}
+                    onChange={(e) => setMarkPriorPagesDone(e.target.checked)}
+                    className="w-4 h-4 rounded text-[#6D123F] accent-[#6D123F] focus:ring-[#6D123F]"
+                  />
+                  <span className="text-xs font-black text-stone-800">
+                    Tandai semua langkah Hal. {juzRange.startPage} s.d. Hal. {startPage - 1} sudah tuntas (100% selesai &amp; tersimpan di progres)
+                  </span>
+                </label>
+              </div>
+            )}
+
             <div className="space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <label className="text-xs font-black uppercase tracking-wider text-stone-700">
@@ -606,7 +642,10 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               </div>
               <p className="text-stone-700">
                 Total <strong>{totalPagesSelected} halaman</strong> diselesaikan dalam waktu{" "}
-                <strong>{paceMeta.durationMonths} bulan</strong> ({preview.activeDays} hari aktif belajar). Porsi harian:{" "}
+                <strong>{preview.activeDays} hari aktif belajar</strong>
+                {preview.activeDays !== 40 && (
+                  <span className="text-stone-500 font-medium"> (~{(preview.activeDays / 20).toFixed(1)} bulan)</span>
+                )}. Porsi harian:{" "}
                 <strong className="text-stone-900">{paceMeta.dailyPortionLabel}</strong> (setara{" "}
                 <span className="text-[#6D123F] font-bold">{preview.dailyQuota} langkah sistematis/hari</span>).
               </p>

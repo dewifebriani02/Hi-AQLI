@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
-import { TIKRAR_PACE_OPTIONS, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
+import { getJuzPageRange, TIKRAR_PACE_OPTIONS, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
 import { generateTikrarStepSchedule, normalizeTargetRange, TIKRAR_STEPS } from '@/lib/tikrar-steps';
 import { buildTikrarSummary } from '@/lib/tikrar-server';
 
@@ -100,6 +100,71 @@ export async function POST(req: NextRequest) {
         ctx.userId,
       ]
     );
+
+    // Jika thalibah memulai dari pertengahan juz, tandai langkah pada halaman awal juz sebagai tuntas
+    const juzRange = getJuzPageRange(juz);
+    const markPriorPagesDone = Boolean(body.mark_prior_pages_done);
+    if (markPriorPagesDone && startPage > juzRange.startPage) {
+      const priorBlocks = {
+        1: { a: { count: 40 }, b: { count: 40 }, combined: { count: 40 }, listen: { count: 5 } },
+        2: { a: { count: 40 }, b: { count: 40 }, combined: { count: 40 }, listen: { count: 5 } },
+        3: { a: { count: 40 }, b: { count: 40 }, combined: { count: 40 }, listen: { count: 5 } },
+        4: { a: { count: 40 }, b: { count: 40 }, combined: { count: 40 }, listen: { count: 5 } },
+      };
+      const priorMeta = {
+        '1_2': 10,
+        '2_3': 10,
+        '1_2_3': 5,
+        '3_4': 10,
+        '2_3_4': 5,
+        '1_2_3_4': 5,
+      };
+
+      for (let p = juzRange.startPage; p < startPage; p++) {
+        await client.query(
+          `INSERT INTO public.tikrar_user_progress (
+             user_id, page_number, juz, prep_listen_count, prep_translation_done,
+             blocks, meta_counts, tuntas_blocks, total_progress, updated_at
+           ) VALUES ($1, $2, $3, 5, true, $4::jsonb, $5::jsonb, $6::jsonb, 100, now())
+           ON CONFLICT (user_id, page_number) DO UPDATE SET
+             prep_listen_count = 5,
+             prep_translation_done = true,
+             blocks = $4::jsonb,
+             meta_counts = $5::jsonb,
+             tuntas_blocks = $6::jsonb,
+             total_progress = 100,
+             updated_at = now()`,
+          [
+            ctx.userId,
+            p,
+            juz,
+            JSON.stringify(priorBlocks),
+            JSON.stringify(priorMeta),
+            JSON.stringify([1, 2, 3, 4]),
+          ]
+        );
+
+        await client.query(
+          `INSERT INTO public.tikrar_page_quizzes (
+             user_id, juz, page_number, total_questions, correct_answers, score, passed, question_types, created_at
+           )
+           SELECT $1, $2, $3, 30, 30, 100, true, '{"source":"prior_hafalan"}'::jsonb, now()
+           WHERE NOT EXISTS (
+             SELECT 1 FROM public.tikrar_page_quizzes WHERE user_id = $1 AND page_number = $3 AND passed = true
+           )`,
+          [ctx.userId, juz, p]
+        );
+
+        await client.query(
+          `INSERT INTO public.tikrar_prior_hafalan (user_id, page_number, status, updated_at)
+           VALUES ($1, $2, 'tested_external', now())
+           ON CONFLICT (user_id, page_number) DO UPDATE SET
+             status = 'tested_external',
+             updated_at = now()`,
+          [ctx.userId, p]
+        ).catch(() => {});
+      }
+    }
 
     // Sinkron jadwal per blok (dipakai pengingat WhatsApp): tanggal blok = hari langkah "Gabung Blok X"
     await client.query(
