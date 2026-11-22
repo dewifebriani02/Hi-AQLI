@@ -5,6 +5,8 @@ import { getJuzForPage } from '@/lib/tikrar-schedule-generator';
 import {
   countCompletedSteps,
   MEMORIZED_STEP_COUNT,
+  QUIZ_PART1_COUNT,
+  QUIZ_PART2_COUNT,
   QUIZ_PASS_PERCENT,
   QUIZ_QUESTION_COUNT,
   TIKRAR_POINTS,
@@ -32,7 +34,11 @@ export async function POST(req: NextRequest) {
     const correct = Math.max(0, Math.min(total, Math.floor(Number(body.correct_answers) || 0)));
     if (!pageNumber || total < QUIZ_QUESTION_COUNT) {
       return NextResponse.json(
-        { error: { message: `Ujian halaman harus berisi ${QUIZ_QUESTION_COUNT} soal.` } },
+        {
+          error: {
+            message: `Ujian halaman harus berisi ${QUIZ_QUESTION_COUNT} soal (${QUIZ_PART1_COUNT} Hafalan + ${QUIZ_PART2_COUNT} Terjemah Per Kata).`,
+          },
+        },
         { status: 400 }
       );
     }

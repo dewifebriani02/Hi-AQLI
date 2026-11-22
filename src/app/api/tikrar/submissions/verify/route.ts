@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
     const pointsAwarded = nextStatus === 'passed' && sub.status !== 'passed' ? TIKRAR_POINTS.tasmiPassed : 0;
 
     // Halaman penuh lulus tasmi' -> sinkron page_exams (lapis "sudah diuji" di Itqan 30 Juz).
-    // Tasmi' tidak lagi mengunci/membuka halaman; gerbang halaman = ujian 30 soal.
+    // Tasmi' tidak lagi mengunci/membuka halaman; gerbang halaman = ujian 60 soal.
     const { rows: examRows } = await client.query(
       `SELECT id, page_number, passed FROM public.page_exams
        WHERE user_id = $1 AND page_number = $2 LIMIT 1`,

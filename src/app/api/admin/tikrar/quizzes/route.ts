@@ -5,6 +5,29 @@ import { isStaff } from '@/lib/db-policy';
 import { getJuzForPage } from '@/lib/tikrar-schedule-generator';
 import { countCompletedSteps, MEMORIZED_STEP_COUNT } from '@/lib/tikrar-steps';
 
+function parseQuizBreakdown(questionTypes: any) {
+  if (!questionTypes || typeof questionTypes !== 'object') {
+    return {
+      part1Correct: null as number | null,
+      part1Total: null as number | null,
+      part2Correct: null as number | null,
+      part2Total: null as number | null,
+      mufradatMode: null as string | null,
+    };
+  }
+  const p1c = Number(questionTypes.part1_correct);
+  const p1t = Number(questionTypes.part1_total);
+  const p2c = Number(questionTypes.part2_correct);
+  const p2t = Number(questionTypes.part2_total);
+  return {
+    part1Correct: questionTypes.part1_correct !== undefined && Number.isFinite(p1c) ? p1c : null,
+    part1Total: Number.isFinite(p1t) && p1t > 0 ? p1t : null,
+    part2Correct: questionTypes.part2_correct !== undefined && Number.isFinite(p2c) ? p2c : null,
+    part2Total: Number.isFinite(p2t) && p2t > 0 ? p2t : null,
+    mufradatMode: typeof questionTypes.mufradat_mode === 'string' ? questionTypes.mufradat_mode : null,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getAuthContext(req);
@@ -23,7 +46,7 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
       pool.query(
         `SELECT q.id, q.user_id, q.juz, q.page_number, q.total_questions, q.correct_answers,
-                q.score, q.passed, q.created_at
+                q.score, q.passed, q.question_types, q.created_at
          FROM public.tikrar_page_quizzes q
          WHERE COALESCE(q.question_types->>'source', '') <> 'prior_hafalan'
          ORDER BY q.created_at DESC
@@ -108,6 +131,7 @@ export async function GET(req: NextRequest) {
         score: Number(q.score),
         passed: Boolean(q.passed),
         isPriorPage: isPrior,
+        ...parseQuizBreakdown(q.question_types),
         createdAt: new Date(q.created_at).toISOString(),
       };
     });
@@ -180,6 +204,7 @@ export async function GET(req: NextRequest) {
           totalQuestions: Number(q.total_questions),
           score: Number(q.score),
           passed: Boolean(q.passed),
+          ...parseQuizBreakdown(q.question_types),
           createdAt: new Date(q.created_at).toISOString(),
         })),
       };

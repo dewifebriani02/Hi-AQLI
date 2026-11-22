@@ -6,7 +6,12 @@ import Link from 'next/link';
 import { ChevronLeft, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TikrarPageQuiz } from '@/components/tikrar/tikrar-page-quiz';
-import { QUIZ_PASS_PERCENT, QUIZ_QUESTION_COUNT } from '@/lib/tikrar-steps';
+import {
+  QUIZ_PART1_COUNT,
+  QUIZ_PART2_COUNT,
+  QUIZ_PASS_PERCENT,
+  QUIZ_QUESTION_COUNT,
+} from '@/lib/tikrar-steps';
 
 function UjianContent() {
   const searchParams = useSearchParams();
@@ -28,7 +33,8 @@ function UjianContent() {
           </div>
           <h1 className="text-2xl font-black font-headline tracking-tight">Ujian Halaman {page}</h1>
           <p className="text-xs text-muted-foreground">
-            {QUIZ_QUESTION_COUNT} soal acak • lulus minimal {QUIZ_PASS_PERCENT}% untuk membuka halaman berikutnya
+            {QUIZ_QUESTION_COUNT} soal ({QUIZ_PART1_COUNT} Hafalan + {QUIZ_PART2_COUNT} Terjemah Per Kata) • lulus
+            minimal {QUIZ_PASS_PERCENT}% untuk membuka halaman berikutnya
           </p>
         </div>
       </div>

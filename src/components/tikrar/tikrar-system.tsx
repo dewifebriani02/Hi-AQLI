@@ -526,7 +526,7 @@ export function TikrarSystem({
   ]);
 
   const todayKey = useMemo(() => toDateKeyWIB(), []);
-  // Target aktif dari Target & Jadwal: menentukan rentang halaman & gerbang ujian 30 soal
+  // Target aktif dari Target & Jadwal: menentukan rentang halaman & gerbang ujian 60 soal
   const activeTarget = summary?.target || null;
   const juzPageRange = useMemo(() => getJuzPageRange(juz), [juz]);
   const { startPage, endPage } = useMemo(
@@ -2019,7 +2019,7 @@ export function TikrarSystem({
             <div className="flex items-center gap-2">
               <ClipboardCheck className="w-4 h-4 text-[#6D123F] shrink-0" />
               <p className="text-xs font-black text-amber-950">
-                {summary!.pendingQuizPages.length} halaman sudah dihafal tetapi belum lulus ujian pilihan ganda (30 soal):
+                {summary!.pendingQuizPages.length} halaman sudah dihafal tetapi belum lulus ujian halaman (60 soal):
               </p>
             </div>
           </div>
@@ -2450,7 +2450,7 @@ export function TikrarSystem({
                     </div>
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[260px]">
                       Selesaikan repetisi gabungan seluruh halaman (A–D min. 5x) untuk membuka
-                      ujian halaman 30 soal &amp; setoran Tasmi&apos; ke muallimah.
+                      ujian halaman 60 soal (30 Hafalan + 30 Terjemah Per Kata) &amp; setoran Tasmi&apos; ke muallimah.
                     </p>
                   </CardContent>
                 </Card>
@@ -2468,12 +2468,15 @@ export function TikrarSystem({
                             : `Ujian Halaman ${QUIZ_QUESTION_COUNT} Soal`}
                         </h5>
                         <p className="text-[11px] opacity-80 leading-relaxed">
-                          Sambung ayat, tebak nomor ayat, lengkapi potongan kata, urutan ayat &amp; arti.
+                          Part 1 (30 Hafalan Ayat): sambung ayat, tebak nomor &amp; arti ayat. Part 2 (30 Terjemah Per Kata ala Hi Mufradat).
                           Lulus minimal {QUIZ_PASS_PERCENT}% untuk membuka halaman berikutnya.
                         </p>
                         {lastQuizOnPage && (
                           <p className="text-[11px] font-black text-[#D4AF37]">
                             Hasil terakhir: {lastQuizOnPage.correct}/{lastQuizOnPage.total} ({lastQuizOnPage.score}%)
+                            {lastQuizOnPage.part1Correct !== null && lastQuizOnPage.part1Correct !== undefined && lastQuizOnPage.part2Correct !== null && lastQuizOnPage.part2Correct !== undefined
+                              ? ` • Hafalan ${lastQuizOnPage.part1Correct}/${lastQuizOnPage.part1Total ?? 30} • Per Kata ${lastQuizOnPage.part2Correct}/${lastQuizOnPage.part2Total ?? 30}`
+                              : ""}
                             {lastQuizOnPage.passed ? ' • LULUS' : ' • Belum lulus'}
                           </p>
                         )}

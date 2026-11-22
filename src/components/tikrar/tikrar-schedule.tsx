@@ -538,7 +538,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                     </h4>
                     <p className="text-xs text-amber-900 leading-relaxed">
                       Ukhti memulai hafalan dari Hal. {startPage}, melewati {startPage - juzRange.startPage} halaman awal Juz {selectedJuz} (Hal. {juzRange.startPage}–{startPage - 1}).
-                      Centang ini <strong>hanya mencatat bahwa halaman tersebut sudah pernah dihafal sebelumnya</strong> (belum dianggap lulus ujian pilihan ganda 30 soal maupun setoran tasmi&apos; di aplikasi).
+                      Centang ini <strong>hanya mencatat bahwa halaman tersebut sudah pernah dihafal sebelumnya</strong> (belum dianggap lulus ujian halaman 60 soal maupun setoran tasmi&apos; di aplikasi).
                     </p>
                   </div>
                 </div>

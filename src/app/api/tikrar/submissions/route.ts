@@ -317,7 +317,7 @@ export async function POST(req: NextRequest) {
       `📖 *Halaman:* Juz ${juz} • Halaman ${pageNumber} (QS. ${surahName})\n` +
       `📦 *Cakupan:* ${formatBlocksHuman(blocksRange)}\n` +
       `🏷️ *Sumber Hafalan:* ${isPriorPage ? 'Hafalan Sebelum Bergabung' : 'Tikrar di Aplikasi'}\n` +
-      `📝 *Ujian PG 30 Soal:* ${quizInfoText}\n` +
+      `📝 *Ujian Halaman 60 Soal:* ${quizInfoText}\n` +
       (queuePosition ? `🕐 *Nomor Antrean:* #${queuePosition} (Total ${totalPending} menunggu)\n` : '') +
       (halaqahTitle ? `🏫 *Sesi Halaqah:* ${halaqahTitle}\n` : '') +
       (customNotes ? `💬 *Catatan:* ${customNotes}\n` : '') +

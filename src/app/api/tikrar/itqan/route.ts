@@ -9,7 +9,7 @@ import { loadClearedPages } from '@/lib/tikrar-server';
  * Itqan 30 Juz dua lapis:
  * - memorized: halaman yang semua langkah klik counter sampai Gabung A–D tuntas
  * - tested: halaman yang dinyatakan lulus setoran Tasmi' / ujian lisan oleh muallimah
- * - mutqin: halaman yang lulus ujian 30 soal dan lulus Tasmi' (di AQLI atau di luar AQLI)
+ * - mutqin: halaman yang lulus ujian 60 soal dan lulus Tasmi' (di AQLI atau di luar AQLI)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       if (r.status === 'tested_external' && !tasmiPassed.has(p)) externalTested.add(p);
     }
 
-    // Mutqin = lulus ujian 30 soal DAN lulus Tasmi' (di AQLI atau di luar AQLI)
+    // Mutqin = lulus ujian 60 soal DAN lulus Tasmi' (di AQLI atau di luar AQLI)
     const mutqinPages = new Set<number>(
       Array.from(quizPassed).filter((p) => tasmiPassed.has(p) || externalTested.has(p))
     );

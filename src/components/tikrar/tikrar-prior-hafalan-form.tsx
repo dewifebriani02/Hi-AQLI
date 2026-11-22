@@ -152,7 +152,8 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
         <p className="text-xs text-muted-foreground leading-relaxed">
           Isi hafalan yang sudah Ukhti miliki sebelum memakai HI AQLI. Hafalan ini tampil di Itqan 30 Juz dengan warna
           lebih muda, tidak menambah poin/streak, dan tidak membuka kunci halaman. Muallimah AQLI dapat mengujinya lewat
-          setoran Tasmi&apos;. Ujian 30 soal bisa langsung diambil per halaman (tanpa poin & keaktifan); lulus ujian + lulus tasmi&apos; = mutqin.
+          setoran Tasmi&apos;. Ujian 60 soal (30 Hafalan + 30 Terjemah Per Kata) bisa langsung diambil per halaman
+          (tanpa poin &amp; keaktifan); lulus ujian + lulus tasmi&apos; = mutqin.
         </p>
       </div>
 
@@ -280,7 +281,7 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
                     {r.testedBy ? ` • ${r.testedBy}` : ''} • {r.end - r.start + 1} hal.
                   </p>
                   <p className={cn('text-[11px] font-bold', r.nextQuizPage ? 'text-amber-800' : 'text-emerald-700')}>
-                    Lulus ujian pilihan ganda 30 soal: {r.quizPassedCount}/{r.end - r.start + 1} hal.
+                    Lulus ujian halaman 60 soal: {r.quizPassedCount}/{r.end - r.start + 1} hal.
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">

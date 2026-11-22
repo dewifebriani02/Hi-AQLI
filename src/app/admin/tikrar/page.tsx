@@ -1422,7 +1422,7 @@ export default function AdminTikrarPage() {
           </Card>
         </TabsContent>
 
-        {/* Skor Ujian Pilihan Ganda 30 Soal & Daftar Halaman Belum Ujian */}
+        {/* Skor Ujian Halaman 60 Soal & Daftar Halaman Belum Ujian */}
         <TabsContent value="quizzes" className="outline-none">
           <TikrarQuizScoresAdmin />
         </TabsContent>

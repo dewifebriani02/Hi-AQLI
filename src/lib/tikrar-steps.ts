@@ -6,7 +6,7 @@
  *   Simak TM2 → TM2-1 → TM2-2 → Gabung TM2 → Gabung TM1-2 →
  *   Simak TM3 → TM3-1 → TM3-2 → Gabung TM3 → Gabung TM2-3 → Gabung TM1-3 →
  *   Simak TM4 → TM4-1 → TM4-2 → Gabung TM4 → Gabung TM3-4 → Gabung TM2-4 → Gabung TM1-4 →
- *   Ujian halaman 30 soal.
+ *   Ujian halaman 60 soal (30 Hafalan Ayat + 30 Terjemah Per Kata).
  *
  * Indeks langkah global dalam satu target = (page - startPage) * STEPS_PER_PAGE + stepIndex.
  */
@@ -29,7 +29,9 @@ export const META_4_BLOCKS_THRESHOLD = 5;
 /** Default / backwards-compatible threshold */
 export const META_PASS_THRESHOLD = 10;
 export const PREP_LISTEN_THRESHOLD = 5;
-export const QUIZ_QUESTION_COUNT = 30;
+export const QUIZ_PART1_COUNT = 30;
+export const QUIZ_PART2_COUNT = 30;
+export const QUIZ_QUESTION_COUNT = QUIZ_PART1_COUNT + QUIZ_PART2_COUNT;
 export const QUIZ_PASS_PERCENT = 80;
 
 /** Minimal repetisi penggabungan antar blok: 2 blok min. 10x, 3 blok min. 5x, 4 blok min. 5x */
@@ -118,7 +120,14 @@ export const TIKRAR_STEPS: readonly TikrarStepDef[] = ([
   meta('3_4', 'Gabung TM 3 & 4 (Blok C & D)', 'Gab TM3-4', 10),
   meta('2_3_4', 'Gabung TM 2–4 (Blok B–D)', 'Gab TM2-4', 5),
   meta('1_2_3_4', 'Gabung Seluruh Halaman (TM 1–4)', 'Gab TM1-4', 5),
-  { index: 0, key: 'quiz', label: `Ujian Halaman ${QUIZ_QUESTION_COUNT} Soal`, shortLabel: 'Ujian', kind: 'quiz', target: 1 },
+  {
+    index: 0,
+    key: 'quiz',
+    label: `Ujian Halaman ${QUIZ_QUESTION_COUNT} Soal (Hafalan & Terjemah Per Kata)`,
+    shortLabel: 'Ujian',
+    kind: 'quiz',
+    target: 1,
+  },
 ] as TikrarStepDef[]).map((s, i) => ({ ...s, index: i }));
 
 export const STEPS_PER_PAGE = TIKRAR_STEPS.length; // 23
@@ -170,8 +179,8 @@ export function isBlockListenDone(prog: TikrarProgressLike | null | undefined, b
 }
 
 /**
- * Jumlah langkah berurutan yang sudah tuntas pada satu halaman (0..20).
- * `quizCleared` = lulus ujian 30 soal (atau halaman sudah lulus tasmi' lama).
+ * Jumlah langkah berurutan yang sudah tuntas pada satu halaman (0..23).
+ * `quizCleared` = lulus ujian 60 soal (atau halaman sudah lulus tasmi' / ujian versi sebelumnya).
  */
 export function countCompletedSteps(prog: TikrarProgressLike | null | undefined, quizCleared = false): number {
   let done = 0;
@@ -322,7 +331,7 @@ export function addMonthsToDateKey(dateKey: string, months: number): string {
 
 /** Hari aktif dalam periode [startDate, startDate + durasi) */
 export function listActiveDaysInPeriod(startDate: string, durationMonths: number, activeDaysPerWeek: number): string[] {
-  const endExclusive = addMonthsToDateKey(startDate, Math.max(1, Math.min(4, Math.floor(durationMonths) || 2)));
+  const endExclusive = addMonthsToDateKey(dateKeyOf(startDate), Math.max(1, Math.min(4, Math.floor(durationMonths) || 2)));
   const days: string[] = [];
   let cursor = startDate;
   for (let guard = 0; guard < 400 && cursor < endExclusive; guard++) {
@@ -330,6 +339,10 @@ export function listActiveDaysInPeriod(startDate: string, durationMonths: number
     cursor = addCalendarDays(cursor, 1);
   }
   return days;
+}
+
+function dateKeyOf(s: string) {
+  return s;
 }
 
 export function getDailyQuotaForPace(durationMonths: number): number {
@@ -401,7 +414,7 @@ export function expectedStepsByDate(schedule: TikrarStepSchedule, dateKey: strin
 }
 
 // ---------------------------------------------------------------------------
-// Gerbang halaman: lulus ujian 30 soal membuka halaman berikutnya
+// Gerbang halaman: lulus ujian halaman membuka halaman berikutnya
 // ---------------------------------------------------------------------------
 
 export function buildClearedPageSet(

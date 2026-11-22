@@ -206,7 +206,7 @@ export function TikrarPriorHafalanAdmin({
                             : `${r.untestedPages.length}/${r.end - r.start + 1} hal. belum diuji AQLI`}{' '}
                           •{' '}
                           <span className={r.unquizzedPages.length === 0 ? 'text-emerald-700 font-bold' : 'text-amber-800 font-bold'}>
-                            Ujian PG 30 soal: {r.quizPassedCount}/{r.end - r.start + 1} lulus
+                            Ujian PG 60 soal: {r.quizPassedCount}/{r.end - r.start + 1} lulus
                           </span>
                         </p>
                         {r.unquizzedPages.length > 0 && (

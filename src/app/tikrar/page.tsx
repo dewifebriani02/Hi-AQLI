@@ -50,7 +50,7 @@ export default function TikrarPage() {
   const isInitialSummaryLoading = isSummaryLoading && !summary;
   const isSchedulesLoading = isSummaryLoading;
 
-  // Halaman aktif = halaman target yang sedang terbuka (belum lulus ujian 30 soal)
+  // Halaman aktif = halaman target yang sedang terbuka (belum lulus ujian 60 soal)
   const userActiveJuz = activeTarget?.juz ?? null;
   const userActivePage = activeTarget?.unlockedPage ?? null;
 

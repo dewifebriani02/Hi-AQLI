@@ -8,12 +8,36 @@ import {
   countCompletedSteps,
   generateTikrarStepSchedule,
   MEMORIZED_STEP_COUNT,
+  QUIZ_QUESTION_COUNT,
   STEPS_PER_PAGE,
   TIKRAR_POINTS,
   type TikrarStepSchedule,
 } from '@/lib/tikrar-steps';
 
 type Db = PoolClient | typeof pool;
+
+function parseQuizBreakdown(questionTypes: any) {
+  if (!questionTypes || typeof questionTypes !== 'object') {
+    return {
+      part1Correct: null as number | null,
+      part1Total: null as number | null,
+      part2Correct: null as number | null,
+      part2Total: null as number | null,
+      mufradatMode: null as string | null,
+    };
+  }
+  const p1c = Number(questionTypes.part1_correct);
+  const p1t = Number(questionTypes.part1_total);
+  const p2c = Number(questionTypes.part2_correct);
+  const p2t = Number(questionTypes.part2_total);
+  return {
+    part1Correct: questionTypes.part1_correct !== undefined && Number.isFinite(p1c) ? p1c : null,
+    part1Total: Number.isFinite(p1t) && p1t > 0 ? p1t : null,
+    part2Correct: questionTypes.part2_correct !== undefined && Number.isFinite(p2c) ? p2c : null,
+    part2Total: Number.isFinite(p2t) && p2t > 0 ? p2t : null,
+    mufradatMode: typeof questionTypes.mufradat_mode === 'string' ? questionTypes.mufradat_mode : null,
+  };
+}
 
 export interface ActiveTikrarTarget {
   id: string;
@@ -58,7 +82,7 @@ export async function loadActiveTarget(db: Db, userId: string): Promise<ActiveTi
   };
 }
 
-/** Halaman yang lulus ujian 30 soal, ditambah halaman lama yang sudah lulus tasmi'/ujian lisan */
+/** Halaman yang lulus ujian 60 soal, ditambah halaman lama yang sudah lulus tasmi'/ujian lisan */
 export async function loadClearedPages(db: Db, userId: string): Promise<{
   cleared: Set<number>;
   quizPassed: Set<number>;
@@ -141,7 +165,7 @@ export function isPagePracticeAllowed(
   if (page > unlockedPage) {
     return {
       allowed: false,
-      reason: `Halaman ${page} masih terkunci. Luluskan ujian 30 soal Halaman ${unlockedPage} terlebih dahulu.`,
+      reason: `Halaman ${page} masih terkunci. Luluskan ujian ${QUIZ_QUESTION_COUNT} soal Halaman ${unlockedPage} terlebih dahulu.`,
       unlockedPage,
     };
   }
@@ -270,7 +294,7 @@ export async function buildTikrarSummary(userId: string) {
       ),
       pool.query(`SELECT points FROM public.users WHERE id = $1`, [userId]),
       pool.query(
-        `SELECT page_number, juz, score, correct_answers, total_questions, passed, created_at
+        `SELECT page_number, juz, score, correct_answers, total_questions, passed, question_types, created_at
          FROM public.tikrar_page_quizzes
          WHERE user_id = $1 AND COALESCE(question_types->>'source', '') <> 'prior_hafalan'
          ORDER BY created_at DESC LIMIT 200`,
@@ -433,6 +457,7 @@ export async function buildTikrarSummary(userId: string) {
       correct: Number(q.correct_answers),
       total: Number(q.total_questions),
       passed: Boolean(q.passed),
+      ...parseQuizBreakdown(q.question_types),
       createdAt: new Date(q.created_at).toISOString(),
     })),
     lastPracticedPage: progressRows[0] ? Number(progressRows[0].page_number) : null,

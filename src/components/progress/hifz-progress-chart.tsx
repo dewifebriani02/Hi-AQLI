@@ -45,7 +45,7 @@ const TOTAL_PAGES = 604;
  * Itqan 30 Juz tiga lapis:
  *  - lingkar luar: halaman dihafal (klik counter sampai Gabung A–D tuntas + hafalan sebelum bergabung)
  *  - lingkar tengah: halaman sudah diuji (Tasmi' muallimah AQLI + diuji di luar AQLI)
- *  - lingkar dalam: halaman mutqin (lulus ujian 30 soal dan lulus Tasmi')
+ *  - lingkar dalam: halaman mutqin (lulus ujian 60 soal dan lulus Tasmi')
  */
 export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: number }) {
   const { user } = useUser();
@@ -194,7 +194,7 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
               <p className="text-[11px] font-bold text-stone-600 text-center">
                 {data?.totalMutqinPages || 0} hal. ({mutqinPct}%)
               </p>
-              <p className="text-[10px] text-stone-500 text-center">Lulus ujian 30 soal + Tasmi&apos;</p>
+              <p className="text-[10px] text-stone-500 text-center">Lulus ujian 60 soal + Tasmi&apos;</p>
             </div>
           </div>
           <div className="space-y-2 bg-muted p-5 rounded-3xl border border-[#800000]/5">
@@ -205,7 +205,7 @@ export function HifzProgressChart({ refreshSignal = 0 }: { refreshSignal?: numbe
               <strong>Dihafal</strong> (lingkar luar) = semua langkah klik counter sampai Gabung Seluruh Halaman (A–D)
               tuntas (emas), ditambah hafalan sebelum bergabung (emas muda). <strong>Diuji</strong> (lingkar tengah) =
               lulus setoran Tasmi&apos; oleh muallimah AQLI (marun), ditambah yang diuji di luar AQLI (cokelat muda).{' '}
-              <strong>Mutqin</strong> (lingkar dalam, hijau) = lulus ujian 30 soal <em>dan</em> lulus Tasmi&apos;.
+              <strong>Mutqin</strong> (lingkar dalam, hijau) = lulus ujian 60 soal <em>dan</em> lulus Tasmi&apos;.
             </p>
           </div>
         </div>

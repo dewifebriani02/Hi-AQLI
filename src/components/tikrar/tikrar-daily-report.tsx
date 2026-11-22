@@ -447,7 +447,7 @@ export function TikrarDailyReport({
         };
       } else if (!(summary?.quizPassedPages || []).includes(pageNumber)) {
         activeSub = {
-          stageName: 'Ujian Halaman 30 Soal (syarat buka halaman berikutnya)',
+          stageName: 'Ujian Halaman 60 Soal (syarat buka halaman berikutnya)',
           subBlockLetter: 'Ujian Halaman',
           currentCount: 0,
           targetCount: 1,
@@ -967,12 +967,12 @@ export function TikrarDailyReport({
           </div>
         </div>
 
-        {/* Ujian Pilihan Ganda 30 Soal: Daftar Halaman Belum Ujian & Riwayat Skor */}
+        {/* Ujian Halaman 60 Soal (30 Hafalan + 30 Terjemah Per Kata): Daftar Halaman Belum Ujian & Riwayat Skor */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
-                <ClipboardCheck className="w-4 h-4 text-[#6D123F]" /> Belum Ujian Pilihan Ganda (30 Soal)
+                <ClipboardCheck className="w-4 h-4 text-[#6D123F]" /> Belum Ujian Halaman (60 Soal)
               </h3>
               <Badge
                 className={cn(
@@ -1017,7 +1017,7 @@ export function TikrarDailyReport({
                       className="h-8 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-[11px] font-black rounded-lg shrink-0"
                     >
                       <Link href={`/tikrar/ujian?page=${item.page}`}>
-                        {item.lastScore !== null && item.lastScore !== undefined ? 'Ulangi Ujian' : 'Ujian 30 Soal'}
+                        {item.lastScore !== null && item.lastScore !== undefined ? 'Ulangi Ujian' : 'Ujian 60 Soal'}
                       </Link>
                     </Button>
                   </div>
@@ -1037,7 +1037,7 @@ export function TikrarDailyReport({
             </div>
             {(summary?.recentQuizzes || []).length === 0 ? (
               <div className="py-6 text-center text-xs text-stone-500 bg-stone-50 rounded-lg border border-dashed border-stone-200">
-                Belum ada skor ujian pilihan ganda 30 soal yang tersimpan di database.
+                Belum ada skor ujian halaman 60 soal yang tersimpan di database.
               </div>
             ) : (
               <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
@@ -1051,7 +1051,10 @@ export function TikrarDailyReport({
                         Hal. {q.page} • {getSurahNameForPage(q.page)}
                       </p>
                       <p className="text-[11px] text-stone-500">
-                        {q.correct}/{q.total} benar •{' '}
+                        {q.correct}/{q.total} benar
+                        {q.part1Correct !== null && q.part1Correct !== undefined && q.part2Correct !== null && q.part2Correct !== undefined
+                          ? ` (Hafalan ${q.part1Correct}/${q.part1Total ?? 30} • Kata ${q.part2Correct}/${q.part2Total ?? 30})`
+                          : ""} •{" "}
                         {new Date(q.createdAt).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'short',

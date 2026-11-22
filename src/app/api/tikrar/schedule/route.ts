@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     );
 
     // Jika thalibah memulai dari pertengahan juz, catat halaman awal juz hanya sebagai sudah dihafal
-    // sebelumnya (tikrar_prior_hafalan), TANPA meluluskan ujian pilihan ganda 30 soal secara otomatis.
+    // sebelumnya (tikrar_prior_hafalan), TANPA meluluskan ujian halaman 60 soal secara otomatis.
     const juzRange = getJuzPageRange(juz);
     const markPriorPagesDone = Boolean(body.mark_prior_pages_done);
     if (markPriorPagesDone && startPage > juzRange.startPage) {

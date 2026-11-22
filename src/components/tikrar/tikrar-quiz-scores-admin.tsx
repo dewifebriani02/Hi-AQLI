@@ -30,6 +30,11 @@ interface QuizAttemptRow {
   score: number;
   passed: boolean;
   isPriorPage: boolean;
+  part1Correct?: number | null;
+  part1Total?: number | null;
+  part2Correct?: number | null;
+  part2Total?: number | null;
+  mufradatMode?: string | null;
   createdAt: string;
 }
 
@@ -67,6 +72,11 @@ interface ParticipantQuizSummary {
     totalQuestions: number;
     score: number;
     passed: boolean;
+    part1Correct?: number | null;
+    part1Total?: number | null;
+    part2Correct?: number | null;
+    part2Total?: number | null;
+    mufradatMode?: string | null;
     createdAt: string;
   }[];
 }
@@ -150,11 +160,11 @@ export function TikrarQuizScoresAdmin() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base font-black flex items-center gap-2 text-[#6D123F]">
-              <Trophy className="w-4 h-4 text-[#D4AF37]" /> Skor Ujian Pilihan Ganda (30 Soal) Thalibah
+              <Trophy className="w-4 h-4 text-[#D4AF37]" /> Skor Ujian Halaman 60 Soal (Hafalan &amp; Terjemah Per Kata)
             </CardTitle>
             <CardDescription className="text-xs">
-              Menampilkan skor asli ujian pilihan ganda dari database dan daftar halaman yang sudah dihafal
-              (termasuk hafalan luar aplikasi) namun belum lulus ujian pilihan ganda.
+              Menampilkan skor ujian halaman (Part 1: 30 Hafalan Ayat + Part 2: 30 Terjemah Per Kata) dari database dan
+              daftar halaman yang sudah dihafal namun belum lulus ujian.
             </CardDescription>
           </div>
           <Button
@@ -303,7 +313,7 @@ export function TikrarQuizScoresAdmin() {
                   {p.pendingQuizPages.length > 0 && (
                     <div className="rounded-xl bg-amber-50/80 border border-amber-200 p-3 space-y-1.5">
                       <p className="text-[11px] font-black text-amber-950">
-                        Halaman sudah dihafal tetapi belum lulus ujian pilihan ganda 30 soal ({p.pendingQuizPages.length} hal.):
+                        Halaman sudah dihafal tetapi belum lulus ujian halaman 60 soal ({p.pendingQuizPages.length} hal.):
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {p.pendingQuizPages.map((pg) => (
@@ -346,6 +356,15 @@ export function TikrarQuizScoresAdmin() {
                             <span className="font-bold">
                               {att.correctAnswers}/{att.totalQuestions} ({att.score}%)
                             </span>
+                            {att.part1Correct !== null &&
+                              att.part1Correct !== undefined &&
+                              att.part2Correct !== null &&
+                              att.part2Correct !== undefined && (
+                                <span className="text-[10px] opacity-80">
+                                  [Hafalan {att.part1Correct}/{att.part1Total ?? 30} • Kata {att.part2Correct}/
+                                  {att.part2Total ?? 30}]
+                                </span>
+                              )}
                             <span className="text-[10px] opacity-75">
                               {att.passed ? 'LULUS' : 'Belum Lulus'}
                             </span>
@@ -393,6 +412,12 @@ export function TikrarQuizScoresAdmin() {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
+                    {a.part1Correct !== null &&
+                    a.part1Correct !== undefined &&
+                    a.part2Correct !== null &&
+                    a.part2Correct !== undefined
+                      ? ` • Hafalan ${a.part1Correct}/${a.part1Total ?? 30} • Per Kata ${a.part2Correct}/${a.part2Total ?? 30}`
+                      : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
