@@ -2,9 +2,11 @@
  * Langkah baku Hi Tikrar per halaman mushaf & jadwal per langkah.
  *
  * Urutan langkah mengikuti urutan kartu di tab Mushaf:
- *   Simak 5x + terjemahan → A1 → A2 → Gabung A → B1 → B2 → Gabung B → Gabung A&B →
- *   C1 → C2 → Gabung C → Gabung B&C → Gabung A–C → D1 → D2 → Gabung D →
- *   Gabung C&D → Gabung B–D → Gabung A–D → Ujian halaman 30 soal.
+ *   Simak TM1 → TM1-1 → TM1-2 → Gabung TM1 →
+ *   Simak TM2 → TM2-1 → TM2-2 → Gabung TM2 → Gabung TM1-2 →
+ *   Simak TM3 → TM3-1 → TM3-2 → Gabung TM3 → Gabung TM2-3 → Gabung TM1-3 →
+ *   Simak TM4 → TM4-1 → TM4-2 → Gabung TM4 → Gabung TM3-4 → Gabung TM2-4 → Gabung TM1-4 →
+ *   Ujian halaman 30 soal.
  *
  * Indeks langkah global dalam satu target = (page - startPage) * STEPS_PER_PAGE + stepIndex.
  */
@@ -38,7 +40,7 @@ export function getMetaThreshold(key: string): number {
   return META_2_BLOCKS_THRESHOLD; // 10x (1_2, 2_3, 3_4)
 }
 
-export type TikrarStepKind = 'prep' | 'sub' | 'meta' | 'quiz';
+export type TikrarStepKind = 'prep' | 'listen' | 'sub' | 'meta' | 'quiz';
 
 export interface TikrarStepDef {
   index: number;
@@ -92,13 +94,26 @@ const meta = (key: string, label: string, shortLabel: string, target = getMetaTh
   target,
 });
 
+const listenStep = (blockNo: 2 | 3 | 4, letter: 'B' | 'C' | 'D'): TikrarStepDef => ({
+  index: 0,
+  key: `${blockNo}.listen`,
+  label: `Simak Audio TM ${blockNo} (Blok ${letter}) 5x`,
+  shortLabel: `Simak TM${blockNo}`,
+  kind: 'listen',
+  target: PREP_LISTEN_THRESHOLD,
+});
+
 export const TIKRAR_STEPS: readonly TikrarStepDef[] = ([
   { index: 0, key: 'prep', label: 'Simak Audio TM 1 (Blok A) 5x', shortLabel: 'Simak TM1', kind: 'prep', target: PREP_LISTEN_THRESHOLD },
-  ...SUB_STEPS.slice(0, 6),
+  ...SUB_STEPS.slice(0, 3),
+  listenStep(2, 'B'),
+  ...SUB_STEPS.slice(3, 6),
   meta('1_2', 'Gabung TM 1 & 2 (Blok A & B)', 'Gab TM1-2', 10),
+  listenStep(3, 'C'),
   ...SUB_STEPS.slice(6, 9),
   meta('2_3', 'Gabung TM 2 & 3 (Blok B & C)', 'Gab TM2-3', 10),
   meta('1_2_3', 'Gabung TM 1–3 (Blok A–C)', 'Gab TM1-3', 5),
+  listenStep(4, 'D'),
   ...SUB_STEPS.slice(9, 12),
   meta('3_4', 'Gabung TM 3 & 4 (Blok C & D)', 'Gab TM3-4', 10),
   meta('2_3_4', 'Gabung TM 2–4 (Blok B–D)', 'Gab TM2-4', 5),
@@ -106,9 +121,9 @@ export const TIKRAR_STEPS: readonly TikrarStepDef[] = ([
   { index: 0, key: 'quiz', label: `Ujian Halaman ${QUIZ_QUESTION_COUNT} Soal`, shortLabel: 'Ujian', kind: 'quiz', target: 1 },
 ] as TikrarStepDef[]).map((s, i) => ({ ...s, index: i }));
 
-export const STEPS_PER_PAGE = TIKRAR_STEPS.length; // 20
+export const STEPS_PER_PAGE = TIKRAR_STEPS.length; // 23
 /** Langkah terakhir sebelum ujian (Gabung A–D) */
-export const MEMORIZED_STEP_COUNT = STEPS_PER_PAGE - 1; // 19
+export const MEMORIZED_STEP_COUNT = STEPS_PER_PAGE - 1; // 22
 
 export interface TikrarProgressLike {
   prep_listen_count?: number | null;
@@ -120,8 +135,14 @@ export interface TikrarProgressLike {
 export function stepValue(step: TikrarStepDef, prog: TikrarProgressLike | null | undefined): number {
   if (!prog) return 0;
   if (step.kind === 'prep') {
-    // Simak per blok: langkah "Simak" = Blok A sudah disimak 5x (atau simak 5x satu halaman versi lama)
+    // Simak TM 1 (Blok A): pakai hitungan simak Blok A, simak versi lama, atau jika TM 1-1 sudah mulai dikerjakan
+    if ((Number(prog?.blocks?.[1]?.a?.count) || 0) > 0) return step.target;
     return Math.min(step.target, Math.max(getBlockListenCount(prog, 1), Number(prog.prep_listen_count) || 0));
+  }
+  if (step.kind === 'listen') {
+    const block = Number(step.key.split('.')[0]) as 1 | 2 | 3 | 4;
+    if ((Number(prog?.blocks?.[block]?.a?.count) || 0) > 0) return step.target;
+    return Math.min(step.target, getBlockListenCount(prog, block));
   }
   if (step.kind === 'sub') {
     const [b, part] = step.key.split('.');
@@ -205,7 +226,7 @@ export function getStepMinCount(key: string, prog: TikrarProgressLike | null | u
 export function canUndoStep(key: string, prog: TikrarProgressLike | null | undefined): boolean {
   const i = TIKRAR_STEPS.findIndex((s) => s.key === key);
   const step = TIKRAR_STEPS[i];
-  if (!step || step.kind === 'prep' || step.kind === 'quiz') return false;
+  if (!step || step.kind === 'prep' || step.kind === 'listen' || step.kind === 'quiz') return false;
   const val = stepValue(step, prog);
   if (val <= 0) return false;
 
@@ -241,10 +262,7 @@ export function estimateClicksForNextSteps(
         const current = Math.min(stepValue(step, prog), step.target);
         clicks += Math.max(0, step.target - current);
       }
-      const block = Number(step.key.split('.')[0]) as 1 | 2 | 3 | 4;
-      if (step.kind === 'sub' && step.key.endsWith('.a') && block > 1 && !isBlockListenDone(prog, block)) {
-        clicks += Math.max(0, PREP_LISTEN_THRESHOLD - getBlockListenCount(prog, block));
-      }
+
       remaining -= 1;
     }
   }
@@ -316,10 +334,10 @@ export function listActiveDaysInPeriod(startDate: string, durationMonths: number
 
 export function getDailyQuotaForPace(durationMonths: number): number {
   const m = Math.max(1, Math.min(4, Math.floor(durationMonths) || 2));
-  if (m === 1) return 20; // 1 halaman (20 langkah) / hari aktif
-  if (m === 2) return 10; // 1/2 halaman (10 langkah) / hari aktif
-  if (m === 3) return 7;  // ~1.4 TM (7 langkah) / hari aktif
-  return 5;               // 1/4 halaman (5 langkah) / hari aktif
+  if (m === 1) return STEPS_PER_PAGE; // 1 halaman (23 langkah) / hari aktif
+  if (m === 2) return 11;             // 1/2 halaman (11 langkah) / hari aktif (~42 hari)
+  if (m === 3) return 8;              // ~1.4 TM (8 langkah) / hari aktif (~58 hari)
+  return 6;                           // 1/4 halaman (6 langkah) / hari aktif (~77 hari)
 }
 
 export function generateTikrarStepSchedule(params: TikrarTargetParams): TikrarStepSchedule {

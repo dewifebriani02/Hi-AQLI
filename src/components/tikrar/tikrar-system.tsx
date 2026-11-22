@@ -1291,7 +1291,13 @@ export function TikrarSystem({
         const current = Math.min(stepValue(step, localProgress), step.target);
         clicks += Math.max(0, step.target - current);
         const block = Number(step.key.split('.')[0]) as 1 | 2 | 3 | 4;
-        if (step.kind === 'sub' && step.key.endsWith('.a') && block > 1 && !isBlockListenDone(localProgress, block)) {
+        if (
+          step.kind === 'sub' &&
+          step.key.endsWith('.a') &&
+          block > 1 &&
+          !isBlockListenDone(localProgress, block) &&
+          !todayTargets.some((x) => x.page === t.page && x.key === `${block}.listen`)
+        ) {
           clicks += Math.max(0, PREP_LISTEN_THRESHOLD - getBlockListenCount(localProgress, block));
         }
       } else {
@@ -1921,7 +1927,7 @@ export function TikrarSystem({
               stepInfoFor={(part: string) => stepInfo('2.' + part)}
               listenCount={getBlockListenCount({ blocks }, 2)}
               listenDone={blockListenDone(2)}
-              listenStepInfo={null}
+              listenStepInfo={stepInfo('2.listen')}
               playback={blockPlayback?.block === 2 ? blockPlayback : null}
               onPlayAudio={() => startBlockAudio(2)}
               onStopAudio={stopBlockAudio}
@@ -1959,7 +1965,7 @@ export function TikrarSystem({
               stepInfoFor={(part: string) => stepInfo('3.' + part)}
               listenCount={getBlockListenCount({ blocks }, 3)}
               listenDone={blockListenDone(3)}
-              listenStepInfo={null}
+              listenStepInfo={stepInfo('3.listen')}
               playback={blockPlayback?.block === 3 ? blockPlayback : null}
               onPlayAudio={() => startBlockAudio(3)}
               onStopAudio={stopBlockAudio}
@@ -2008,7 +2014,7 @@ export function TikrarSystem({
               stepInfoFor={(part: string) => stepInfo('4.' + part)}
               listenCount={getBlockListenCount({ blocks }, 4)}
               listenDone={blockListenDone(4)}
-              listenStepInfo={null}
+              listenStepInfo={stepInfo('4.listen')}
               playback={blockPlayback?.block === 4 ? blockPlayback : null}
               onPlayAudio={() => startBlockAudio(4)}
               onStopAudio={stopBlockAudio}
