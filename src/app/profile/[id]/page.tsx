@@ -66,8 +66,8 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-2xl mx-auto pb-32 px-4 sm:px-0">
-      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
+    <div className="flex flex-col gap-6 sm:gap-8 max-w-2xl mx-auto pb-32">
+      <div className="flex items-center gap-3 sm:gap-4 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b">
         <Button onClick={() => router.back()} variant="ghost" size="icon">
           <ChevronLeft className="h-6 w-6" />
         </Button>

@@ -373,7 +373,7 @@ export default function MufradatSurahDetailPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
-      <div className="flex flex-col gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b px-4">
+      <div className="flex flex-col gap-3 sm:gap-4 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b px-2 sm:px-4">
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon"><Link href="/mufradat"><ChevronLeft className="h-6 w-6 text-[#800000]" /></Link></Button>
           <div className="flex-1 min-w-0">

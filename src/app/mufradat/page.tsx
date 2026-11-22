@@ -441,7 +441,7 @@ function MufradatPageContent() {
 
   return (
     <div className={cn(
-      "flex flex-col gap-6 pb-24 max-w-4xl mx-auto px-4 sm:px-0 transition-all duration-700",
+      "flex flex-col gap-6 pb-24 max-w-4xl mx-auto transition-all duration-700",
       showOnboarding && "blur-xl grayscale pointer-events-none opacity-50"
     )}>
       <MufradatOnboarding 
@@ -465,41 +465,41 @@ function MufradatPageContent() {
         )}>
           {user && (
             <div className="grid grid-cols-3 gap-1.5 w-full sm:flex sm:flex-row sm:gap-2 sm:w-auto sm:items-end">
-              <Button asChild variant="outline" className="h-12 px-2 sm:px-5 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 group transition-all bg-white shadow-sm flex-1">
-                <Link href="/mufradat/billing" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
-                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+              <Button asChild variant="outline" className="min-h-[3.5rem] h-auto sm:h-12 py-2 sm:py-0 px-1.5 sm:px-5 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 group transition-all bg-white shadow-sm flex-1 min-w-0">
+                <Link href="/mufradat/billing" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3 min-w-0 w-full sm:w-auto">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors shrink-0">
                     <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
-                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground line-clamp-1">
+                  <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1 min-w-0 max-w-full">
+                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground truncate max-w-full">
                       {access.daysRemaining !== undefined ? `SISA ${access.daysRemaining} HARI` : 'LANGGANAN'}
                     </span>
-                    <span className="text-[10px] sm:text-xs font-bold text-slate-800 uppercase line-clamp-1">Status</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-800 uppercase truncate max-w-full">Status</span>
                   </div>
                 </Link>
               </Button>
 
               {/* TARGET PEKANAN */}
               <div className={cn(
-                "h-12 px-2 sm:px-5 rounded-2xl border-2 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 transition-all",
+                "min-h-[3.5rem] h-auto sm:h-12 py-2 sm:py-0 px-1.5 sm:px-5 rounded-2xl border-2 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 min-w-0 transition-all",
                 userWeeklyStats.weeklyPageProgress >= 1 ? "bg-emerald-50 border-emerald-500/20 text-emerald-700" : "bg-amber-50 border-amber-500/20 text-amber-700"
               )}>
                 <div className={cn(
-                  "w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
+                  "w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0",
                   userWeeklyStats.weeklyPageProgress >= 1 ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
                 )}>
                   <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
-                <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1">
-                  <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-tight opacity-70 line-clamp-1">Target Pekanan</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[9px] sm:text-xs font-black uppercase line-clamp-1">{userWeeklyStats.weeklyPageProgress} / 1 HLM</span>
-                    <span className="text-[7px] sm:text-[9px] font-bold text-muted-foreground uppercase opacity-60">Total: {userWeeklyStats.totalPagesEver}</span>
+                <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1 min-w-0 max-w-full">
+                  <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-tight opacity-70 truncate max-w-full">Target Pekanan</span>
+                  <div className="flex flex-wrap items-baseline justify-center sm:justify-start gap-x-1">
+                    <span className="text-[9px] sm:text-xs font-black uppercase whitespace-nowrap">{userWeeklyStats.weeklyPageProgress} / 1 HLM</span>
+                    <span className="hidden sm:inline text-[9px] font-bold text-muted-foreground uppercase opacity-60">Total: {userWeeklyStats.totalPagesEver}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="h-12 px-2 sm:px-5 rounded-2xl border-2 border-orange-500/10 bg-orange-50/30 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 animate-in zoom-in duration-500">
+              <div className="min-h-[3.5rem] h-auto sm:h-12 py-2 sm:py-0 px-1.5 sm:px-5 rounded-2xl border-2 border-orange-500/10 bg-orange-50/30 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 shadow-sm flex-1 min-w-0 animate-in zoom-in duration-500">
                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0">
                   <Flame className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current", (userData?.mufradat_streak_count || 0) > 0 ? "animate-pulse" : "opacity-30")} />
                 </div>
@@ -568,7 +568,7 @@ function MufradatPageContent() {
 
       {/* MABAR PROMO CARD */}
       <Link href="/mufradat/mabar">
-        <div className="group relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#800000] via-[#A52A2A] to-[#8B4513] p-8 text-white shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] mb-8 border-b-4 border-black/20">
+        <div className="group relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-[#800000] via-[#A52A2A] to-[#8B4513] p-5 sm:p-8 text-white shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] mb-6 sm:mb-8 border-b-4 border-black/20">
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
               <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform">

@@ -708,7 +708,7 @@ export default function MufradatBillingPage() {
                    <span className="text-muted-foreground">Tujuan Transfer:</span>
                    <Badge className="bg-[#800000]">BSI (BANK SYARIAH INDONESIA)</Badge>
                 </div>
-                  <div className="flex items-center justify-between text-2xl font-black text-[#800000]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xl sm:text-2xl font-black text-[#800000]">
                      <span>Rp {(parseInt(amount || "0") + uniqueCode).toLocaleString('id-ID')}</span>
                      <span className="text-[10px] text-muted-foreground uppercase font-medium">a.n. Dewi Febriani</span>
                   </div>
@@ -740,7 +740,7 @@ export default function MufradatBillingPage() {
                        className="h-12 border-2 rounded-xl font-bold"
                     />
                  </div>
-                 <div className="grid grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Nominal (Tanpa Titik)</Label>
                      <Input 
@@ -808,7 +808,7 @@ export default function MufradatBillingPage() {
              </div>
              
              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">Mulai Cuti</Label>
                       <Input 

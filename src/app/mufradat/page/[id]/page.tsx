@@ -222,21 +222,21 @@ export default function MufradatPageDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32 px-4 sm:px-0">
-      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
-        <Button asChild variant="ghost" size="icon" className="text-[#800000]"><Link href="/mufradat?tab=juz"><ChevronLeft className="h-6 w-6" /></Link></Button>
-        <div className="flex-1">
-          <h1 className="text-lg font-bold font-headline">Mushaf Halaman {pageNum}</h1>
-          <p className="text-[9px] uppercase tracking-widest text-[#800000] font-bold">Hi Mufradat • Juz {juzNum}</p>
+    <div className="flex flex-col gap-6 sm:gap-8 max-w-4xl mx-auto pb-32">
+      <div className="flex items-center gap-2 sm:gap-4 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b">
+        <Button asChild variant="ghost" size="icon" className="text-[#800000] shrink-0 h-8 w-8 sm:h-10 sm:w-10"><Link href="/mufradat?tab=juz"><ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" /></Link></Button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-sm sm:text-lg font-bold font-headline truncate">Mushaf Halaman {pageNum}</h1>
+          <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-[#800000] font-bold truncate">Hi Mufradat • Juz {juzNum}</p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <Button 
             asChild={isAllVersesPassed} 
             variant="ghost" 
             size={isAllVersesPassed ? "icon" : "default"} 
             className={cn(
               "text-[#D4AF37] transition-all",
-              !isAllVersesPassed && "bg-amber-50 text-amber-600 px-3 gap-2 hover:bg-amber-100 border border-amber-200"
+              !isAllVersesPassed && "bg-amber-50 text-amber-600 px-2 sm:px-3 h-8 sm:h-10 gap-1 sm:gap-2 hover:bg-amber-100 border border-amber-200"
             )}
             disabled={!isAllVersesPassed}
           >
@@ -245,23 +245,24 @@ export default function MufradatPageDetailPage() {
                 <GraduationCap className="h-5 w-5" />
               </Link>
             ) : (
-              <div className="flex items-center gap-2 font-black text-[10px] uppercase tracking-tighter">
-                <Lock className="w-3.5 h-3.5" /> PROGRES: {passedCountInPage}/{verses.length} AYAT
+              <div className="flex items-center gap-1 sm:gap-2 font-black text-[9px] sm:text-[10px] uppercase tracking-tighter">
+                <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="hidden sm:inline">PROGRES:</span> {passedCountInPage}/{verses.length} <span className="hidden sm:inline">AYAT</span>
               </div>
             )}
           </Button>
-          <Button variant="ghost" size="icon" disabled={pageNum <= 1} onClick={() => router.push(`/mufradat/page/${pageNum - 1}`)}><ArrowLeft className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" disabled={pageNum <= 1} onClick={() => router.push(`/mufradat/page/${pageNum - 1}`)}><ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
           <Button 
             variant="ghost" 
             size="icon" 
             disabled={pageNum >= 604 || !isPageCompleted} 
             onClick={() => isPageCompleted && router.push(`/mufradat/page/${pageNum + 1}`)} 
             className={cn(
-              "transition-all duration-300", 
+              "h-8 w-8 sm:h-10 sm:w-10 transition-all duration-300", 
               !isPageCompleted && "text-muted-foreground/20 opacity-20 pointer-events-none cursor-not-allowed"
             )}
           >
-            <ArrowRight className="h-5 w-5" />
+            <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
         </div>
       </div>

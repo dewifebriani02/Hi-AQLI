@@ -30,7 +30,7 @@ export function BottomNav() {
   // - Untuk user biasa: muncul di semua device
   // - Untuk admin: hanya muncul di mobile (di desktop pakai sidebar)
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-end justify-around border-t bg-background/95 backdrop-blur px-1 pb-2 pt-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-end justify-around border-t bg-background/95 backdrop-blur px-1 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
       {navItems.map((item) => {
         const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
 
@@ -39,17 +39,17 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="relative -top-4 flex flex-col items-center justify-center gap-1 group"
+              className="relative -top-4 flex shrink-0 flex-col items-center justify-center gap-1 px-1 group"
             >
               <div className={cn(
-                "flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300",
+                "flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300",
                 "bg-[#800000] text-white",
                 isActive ? "scale-110 shadow-[#800000]/40" : "hover:scale-105"
               )}>
-                <item.icon className="h-7 w-7" />
+                <item.icon className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
               <span className={cn(
-                "text-[10px] font-bold uppercase tracking-wider transition-colors mt-1",
+                "text-[9px] sm:text-[10px] font-bold uppercase tracking-tight sm:tracking-wider transition-colors mt-1 whitespace-nowrap",
                 isActive ? "text-[#800000]" : "text-muted-foreground"
               )}>
                 {item.label}
@@ -63,14 +63,14 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-1 flex-col items-center justify-center gap-1 rounded-md py-2 text-[10px] font-medium transition-colors",
+              "flex flex-1 min-w-0 flex-col items-center justify-center gap-1 rounded-md py-2 px-0.5 text-[9px] sm:text-[10px] font-medium transition-colors",
               isActive
                 ? "text-[#800000] bg-[#800000]/5"
                 : "text-muted-foreground hover:text-[#800000]"
             )}
           >
-            <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />
-            <span>{item.label}</span>
+            <item.icon className={cn("h-5 w-5 shrink-0", isActive && "fill-current")} />
+            <span className="truncate max-w-full">{item.label}</span>
           </Link>
         );
       })}

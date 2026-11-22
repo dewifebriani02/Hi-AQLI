@@ -68,7 +68,7 @@ export default function MatanQuestMap() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12 space-y-12 pb-32 selection:bg-[#800000]/10">
+    <div className="max-w-4xl mx-auto px-1 sm:px-4 py-6 sm:py-12 space-y-8 sm:space-y-12 pb-32 selection:bg-[#800000]/10">
       {/* Dynamic Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
@@ -81,7 +81,7 @@ export default function MatanQuestMap() {
                     <Gamepad2 className="w-4 h-4" />
                     Peta Quest Kitab
                  </div>
-                 <h1 className="text-4xl font-black font-headline tracking-tighter text-slate-900 uppercase">
+                 <h1 className="text-2xl sm:text-4xl font-black font-headline tracking-tighter text-slate-900 uppercase">
                     {matanTitle}
                  </h1>
               </div>
@@ -102,7 +102,7 @@ export default function MatanQuestMap() {
       {/* Quest Timeline (Mufradat Style) */}
       <div className="relative space-y-12">
         {/* Timeline Line */}
-        <div className="absolute left-[39px] md:left-1/2 md:-translate-x-1/2 top-4 bottom-4 w-1 bg-slate-100 rounded-full" />
+        <div className="absolute left-[27px] sm:left-[39px] md:left-1/2 md:-translate-x-1/2 top-4 bottom-4 w-1 bg-slate-100 rounded-full" />
 
         {displayChapters.map((chapter: any, idx) => {
           const isEven = idx % 2 === 0;
@@ -113,7 +113,7 @@ export default function MatanQuestMap() {
           
           return (
             <div key={chapter.id} className={cn(
-              "relative flex items-center gap-8 md:gap-0",
+              "relative flex items-center gap-4 sm:gap-8 md:gap-0",
               isEven ? "md:flex-row-reverse" : "md:flex-row"
             )}>
               {/* Content Side */}
@@ -122,7 +122,7 @@ export default function MatanQuestMap() {
               {/* Icon Node */}
               <div className="relative z-10">
                 <div className={cn(
-                  "w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-500 shadow-lg",
+                  "w-14 h-14 sm:w-20 sm:h-20 rounded-full border-4 flex items-center justify-center transition-all duration-500 shadow-lg shrink-0",
                   isCompleted 
                     ? "bg-white border-[#800000] text-[#800000] ring-4 ring-[#800000]/10" 
                     : isUnlocked 
@@ -152,7 +152,7 @@ export default function MatanQuestMap() {
                   )}
                 >
                    <Card className={cn(
-                     "rounded-3xl border-2 transition-all p-6",
+                     "rounded-2xl sm:rounded-3xl border-2 transition-all p-4 sm:p-6",
                      isUnlocked 
                       ? "border-slate-100 hover:border-[#800000]/20 hover:shadow-2xl bg-white" 
                       : "border-transparent bg-slate-50 opacity-40"

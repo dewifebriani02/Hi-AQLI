@@ -114,10 +114,10 @@ export default function StudyCirclesPage() {
                 circle.isPremium ? "bg-[#800000]/5 border-l-4 border-[#800000]" : "bg-card/50"
           )}
         >
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 flex-1">
+          <div className="flex items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
               <div className={cn(
-                "flex items-center justify-center w-12 h-12 rounded-xl font-bold group-hover:text-white transition-colors",
+                "flex items-center justify-center w-12 h-12 rounded-xl font-bold shrink-0 group-hover:text-white transition-colors",
                 isActive ? "bg-emerald-600 text-white" :
                   isPending ? "bg-amber-500 text-white" :
                     circle.isPremium ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
@@ -126,7 +126,7 @@ export default function StudyCirclesPage() {
                   isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
                     circle.isPremium ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
               </div>
-              <div className="flex flex-col gap-0.5 flex-1">
+              <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className={cn("font-bold text-base leading-tight", isActive && "text-emerald-900", isPending && "text-amber-900")}>{circle.title}</h4>
                   {user && (isActive ? (
@@ -165,7 +165,7 @@ export default function StudyCirclesPage() {
               </div>
             </div>
             <ChevronRight className={cn(
-              "w-5 h-5 transition-colors",
+              "w-5 h-5 shrink-0 transition-colors",
               isActive ? "text-emerald-400" : "text-muted-foreground/30 group-hover:text-[#800000]"
             )} />
           </div>
@@ -198,7 +198,7 @@ export default function StudyCirclesPage() {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl mx-1">
+        <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="all" className="font-bold text-xs uppercase tracking-widest">
             Semua ({filteredCircles.length})
           </TabsTrigger>

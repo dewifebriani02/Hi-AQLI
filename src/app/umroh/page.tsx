@@ -202,17 +202,17 @@ export default function UmrohPage() {
               }`}
             >
               {/* Package Image */}
-              <div className="h-32 bg-gradient-to-r from-[#800000] to-[#a32828] relative overflow-hidden">
+              <div className="min-h-[8rem] bg-gradient-to-r from-[#800000] to-[#a32828] relative overflow-hidden flex items-end pt-8 pb-3 px-3 sm:px-4">
                 <div className="absolute inset-0 bg-black/20"></div>
-                <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end">
-                  <div>
+                <div className="relative z-10 w-full flex flex-wrap justify-between items-end gap-2">
+                  <div className="min-w-0 flex-1">
                     <Badge className="bg-[#D4AF37] text-[#800000] text-[10px] font-black mb-1">
                       {pkg.travel}
                     </Badge>
-                    <h3 className="text-white font-bold text-lg leading-tight">{pkg.name}</h3>
+                    <h3 className="text-white font-bold text-base sm:text-lg leading-tight">{pkg.name}</h3>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[#D4AF37] font-black text-xl">
+                  <div className="text-right shrink-0">
+                    <div className="text-[#D4AF37] font-black text-lg sm:text-xl">
                       Rp {(pkg.price / 1000000).toFixed(0)}jt
                     </div>
                     <div className="text-amber-200 text-[10px]">per orang</div>
@@ -222,7 +222,7 @@ export default function UmrohPage() {
 
               <CardContent className="p-4">
                 {/* Package Info */}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground mb-3">
                   <div className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {pkg.duration}

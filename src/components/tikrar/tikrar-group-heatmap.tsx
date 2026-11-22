@@ -203,7 +203,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                       member.isMe ? 'bg-amber-50/40 border-[#D4AF37]' : 'bg-[#fafaf9] border-stone-200/70'
                     )}
                   >
-                    <div className="min-w-[210px] max-w-full lg:w-[230px] shrink-0 space-y-0.5">
+                    <div className="min-w-0 w-full lg:w-[230px] shrink-0 space-y-0.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs font-black text-stone-900 truncate">
                           {index + 1}. {member.name}
@@ -228,7 +228,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                       <TodayProgress today={member.today} />
                     </div>
 
-                    <div className="py-1">
+                    <div className="py-1 overflow-x-auto max-w-full">
                       {/* Tanggal 1 s/d akhir bulan: 2 baris x 16 di HP, 1 baris di layar lebar */}
                       <div className="grid gap-x-[3px] gap-y-1 [grid-template-columns:repeat(16,15px)] lg:[grid-template-columns:repeat(31,15px)]">
                         {member.days.map((d) => {
@@ -316,7 +316,7 @@ function TodayProgress({ today }: { today?: MemberRow['today'] }) {
     ? Math.min(100, Math.round((today.clicks / today.clicksTarget) * 100))
     : 0;
   return (
-    <div className="pt-1.5 space-y-1 max-w-[230px]">
+    <div className="pt-1.5 space-y-1 w-full max-w-[230px]">
       <p className={cn('text-[11px] font-bold', today.met ? 'text-emerald-700' : 'text-stone-600')}>
         {today.met
           ? `✓ Target hari ini tercapai • ${today.clicks} klik`

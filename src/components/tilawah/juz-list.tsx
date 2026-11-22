@@ -430,13 +430,13 @@ export function JuzList({
 
               {isExpanded && (
                 <div className={cn(
-                  "mt-1 px-4 py-4 border-l-2 border-slate-100 ml-6 animate-in slide-in-from-left-2 duration-200",
+                  "mt-1 px-2 sm:px-4 py-3 sm:py-4 border-l-2 border-slate-100 ml-2 sm:ml-6 animate-in slide-in-from-left-2 duration-200",
                   mode === 'exam' ? "flex flex-col gap-6" : "grid grid-cols-1 sm:grid-cols-2 gap-2"
                 )}>
                   {/* COMPACT PAGE GRID */}
                   <div className={cn(
                     "grid gap-1.5",
-                    mode === 'exam' ? "grid-cols-10 sm:grid-cols-12 md:grid-cols-15" : "contents"
+                    mode === 'exam' ? "grid-cols-6 sm:grid-cols-10 md:grid-cols-12" : "contents"
                   )}>
                     {juzPages.map((p) => {
                       const isDone = pageQuizzesDone.has(p);
@@ -456,7 +456,7 @@ export function JuzList({
                                   href={isUnlocked ? `/mufradat/page/${p}` : "#"}
                                   onClick={(e) => !isUnlocked && e.preventDefault()}
                                   className={cn(
-                                    "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black transition-all border",
+                                    "w-full h-8 rounded-lg flex items-center justify-center text-[10px] font-black transition-all border",
                                     isDone ? "bg-emerald-500 text-white border-emerald-600 shadow-sm" : 
                                     isAnyVerseDone ? "bg-amber-400 text-white border-amber-500" : 
                                     isUnlocked ? "bg-white border-slate-200 text-slate-400 hover:border-[#800000]/40" : 

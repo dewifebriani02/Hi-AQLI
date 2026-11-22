@@ -381,13 +381,13 @@ export default function ProfilePage() {
           </div>
         </CardHeader>
 
-        <CardContent className="px-6 sm:px-8 pt-4">
+        <CardContent className="px-4 sm:px-8 pt-4">
           {(adminRole || superAdminRole) && (
             <Card className={cn(
               "mb-8 border-2 p-4",
               superAdminRole ? "border-[#800000] bg-[#800000]/10" : "border-amber-200 bg-amber-50"
             )}>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-lg",
@@ -418,13 +418,13 @@ export default function ProfilePage() {
 
           <Card className="mb-8 border-dashed border-2 bg-muted/20">
             <CardContent className="p-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-white shadow-sm">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="p-2 rounded-lg bg-white shadow-sm shrink-0">
                   <Fingerprint className="w-5 h-5 text-[#800000]" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">User ID {fullSalutation} (UID)</p>
-                  <p className="text-xs font-mono font-bold truncate max-w-[150px] sm:max-w-none">{user.id}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1 truncate">User ID {fullSalutation} (UID)</p>
+                  <p className="text-xs font-mono font-bold truncate">{user.id}</p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" className="h-8 gap-2 text-[#800000] font-bold" onClick={copyUid}>

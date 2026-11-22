@@ -531,7 +531,7 @@ export default function HiSehatPage() {
       <Tabs defaultValue="evaluasi" className="w-full">
         {/* Guest Preview Banner */}
         {!user && (
-          <div className="bg-gradient-to-r from-emerald-600 to-[#800000] p-4 text-white text-center animate-in slide-in-from-top-2 duration-500 sticky top-0 z-50 shadow-lg">
+          <div className="bg-gradient-to-r from-emerald-600 to-[#800000] p-3 sm:p-4 text-white text-center animate-in slide-in-from-top-2 duration-500 shadow-lg rounded-2xl mx-1 mb-2">
             <p className="text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
               <Sparkles className="w-4 h-4 animate-pulse text-amber-300 fill-amber-300" /> 
               Masuk akun untuk sinkronisasi amalan Sunnah sehat Ukhti secara permanen
@@ -544,7 +544,7 @@ export default function HiSehatPage() {
         )}
 
         {/* Sticky Header */}
-        <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-emerald-100 flex flex-col">
+        <div className="sticky top-16 sm:top-20 z-30 bg-white/95 backdrop-blur-md border-b border-emerald-100 flex flex-col">
           <div className="px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button asChild variant="ghost" size="icon" className="rounded-full text-[#800000] hover:bg-emerald-50">
@@ -578,7 +578,7 @@ export default function HiSehatPage() {
 
         {/* Tab 1: Evaluasi (Checklist & Stomach Plate) */}
         <TabsContent value="evaluasi" className="mt-0 outline-none">
-          <div className="p-4 max-w-2xl mx-auto w-full space-y-6">
+          <div className="px-1 py-4 sm:p-4 max-w-2xl mx-auto w-full space-y-6">
             
             {/* Progress Card */}
             <Card className="border-none shadow-xl bg-white overflow-hidden relative border-b-4 border-emerald-500">
@@ -970,7 +970,7 @@ export default function HiSehatPage() {
 
         {/* Tab 2: Monitoring */}
         <TabsContent value="monitoring" className="mt-0 outline-none">
-          <div className="p-4 max-w-2xl mx-auto w-full space-y-6">
+          <div className="px-1 py-4 sm:p-4 max-w-2xl mx-auto w-full space-y-6">
             
             {/* Stats Dashboard */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

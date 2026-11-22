@@ -78,8 +78,8 @@ export default function NgajiPage() {
           )}
         >
           <div className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-start justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                 <div className={cn(
                   "flex items-center justify-center w-12 h-12 rounded-xl font-bold shrink-0",
                   isActive ? "bg-[#D4AF37] text-black" :
@@ -117,7 +117,7 @@ export default function NgajiPage() {
                   </div>
                 </div>
               </div>
-              {!isPending && !isFull && <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#800000]" />}
+              {!isPending && !isFull && <ChevronRight className="w-5 h-5 shrink-0 text-muted-foreground/30 group-hover:text-[#800000]" />}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-dashed">
@@ -206,7 +206,7 @@ export default function NgajiPage() {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl mx-1">
+        <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="all" className="font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-[#800000] data-[state=active]:text-white">
             Semua
           </TabsTrigger>

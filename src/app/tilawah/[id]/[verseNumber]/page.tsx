@@ -151,8 +151,8 @@ export default function VerseDetailPage() {
   if (loading) return <div className="flex flex-col items-center py-32 gap-4"><Loader2 className="animate-spin text-[#800000]" /><p className="text-sm">Menyiapkan Penjabaran...</p></div>;
 
   return (
-    <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32 px-4 sm:px-0">
-      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-4 border-b">
+    <div className="flex flex-col gap-6 sm:gap-8 max-w-4xl mx-auto pb-32">
+      <div className="flex items-center gap-2 sm:gap-4 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b">
         <Button asChild variant="ghost" size="icon"><Link href={`/tilawah/${id}`}><ChevronLeft className="h-6 w-6" /></Link></Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold font-headline">{surahName} : ({verseNumber})</h1>

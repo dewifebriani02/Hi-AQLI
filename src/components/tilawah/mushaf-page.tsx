@@ -191,7 +191,7 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
   return (
     <div className="flex flex-col gap-6 px-1">
       {/* Navigation Header */}
-      <div className="flex flex-col gap-4 bg-white/80 p-4 rounded-2xl border border-[#800000]/10 shadow-sm sticky top-20 z-20 backdrop-blur-md">
+      <div className="flex flex-col gap-3 sm:gap-4 bg-white/90 p-3 sm:p-4 rounded-2xl border border-[#800000]/10 shadow-sm sticky top-16 sm:top-20 z-20 backdrop-blur-md">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button 
@@ -228,7 +228,7 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
             </Button>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
             <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-lg border">
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(-4)} title="Perkecil Font">
                 <Minus className="h-3 w-3" />
@@ -278,7 +278,7 @@ export function MushafPage({ isStudent = false }: { isStudent?: boolean }) {
       ) : (
         <div className="flex flex-col gap-8 pb-24">
           {/* Mushaf Page Container */}
-          <Card className="relative p-6 md:p-10 lg:p-14 border-none shadow-2xl bg-[#fffcf5] min-h-[750px] flex flex-col items-center overflow-hidden">
+          <Card className="relative p-4 sm:p-6 md:p-10 lg:p-14 border-none shadow-2xl bg-[#fffcf5] min-h-[600px] sm:min-h-[750px] flex flex-col items-center overflow-hidden">
             {/* Decorative Borders */}
             <div className="absolute inset-2 border-[4px] border-[#800000]/5 rounded-xl pointer-events-none" />
             <div className="absolute inset-4 border border-[#800000]/10 rounded-lg pointer-events-none" />

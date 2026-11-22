@@ -454,14 +454,14 @@ export default function MatanChapterReader() {
   return (
     <div className="min-h-screen pb-40 selection:bg-[#800000]/10 font-body">
       {/* Branded Header */}
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-4">
+      <div className="sticky top-16 sm:top-20 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-100 px-3 sm:px-4 py-3 sm:py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-           <div className="flex items-center gap-4">
-              <Button asChild variant="ghost" size="icon" className="rounded-2xl text-slate-900 hover:bg-[#800000]/5">
+           <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+              <Button asChild variant="ghost" size="icon" className="rounded-2xl text-slate-900 hover:bg-[#800000]/5 shrink-0">
                  <Link href={`/matan/${slug}`}><ChevronLeft className="w-6 h-6 text-[#800000]" /></Link>
               </Button>
-              <div className="flex flex-col">
-                 <h2 className="text-xl font-black text-slate-900 leading-none uppercase tracking-tighter">{chapterTitle}</h2>
+              <div className="flex flex-col min-w-0">
+                 <h2 className="text-base sm:text-xl font-black text-slate-900 leading-none uppercase tracking-tighter truncate">{chapterTitle}</h2>
                  <p className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest mt-1">{slug} • Langkah {chapterStepLabel}</p>
               </div>
            </div>
@@ -475,10 +475,10 @@ export default function MatanChapterReader() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-12 space-y-12">
+      <div className="max-w-3xl mx-auto px-1 sm:px-4 py-6 sm:py-12 space-y-8 sm:space-y-12">
         {/* Bait Card */}
         <div className="relative">
-           <div className="relative bg-white rounded-[3rem] border border-slate-200 p-8 md:p-14 shadow-2xl flex flex-col items-center text-center space-y-10 overflow-hidden">
+           <div className="relative bg-white rounded-[2rem] sm:rounded-[3rem] border border-slate-200 p-5 sm:p-8 md:p-14 shadow-2xl flex flex-col items-center text-center space-y-6 sm:space-y-10 overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none text-[#800000]">
                  <BookOpen className="w-64 h-64 rotate-12" />
               </div>
@@ -490,7 +490,7 @@ export default function MatanChapterReader() {
                     <div className="h-[2px] w-12 bg-[#800000]/10" />
                  </div>
 
-                 <h3 className="text-4xl md:text-6xl font-arabic leading-[1.8] text-slate-900 direction-rtl px-4 font-headline" dir="rtl">
+                 <h3 className="text-2xl sm:text-4xl md:text-6xl font-arabic leading-[1.8] text-slate-900 direction-rtl px-1 sm:px-4 font-headline" dir="rtl">
                     {item.bait_arabic}
                  </h3>
                  
@@ -536,7 +536,7 @@ export default function MatanChapterReader() {
         {/* Syarah & Quiz */}
         {showSyarah && (
           <div className="animate-in fade-in slide-in-from-bottom-10 duration-700 space-y-12">
-             <div className="bg-white border border-slate-200 rounded-[3rem] p-8 md:p-14 shadow-xl">
+             <div className="bg-white border border-slate-200 rounded-[2rem] sm:rounded-[3rem] p-5 sm:p-8 md:p-14 shadow-xl">
                 <h4 className="flex items-center gap-3 text-xs font-black text-[#800000] uppercase tracking-widest mb-10">
                    <Zap className="w-5 h-5 fill-current text-[#D4AF37]" /> Analisa Mendalam
                 </h4>
@@ -544,7 +544,7 @@ export default function MatanChapterReader() {
                 
                 {/* Lab I'rab */}
                 {item.example_verse?.text && (
-                  <div className="mt-14 p-10 rounded-[2.5rem] bg-gradient-to-br from-[#800000]/5 to-white border-2 border-[#800000]/10 text-center space-y-8">
+                  <div className="mt-8 sm:mt-14 p-5 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-[#800000]/5 to-white border-2 border-[#800000]/10 text-center space-y-6 sm:space-y-8">
                      <div className="text-4xl md:text-5xl font-arabic text-slate-900" dir="rtl">{item.example_verse.text}</div>
                      <Button asChild className="h-14 px-10 rounded-2xl bg-[#800000] text-white font-black shadow-xl">
                         <Link href={`/irab?surah=${item.example_verse.surah}&ayat=${item.example_verse.ayat}`}>Buka di Lab I&apos;rab <Sparkles className="w-4 h-4 ml-2 text-[#D4AF37]" /></Link>
@@ -557,7 +557,7 @@ export default function MatanChapterReader() {
              {quizzes.length > 0 && (
                <div id="quiz-anchor" className="scroll-mt-32">
                   {quizStage === 'start' && (
-                    <Card className="bg-[#800000] border-4 border-[#D4AF37]/20 rounded-[3rem] p-10 text-center space-y-10 shadow-2xl relative overflow-hidden">
+                    <Card className="bg-[#800000] border-4 border-[#D4AF37]/20 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-center space-y-6 sm:space-y-10 shadow-2xl relative overflow-hidden">
                       <div className="space-y-2">
                          <h2 className="text-3xl font-black text-white italic">Cek Pemahaman</h2>
                          <p className="text-amber-100/60 text-sm">Selesaikan tantangan ({quizzes.length} soal) untuk menguasai bab ini.</p>
@@ -589,7 +589,7 @@ export default function MatanChapterReader() {
                           </div>
                           <Progress value={((currentQuizIdx + 1) / quizzes.length) * 100} className="h-2 bg-[#800000]/5 [&>div]:bg-[#D4AF37]" />
                        </div>
-                       <div className="p-10 flex flex-col items-center justify-center text-center space-y-10">
+                       <div className="p-5 sm:p-10 flex flex-col items-center justify-center text-center space-y-6 sm:space-y-10">
                           <h3 className="text-2xl font-black text-[#800000] uppercase leading-tight max-w-lg">{currentQuestion.question}</h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
                              {currentQuestion.options.map((opt, i) => (
@@ -622,7 +622,7 @@ export default function MatanChapterReader() {
                            <p className="text-xs font-bold opacity-60 uppercase tracking-widest">Skor: {score} / {quizzes.length} • Waktu: {formatTime(totalTime)}</p>
                         </div>
                         
-                        <CardContent className="p-10 space-y-8">
+                        <CardContent className="p-5 sm:p-10 space-y-6 sm:space-y-8">
                            <div className="grid grid-cols-2 gap-4">
                               <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 text-center">
                                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Akurasi</div>
@@ -697,7 +697,7 @@ export default function MatanChapterReader() {
       </div>
 
       {/* Floating Bottom Navigation (Bait Stepper) */}
-      <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-full p-2 shadow-2xl">
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100vw-2rem)] flex items-center gap-1 sm:gap-3 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-full p-1.5 sm:p-2 shadow-2xl">
          <Button
            variant="ghost"
            size="icon"

@@ -48,7 +48,7 @@ export default function IrabPage() {
   return (
     <div className="flex flex-col min-h-screen bg-orange-50/30 pb-24">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100 px-4 py-4 flex items-center justify-between">
+      <div className="sticky top-16 sm:top-20 z-30 bg-white/95 backdrop-blur-md border-b border-orange-100 px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon" className="rounded-full text-[#800000]">
             <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>

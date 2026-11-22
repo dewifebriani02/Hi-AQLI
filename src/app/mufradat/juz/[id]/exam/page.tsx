@@ -493,7 +493,7 @@ export default function MufradatJuzExamPage() {
         />
       ) : (
         <Card className="border-none shadow-2xl overflow-hidden rounded-3xl bg-white">
-          <CardContent className="p-6 sm:p-10 text-center bg-slate-50 flex flex-col items-center gap-6 relative min-h-[400px]">
+          <CardContent className="p-5 pt-14 sm:p-10 text-center bg-slate-50 flex flex-col items-center gap-6 relative min-h-[400px]">
             <div className="absolute top-4 right-6 animate-in zoom-in duration-300">
                <Badge 
                  variant="outline" 
@@ -564,7 +564,7 @@ export default function MufradatJuzExamPage() {
                       {questions[currentIdx]?.type === 'reverse' ? (
                         <div className="space-y-4 w-full">
                           <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Terjemahan:</p>
-                          <div className="text-3xl font-bold text-slate-800 bg-white px-8 py-6 rounded-[2rem] shadow-sm border border-slate-100 inline-block mx-auto min-w-[200px]">
+                          <div className="text-2xl sm:text-3xl font-bold text-slate-800 bg-white px-4 sm:px-8 py-5 sm:py-6 rounded-[2rem] shadow-sm border border-slate-100 inline-block mx-auto w-full sm:w-auto sm:min-w-[200px] max-w-full break-words">
                             {questions[currentIdx]?.correct}
                           </div>
                           <p className="text-[10px] font-black uppercase text-[#D4AF37] tracking-widest mt-4">Pilih Bahasa Arabnya:</p>

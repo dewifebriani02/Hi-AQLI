@@ -110,7 +110,7 @@ export default function MatanDashboard() {
                       : "border-slate-100 opacity-60 grayscale cursor-not-allowed"
                   )}
                 >
-                  <div className="p-8 flex flex-col h-full space-y-4">
+                  <div className="p-5 sm:p-8 flex flex-col h-full space-y-4">
                     <div className="flex items-center justify-between gap-4">
                       <Badge className={cn(
                         "font-black text-[9px] uppercase tracking-widest rounded-lg px-2.5 py-1 shadow-sm",
@@ -151,7 +151,7 @@ export default function MatanDashboard() {
 
       {/* Daily Challenge Card - Branding version */}
       <div className="relative overflow-hidden rounded-[3rem] p-1 bg-gradient-to-br from-[#800000] to-[#4D0000] shadow-xl shadow-[#800000]/10">
-        <div className="relative bg-white rounded-[2.9rem] p-10 flex flex-col md:flex-row items-center justify-between gap-8 group overflow-hidden">
+        <div className="relative bg-white rounded-[2.2rem] sm:rounded-[2.9rem] p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8 group overflow-hidden">
            <div className="relative z-10 space-y-5 max-w-lg text-center md:text-left">
               <div className="inline-flex items-center gap-2 bg-[#800000]/5 text-[#800000] px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#800000]/10">
                  <Star className="w-3 h-3 fill-current text-[#D4AF37]" />

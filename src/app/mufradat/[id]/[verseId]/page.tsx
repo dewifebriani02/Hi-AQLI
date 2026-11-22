@@ -279,8 +279,8 @@ function VerseDetailContent() {
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-4xl mx-auto pb-32 px-4 sm:px-0">
-      <div className="flex items-center gap-2 sm:gap-4 sticky top-0 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b px-2 sm:px-0">
+    <div className="flex flex-col gap-6 sm:gap-8 max-w-4xl mx-auto pb-32">
+      <div className="flex items-center gap-2 sm:gap-4 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b">
         <Button asChild variant="ghost" size="icon" className="text-[#800000] shrink-0 w-8 h-8 sm:w-10 sm:h-10">
           <Link href={`/mufradat/${id}`}><ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" /></Link>
         </Button>

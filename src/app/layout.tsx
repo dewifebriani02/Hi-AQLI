@@ -162,18 +162,18 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <div className="relative flex min-h-screen w-full">
         {/* Sidebar hanya muncul untuk admin di md ke atas */}
         {showAdminUI && <AppSidebar />}
-        <SidebarInset className="w-full flex flex-col">
+        <SidebarInset className="w-full min-w-0 flex flex-col overflow-x-clip">
           {/* Padding bottom untuk BottomNav (selalu ada) */}
-          <div className="flex flex-col flex-1 w-full pb-20">
-            <header className="sticky top-0 z-40 flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
-              <div className="flex items-center gap-3 sm:gap-4">
-                {showAdminUI && <SidebarTrigger className="md:hidden text-slate-400" />}
-                <Link href="/" className="transition-transform hover:scale-105 active:scale-95">
-                  <Logo variant="default" showText={true} className="scale-100 sm:scale-110 md:scale-125 origin-left" textClassName="text-xl sm:text-2xl md:text-3xl font-black tracking-tight" imageSize={42} />
+          <div className="flex flex-col flex-1 w-full min-w-0 pb-24">
+            <header className="sticky top-0 z-40 flex h-16 sm:h-20 items-center justify-between gap-2 px-3 sm:px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                {showAdminUI && <SidebarTrigger className="md:hidden text-slate-400 shrink-0" />}
+                <Link href="/" className="transition-transform hover:scale-105 active:scale-95 min-w-0">
+                  <Logo variant="default" showText={true} className="scale-90 sm:scale-110 md:scale-125 origin-left" textClassName="text-lg sm:text-2xl md:text-3xl font-black tracking-tight" imageSize={40} />
                 </Link>
               </div>
               
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                 {/* Global Font Size Stepper */}
                 <div 
                   className="flex items-center gap-0.5 sm:gap-1 bg-slate-50 border border-slate-200/90 shadow-xs rounded-full px-1.5 py-0.5" 
@@ -244,7 +244,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             </header>
-            <main className="p-4 sm:p-6 lg:p-8 flex-1">
+            <main className="p-3 sm:p-6 lg:p-8 flex-1 min-w-0">
               {children}
             </main>
           </div>

@@ -245,7 +245,7 @@ export default function TikrarTajweedQuizPage() {
 
       {stage === 'intro' && (
         <Card className="border-none shadow-2xl overflow-hidden rounded-[2.5rem] bg-white">
-          <div className="bg-gradient-to-br from-[#6D123F] to-[#4A0C2B] p-8 sm:p-10 text-white space-y-4 border-b-4 border-[#D4AF37]">
+          <div className="bg-gradient-to-br from-[#6D123F] to-[#4A0C2B] p-5 sm:p-10 text-white space-y-4 border-b-4 border-[#D4AF37]">
             <Badge className="bg-[#D4AF37] text-black border-none font-black text-[10px] uppercase tracking-widest">
               10 Soal Pilihan Ganda
             </Badge>
@@ -256,7 +256,7 @@ export default function TikrarTajweedQuizPage() {
               Sebelum mengikuti ujian lisan Itqan, pastikan {salutation} menguasai kaidah Nun Sakinah, Mim Sakinah, Qalqalah, Ghunnah, dan Hukum Mad dasar. Raih minimal skor 8/10 untuk lulus (+20 Poin).
             </p>
           </div>
-          <CardContent className="p-8 space-y-6">
+          <CardContent className="p-5 sm:p-8 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Jumlah Soal</p>
@@ -364,7 +364,7 @@ export default function TikrarTajweedQuizPage() {
         <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
           <div
             className={cn(
-              'p-10 text-center text-white space-y-3 border-b-4 border-[#D4AF37]',
+              'p-6 sm:p-10 text-center text-white space-y-3 border-b-4 border-[#D4AF37]',
               score >= 8 ? 'bg-gradient-to-br from-[#6D123F] to-[#4A0C2B]' : 'bg-slate-800'
             )}
           >
@@ -380,7 +380,7 @@ export default function TikrarTajweedQuizPage() {
             </p>
           </div>
 
-          <CardContent className="p-8 space-y-6">
+          <CardContent className="p-5 sm:p-8 space-y-6">
             <div className="space-y-3">
               <h4 className="text-xs font-black uppercase tracking-widest text-[#6D123F] flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[#D4AF37]" /> Ringkasan Jawaban

@@ -172,7 +172,7 @@ export default function MufradatMabarRoomPage() {
                      <Button 
                        onClick={handleJoin} 
                        disabled={isJoining}
-                       className="h-16 px-12 bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xl rounded-2xl shadow-xl w-full sm:w-auto active:scale-95 transition-all"
+                       className="h-14 sm:h-16 px-6 sm:px-12 bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-base sm:text-xl rounded-2xl shadow-xl w-full sm:w-auto active:scale-95 transition-all"
                      >
                         {isJoining ? <Loader2 className="animate-spin w-6 h-6" /> : "GABUNG MABAR SEKARANG"}
                      </Button>

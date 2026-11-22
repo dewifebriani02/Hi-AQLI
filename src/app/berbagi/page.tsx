@@ -451,10 +451,10 @@ export default function BerbagiPage() {
               <Button variant="ghost" size="icon" className="absolute left-4 top-4 text-white hover:bg-white/10" onClick={() => setStep(1)}><ArrowLeft className="h-5 w-5" /></Button>
               <div className="text-center space-y-2">
                 <Badge className="bg-[#D4AF37] text-black font-black text-[9px] mx-auto border-none uppercase">{selectedCampaign.category}</Badge>
-                <CardTitle className="font-headline text-xl font-black uppercase leading-tight px-8">{selectedCampaign.title}</CardTitle>
+                <CardTitle className="font-headline text-lg sm:text-xl font-black uppercase leading-tight px-10 sm:px-8">{selectedCampaign.title}</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-8 space-y-8">
+            <CardContent className="p-4 sm:p-8 space-y-6 sm:space-y-8">
               <div className="bg-muted/30 p-4 rounded-2xl border border-dashed border-[#800000]/20">
                 <p className="text-xs font-bold text-[#800000] uppercase mb-2 flex items-center gap-2">
                   <Info className="w-3.5 h-3.5" /> Tentang Program
@@ -521,7 +521,7 @@ export default function BerbagiPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="p-8 pt-0">
+            <CardFooter className="p-4 sm:p-8 pt-0">
               <Button onClick={goToPayment} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-lg rounded-2xl uppercase tracking-widest shadow-xl">
                 Lanjut Infaq <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
@@ -538,12 +538,12 @@ export default function BerbagiPage() {
               <CardTitle className="font-headline text-2xl font-black uppercase">Instruksi Pembayaran</CardTitle>
               <CardDescription className="text-white/60 font-bold uppercase text-[9px] tracking-widest">Hi Berbagi • Digital Receipt</CardDescription>
             </CardHeader>
-            <CardContent className="p-8 space-y-8">
-              <div className="bg-[#800000] text-white p-8 rounded-[2rem] border-b-8 border-[#D4AF37] space-y-6 relative overflow-hidden">
+            <CardContent className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+              <div className="bg-[#800000] text-white p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border-b-8 border-[#D4AF37] space-y-5 sm:space-y-6 relative overflow-hidden">
                 <div className="absolute right-[-20px] top-[-20px] opacity-10"><Landmark className="w-32 h-32 text-[#D4AF37]" /></div>
                 <div className="text-center space-y-2 relative z-10">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">Total Infaq</p>
-                  <div className="text-4xl font-black flex items-center justify-center gap-2">
+                  <div className="text-2xl sm:text-4xl font-black flex flex-wrap items-center justify-center gap-2">
                     Rp {((amount || parseInt(customAmount) || 0) + uniqueCode).toLocaleString('id-ID')}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-[#D4AF37]" onClick={() => copyToClipboard(((amount || parseInt(customAmount) || 0) + uniqueCode).toString())}><Copy className="h-4 w-4" /></Button>
                   </div>
@@ -619,7 +619,7 @@ export default function BerbagiPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="p-8 pt-0">
+            <CardFooter className="p-4 sm:p-8 pt-0">
               <Button
                 onClick={handleConfirmDonation}
                 disabled={loading}
@@ -679,27 +679,27 @@ export default function BerbagiPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {allDonations.slice(0, 10).map((don) => (
-                <div key={don.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-[#800000]/5 hover:border-[#800000]/20 transition-all shadow-sm animate-in fade-in slide-in-from-bottom-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#800000]/5 flex items-center justify-center text-[#800000]">
-                      <User className="w-5 h-5" />
+                <div key={don.id} className="flex items-center justify-between gap-2 p-3 sm:p-4 bg-white rounded-2xl border border-[#800000]/5 hover:border-[#800000]/20 transition-all shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#800000]/5 flex items-center justify-center text-[#800000] shrink-0">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-[#800000] uppercase truncate max-w-[100px]">
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-black text-[#800000] uppercase truncate max-w-[110px]">
                           {don.is_anonymous ? "Hamba Allah" : maskName(don.sender_name)}
                         </span>
                         <Badge className={cn(
-                          "text-[7px] font-black px-1.5 py-0 h-4 border-none",
+                          "text-[7px] font-black px-1.5 py-0 h-4 border-none shrink-0",
                           don.status === 'verified' ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
                         )}>
-                          {don.status === 'verified' ? "VERIFIED" : "PENDING VERIFICATION"}
+                          {don.status === 'verified' ? "VERIFIED" : "PENDING"}
                         </Badge>
                       </div>
-                      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter truncate max-w-[120px]">{don.campaign_title || "Infaq Umum"}</span>
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter truncate">{don.campaign_title || "Infaq Umum"}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end">
+                  <div className="flex flex-col items-end shrink-0">
                     <span className="text-xs font-black text-emerald-600">Rp {Number(don.amount || 0).toLocaleString('id-ID')}</span>
                     <span className="text-[8px] font-bold text-muted-foreground flex items-center gap-1 uppercase tracking-tighter">
                       <Calendar className="w-2 h-2" /> {new Date(don.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}

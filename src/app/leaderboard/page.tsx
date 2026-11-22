@@ -179,15 +179,15 @@ export default function LeaderboardPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-[#800000]/5">
             {restUsers.length > 0 ? restUsers.map((u, idx) => (
-              <div key={u.id} className="flex items-center justify-between p-4 hover:bg-white transition-colors">
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-black text-muted-foreground w-4">{idx + 4}</span>
-                  <Avatar className="h-10 w-10 border-2 border-white">
+              <div key={u.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-white transition-colors">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                  <span className="text-xs font-black text-muted-foreground w-5 shrink-0">{idx + 4}</span>
+                  <Avatar className="h-10 w-10 border-2 border-white shrink-0">
                     <AvatarImage src={u.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username || u.email || 'H')}&background=800000&color=fff`} />
                     <AvatarFallback className="bg-[#800000] text-white font-bold">{u.username?.[0] || u.email?.[0]}</AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-black text-black uppercase">{u.username || 'Hamba Allah'}</span>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-sm font-black text-black uppercase truncate">{u.username || 'Hamba Allah'}</span>
                     <div className="flex items-center gap-1.5">
                       <Badge className="bg-[#800000] text-white text-[8px] font-black uppercase px-1.5 py-0">
                         {u.role_id === 'learner' ? 'THALIBAH' : u.role_id?.toUpperCase() || 'SANTRI'}
@@ -226,12 +226,12 @@ export default function LeaderboardPage() {
                     <span className="text-[9px] font-black uppercase text-center leading-tight">Reward</span>
                   </div>
                   <div className="flex-1 p-5 space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
+                    <div className="flex flex-wrap justify-between items-start gap-2">
+                      <div className="space-y-1 min-w-0 flex-1">
                         <h3 className="font-bold text-sm leading-tight text-[#800000]">{challenge.title}</h3>
                         <p className="text-[10px] text-muted-foreground">{challenge.description}</p>
                       </div>
-                      <div className="flex items-center gap-1 text-[9px] font-black text-white uppercase bg-[#800000] px-2 py-1 rounded-full">
+                      <div className="flex items-center gap-1 text-[9px] font-black text-white uppercase bg-[#800000] px-2 py-1 rounded-full shrink-0 whitespace-nowrap">
                         <Clock className="w-3 h-3 text-[#D4AF37]" /> {challenge.deadline}
                       </div>
                     </div>

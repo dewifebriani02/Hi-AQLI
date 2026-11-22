@@ -264,7 +264,7 @@ export default function IrabDetailPage() {
   return (
     <div className="flex flex-col min-h-screen bg-orange-50/30 pb-24">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100 px-4 py-4">
+      <div className="sticky top-16 sm:top-20 z-30 bg-white/95 backdrop-blur-md border-b border-orange-100 px-3 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="outline" size="sm" className="gap-1.5 text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5 shrink-0">
             <Link href="/irab">
@@ -382,7 +382,7 @@ export default function IrabDetailPage() {
                       </div>
                    </div>
 
-                   <div className="grid grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                      <div className="flex items-start gap-3 p-3 sm:p-4 rounded-xl bg-orange-50/50 border border-orange-100">
                         <div className="p-2 rounded-lg bg-white text-orange-600 shadow-sm"><Type className="w-4 h-4" /></div>
                         <div className="text-right">

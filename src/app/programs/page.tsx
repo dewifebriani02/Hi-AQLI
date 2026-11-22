@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ArrowRight, BookOpen, GraduationCap, HeartHandshake, Library, CheckCircle2, ScrollText, Search, Users } from "lucide-react";
-import { Logo } from "@/components/common/logo";
 
 const PROGRAMS = [
   {
@@ -55,48 +54,13 @@ export default function ProgramsPage() {
   const fullSalutation = userData?.salutation || "Ukhti";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-100 pb-24">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <Logo variant="default" showText={true} />
-            </Link>
-            <div className="flex items-center gap-3">
-              {user ? (
-                <>
-                  <Link href="/profile">
-                    <Button variant="outline" size="sm" className="rounded-full">
-                      Profil Saya
-                    </Button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/login">
-                    <Button variant="ghost" size="sm" className="rounded-full">
-                      Masuk
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button size="sm" className="bg-[#800000] hover:bg-[#800000]/90 text-white rounded-full">
-                      Daftar
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-100 rounded-3xl pb-24">
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 text-center">
         <Badge className="mb-4 bg-emerald-100 text-emerald-700 border-emerald-200">
           <Users className="w-3 h-3 mr-1" /> Ekosistem Pembelajaran Al-Qur'an
         </Badge>
-        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 mb-6">
+        <h1 className="text-3xl sm:text-5xl font-black text-slate-900 mb-4 sm:mb-6">
           Pilih Program <span className="text-[#800000]">Hi AQLI</span>
         </h1>
         <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-8">

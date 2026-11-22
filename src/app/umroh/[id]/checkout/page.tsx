@@ -203,7 +203,7 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="nik">NIK</Label>
                   <Input
@@ -231,7 +231,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="birthPlace">Tempat Lahir</Label>
                   <Input
@@ -318,7 +318,7 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="passportIssue">Tanggal Terbit</Label>
                   <Input
@@ -374,7 +374,7 @@ export default function CheckoutPage() {
                       className="border-amber-200 focus:border-[#D4AF37]"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="emergencyPhone">No. Telepon</Label>
                       <Input

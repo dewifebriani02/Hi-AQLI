@@ -113,13 +113,13 @@ export default function MufradatMabarOverviewPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20 p-4 sm:p-0">
       {/* HERO SECTION */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#800000] via-[#A52A2A] to-[#8B4513] p-8 sm:p-12 text-white shadow-2xl">
+      <div className="relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-[#800000] via-[#A52A2A] to-[#8B4513] p-5 sm:p-12 text-white shadow-2xl">
         <div className="relative z-10 space-y-6">
           <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-4 py-1 rounded-full font-black text-[10px] uppercase tracking-widest">
             Fitur Baru • Kompetisi Global
           </Badge>
           <div className="space-y-2">
-            <h1 className="text-4xl sm:text-5xl font-black font-headline tracking-tighter uppercase leading-none">
+            <h1 className="text-3xl sm:text-5xl font-black font-headline tracking-tighter uppercase leading-none">
               Mabar <span className="text-[#D4AF37]">Al-Qur'an</span>
             </h1>
             <p className="text-white/80 text-sm sm:text-lg max-w-lg font-medium leading-relaxed">
