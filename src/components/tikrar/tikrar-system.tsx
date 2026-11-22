@@ -2237,6 +2237,8 @@ function MaqtaCard({
   // Arti kata: tetap tampil 2,5 detik setelah kursor pergi; ketuk untuk menahan/menutup
   const [openWord, setOpenWord] = useState<string | null>(null);
   const [pinnedWord, setPinnedWord] = useState<string | null>(null);
+  const [showPerKata, setShowPerKata] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
   const closeWordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (closeWordTimer.current) clearTimeout(closeWordTimer.current);
@@ -2351,6 +2353,55 @@ function MaqtaCard({
   const renderToken = (token: any, colorClass: string) => {
     if (token.type === 'word') {
       const wid = `${token.verse_key}-${token.word_idx}`;
+      const isActualWord = token.data?.char_type_name !== 'end';
+      const isActiveVerse = token.verse_key === playingVerseKey;
+      const showInlineMeaning = isActualWord && (showPerKata || isActiveVerse);
+
+      if (showInlineMeaning) {
+        return (
+          <Tooltip key={wid} open={openWord === wid || pinnedWord === wid} onOpenChange={() => {}}>
+            <TooltipTrigger asChild>
+              <span
+                tabIndex={0}
+                onMouseEnter={() => showWord(wid)}
+                onMouseLeave={() => hideWordLater(wid)}
+                onFocus={() => showWord(wid)}
+                onBlur={() => hideWordLater(wid)}
+                onClick={() => {
+                  setPinnedWord((cur) => (cur === wid ? null : wid));
+                  showWord(wid);
+                }}
+                className={cn(
+                  'inline-flex flex-col items-center justify-start cursor-help rounded-lg px-1.5 py-1 outline-none transition-colors',
+                  isActiveVerse
+                    ? 'bg-amber-200/80 ring-1 ring-amber-400/70'
+                    : 'bg-white/60 hover:bg-[#D4AF37]/20',
+                  pinnedWord === wid && 'ring-2 ring-[#6D123F]/40'
+                )}
+              >
+                <span
+                  style={{ fontSize: `${fontSize}px`, lineHeight: 1.55 }}
+                  className={cn('font-arabic', colorClass)}
+                >
+                  {token.data.text_uthmani}
+                </span>
+                <span
+                  dir="ltr"
+                  className="text-[10px] font-sans font-semibold text-[#6D123F] leading-tight text-center mt-0.5 max-w-[92px] break-words"
+                >
+                  {token.data.translation?.text || '-'}
+                </span>
+              </span>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent className="bg-[#6D123F] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                <p className="text-xs font-bold">{token.data.translation?.text || '...'}</p>
+              </TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
+        );
+      }
+
       return (
         <Tooltip key={wid} open={openWord === wid || pinnedWord === wid} onOpenChange={() => {}}>
           <TooltipTrigger asChild>
@@ -2368,7 +2419,7 @@ function MaqtaCard({
               className={cn(
                 'font-arabic cursor-help hover:bg-[#D4AF37]/20 rounded px-0.5 outline-none transition-colors',
                 colorClass,
-                token.verse_key === playingVerseKey && 'bg-amber-200/70',
+                isActiveVerse && 'bg-amber-200/70',
                 pinnedWord === wid && 'bg-[#D4AF37]/30'
               )}
             >
@@ -2478,6 +2529,41 @@ function MaqtaCard({
             theme.verseBg
           )}
         >
+          {/* Kontrol tampilan Per Kata & Terjemahan di dalam kotak atas */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-[10px] font-bold text-stone-600">
+              Ketuk kata untuk arti
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowPerKata((v) => !v)}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation',
+                  showPerKata
+                    ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                    : 'bg-white/80 text-[#6D123F] border-[#6D123F]/20 hover:bg-white'
+                )}
+              >
+                <Languages className="w-3 h-3" />
+                Per Kata
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTranslation((v) => !v)}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation',
+                  showTranslation
+                    ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                    : 'bg-white/80 text-[#6D123F] border-[#6D123F]/20 hover:bg-white'
+                )}
+              >
+                <BookOpen className="w-3 h-3" />
+                Terjemah
+              </button>
+            </div>
+          </div>
+
           {/* Sub-blok 1 (TM x-1) */}
           <div className="bg-white/40 rounded-xl p-3 border border-white/60 border-r-4 border-r-[#B91C1C] shadow-sm space-y-2">
             <div className="flex items-center justify-between gap-2">
@@ -2488,7 +2574,7 @@ function MaqtaCard({
                 {part1Range}
               </span>
             </div>
-            <div className="flex flex-wrap justify-center gap-x-1 gap-y-2" dir="rtl">
+            <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
               {tokensA.map((t) => renderToken(t, 'text-[#991B1B]'))}
             </div>
           </div>
@@ -2504,43 +2590,54 @@ function MaqtaCard({
                   {part2Range}
                 </span>
               </div>
-              <div className="flex flex-wrap justify-center gap-x-1 gap-y-2" dir="rtl">
+              <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
                 {tokensB.map((t) => renderToken(t, 'text-stone-950'))}
               </div>
             </div>
           )}
-        </div>
 
-        {/* Arti per kata & terjemahan kalimat ayat yang sedang diputar */}
-        {playingVerse && (
-          <div className="rounded-2xl border-2 border-[#D4AF37]/60 bg-amber-50/60 p-3 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <Badge variant="outline" className="text-[9px] font-black border-[#6D123F]/20 text-[#6D123F] bg-white">
-                Ayat {playingVerse.verse_key}
-              </Badge>
-              <span className="text-[10px] font-black text-[#6D123F]">Putaran {playback.loop + 1}/5</span>
+          {/* Terjemahan kalimat terintegrasi di dalam kotak atas (tanpa mengulang teks Arab) */}
+          {(playingVerse || showTranslation) && (
+            <div className="bg-white/75 rounded-xl p-3 border border-[#D4AF37]/60 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#6D123F]">
+                  {playingVerse ? `Terjemahan Ayat ${playingVerse.verse_key}` : `Terjemahan TM ${id} (Blok ${letter})`}
+                </span>
+                {playingVerse && (
+                  <span className="text-[10px] font-black text-[#6D123F]">
+                    Putaran {playback.loop + 1}/5
+                  </span>
+                )}
+              </div>
+              {showTranslation ? (
+                <div className="space-y-1.5">
+                  {verses.map((v: any) => {
+                    const isCur = v.verse_key === playingVerseKey;
+                    const text = v.translations?.[0]?.text?.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...';
+                    return (
+                      <p
+                        key={v.verse_key}
+                        className={cn(
+                          'text-xs leading-relaxed rounded-lg px-2.5 py-1.5 border-l-4 transition-colors',
+                          isCur
+                            ? 'bg-amber-100/90 border-[#D4AF37] text-stone-950 font-semibold'
+                            : 'bg-white/80 border-[#6D123F]/40 text-stone-800'
+                        )}
+                      >
+                        <span className="font-black text-[#6D123F] mr-1.5">({v.verse_key.split(':')[1]})</span>
+                        &ldquo;{text}&rdquo;
+                      </p>
+                    );
+                  })}
+                </div>
+              ) : playingVerse ? (
+                <p className="text-xs sm:text-sm text-stone-900 leading-relaxed italic font-medium bg-white/85 rounded-lg p-2.5 border-l-4 border-[#6D123F]">
+                  &ldquo;{playingVerse.translations?.[0]?.text?.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...'}&rdquo;
+                </p>
+              ) : null}
             </div>
-            <div className="flex flex-wrap justify-start gap-1.5" dir="rtl">
-              {playingVerse.words
-                .filter((w: any) => w.text_uthmani && w.char_type_name !== 'end')
-                .map((word: any, wIdx: number) => (
-                  <div
-                    key={wIdx}
-                    dir="ltr"
-                    className="bg-white border border-[#6D123F]/10 rounded-xl px-2.5 py-1 flex flex-col items-center gap-0.5 min-w-[52px]"
-                  >
-                    <span className="font-arabic text-black text-sm font-bold leading-none">{word.text_uthmani}</span>
-                    <span className="text-[9px] font-medium text-[#6D123F] leading-none text-center">
-                      {word.translation?.text || '-'}
-                    </span>
-                  </div>
-                ))}
-            </div>
-            <p className="text-sm text-black leading-relaxed italic font-medium bg-white rounded-xl p-3 border-l-4 border-[#6D123F]">
-              &ldquo;{playingVerse.translations?.[0]?.text.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...'}&rdquo;
-            </p>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox
