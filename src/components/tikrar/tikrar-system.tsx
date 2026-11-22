@@ -2748,8 +2748,12 @@ function MaqtaCard({
   const isPlaying = Boolean(playback);
   const playingVerse = isPlaying ? verses[playback.verseIdx] : null;
   const playingVerseKey = playingVerse?.verse_key || null;
-  // Counter blok terbuka setelah blok disimak 5x
-  const countersLocked = isLocked || !listenDone;
+  // Counter blok baru terbuka setelah blok disimak 5x DAN dikonfirmasi sudah paham
+  const needsComprehensionConfirm =
+    listenDone &&
+    state?.understood !== true &&
+    (state?.understood === false || (state?.a?.count || 0) === 0);
+  const countersLocked = isLocked || !listenDone || needsComprehensionConfirm;
 
   // Arti kata: tetap tampil 2,5 detik setelah kursor pergi; ketuk untuk menahan/menutup
   const [openWord, setOpenWord] = useState<string | null>(null);
@@ -2834,6 +2838,7 @@ function MaqtaCard({
   }, [verses, subSplit]);
 
   const addSubCount = (part: 'a' | 'b' | 'combined', delta: number) => {
+    if (countersLocked) return;
     const currentCount = state?.[part]?.count || 0;
     const nextCount = currentCount + delta;
     if (delta > 0) playTikrarCount(nextCount, PASS_THRESHOLD);
@@ -3071,7 +3076,7 @@ function MaqtaCard({
                       Belum paham isi Blok {letter} (TM {id})? Yuk pahami dulu!
                     </p>
                     <p className="text-[11px] font-medium text-stone-700 leading-relaxed">
-                      <strong>Per Kata</strong> dan <strong>Terjemah</strong> sudah dibuka di bawah. Silakan baca terjemahan lengkap dan ketuk kata Arab untuk memahami artinya sebelum menghafal.
+                      <strong>Per Kata</strong> dan <strong>Terjemah</strong> sudah dibuka di bawah. Kotak hafalan <strong>TM {id}-1</strong> tetap terkunci sampai klik <strong>Sekarang Sudah Paham</strong>.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -3135,7 +3140,6 @@ function MaqtaCard({
                 onClick={() => {
                   setShowPerKata(true);
                   setShowTranslation(true);
-                  onAnswerComprehension?.(false);
                 }}
                 className="font-bold text-[#6D123F] hover:underline"
               >
@@ -3306,6 +3310,17 @@ function MaqtaCard({
           )}
         </div>
 
+        {!isLocked && needsComprehensionConfirm && (
+          <div className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-300 text-[10px] font-black text-amber-950 text-center">
+            <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+            <span>
+              {state?.understood === false
+                ? `Pahami arti dulu lalu klik "Sekarang Sudah Paham" di atas untuk membuka kotak TM ${id}-1.`
+                : `Jawab "Sudah Paham" di atas terlebih dahulu untuk membuka kotak TM ${id}-1.`}
+            </span>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2 shrink-0">
           <CounterBox
             id={`step-${id}.a`}
@@ -3455,7 +3470,7 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
               disabled={isLocked}
               className={cn(
                 'h-16 w-full rounded-2xl p-0 font-black text-xl transition-all shadow-md touch-manipulation select-none active:scale-[0.95]',
-                stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
+                !isLocked && stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
                 isDone
                   ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 border-none'
                   : 'bg-[#6D123F] text-white hover:bg-[#6D123F]/90'
