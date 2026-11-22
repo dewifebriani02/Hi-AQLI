@@ -113,6 +113,14 @@ export async function POST(req: NextRequest) {
       const exBlocks = typeof ex.blocks === 'object' && ex.blocks !== null ? ex.blocks : {};
       finalBlocks = {};
       for (const b of [1, 2, 3, 4] as const) {
+        const incomingUnderstood = blocks?.[b]?.understood;
+        const existingUnderstood = exBlocks?.[b]?.understood;
+        const finalUnderstood =
+          typeof incomingUnderstood === 'boolean'
+            ? incomingUnderstood
+            : typeof existingUnderstood === 'boolean'
+            ? existingUnderstood
+            : undefined;
         finalBlocks[b] = {
           a: { count: Math.max(Number(exBlocks?.[b]?.a?.count) || 0, Number(blocks?.[b]?.a?.count) || 0) },
           b: { count: Math.max(Number(exBlocks?.[b]?.b?.count) || 0, Number(blocks?.[b]?.b?.count) || 0) },
@@ -121,6 +129,7 @@ export async function POST(req: NextRequest) {
           listen: {
             count: Math.min(5, Math.max(Number(exBlocks?.[b]?.listen?.count) || 0, Number(blocks?.[b]?.listen?.count) || 0)),
           },
+          ...(typeof finalUnderstood === 'boolean' ? { understood: finalUnderstood } : {}),
         };
       }
 

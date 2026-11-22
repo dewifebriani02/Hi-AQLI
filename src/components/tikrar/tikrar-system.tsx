@@ -240,6 +240,108 @@ function formatBlockRangeLabel(verses: Verse[], blockCfg?: BlockConfig | null): 
   return `${surah1} ${a1} – ${surah2} ${a2}`;
 }
 
+const pageDataCache = new Map<number, { verses: Verse[]; customPageConfig: PageBlockConfig | null }>();
+
+function createEmptyBlocks() {
+  return {
+    1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+  };
+}
+
+function createEmptyMetaCounts(): Record<string, number> {
+  return {
+    '1_2': 0,
+    '2_3': 0,
+    '1_2_3': 0,
+    '3_4': 0,
+    '2_3_4': 0,
+    '1_2_3_4': 0,
+  };
+}
+
+function readLocalPageProgress(p: number) {
+  const blocks = createEmptyBlocks() as any;
+  const metaCounts = createEmptyMetaCounts();
+  let prepListenCount = 0;
+  let prepTranslationDone = false;
+  if (typeof window === 'undefined' || !p) {
+    return { blocks, metaCounts, prepListenCount, prepTranslationDone };
+  }
+  try {
+    const savedProgressStr = localStorage.getItem(`tikrar_progress_p${p}`);
+    if (savedProgressStr) {
+      const saved = JSON.parse(savedProgressStr);
+      prepListenCount = Number(saved.prepListenCount) || 0;
+      prepTranslationDone = Boolean(saved.prepTranslationDone);
+      for (const b of [1, 2, 3, 4] as const) {
+        if (saved.blocks?.[b]) {
+          blocks[b] = {
+            a: { count: Number(saved.blocks[b]?.a?.count) || 0 },
+            b: { count: Number(saved.blocks[b]?.b?.count) || 0 },
+            combined: { count: Number(saved.blocks[b]?.combined?.count) || 0 },
+            listen: { count: Number(saved.blocks[b]?.listen?.count) || 0 },
+            ...(typeof saved.blocks[b]?.understood === 'boolean'
+              ? { understood: saved.blocks[b].understood }
+              : {}),
+          };
+        }
+      }
+      if (saved.metaCounts) {
+        Object.keys(metaCounts).forEach((k) => {
+          metaCounts[k] = Number(saved.metaCounts[k]) || 0;
+        });
+      }
+    }
+  } catch {}
+  return { blocks, metaCounts, prepListenCount, prepTranslationDone };
+}
+
+function resolveInitialPageAndJuz(
+  targetPage: number | null | undefined,
+  targetJuz: number | null | undefined,
+  summary: TikrarSummary | null | undefined
+): { page: number; juz: number; resolved: boolean } {
+  if (targetPage && targetPage >= 1 && targetPage <= 604) {
+    const derivedJuz = targetJuz && targetJuz >= 1 && targetJuz <= 30 ? targetJuz : getJuzForPage(targetPage);
+    return { page: targetPage, juz: derivedJuz, resolved: true };
+  }
+  const activeTarget = summary?.target || null;
+  if (activeTarget) {
+    const cleared = new Set<number>([
+      ...(summary?.quizPassedPages || []),
+      ...(summary?.tasmiPassedPages || []),
+    ]);
+    if (typeof window !== 'undefined') {
+      const savedPage = Number(localStorage.getItem('aqli_tikrar_last_page'));
+      const savedJuz = Number(localStorage.getItem('aqli_tikrar_last_juz'));
+      if (
+        savedPage >= activeTarget.startPage &&
+        savedPage <= activeTarget.endPage &&
+        (!savedJuz || savedJuz === activeTarget.juz) &&
+        (savedPage <= activeTarget.unlockedPage || cleared.has(savedPage))
+      ) {
+        return { page: savedPage, juz: activeTarget.juz, resolved: true };
+      }
+    }
+    return { page: activeTarget.unlockedPage, juz: activeTarget.juz, resolved: true };
+  }
+  if (typeof window !== 'undefined') {
+    const savedPage = Number(localStorage.getItem('aqli_tikrar_last_page'));
+    const savedJuz = Number(localStorage.getItem('aqli_tikrar_last_juz'));
+    if (savedPage >= 1 && savedPage <= 604) {
+      return {
+        page: savedPage,
+        juz: savedJuz >= 1 && savedJuz <= 30 ? savedJuz : getJuzForPage(savedPage),
+        resolved: false,
+      };
+    }
+  }
+  return { page: targetPage || 582, juz: targetJuz || 30, resolved: false };
+}
+
 export function TikrarSystem({
   targetPage,
   targetJuz,
@@ -265,30 +367,27 @@ export function TikrarSystem({
     return raw >= 1 && raw <= 30 ? raw : 30;
   }, [userData]);
 
-  const [juz, setJuz] = useState<number>(targetJuz || 30);
-  const [page, setPage] = useState<number>(targetPage || 582);
-  const [customPageConfig, setCustomPageConfig] = useState<PageBlockConfig | null>(null);
-  const [verses, setVerses] = useState<Verse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialResolved = useMemo(
+    () => resolveInitialPageAndJuz(targetPage, targetJuz, summary),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const initialCachedPageData = pageDataCache.get(initialResolved.page);
+  const initialLocalProgress = useMemo(
+    () => readLocalPageProgress(initialResolved.page),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
-  useEffect(() => {
-    let active = true;
-    fetch(`/api/tikrar/blocks?page=${page}`)
-      .then((r) => r.json())
-      .then((res) => {
-        if (active) {
-          setCustomPageConfig(res?.success && res?.config ? res.config : null);
-        }
-      })
-      .catch(() => {
-        if (active) setCustomPageConfig(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [page]);
+  const [juz, setJuz] = useState<number>(initialResolved.juz);
+  const [page, setPage] = useState<number>(initialResolved.page);
+  const [customPageConfig, setCustomPageConfig] = useState<PageBlockConfig | null>(
+    initialCachedPageData?.customPageConfig ?? null
+  );
+  const [verses, setVerses] = useState<Verse[]>(initialCachedPageData?.verses || []);
+  const [loading, setLoading] = useState(!initialCachedPageData);
   const { fontSize } = useFontSize();
-  const [hasInitializedPage, setHasInitializedPage] = useState(false);
+  const [hasInitializedPage, setHasInitializedPage] = useState(initialResolved.resolved);
   const [isRequestingExam, setIsRequestingExam] = useState(false);
   const [tasmiQueue, setTasmiQueue] = useState<any[]>([]);
   const [serverMySubmissions, setServerMySubmissions] = useState<any[] | null>(null);
@@ -299,8 +398,8 @@ export function TikrarSystem({
   // State & audio ref
 
   // Tahap 0 & Sub-repetisi state
-  const [prepListenCount, setPrepListenCount] = useState(0);
-  const [prepTranslationDone, setPrepTranslationDone] = useState(false);
+  const [prepListenCount, setPrepListenCount] = useState(initialLocalProgress.prepListenCount);
+  const [prepTranslationDone, setPrepTranslationDone] = useState(initialLocalProgress.prepTranslationDone);
 
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(21203);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
@@ -319,7 +418,8 @@ export function TikrarSystem({
 
   // Audio simak per blok: memutar ayat-ayat satu blok, 5 putaran, menambah hitungan simak blok
   const [blockPlayback, setBlockPlayback] = useState<{ block: 1 | 2 | 3 | 4; verseIdx: number; loop: number } | null>(null);
-  const blockPlaybackRef = useRef<{ block: number } | null>(null);
+  const blockPlaybackRef = useRef<{ block: 1 | 2 | 3 | 4; played?: boolean } | null>(null);
+  const [simakPromptedBlocks, setSimakPromptedBlocks] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     if (!activeVerseKey) return;
@@ -549,21 +649,8 @@ export function TikrarSystem({
     [clearedPages, page, userSubmissions, passedExamPages]
   );
 
-  const [blocks, setBlocks] = useState<any>({
-    1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
-    2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
-    3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
-    4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
-  });
-
-  const [metaCounts, setMetaCounts] = useState<Record<string, number>>({
-    '1_2': 0,
-    '2_3': 0,
-    '1_2_3': 0,
-    '3_4': 0,
-    '2_3_4': 0,
-    '1_2_3_4': 0,
-  });
+  const [blocks, setBlocks] = useState<any>(() => initialLocalProgress.blocks);
+  const [metaCounts, setMetaCounts] = useState<Record<string, number>>(() => initialLocalProgress.metaCounts);
 
   // Blocks already logged in DB on `page` (across any date) and specifically today
   const { completedBlocksAllTime, completedBlocksToday } = useMemo(() => {
@@ -697,25 +784,52 @@ export function TikrarSystem({
     }
   }, [page, juz]);
 
-  // Fetch verses for `page`
+  // Reset prompt per-sesi saat halaman berubah
   useEffect(() => {
-    async function fetchVerses() {
+    setSimakPromptedBlocks({});
+  }, [page]);
+
+  // Fetch verses + custom block config secara atomik dan manfaatkan cache agar tidak berkedip
+  useEffect(() => {
+    if (!hasInitializedPage) return;
+    let active = true;
+
+    if (audioRef.current) audioRef.current.pause();
+    blockPlaybackRef.current = null;
+    setBlockPlayback(null);
+    setIsAutoPlaying(false);
+    isAutoPlayingRef.current = false;
+    setPlayingVerseIndex(null);
+
+    const cached = pageDataCache.get(page);
+    if (cached) {
+      setVerses(cached.verses);
+      setCustomPageConfig(cached.customPageConfig);
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    async function fetchPageData() {
       setLoading(true);
-      if (audioRef.current) audioRef.current.pause();
-      blockPlaybackRef.current = null;
-      setBlockPlayback(null);
-      setIsAutoPlaying(false);
-      isAutoPlayingRef.current = false;
-      setPlayingVerseIndex(null);
-
       try {
-        const res = await fetch(
-          `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33`
-        );
-        if (!res.ok) throw new Error('Gagal memuat ayat');
-        const data = await res.json();
+        const [versesRes, blocksRes] = await Promise.all([
+          fetch(
+            `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33`
+          ),
+          fetch(`/api/tikrar/blocks?page=${page}`).catch(() => null),
+        ]);
 
-        if (data && data.verses && data.verses.length > 0) {
+        if (!versesRes.ok) throw new Error('Gagal memuat ayat');
+        const data = await versesRes.json();
+        const blocksJson = blocksRes && blocksRes.ok ? await blocksRes.json().catch(() => null) : null;
+        const nextConfig: PageBlockConfig | null =
+          blocksJson?.success && blocksJson?.config ? blocksJson.config : null;
+
+        if (active && data && data.verses && data.verses.length > 0) {
+          pageDataCache.set(page, { verses: data.verses, customPageConfig: nextConfig });
+          setCustomPageConfig(nextConfig);
           setVerses(data.verses);
           const rec = RECITERS.find((r) => r.id === selectedReciterId);
           if (rec && rec.provider !== "mp3quran") {
@@ -727,12 +841,15 @@ export function TikrarSystem({
       } catch (error) {
         console.error('Tikrar Maqta Fetch Error:', error);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
-    fetchVerses();
-  }, [page]);
+    fetchPageData();
+    return () => {
+      active = false;
+    };
+  }, [page, hasInitializedPage]);
 
   const isHydratedRef = useRef(false);
   const [soundOn, setSoundOn] = useState(true);
@@ -782,6 +899,9 @@ export function TikrarSystem({
                 b: { count: Number(saved.blocks[b]?.b?.count) || 0 },
                 combined: { count: Number(saved.blocks[b]?.combined?.count) || 0 },
                 listen: { count: Number(saved.blocks[b]?.listen?.count) || 0 },
+                ...(typeof saved.blocks[b]?.understood === 'boolean'
+                  ? { understood: saved.blocks[b].understood }
+                  : {}),
               };
             }
           }
@@ -791,6 +911,13 @@ export function TikrarSystem({
             });
           }
         } catch {}
+      }
+
+      if (!isCancelled) {
+        setPrepListenCount(nextPrepListen);
+        setPrepTranslationDone(nextPrepTrans);
+        setBlocks({ ...nextBlocks });
+        setMetaCounts({ ...nextMeta });
       }
 
       // 2. Ambil dari Database jika user sudah login
@@ -806,11 +933,22 @@ export function TikrarSystem({
               if (dbProg.blocks) {
                 for (const b of [1, 2, 3, 4] as const) {
                   if (dbProg.blocks[b]) {
+                    const localUnderstood = nextBlocks[b]?.understood;
+                    const dbUnderstood = dbProg.blocks[b]?.understood;
+                    const mergedUnderstood =
+                      localUnderstood === true || dbUnderstood === true
+                        ? true
+                        : typeof localUnderstood === 'boolean'
+                        ? localUnderstood
+                        : typeof dbUnderstood === 'boolean'
+                        ? dbUnderstood
+                        : undefined;
                     nextBlocks[b] = {
                       a: { count: Math.max(nextBlocks[b].a.count, Number(dbProg.blocks[b]?.a?.count) || 0) },
                       b: { count: Math.max(nextBlocks[b].b.count, Number(dbProg.blocks[b]?.b?.count) || 0) },
                       combined: { count: Math.max(nextBlocks[b].combined.count, Number(dbProg.blocks[b]?.combined?.count) || 0) },
                       listen: { count: Math.max(nextBlocks[b].listen.count, Number(dbProg.blocks[b]?.listen?.count) || 0) },
+                      ...(typeof mergedUnderstood === 'boolean' ? { understood: mergedUnderstood } : {}),
                     };
                   }
                 }
@@ -832,6 +970,7 @@ export function TikrarSystem({
         for (const b of [1, 2, 3, 4] as const) {
           if (completedBlocksAllTime.has(b)) {
             nextBlocks[b] = {
+              ...nextBlocks[b],
               a: { count: Math.max(nextBlocks[b].a.count, PASS_THRESHOLD) },
               b: { count: Math.max(nextBlocks[b].b.count, PASS_THRESHOLD) },
               combined: { count: Math.max(nextBlocks[b].combined.count, PASS_THRESHOLD) },
@@ -1097,13 +1236,37 @@ export function TikrarSystem({
   const blockVersesRef = useRef(blockVerses);
   blockVersesRef.current = blockVerses;
 
-  const stopBlockAudio = () => {
+  const stopBlockAudio = (triggerComprehensionPrompt = false) => {
+    const prevBlock = blockPlaybackRef.current?.block;
+    const wasPlayed = Boolean(blockPlaybackRef.current?.played);
     blockPlaybackRef.current = null;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.onended = null;
     }
     setBlockPlayback(null);
+    if (triggerComprehensionPrompt && prevBlock && wasPlayed) {
+      setSimakPromptedBlocks((prev) => ({ ...prev, [prevBlock]: true }));
+    }
+  };
+
+  const handleBlockComprehension = (block: 1 | 2 | 3 | 4, understood: boolean) => {
+    setBlocks((prev: any) => ({
+      ...prev,
+      [block]: {
+        ...prev[block],
+        understood,
+      },
+    }));
+    if (understood) {
+      setSimakPromptedBlocks((prev) => ({ ...prev, [block]: false }));
+      playTikrarTap();
+      setTimeout(() => {
+        document.getElementById(`step-${block}.a`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+    } else {
+      setSimakPromptedBlocks((prev) => ({ ...prev, [block]: true }));
+    }
   };
 
   const playBlockVerse = async (block: 1 | 2 | 3 | 4, vIdx: number, loop: number) => {
@@ -1122,14 +1285,17 @@ export function TikrarSystem({
       if (next < PREP_LISTEN_THRESHOLD) {
         playBlockVerse(block, 0, next);
       } else {
-        stopBlockAudio();
+        stopBlockAudio(true);
         playTikrarDone();
         toast({
           title: `Simak TM ${block} (Blok ${BLOCK_LETTERS[block]}) Tuntas 5x`,
-          description: 'Counter blok ini sudah terbuka. Bismillah, mulai menghafal!',
+          description: 'Konfirmasi pemahaman makna blok ini terlebih dahulu sebelum mulai menghafal.',
         });
         setTimeout(() => {
-          document.getElementById(`step-${block}.a`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const targetEl =
+            document.getElementById(`comprehension-${block}`) ||
+            document.getElementById(`step-${block}.a`);
+          targetEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 250);
       }
       return;
@@ -1138,7 +1304,7 @@ export function TikrarSystem({
     const url = await getAudioUrlByVerseKey(list[vIdx].verse_key, blockReciterIdRef.current);
     if (blockPlaybackRef.current?.block !== block) return;
     if (!url) {
-      stopBlockAudio();
+      stopBlockAudio(false);
       toast({ variant: 'destructive', title: 'Audio gagal dimuat', description: 'Coba lagi atau pilih qari lain.' });
       return;
     }
@@ -1147,13 +1313,14 @@ export function TikrarSystem({
     audio.ontimeupdate = null;
     audio.src = url;
     audio.onended = () => playBlockVerse(block, vIdx + 1, loop);
-    audio.play().catch(() => stopBlockAudio());
+    audio.play().catch(() => stopBlockAudio(false));
   };
 
   const startBlockAudio = (block: 1 | 2 | 3 | 4) => {
-    stopBlockAudio();
+    stopBlockAudio(false);
+    setSimakPromptedBlocks((prev) => ({ ...prev, [block]: false }));
     const listened = blocks[block]?.listen?.count || 0;
-    blockPlaybackRef.current = { block };
+    blockPlaybackRef.current = { block, played: true };
     playBlockVerse(block, 0, listened >= PREP_LISTEN_THRESHOLD ? 0 : listened);
   };
 
@@ -1479,7 +1646,7 @@ export function TikrarSystem({
 
 
 
-  if (isUserDataLoading) {
+  if (user && isUserDataLoading && !userData && !hasInitializedPage) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="animate-spin text-[#6D123F]" />
@@ -2077,7 +2244,10 @@ export function TikrarSystem({
               listenStepInfo={stepInfo('prep')}
               playback={blockPlayback?.block === 1 ? blockPlayback : null}
               onPlayAudio={() => startBlockAudio(1)}
-              onStopAudio={stopBlockAudio}
+              onStopAudio={() => stopBlockAudio(true)}
+              simakPrompted={Boolean(simakPromptedBlocks[1])}
+              onAnswerComprehension={(understood: boolean) => handleBlockComprehension(1, understood)}
+              salutation={userData?.salutation || 'Ukhti'}
               onUndo={(part: string) => markUndo('1.' + part)}
               page={page}
               state={blocks[1]}
@@ -2105,7 +2275,10 @@ export function TikrarSystem({
               listenStepInfo={stepInfo('2.listen')}
               playback={blockPlayback?.block === 2 ? blockPlayback : null}
               onPlayAudio={() => startBlockAudio(2)}
-              onStopAudio={stopBlockAudio}
+              onStopAudio={() => stopBlockAudio(true)}
+              simakPrompted={Boolean(simakPromptedBlocks[2])}
+              onAnswerComprehension={(understood: boolean) => handleBlockComprehension(2, understood)}
+              salutation={userData?.salutation || 'Ukhti'}
               onUndo={(part: string) => markUndo('2.' + part)}
               page={page}
               state={blocks[2]}
@@ -2146,7 +2319,10 @@ export function TikrarSystem({
               listenStepInfo={stepInfo('3.listen')}
               playback={blockPlayback?.block === 3 ? blockPlayback : null}
               onPlayAudio={() => startBlockAudio(3)}
-              onStopAudio={stopBlockAudio}
+              onStopAudio={() => stopBlockAudio(true)}
+              simakPrompted={Boolean(simakPromptedBlocks[3])}
+              onAnswerComprehension={(understood: boolean) => handleBlockComprehension(3, understood)}
+              salutation={userData?.salutation || 'Ukhti'}
               onUndo={(part: string) => markUndo('3.' + part)}
             page={page}
             state={blocks[3]}
@@ -2198,7 +2374,10 @@ export function TikrarSystem({
               listenStepInfo={stepInfo('4.listen')}
               playback={blockPlayback?.block === 4 ? blockPlayback : null}
               onPlayAudio={() => startBlockAudio(4)}
-              onStopAudio={stopBlockAudio}
+              onStopAudio={() => stopBlockAudio(true)}
+              simakPrompted={Boolean(simakPromptedBlocks[4])}
+              onAnswerComprehension={(understood: boolean) => handleBlockComprehension(4, understood)}
+              salutation={userData?.salutation || 'Ukhti'}
               onUndo={(part: string) => markUndo('4.' + part)}
             page={page}
             state={blocks[4]}
@@ -2276,7 +2455,7 @@ export function TikrarSystem({
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="border-none bg-[#6D123F] text-white shadow-xl overflow-hidden border-b-4 border-[#D4AF37]">
                     <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
                       <div className="space-y-2">
@@ -2555,6 +2734,9 @@ function MaqtaCard({
   playback,
   onPlayAudio,
   onStopAudio,
+  simakPrompted = false,
+  onAnswerComprehension,
+  salutation = 'Ukhti',
   getMinCount,
   customConfig,
   allPageVerses,
@@ -2572,8 +2754,14 @@ function MaqtaCard({
   // Arti kata: tetap tampil 2,5 detik setelah kursor pergi; ketuk untuk menahan/menutup
   const [openWord, setOpenWord] = useState<string | null>(null);
   const [pinnedWord, setPinnedWord] = useState<string | null>(null);
-  const [showPerKata, setShowPerKata] = useState(false);
-  const [showTranslation, setShowTranslation] = useState(false);
+  const [showPerKata, setShowPerKata] = useState(() => state?.understood === false);
+  const [showTranslation, setShowTranslation] = useState(() => state?.understood === false);
+  useEffect(() => {
+    if (state?.understood === false) {
+      setShowPerKata(true);
+      setShowTranslation(true);
+    }
+  }, [state?.understood, page]);
   const [revealInExam, setRevealInExam] = useState(false);
   useEffect(() => {
     setRevealInExam(globalShowVerses);
@@ -2861,6 +3049,100 @@ function MaqtaCard({
             </p>
           )}
           <StepTag info={listenStepInfo} className="justify-center" />
+
+          {!isLocked && !isPlaying && (
+            simakPrompted ||
+            state?.understood === false ||
+            (listenDone && state?.understood === undefined && (state?.a?.count || 0) === 0)
+          ) ? (
+            <div
+              id={`comprehension-${id}`}
+              className={cn(
+                'mt-2 rounded-xl border-2 p-3 space-y-2.5 scroll-mt-24',
+                state?.understood === false
+                  ? 'bg-amber-50 border-amber-400 text-amber-950'
+                  : 'bg-[#6D123F]/5 border-[#6D123F]/25 text-stone-900'
+              )}
+            >
+              {state?.understood === false ? (
+                <>
+                  <div className="space-y-1">
+                    <p className="text-xs font-black text-[#6D123F]">
+                      Belum paham isi Blok {letter} (TM {id})? Yuk pahami dulu!
+                    </p>
+                    <p className="text-[11px] font-medium text-stone-700 leading-relaxed">
+                      <strong>Per Kata</strong> dan <strong>Terjemah</strong> sudah dibuka di bawah. Silakan baca terjemahan lengkap dan ketuk kata Arab untuk memahami artinya sebelum menghafal.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => onAnswerComprehension?.(true)}
+                      className="flex-1 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] gap-1.5"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Sekarang Sudah Paham
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={onPlayAudio}
+                      className="h-9 rounded-lg border-[#6D123F]/30 text-[#6D123F] hover:bg-[#6D123F]/10 font-bold text-[11px] gap-1.5"
+                    >
+                      <Headphones className="w-3.5 h-3.5" /> Putar Ulang
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-black text-[#6D123F] text-center leading-snug">
+                    Apakah {salutation} sudah paham apa yang akan dihafal pada Blok {letter} (TM {id}) ini?
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => onAnswerComprehension?.(true)}
+                      className="h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] gap-1.5"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Sudah Paham
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setShowPerKata(true);
+                        setShowTranslation(true);
+                        onAnswerComprehension?.(false);
+                      }}
+                      className="h-9 rounded-lg border-amber-500 bg-amber-50 hover:bg-amber-100 text-amber-950 font-black text-[11px] gap-1.5"
+                    >
+                      <Languages className="w-3.5 h-3.5" /> Belum Paham
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : !isLocked && !isPlaying && state?.understood === true ? (
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px]">
+              <span className="font-black text-emerald-800 inline-flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Paham makna Blok {letter}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPerKata(true);
+                  setShowTranslation(true);
+                  onAnswerComprehension?.(false);
+                }}
+                className="font-bold text-[#6D123F] hover:underline"
+              >
+                Buka Arti &amp; Terjemah
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div
@@ -2950,9 +3232,16 @@ function MaqtaCard({
                 {part1Range}
               </span>
             </div>
-            <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
-              {tokensA.map((t) => renderToken(t, 'text-[#991B1B]'))}
-            </div>
+            {verses.length === 0 ? (
+              <div className="min-h-[120px] flex flex-col justify-center gap-2 py-2 animate-pulse">
+                <div className="h-5 bg-[#6D123F]/10 rounded-lg w-5/6 mx-auto" />
+                <div className="h-5 bg-[#6D123F]/10 rounded-lg w-4/6 mx-auto" />
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
+                {tokensA.map((t) => renderToken(t, 'text-[#991B1B]'))}
+              </div>
+            )}
           </div>
 
           {/* Sub-blok 2 (TM x-2) */}

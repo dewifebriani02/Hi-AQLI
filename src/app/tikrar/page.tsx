@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BarChart3,
@@ -23,10 +22,11 @@ import { HifzProgressChart } from '@/components/progress/hifz-progress-chart';
 import { useDoc, useUser } from '@/db';
 import { useTikrarSummary } from '@/hooks/use-tikrar-summary';
 import { getJuzForPage } from '@/lib/tikrar-schedule-generator';
+import { cn } from '@/lib/utils';
 import { Loader2, Lock } from 'lucide-react';
 
 export default function TikrarPage() {
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const { data: userData, refresh: refreshUser } = useDoc<any>(user?.id ? 'users' : null, user?.id);
   const fullSalutation = userData?.salutation || 'Ukhti';
 
@@ -83,6 +83,8 @@ export default function TikrarPage() {
     setHasRoutedInitialTab(true);
   }, [hasRoutedInitialTab, isSummaryLoading, user, activeTarget]);
 
+  const waitingInitialRoute = Boolean(user && !hasRoutedInitialTab && !activeTarget);
+
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-32">
       <div className="flex flex-col gap-2 mt-4 px-1">
@@ -103,15 +105,6 @@ export default function TikrarPage() {
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-6 h-auto sm:h-12 bg-muted/50 p-1 rounded-xl gap-1">
           <TabsTrigger
             value="mushaf"
-            onClick={() => {
-              if (userActivePage && userActiveJuz) {
-                setMushafTarget({
-                  page: userActivePage,
-                  juz: userActiveJuz,
-                  timestamp: Date.now(),
-                });
-              }
-            }}
             className="font-bold gap-1.5 py-2 data-[state=active]:bg-[#6D123F] data-[state=active]:text-white rounded-lg text-xs transition-all"
           >
             <BookOpen className="w-4 h-4 shrink-0" /> Mushaf &amp; Audio
@@ -141,9 +134,14 @@ export default function TikrarPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Mushaf Per Kata, Audio 5x Simak, Gabungan Sub-Repetisi & Auto-Sync Laporan */}
-        <TabsContent value="mushaf" className="outline-none space-y-4">
-          {user && isInitialSummaryLoading ? (
+        {/* Tab 1: Mushaf Per Kata, Audio 5x Simak, Gabungan Sub-Repetisi & Auto-Sync Laporan
+            Tetap mounted (forceMount) agar berpindah tab tidak memuat ulang & berkedip */}
+        <TabsContent
+          value="mushaf"
+          forceMount
+          className={cn('outline-none space-y-4', activeTab !== 'mushaf' && 'hidden')}
+        >
+          {user && (isInitialSummaryLoading || waitingInitialRoute) ? (
             <div className="flex justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-[#6D123F]" />
             </div>

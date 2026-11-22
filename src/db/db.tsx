@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './client';
 
 export interface UseDocResult<T> {
@@ -48,13 +48,18 @@ export function useDoc<T = any>(
     const [data, setData] = useState<(T & { id: string }) | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(!!table && !!id);
     const [error, setError] = useState<Error | null>(null);
+    const hasLoadedRef = useRef<boolean>(false);
+
+    useEffect(() => {
+        hasLoadedRef.current = false;
+    }, [table, id]);
 
     const fetchData = useCallback(async () => {
         if (!table || !id) {
             setIsLoading(false);
             return;
         }
-        if (!data) setIsLoading(true);
+        if (!hasLoadedRef.current) setIsLoading(true);
         setError(null);
         const { data: result, error } = await db
             .from(table)
@@ -68,6 +73,7 @@ export function useDoc<T = any>(
         } else {
             setData(result as T & { id: string });
         }
+        hasLoadedRef.current = true;
         setIsLoading(false);
     }, [table, id]);
 
@@ -111,15 +117,20 @@ export function useCollection<T = any>(
     const [data, setData] = useState<(T & { id: string })[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(!!table);
     const [error, setError] = useState<Error | null>(null);
+    const hasLoadedRef = useRef<boolean>(false);
 
     const optionsKey = JSON.stringify(options);
+
+    useEffect(() => {
+        hasLoadedRef.current = false;
+    }, [table, optionsKey]);
 
     const fetchData = useCallback(async () => {
         if (!table) {
             setIsLoading(false);
             return;
         }
-        if (data.length === 0) setIsLoading(true);
+        if (!hasLoadedRef.current) setIsLoading(true);
         setError(null);
 
         let q = db.from(table).select(options?.select || '*');
@@ -156,6 +167,7 @@ export function useCollection<T = any>(
         } else {
             setData((result as unknown as (T & { id: string })[]) || []);
         }
+        hasLoadedRef.current = true;
         setIsLoading(false);
     }, [table, optionsKey]);
 
