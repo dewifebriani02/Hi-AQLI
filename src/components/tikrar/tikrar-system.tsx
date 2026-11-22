@@ -18,6 +18,8 @@ import {
   ClipboardCheck,
   Clock,
   ExternalLink,
+  Eye,
+  EyeOff,
   Flame,
   Headphones,
   Info,
@@ -1139,6 +1141,13 @@ export function TikrarSystem({
   const blockListenDone = (b: 1 | 2 | 3 | 4) => isBlockListenDone({ prep_listen_count: prepListenCount, blocks }, b);
   const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
   const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= getMetaThreshold(key);
+  const isExamStageOpen = isMetaTuntas('1_2_3_4');
+  const [globalShowVerses, setGlobalShowVerses] = useState(false);
+  const [examRevealSeq, setExamRevealSeq] = useState(0);
+  useEffect(() => {
+    setGlobalShowVerses(false);
+    setExamRevealSeq((s) => s + 1);
+  }, [page]);
 
   // Tombol -1: hanya untuk counter yang langkah berikutnya belum dimulai
   const canUndoKey = (key: string) =>
@@ -1894,6 +1903,42 @@ export function TikrarSystem({
             </div>
           </div>
 
+          {isExamStageOpen && (
+            <div className="bg-amber-50/90 border-2 border-[#D4AF37] rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <EyeOff className="w-5 h-5 text-[#6D123F] shrink-0" />
+                <div>
+                  <p className="text-xs font-black text-[#6D123F]">
+                    Mode Siap Ujian: Teks ayat pada blok TM disembunyikan
+                  </p>
+                  <p className="text-[11px] text-stone-700 font-medium">
+                    Tahap Ujian Halaman sudah terbuka. Tampilkan kembali teks ayat kapan saja jika ingin murajaah ulang.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setGlobalShowVerses((v) => !v);
+                  setExamRevealSeq((s) => s + 1);
+                }}
+                className="h-9 px-3.5 rounded-xl bg-white hover:bg-[#6D123F] hover:text-white border-[#6D123F]/30 text-[#6D123F] text-xs font-black shrink-0"
+              >
+                {globalShowVerses ? (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5 mr-1.5" /> Sembunyikan Semua Ayat
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3.5 h-3.5 mr-1.5" /> Tampilkan Semua Ayat
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MaqtaCard
               id={1}
@@ -1919,6 +1964,9 @@ export function TikrarSystem({
               onIncrement={setBlocks}
               fontSize={fontSize}
               letter="A"
+              isExamStageOpen={isExamStageOpen}
+              globalShowVerses={globalShowVerses}
+              examRevealSeq={examRevealSeq}
             />
             <MaqtaCard
               id={2}
@@ -1944,6 +1992,9 @@ export function TikrarSystem({
               onIncrement={setBlocks}
               fontSize={fontSize}
               letter="B"
+              isExamStageOpen={isExamStageOpen}
+              globalShowVerses={globalShowVerses}
+              examRevealSeq={examRevealSeq}
             />
           </div>
 
@@ -1982,6 +2033,9 @@ export function TikrarSystem({
             onIncrement={setBlocks}
             fontSize={fontSize}
             letter="C"
+            isExamStageOpen={isExamStageOpen}
+            globalShowVerses={globalShowVerses}
+            examRevealSeq={examRevealSeq}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2031,6 +2085,9 @@ export function TikrarSystem({
             onIncrement={setBlocks}
             fontSize={fontSize}
             letter="D"
+            isExamStageOpen={isExamStageOpen}
+            globalShowVerses={globalShowVerses}
+            examRevealSeq={examRevealSeq}
           />
 
           <div className="space-y-4">
@@ -2226,6 +2283,9 @@ function MaqtaCard({
   getMinCount,
   customConfig,
   allPageVerses,
+  isExamStageOpen = false,
+  globalShowVerses = false,
+  examRevealSeq = 0,
 }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
   const isPlaying = Boolean(playback);
@@ -2239,6 +2299,11 @@ function MaqtaCard({
   const [pinnedWord, setPinnedWord] = useState<string | null>(null);
   const [showPerKata, setShowPerKata] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [revealInExam, setRevealInExam] = useState(false);
+  useEffect(() => {
+    setRevealInExam(globalShowVerses);
+  }, [globalShowVerses, examRevealSeq]);
+  const isVerseHidden = Boolean(isExamStageOpen && !revealInExam);
   const closeWordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (closeWordTimer.current) clearTimeout(closeWordTimer.current);
@@ -2529,12 +2594,38 @@ function MaqtaCard({
             theme.verseBg
           )}
         >
+          {isVerseHidden ? (
+            <div className="flex flex-col items-center justify-center text-center py-8 px-4 gap-3 bg-white/60 rounded-xl border border-dashed border-[#6D123F]/25">
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-[#6D123F]/15">
+                <EyeOff className="w-5 h-5 text-[#6D123F]" />
+              </div>
+              <div className="space-y-1 max-w-xs">
+                <p className="text-xs font-black text-[#6D123F]">
+                  Teks Ayat Disembunyikan (Siap Ujian)
+                </p>
+                <p className="text-[11px] font-medium text-stone-700 leading-relaxed">
+                  Tahap Ujian Halaman sudah terbuka. Teks ayat disembunyikan agar hafalan benar-benar teruji.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRevealInExam(true)}
+                className="h-8 px-3.5 rounded-full bg-white hover:bg-[#6D123F] hover:text-white border-[#6D123F]/30 text-[#6D123F] text-[11px] font-black transition-colors touch-manipulation"
+              >
+                <Eye className="w-3.5 h-3.5 mr-1.5" />
+                Tampilkan Ayat (Murajaah)
+              </Button>
+            </div>
+          ) : (
+            <>
           {/* Kontrol tampilan Per Kata & Terjemahan di dalam kotak atas */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-[10px] font-bold text-stone-600">
               Ketuk kata untuk arti
             </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
                 onClick={() => setShowPerKata((v) => !v)}
@@ -2561,6 +2652,16 @@ function MaqtaCard({
                 <BookOpen className="w-3 h-3" />
                 Terjemah
               </button>
+              {isExamStageOpen && (
+                <button
+                  type="button"
+                  onClick={() => setRevealInExam(false)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border bg-stone-900 text-white border-stone-900 hover:bg-stone-800 transition-colors touch-manipulation"
+                >
+                  <EyeOff className="w-3 h-3" />
+                  Sembunyikan
+                </button>
+              )}
             </div>
           </div>
 
@@ -2636,6 +2737,8 @@ function MaqtaCard({
                 </p>
               ) : null}
             </div>
+          )}
+            </>
           )}
         </div>
 
