@@ -34,6 +34,51 @@ export const QUIZ_PART2_COUNT = 30;
 export const QUIZ_QUESTION_COUNT = QUIZ_PART1_COUNT + QUIZ_PART2_COUNT;
 export const QUIZ_PASS_PERCENT = 80;
 
+export function createEmptyTikrarBlocks() {
+  return {
+    1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+  } as Record<1 | 2 | 3 | 4, {
+    a: { count: number };
+    b: { count: number };
+    combined: { count: number };
+    listen: { count: number };
+    understood?: boolean;
+  }>;
+}
+
+export function createEmptyTikrarMetaCounts(): Record<string, number> {
+  return {
+    '1_2': 0,
+    '2_3': 0,
+    '1_2_3': 0,
+    '3_4': 0,
+    '2_3_4': 0,
+    '1_2_3_4': 0,
+  };
+}
+
+export function computeTikrarPageTotalProgress(blocks: any, metaCounts: Record<string, any>): number {
+  let totalDone = 0;
+  [1, 2, 3, 4].forEach((id) => {
+    const b = blocks?.[id] || {};
+    totalDone += (Math.min(Number(b?.listen?.count) || 0, PREP_LISTEN_THRESHOLD) / PREP_LISTEN_THRESHOLD) * 2.5;
+    totalDone += (Math.min(Number(b?.a?.count) || 0, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+    totalDone += (Math.min(Number(b?.b?.count) || 0, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+    totalDone += (Math.min(Number(b?.combined?.count) || 0, PASS_THRESHOLD) / PASS_THRESHOLD) * 10;
+  });
+  const metaWeight = 5;
+  const metaKeys = ['1_2', '2_3', '1_2_3', '3_4', '2_3_4', '1_2_3_4'];
+  metaKeys.forEach((k) => {
+    const th = getMetaThreshold(k);
+    totalDone += (Math.min(Number(metaCounts?.[k]) || 0, th) / th) * metaWeight;
+  });
+  const totalWeight = 10 + 4 * 30 + metaKeys.length * metaWeight;
+  return Math.min(100, (totalDone / totalWeight) * 100);
+}
+
 /** Minimal repetisi penggabungan antar blok: 2 blok min. 10x, 3 blok min. 5x, 4 blok min. 5x */
 export function getMetaThreshold(key: string): number {
   const cleanKey = key.startsWith('meta.') ? key.slice(5) : key;

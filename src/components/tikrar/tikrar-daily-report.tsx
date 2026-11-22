@@ -7,6 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCollection, useDoc, useUser } from '@/db';
 import { authFetch } from '@/db/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { QURAN_CHAPTERS } from '@/lib/quran-data';
 import { SURAH_START_PAGES } from '@/lib/quran-mapping';
@@ -34,9 +45,11 @@ import {
   Clock,
   ExternalLink,
   Flame,
+  Loader2,
   Lock,
   MessageCircle,
   PlayCircle,
+  RotateCcw,
   Settings2,
   Sparkles,
   Trophy,
@@ -75,10 +88,14 @@ export function TikrarDailyReport({
   onOpenScheduleTab,
   onOpenMushafTab,
   refreshSignal = 0,
+  onDataChanged,
   summary = null,
 }: TikrarDailyReportProps) {
   const target = summary?.target || null;
   const { user } = useUser();
+  const { toast } = useToast();
+  const [confirmResetAllOpen, setConfirmResetAllOpen] = useState(false);
+  const [isResettingAll, setIsResettingAll] = useState(false);
   const { data: userData, refresh: refreshUser } = useDoc<any>(user?.id ? 'users' : null, user?.id);
 
   const halaqahOptions = useMemo(
@@ -176,6 +193,41 @@ export function TikrarDailyReport({
   useEffect(() => {
     fetchProgress();
   }, [fetchProgress, refreshSignal]);
+
+  const handleResetAllPages = async () => {
+    if (!user?.id || isResettingAll) return;
+    setIsResettingAll(true);
+    try {
+      const res = await authFetch('/api/tikrar/progress/reset', {
+        method: 'POST',
+        body: JSON.stringify({ scope: 'all' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.error) {
+        throw new Error(json.error?.message || 'Gagal mereset counter semua halaman.');
+      }
+      if (typeof window !== 'undefined') {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith('tikrar_progress_p'))
+          .forEach((k) => localStorage.removeItem(k));
+      }
+      await Promise.all([fetchProgress(), refreshLogs(), refreshSchedules(), refreshUser()]);
+      onDataChanged?.();
+      toast({
+        title: 'Semua Counter Direset',
+        description: 'Seluruh counter pengulangan di semua halaman telah dikembalikan ke 0.',
+      });
+      setConfirmResetAllOpen(false);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Reset Semua Halaman',
+        description: err?.message || 'Silakan coba lagi.',
+      });
+    } finally {
+      setIsResettingAll(false);
+    }
+  };
 
   useEffect(() => {
     if (refreshSignal > 0 && user?.id) {
@@ -576,6 +628,23 @@ export function TikrarDailyReport({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {user && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isResettingAll}
+                onClick={() => setConfirmResetAllOpen(true)}
+                className="h-9 text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+              >
+                {isResettingAll ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                Reset Counter Semua Halaman
+              </Button>
+            )}
             {onOpenScheduleTab && (
               <Button
                 type="button"
@@ -1079,6 +1148,34 @@ export function TikrarDailyReport({
           </div>
         </div>
       </CardContent>
+      <AlertDialog open={confirmResetAllOpen} onOpenChange={(open) => { if (!open && !isResettingAll) setConfirmResetAllOpen(false); }}>
+        <AlertDialogContent className="rounded-2xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#6D123F] font-black text-base">
+              Reset Counter Semua Halaman?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-stone-600 leading-relaxed">
+              Seluruh counter pengulangan di semua halaman (1–604) dan catatan progres harian akan dikembalikan ke 0. Status lulus ujian &amp; riwayat tasmi&apos; tetap aman.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel disabled={isResettingAll} className="rounded-xl text-xs font-bold">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isResettingAll}
+              onClick={(e) => {
+                e.preventDefault();
+                handleResetAllPages();
+              }}
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black gap-1.5"
+            >
+              {isResettingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+              Ya, Reset Semua ke 0
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

@@ -34,6 +34,7 @@ import {
   Play,
   Plus,
   Radio,
+  RotateCcw,
   Send,
   Settings2,
   Sparkles,
@@ -58,6 +59,24 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useUser, useDoc, useCollection, addDocumentNonBlocking, db } from '@/db';
 import { authFetch } from '@/db/client';
@@ -85,6 +104,8 @@ import {
 import {
   canUndoStep,
   countCompletedSteps,
+  createEmptyTikrarBlocks,
+  createEmptyTikrarMetaCounts,
   getStepMinCount,
   estimateClicksForNextSteps,
   getBlockListenCount,
@@ -852,6 +873,7 @@ export function TikrarSystem({
   }, [page, hasInitializedPage]);
 
   const isHydratedRef = useRef(false);
+  const skipNextDbSyncRef = useRef(false);
   const [soundOn, setSoundOn] = useState(true);
   useEffect(() => setSoundOn(isTikrarSoundEnabled()), []);
   const lockToastShownRef = useRef(false);
@@ -870,6 +892,7 @@ export function TikrarSystem({
 
       let nextPrepListen = 0;
       let nextPrepTrans = false;
+      let hasExplicitMeta = false;
       const nextBlocks: any = {
         1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
         2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
@@ -905,7 +928,8 @@ export function TikrarSystem({
               };
             }
           }
-          if (saved.metaCounts) {
+          if (saved.metaCounts && typeof saved.metaCounts === 'object' && Object.keys(saved.metaCounts).length > 0) {
+            hasExplicitMeta = true;
             Object.keys(nextMeta).forEach((k) => {
               nextMeta[k] = Number(saved.metaCounts[k]) || 0;
             });
@@ -953,7 +977,8 @@ export function TikrarSystem({
                   }
                 }
               }
-              if (dbProg.meta_counts) {
+              if (dbProg.meta_counts && typeof dbProg.meta_counts === 'object' && Object.keys(dbProg.meta_counts).length > 0) {
+                hasExplicitMeta = true;
                 Object.keys(nextMeta).forEach((k) => {
                   nextMeta[k] = Math.max(nextMeta[k], Number(dbProg.meta_counts[k]) || 0);
                 });
@@ -984,15 +1009,17 @@ export function TikrarSystem({
       // atau (data lama) blok sesudahnya sudah mulai dikerjakan agar blok itu tidak terkunci lagi.
       const blockStarted = (b: 1 | 2 | 3 | 4) =>
         nextBlocks[b].a.count > 0 || nextBlocks[b].b.count > 0 || nextBlocks[b].combined.count > 0;
-      if (blockStarted(3)) {
-        nextMeta['1_2'] = Math.max(nextMeta['1_2'], getMetaThreshold('1_2'));
+      if (!hasExplicitMeta) {
+        if (blockStarted(3)) {
+          nextMeta['1_2'] = Math.max(nextMeta['1_2'], getMetaThreshold('1_2'));
+        }
+        if (blockStarted(4)) {
+          nextMeta['1_2'] = Math.max(nextMeta['1_2'], getMetaThreshold('1_2'));
+          nextMeta['2_3'] = Math.max(nextMeta['2_3'], getMetaThreshold('2_3'));
+          nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], getMetaThreshold('1_2_3'));
+        }
       }
-      if (blockStarted(4)) {
-        nextMeta['1_2'] = Math.max(nextMeta['1_2'], getMetaThreshold('1_2'));
-        nextMeta['2_3'] = Math.max(nextMeta['2_3'], getMetaThreshold('2_3'));
-        nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], getMetaThreshold('1_2_3'));
-      }
-      if (isSelectedPageCleared) {
+      if (isSelectedPageCleared && !hasExplicitMeta && nextBlocks[4].combined.count >= PASS_THRESHOLD) {
         Object.keys(nextMeta).forEach((k) => {
           nextMeta[k] = Math.max(nextMeta[k], getMetaThreshold(k));
         });
@@ -1060,6 +1087,9 @@ export function TikrarSystem({
     // 2. Simpan ke database jika sudah melewati inisialisasi awal
     let timerDb: NodeJS.Timeout | null = null;
     if (user?.id && isHydratedRef.current && !pageLockReason) {
+      if (skipNextDbSyncRef.current) {
+        skipNextDbSyncRef.current = false;
+      } else {
       timerDb = setTimeout(async () => {
         const undoKeys = Array.from(pendingUndoKeysRef.current);
         pendingUndoKeysRef.current.clear();
@@ -1118,6 +1148,7 @@ export function TikrarSystem({
           console.error('Gagal sync progres ke database:', e);
         }
       }, 400);
+      }
     }
 
     return () => {
@@ -1412,6 +1443,128 @@ export function TikrarSystem({
   const markUndo = (key: string) => {
     pendingUndoKeysRef.current.add(key);
     playTikrarUndo();
+  };
+
+  const [resetConfirm, setResetConfirm] = useState<{
+    scope: 'all' | 'page' | 'block' | 'counter';
+    block?: 1 | 2 | 3 | 4;
+    key?: string;
+    title: string;
+    description: string;
+  } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const executeReset = async () => {
+    if (!resetConfirm || isResetting) return;
+    const targetReset = resetConfirm;
+    setIsResetting(true);
+    try {
+      if (user?.id) {
+        const res = await authFetch('/api/tikrar/progress/reset', {
+          method: 'POST',
+          body: JSON.stringify({
+            scope: targetReset.scope,
+            page_number: page,
+            juz,
+            block: targetReset.block,
+            key: targetReset.key,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.error) {
+          throw new Error(json.error?.message || 'Gagal mereset counter.');
+        }
+      }
+
+      stopBlockAudio(false);
+      pendingUndoKeysRef.current.clear();
+      skipNextDbSyncRef.current = true;
+      playTikrarUndo();
+
+      if (targetReset.scope === 'all') {
+        if (typeof window !== 'undefined') {
+          Object.keys(localStorage)
+            .filter((k) => k.startsWith('tikrar_progress_p'))
+            .forEach((k) => localStorage.removeItem(k));
+        }
+        setPrepListenCount(0);
+        setPrepTranslationDone(false);
+        setBlocks(createEmptyTikrarBlocks());
+        setMetaCounts(createEmptyTikrarMetaCounts());
+        setSimakPromptedBlocks({});
+      } else if (targetReset.scope === 'page') {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(`tikrar_progress_p${page}`);
+        }
+        setPrepListenCount(0);
+        setPrepTranslationDone(false);
+        setBlocks(createEmptyTikrarBlocks());
+        setMetaCounts(createEmptyTikrarMetaCounts());
+        setSimakPromptedBlocks({});
+      } else if (targetReset.scope === 'block' && targetReset.block) {
+        const b = targetReset.block;
+        if (b === 1) setPrepListenCount(0);
+        setSimakPromptedBlocks((prev) => ({ ...prev, [b]: false }));
+        setBlocks((prev: any) => ({
+          ...prev,
+          [b]: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+        }));
+      } else if (targetReset.scope === 'counter' && targetReset.key) {
+        const k = targetReset.key === 'prep' ? '1.listen' : targetReset.key;
+        if (k.startsWith('meta.')) {
+          const mk = k.slice(5);
+          setMetaCounts((prev) => ({ ...prev, [mk]: 0 }));
+        } else {
+          const [bStr, part] = k.split('.');
+          const b = Number(bStr) as 1 | 2 | 3 | 4;
+          if (part === 'listen') {
+            if (b === 1) setPrepListenCount(0);
+            setSimakPromptedBlocks((prev) => ({ ...prev, [b]: false }));
+            setBlocks((prev: any) => {
+              const nextB = { ...prev[b], listen: { count: 0 } };
+              delete nextB.understood;
+              return { ...prev, [b]: nextB };
+            });
+          } else if (part === 'a' || part === 'b' || part === 'combined') {
+            setBlocks((prev: any) => ({
+              ...prev,
+              [b]: {
+                ...prev[b],
+                [part]: { count: 0 },
+              },
+            }));
+          }
+        }
+      }
+
+      if (user?.id) {
+        lastStepsTodayRef.current = -1;
+        setLiveTodayClicks(null);
+        await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
+        onDataChanged?.();
+      }
+
+      toast({
+        title: 'Counter Berhasil Direset',
+        description:
+          targetReset.scope === 'all'
+            ? 'Semua counter di seluruh halaman telah dikembalikan ke 0.'
+            : targetReset.scope === 'page'
+            ? `Semua counter pada Halaman ${page} telah dikembalikan ke 0.`
+            : targetReset.scope === 'block' && targetReset.block
+            ? `Semua counter Blok ${BLOCK_LETTERS[targetReset.block]} (TM ${targetReset.block}) dikembalikan ke 0.`
+            : 'Counter pilihan telah dikembalikan ke 0.',
+      });
+      setResetConfirm(null);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Reset Counter',
+        description: err?.message || 'Silakan coba lagi.',
+      });
+    } finally {
+      setIsResetting(false);
+    }
   };
   const adjustMeta = (key: string, delta: number) => {
     if (delta < 0) {
@@ -1852,7 +2005,7 @@ export function TikrarSystem({
         </div>
 
         {/* Baris 2 Audio & Quick Action */}
-        <div className="flex items-center justify-between md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 flex-nowrap min-w-0">
+        <div className="flex items-center justify-between md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 flex-wrap min-w-0">
           {activeTarget && (juz !== activeTarget.juz || page !== recommendedPage) && (
             <Button
               type="button"
@@ -1868,7 +2021,7 @@ export function TikrarSystem({
             </Button>
           )}
 
-          <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
+          <div className="flex items-center flex-wrap justify-end gap-1.5 sm:gap-2 ml-auto">
             <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
               <DialogTrigger asChild>
                 <Button
@@ -2007,6 +2160,59 @@ export function TikrarSystem({
               <Settings2 className="w-3.5 h-3.5 mr-1.5" /> Atur Target
             </Button>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isResetting}
+                className="h-9 px-2.5 text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                title="Reset counter hafalan"
+              >
+                {isResetting ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                )}
+                Reset
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60 rounded-xl p-1.5">
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-wider text-stone-500 px-2 py-1">
+                Opsi Reset Counter
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                disabled={Boolean(pageLockReason)}
+                onClick={() =>
+                  setResetConfirm({
+                    scope: 'page',
+                    title: `Reset Counter Halaman ${page}?`,
+                    description: `Semua counter (Simak, TM 1–4, dan gabungan antar blok) pada Halaman ${page} akan dikembalikan ke 0. Nilai ujian & riwayat tasmi' tetap aman.`,
+                  })
+                }
+                className="rounded-lg text-xs font-bold text-stone-800 cursor-pointer gap-2 py-2"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Reset Halaman Ini (Hal. {page})</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() =>
+                  setResetConfirm({
+                    scope: 'all',
+                    title: 'Reset Counter Semua Halaman?',
+                    description:
+                      'Seluruh counter pengulangan di semua halaman (1–604) dan catatan progres harian akan dikembalikan ke 0. Status lulus ujian & tasmi\' tetap terjaga.',
+                  })
+                }
+                className="rounded-lg text-xs font-bold text-rose-700 focus:text-rose-800 focus:bg-rose-50 cursor-pointer gap-2 py-2"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <span>Reset Semua Halaman</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           </div>
         </div>
       </div>
@@ -2264,6 +2470,23 @@ export function TikrarSystem({
               isExamStageOpen={isExamStageOpen}
               globalShowVerses={globalShowVerses}
               examRevealSeq={examRevealSeq}
+              canReset={!pageLockReason}
+              onResetBlock={() =>
+                setResetConfirm({
+                  scope: 'block',
+                  block: 1,
+                  title: `Reset Counter Blok A (TM 1) Hal. ${page}?`,
+                  description: 'Seluruh hitungan Simak TM 1, TM 1-1, TM 1-2, dan Gabung TM 1 pada halaman ini akan dikembalikan ke 0.',
+                })
+              }
+              onResetCounter={(key: string, label: string) =>
+                setResetConfirm({
+                  scope: 'counter',
+                  key,
+                  title: `Reset Counter ${label}?`,
+                  description: `Hitungan ${label} pada Halaman ${page} akan dikembalikan ke 0.`,
+                })
+              }
             />
             <MaqtaCard
               id={2}
@@ -2295,6 +2518,23 @@ export function TikrarSystem({
               isExamStageOpen={isExamStageOpen}
               globalShowVerses={globalShowVerses}
               examRevealSeq={examRevealSeq}
+              canReset={!pageLockReason}
+              onResetBlock={() =>
+                setResetConfirm({
+                  scope: 'block',
+                  block: 2,
+                  title: `Reset Counter Blok B (TM 2) Hal. ${page}?`,
+                  description: 'Seluruh hitungan Simak TM 2, TM 2-1, TM 2-2, dan Gabung TM 2 pada halaman ini akan dikembalikan ke 0.',
+                })
+              }
+              onResetCounter={(key: string, label: string) =>
+                setResetConfirm({
+                  scope: 'counter',
+                  key,
+                  title: `Reset Counter ${label}?`,
+                  description: `Hitungan ${label} pada Halaman ${page} akan dikembalikan ke 0.`,
+                })
+              }
             />
           </div>
 
@@ -2307,6 +2547,15 @@ export function TikrarSystem({
             onIncrement={(delta = 1) => adjustMeta('1_2', delta)}
             canUndo={canUndoKey('meta.1_2')}
             stepInfo={stepInfo('meta.1_2')}
+            canReset={!pageLockReason}
+            onReset={() =>
+              setResetConfirm({
+                scope: 'counter',
+                key: 'meta.1_2',
+                title: 'Reset Counter Gabung TM 1 & 2?',
+                description: `Hitungan Gabung TM 1 & TM 2 (Blok A & B) pada Halaman ${page} akan dikembalikan ke 0.`,
+              })
+            }
           />
 
           <MaqtaCard
@@ -2339,6 +2588,23 @@ export function TikrarSystem({
             isExamStageOpen={isExamStageOpen}
             globalShowVerses={globalShowVerses}
             examRevealSeq={examRevealSeq}
+            canReset={!pageLockReason}
+            onResetBlock={() =>
+              setResetConfirm({
+                scope: 'block',
+                block: 3,
+                title: `Reset Counter Blok C (TM 3) Hal. ${page}?`,
+                description: 'Seluruh hitungan Simak TM 3, TM 3-1, TM 3-2, dan Gabung TM 3 pada halaman ini akan dikembalikan ke 0.',
+              })
+            }
+            onResetCounter={(key: string, label: string) =>
+              setResetConfirm({
+                scope: 'counter',
+                key,
+                title: `Reset Counter ${label}?`,
+                description: `Hitungan ${label} pada Halaman ${page} akan dikembalikan ke 0.`,
+              })
+            }
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2351,6 +2617,15 @@ export function TikrarSystem({
               onIncrement={(delta = 1) => adjustMeta('2_3', delta)}
               canUndo={canUndoKey('meta.2_3')}
               stepInfo={stepInfo('meta.2_3')}
+              canReset={!pageLockReason}
+              onReset={() =>
+                setResetConfirm({
+                  scope: 'counter',
+                  key: 'meta.2_3',
+                  title: 'Reset Counter Gabung TM 2 & 3?',
+                  description: `Hitungan Gabung TM 2 & TM 3 (Blok B & C) pada Halaman ${page} akan dikembalikan ke 0.`,
+                })
+              }
             />
             <MetaStep
               stepKey="1_2_3"
@@ -2361,6 +2636,15 @@ export function TikrarSystem({
               onIncrement={(delta = 1) => adjustMeta('1_2_3', delta)}
               canUndo={canUndoKey('meta.1_2_3')}
               stepInfo={stepInfo('meta.1_2_3')}
+              canReset={!pageLockReason}
+              onReset={() =>
+                setResetConfirm({
+                  scope: 'counter',
+                  key: 'meta.1_2_3',
+                  title: 'Reset Counter Gabung TM 1–3?',
+                  description: `Hitungan Gabung TM 1–3 (Blok A–C) pada Halaman ${page} akan dikembalikan ke 0.`,
+                })
+              }
             />
           </div>
 
@@ -2394,6 +2678,23 @@ export function TikrarSystem({
             isExamStageOpen={isExamStageOpen}
             globalShowVerses={globalShowVerses}
             examRevealSeq={examRevealSeq}
+            canReset={!pageLockReason}
+            onResetBlock={() =>
+              setResetConfirm({
+                scope: 'block',
+                block: 4,
+                title: `Reset Counter Blok D (TM 4) Hal. ${page}?`,
+                description: 'Seluruh hitungan Simak TM 4, TM 4-1, TM 4-2, dan Gabung TM 4 pada halaman ini akan dikembalikan ke 0.',
+              })
+            }
+            onResetCounter={(key: string, label: string) =>
+              setResetConfirm({
+                scope: 'counter',
+                key,
+                title: `Reset Counter ${label}?`,
+                description: `Hitungan ${label} pada Halaman ${page} akan dikembalikan ke 0.`,
+              })
+            }
           />
 
           <div className="space-y-4">
@@ -2406,6 +2707,15 @@ export function TikrarSystem({
               onIncrement={(delta = 1) => adjustMeta('3_4', delta)}
               canUndo={canUndoKey('meta.3_4')}
               stepInfo={stepInfo('meta.3_4')}
+              canReset={!pageLockReason}
+              onReset={() =>
+                setResetConfirm({
+                  scope: 'counter',
+                  key: 'meta.3_4',
+                  title: 'Reset Counter Gabung TM 3 & 4?',
+                  description: `Hitungan Gabung TM 3 & TM 4 (Blok C & D) pada Halaman ${page} akan dikembalikan ke 0.`,
+                })
+              }
             />
             <MetaStep
               stepKey="2_3_4"
@@ -2416,6 +2726,15 @@ export function TikrarSystem({
               onIncrement={(delta = 1) => adjustMeta('2_3_4', delta)}
               canUndo={canUndoKey('meta.2_3_4')}
               stepInfo={stepInfo('meta.2_3_4')}
+              canReset={!pageLockReason}
+              onReset={() =>
+                setResetConfirm({
+                  scope: 'counter',
+                  key: 'meta.2_3_4',
+                  title: 'Reset Counter Gabung TM 2–4?',
+                  description: `Hitungan Gabung TM 2–4 (Blok B–D) pada Halaman ${page} akan dikembalikan ke 0.`,
+                })
+              }
             />
             <MetaStep
               stepKey="1_2_3_4"
@@ -2426,6 +2745,15 @@ export function TikrarSystem({
               onIncrement={(delta = 1) => adjustMeta('1_2_3_4', delta)}
               canUndo={canUndoKey('meta.1_2_3_4')}
               stepInfo={stepInfo('meta.1_2_3_4')}
+              canReset={!pageLockReason}
+              onReset={() =>
+                setResetConfirm({
+                  scope: 'counter',
+                  key: 'meta.1_2_3_4',
+                  title: 'Reset Counter Gabung Seluruh Halaman (TM 1–4)?',
+                  description: `Hitungan Gabung Seluruh Halaman (Blok A–D) pada Halaman ${page} akan dikembalikan ke 0.`,
+                })
+              }
               highlight
             />
           </div>
@@ -2712,6 +3040,35 @@ export function TikrarSystem({
         </div>
       </TooltipProvider>
       </div>
+
+      <AlertDialog open={Boolean(resetConfirm)} onOpenChange={(open) => { if (!open && !isResetting) setResetConfirm(null); }}>
+        <AlertDialogContent className="rounded-2xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#6D123F] font-black text-base">
+              {resetConfirm?.title || 'Konfirmasi Reset Counter'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-stone-600 leading-relaxed">
+              {resetConfirm?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel disabled={isResetting} className="rounded-xl text-xs font-bold">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isResetting}
+              onClick={(e) => {
+                e.preventDefault();
+                executeReset();
+              }}
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black gap-1.5"
+            >
+              {isResetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+              Ya, Reset ke 0
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -2746,6 +3103,9 @@ function MaqtaCard({
   isExamStageOpen = false,
   globalShowVerses = false,
   examRevealSeq = 0,
+  canReset = true,
+  onResetBlock,
+  onResetCounter,
 }: any) {
   const isDoneG = state.combined.count >= PASS_THRESHOLD;
   const isPlaying = Boolean(playback);
@@ -2981,6 +3341,12 @@ function MaqtaCard({
   };
 
   const isCombinedLocked = countersLocked || state.b.count < PASS_THRESHOLD;
+  const hasBlockActivity =
+    listenCount > 0 ||
+    state.a.count > 0 ||
+    state.b.count > 0 ||
+    state.combined.count > 0 ||
+    state.understood !== undefined;
 
   return (
     <Card
@@ -2999,7 +3365,7 @@ function MaqtaCard({
             Hal. {page} {rangeLabel ? `• ${rangeLabel}` : ''} {isLocked && '• TERKUNCI'}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center flex-wrap justify-end gap-1.5 shrink-0">
           {(['a', 'b', 'combined'] as const).some((part) => stepInfoFor?.(part)?.isTarget) && (
             <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37] font-black text-[8px] tracking-widest h-4 gap-0.5">
               <Star className="w-2.5 h-2.5 fill-current" /> TARGET HARI INI
@@ -3014,6 +3380,17 @@ function MaqtaCard({
               TUNTAS
             </Badge>
           ) : null}
+          {hasBlockActivity && !isLocked && canReset && onResetBlock && (
+            <button
+              type="button"
+              onClick={onResetBlock}
+              title={`Reset seluruh counter Blok ${letter} (TM ${id})`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-rose-300/80 bg-white/95 text-[10px] font-black text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shrink-0"
+            >
+              <RotateCcw className="w-2.5 h-2.5" />
+              <span>Reset Blok</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -3047,7 +3424,7 @@ function MaqtaCard({
             ) : (
               <>
                 <Headphones className="w-5 h-5" />
-                {listenDone ? `Ulangi Simak TM ${id} (Blok ${letter})` : `Simak TM ${id} (${listenCount}/5)`}
+                {listenCount >= PREP_LISTEN_THRESHOLD ? `Ulangi Simak TM ${id} (Blok ${letter})` : `Simak TM ${id} (${listenCount}/5)`}
               </>
             )}
           </Button>
@@ -3055,6 +3432,19 @@ function MaqtaCard({
             <p className="text-[10px] font-bold text-center text-stone-600">
               Simak audio blok ini 5x dulu untuk membuka counter.
             </p>
+          )}
+          {(listenCount > 0 || state?.understood !== undefined) && !isLocked && canReset && onResetCounter && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => onResetCounter(`${id}.listen`, `Simak TM ${id} (Blok ${letter})`)}
+                title={`Reset hitungan Simak TM ${id} ke 0`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-stone-200 bg-stone-50 hover:bg-rose-50 hover:border-rose-200 text-[10px] font-bold text-stone-600 hover:text-rose-700 transition-colors"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                Reset Simak ({listenCount}/5)
+              </button>
+            </div>
           )}
           <StepTag info={listenStepInfo} className="justify-center" />
 
@@ -3332,6 +3722,8 @@ function MaqtaCard({
             isLocked={countersLocked}
             onInc={(delta = 1) => addSubCount('a', delta)}
             canUndo={canUndo?.('a')}
+            canReset={canReset && !isLocked}
+            onReset={() => onResetCounter?.(`${id}.a`, `TM ${id}-1 (Blok ${letter}-1)`)}
             stepInfo={stepInfoFor?.('a')}
             color="maroon"
             threshold={PASS_THRESHOLD}
@@ -3343,6 +3735,8 @@ function MaqtaCard({
             isLocked={countersLocked || state.a.count < PASS_THRESHOLD}
             onInc={(delta = 1) => addSubCount('b', delta)}
             canUndo={canUndo?.('b')}
+            canReset={canReset && !isLocked}
+            onReset={() => onResetCounter?.(`${id}.b`, `TM ${id}-2 (Blok ${letter}-2)`)}
             stepInfo={stepInfoFor?.('b')}
             color="darkMaroon"
             threshold={PASS_THRESHOLD}
@@ -3375,10 +3769,33 @@ function MaqtaCard({
               </div>
             )}
           </Button>
-          {canUndo?.('combined') && (
-            <InlineUndoButton onClick={() => addSubCount('combined', -1)} className="left-2 top-1/2 -translate-y-1/2" />
-          )}
           </div>
+          {(canUndo?.('combined') || (state.combined.count > 0 && canReset && !isLocked && onResetCounter)) && (
+            <div className="flex items-center justify-center gap-1.5">
+              {canUndo?.('combined') && (
+                <button
+                  type="button"
+                  onClick={() => addSubCount('combined', -1)}
+                  title="Kurangi 1 (kelebihan pencet)"
+                  aria-label="Kurangi 1"
+                  className="h-7 px-3 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
+                >
+                  −1
+                </button>
+              )}
+              {state.combined.count > 0 && canReset && !isLocked && onResetCounter && (
+                <button
+                  type="button"
+                  onClick={() => onResetCounter(`${id}.combined`, `Gabung TM ${id} (Blok ${letter})`)}
+                  title={`Reset counter Gabung TM ${id} ke 0`}
+                  className="h-7 px-2.5 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  Reset Counter
+                </button>
+              )}
+            </div>
+          )}
           <StepTag info={stepInfoFor?.('combined')} className="justify-center" />
         </div>
       </CardContent>
@@ -3386,28 +3803,7 @@ function MaqtaCard({
   );
 }
 
-/** Tombol -1 kecil (seukuran jari) yang diletakkan di dalam kotak counter */
-function InlineUndoButton({ onClick, className }: { onClick: () => void; className?: string }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      title="Kurangi 1 (kelebihan pencet)"
-      aria-label="Kurangi 1"
-      className={cn(
-        'absolute z-10 h-10 w-10 rounded-xl border-2 border-stone-300 bg-white/95 text-stone-700 font-black text-sm flex items-center justify-center shadow-sm touch-manipulation select-none active:scale-95',
-        className
-      )}
-    >
-      −1
-    </button>
-  );
-}
-
-function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, highlight, canUndo, stepInfo, threshold = 10 }: any) {
+function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, highlight, canUndo, canReset, onReset, stepInfo, threshold = 10 }: any) {
   const isDone = count >= threshold;
   const elementId = customId || (stepKey ? `step-meta.${stepKey}` : (stepInfo ? `step-${stepInfo.key}` : undefined));
   return (
@@ -3484,10 +3880,33 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
                 +1
               </span>
             </Button>
-            {canUndo && (
-              <InlineUndoButton onClick={() => onIncrement(-1)} className="left-2 top-1/2 -translate-y-1/2" />
-            )}
           </div>
+          {(canUndo || (count > 0 && canReset && onReset)) && (
+            <div className="flex items-center justify-center gap-1.5">
+              {canUndo && (
+                <button
+                  type="button"
+                  onClick={() => onIncrement(-1)}
+                  title="Kurangi 1 (kelebihan pencet)"
+                  aria-label="Kurangi 1"
+                  className="h-7 px-3 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
+                >
+                  −1
+                </button>
+              )}
+              {count > 0 && canReset && onReset && (
+                <button
+                  type="button"
+                  onClick={onReset}
+                  title={`Reset counter ${label} ke 0`}
+                  className="h-7 px-2.5 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  Reset Counter
+                </button>
+              )}
+            </div>
+          )}
           <StepTag info={stepInfo} className="justify-center" />
         </div>
       </div>
@@ -3495,7 +3914,7 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
   );
 }
 
-function CounterBox({ id: customId, label, count, isLocked, onInc, color, threshold, canUndo, stepInfo }: any) {
+function CounterBox({ id: customId, label, count, isLocked, onInc, color, threshold, canUndo, canReset, onReset, stepInfo }: any) {
   const isDone = count >= threshold;
   const themes: any = {
     maroon: isDone
@@ -3536,8 +3955,33 @@ function CounterBox({ id: customId, label, count, isLocked, onInc, color, thresh
       {isLocked && <Lock className="absolute top-2 right-2 w-3.5 h-3.5 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
     </button>
-    {canUndo && <InlineUndoButton onClick={() => onInc(-1)} className="left-2 top-1/2 -translate-y-1/2" />}
     </div>
+    {(canUndo || (count > 0 && canReset && onReset)) && (
+      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+        {canUndo && (
+          <button
+            type="button"
+            onClick={() => onInc(-1)}
+            title="Kurangi 1 (kelebihan pencet)"
+            aria-label="Kurangi 1"
+            className="h-7 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
+          >
+            −1
+          </button>
+        )}
+        {count > 0 && canReset && onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            title={`Reset counter ${label} ke 0`}
+            className="h-7 px-2 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
+          >
+            <RotateCcw className="w-2.5 h-2.5" />
+            Reset
+          </button>
+        )}
+      </div>
+    )}
     <StepTag info={stepInfo} className="justify-center" />
     </div>
   );
