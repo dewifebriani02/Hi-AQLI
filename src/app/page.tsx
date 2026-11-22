@@ -880,7 +880,7 @@ export default function DashboardPage() {
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
                     <div className="flex items-center gap-2">
                       <SparklesIcon className="w-4 h-4 text-amber-400" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Keringanan Referral 5rb</span>
+                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Ajak Teman Belajar Bareng</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -1003,34 +1003,29 @@ export default function DashboardPage() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex flex-col">
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Ajak Teman & Hemat Bersama</h3>
-                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Pahala Jariyah + Bonus Saldo</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Saldo Hadiah</p>
-                    <p className="text-sm font-black text-emerald-600">Rp {(userData.referral_balance || 0).toLocaleString('id-ID')}</p>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Ajak Teman Belajar Al-Qur&apos;an</h3>
+                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Syiar Kebaikan &amp; Pahala Jariyah</p>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1 mb-6">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kode Referral {fullSalutation}</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kode Undangan {fullSalutation}</p>
                   <div className="text-2xl font-black text-[#800000] tracking-[0.3em] font-mono">
                     {userData.referral_code}
                   </div>
                 </div>
               </div>
 
-              {/* Common Promo Text Generator */}
+              {/* Common Invite Text Generator */}
               {(() => {
                 const origin = "https://hiaqli.pro";
-                const referralLink = `${origin}/register?ref=${userData.referral_code}`;
                 const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
                 
                 const promoTexts: Record<string, string> = {
-                  mufradat: `*NAIK LEVEL PAHAM AL-QUR'AN DENGAN KUIS SERU!* 📈✨\n*HI MUFRADAT* - By AQLI\n\nIngin bacaan Al-Qur'anmu tak sekadar lewat di lisan, tapi juga meresap dalam ke hati? Yuk, naikkan level pemahamanmu dengan cara yang seru dan bikin nagih! 🌿\n\nDi Hi Mufradat, setiap ayat adalah tantangan baru untuk dimenangkan! ✨\n\n🚀 *MISI SPESIAL UNTUKMU:*\n✅ *Kuasai Mufradat Al-Qur'an*: Pecahkan kuis harian yang dirancang khusus untuk mengasah hafalan maknamu! 🕹️\n✅ *Panjat Leaderboard*: Kumpulkan poin dari setiap jawaban benar dan jadilah yang terbaik di grup thalibah! 🏆\n✅ *Progress Bertahap*: Minimal 1 halaman per pekan, rasakan kedekatan yang berbeda saat berinteraksi dengan Kalam-Nya. 📈\n✅ *Komunitas Aktif*: Berjuang bareng teman-teman dengan visi yang sama untuk jadi Ahlul Qur'an. 🤝\n\n💸 *INFAQ JOIN:*\n• Daftar: Rp 10.000 (Sekali Seumur Hidup)\n• Infaq Bulanan: Rp 20.000\n\n🎁 *HADIAH UNTUK ${fullSalutation.toUpperCase()}!*\nGunakan kode referral saya: *${userData.referral_code}*\nDapatkan *Keringanan Rp 5.000* untuk pendaftaran pertama ${fullSalutation}! 💸\n\nSiap Menjadi Master Mufradat? Mulai Petualanganmu Sekarang:\n🔗 ${mufradatLink}\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
-                  tikrar: `*HAFAL AL-QUR'AN JADI PETUALANGAN SERU!* 📖🚀\n*HI TIKRAR* - By AQLI\n\nIngin hafalan Al-Qur'an ${fullSalutation} sekuat karang dan anti-lupa? Yuk, taklukkan tantangan hafalan dengan sistem monitoring harian yang bikin semangat! 🕋\n\n🚀 *MISI HAFALANMU:*\n✅ *7 Tahapan Itqan*: Metode sistematis yang bikin hafalan nempel terus! 🧠\n✅ *Daily Monitoring*: Progressmu dipantau setiap hari, gak bakal melenceng! 🎯\n✅ *Teman Murojaah*: Semangat bareng thalibah lain agar istiqomah terjaga! 🤝\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* & klaim *Keringanan LANGSUNG Rp 5.000!* 💸\n\nSiap Jadi Penjaga Al-Qur'an? Join Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
-                  ngaji: `*BACA AL-QUR'AN JADI LEBIH TARTIL & PERCAYA DIRI!* 📚✨\n*HI NGAJI* - By AQLI\n\nIngin memperbaiki bacaan dari nol sampai mahir? Yuk, rasakan asyiknya belajar tahsin & tajwid bareng muallimah yang sabar & kompeten! 🕋\n\n🌟 *PENGALAMAN BELAJARMU:*\n✅ *Bimbingan Intensif*: Belajar dari dasar sampai tartil sesuai kaidah tajwid! 🎓\n✅ *Koreksi Detail*: Tajwid & makhroj diperbaiki sampai benar-benar fasih! 🗣️\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* & klaim *Keringanan LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
-                  irab: `*SELAMI RAHASIA BAHASA LANGIT DENGAN MUDAH!* 🔍📖\n*HI IRAB* - By AQLI\n\nIngin memahami alasan di balik setiap harokat dan keindahan tata bahasa Al-Qur'an? Yuk, pecahkan misteri I'rab dengan cara yang simpel dan menyenangkan! 🕋\n\n✨ *LEVEL UP PEMAHAMANMU:*\n✅ *Analisis Mendalam*: Pahami struktur kalimat Al-Qur'an secara detail. 🧐\n✅ *Simpel & Praktis*: Metode yang dirancang khusus agar mudah dipahami siapa saja! 🎓\n\n🎁 *BONUS KHUSUS!*\nGunakan kode referral saya: *${userData.referral_code}* & klaim *Keringanan LANGSUNG Rp 5.000!* 💸\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`
+                  mufradat: `*NAIK LEVEL PAHAM AL-QUR'AN DENGAN KUIS SERU!* 📈✨\n*HI MUFRADAT* - By AQLI\n\nIngin bacaan Al-Qur'anmu tak sekadar lewat di lisan, tapi juga meresap dalam ke hati? Yuk, naikkan level pemahamanmu dengan cara yang seru dan bikin nagih! 🌿\n\nDi Hi Mufradat, setiap ayat adalah tantangan baru untuk dimenangkan! ✨\n\n🚀 *MISI SPESIAL UNTUKMU:*\n✅ *Kuasai Mufradat Al-Qur'an*: Pecahkan kuis harian yang dirancang khusus untuk mengasah hafalan maknamu! 🕹️\n✅ *Panjat Leaderboard*: Kumpulkan poin dari setiap jawaban benar dan jadilah yang terbaik di grup thalibah! 🏆\n✅ *Progress Bertahap*: Minimal 1 halaman per pekan, rasakan kedekatan yang berbeda saat berinteraksi dengan Kalam-Nya. 📈\n✅ *Komunitas Aktif*: Berjuang bareng teman-teman dengan visi yang sama untuk jadi Ahlul Qur'an. 🤝\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nSiap Menjadi Master Mufradat? Mulai Petualanganmu Sekarang:\n🔗 ${mufradatLink}\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
+                  tikrar: `*HAFAL AL-QUR'AN JADI PETUALANGAN SERU!* 📖🚀\n*HI TIKRAR* - By AQLI\n\nIngin hafalan Al-Qur'an ${fullSalutation} sekuat karang dan anti-lupa? Yuk, taklukkan tantangan hafalan dengan sistem monitoring harian yang bikin semangat! 🕋\n\n🚀 *MISI HAFALANMU:*\n✅ *7 Tahapan Itqan*: Metode sistematis yang bikin hafalan nempel terus! 🧠\n✅ *Daily Monitoring*: Progressmu dipantau setiap hari, gak bakal melenceng! 🎯\n✅ *Teman Murojaah*: Semangat bareng thalibah lain agar istiqomah terjaga! 🤝\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nSiap Jadi Penjaga Al-Qur'an? Join Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
+                  ngaji: `*BACA AL-QUR'AN JADI LEBIH TARTIL & PERCAYA DIRI!* 📚✨\n*HI NGAJI* - By AQLI\n\nIngin memperbaiki bacaan dari nol sampai mahir? Yuk, rasakan asyiknya belajar tahsin & tajwid bareng muallimah yang sabar & kompeten! 🕋\n\n🌟 *PENGALAMAN BELAJARMU:*\n✅ *Bimbingan Intensif*: Belajar dari dasar sampai tartil sesuai kaidah tajwid! 🎓\n✅ *Koreksi Detail*: Tajwid & makhroj diperbaiki sampai benar-benar fasih! 🗣️\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
+                  irab: `*SELAMI RAHASIA BAHASA LANGIT DENGAN MUDAH!* 🔍📖\n*HI IRAB* - By AQLI\n\nIngin memahami alasan di balik setiap harokat dan keindahan tata bahasa Al-Qur'an? Yuk, pecahkan misteri I'rab dengan cara yang simpel dan menyenangkan! 🕋\n\n✨ *LEVEL UP PEMAHAMANMU:*\n✅ *Analisis Mendalam*: Pahami struktur kalimat Al-Qur'an secara detail. 🧐\n✅ *Simpel & Praktis*: Metode yang dirancang khusus agar mudah dipahami siapa saja! 🎓\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`
                 };
 
                 const promoItems = [
@@ -1048,14 +1043,14 @@ export default function DashboardPage() {
                           className="w-full rounded-2xl h-16 font-black uppercase text-[12px] tracking-[0.2em] gap-3 bg-[#800000] text-white border-2 border-[#800000] hover:bg-white hover:text-[#800000] transition-all shadow-xl shadow-[#800000]/20 group/btn"
                         >
                           <Share2 className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-                          BAGIKAN PESAN PROMOSI
+                          BAGIKAN AJAKAN KE TEMAN
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-lg bg-white rounded-[2rem]">
                         <DialogHeader>
-                          <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest text-xl">Pilih Program Promosi</DialogTitle>
+                          <DialogTitle className="text-center text-[#800000] font-black uppercase tracking-widest text-xl">Ajak Teman Belajar</DialogTitle>
                           <DialogDescription className="text-[10px] font-bold text-center uppercase tracking-tight text-slate-500">
-                            Pilih program yang ingin {fullSalutation} bagikan. Reward saldo berlaku ketika teman mendaftar melalui link promosi ini.
+                            Pilih program yang ingin {fullSalutation} bagikan untuk mengajak teman belajar Al-Qur&apos;an bersama di Hi AQLI.
                           </DialogDescription>
                         </DialogHeader>
 
@@ -1088,7 +1083,7 @@ export default function DashboardPage() {
                                        <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.name}</span>
                                        {isLocked && <Lock className="w-3 h-3 text-slate-400" />}
                                      </div>
-                                     <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Gunakan kode teman & dapatkan keringanan Rp 5.000</p>
+                                     <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Bagikan link ajakan belajar bareng dari {fullSalutation}</p>
                                    </div>
                                  </div>
                                  <div className={cn(
@@ -1101,7 +1096,7 @@ export default function DashboardPage() {
                              );
                            })}
                         </div>
-                        <p className="text-[9px] text-center text-slate-400 font-medium italic">Klik salah satu program untuk membagikan pesan promosi via WhatsApp.</p>
+                        <p className="text-[9px] text-center text-slate-400 font-medium italic">Klik salah satu program untuk membagikan ajakan belajar via WhatsApp.</p>
                       </DialogContent>
                     </Dialog>
                   </div>

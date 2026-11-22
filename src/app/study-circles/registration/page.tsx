@@ -324,7 +324,7 @@ function RegistrationForm() {
   }, [user, registrationsHistory, circle, isMufradat, isTikrar]);
 
   const registrationFee = (!isFree && isFirstRegistration) ? 10000 : 0;
-  const referralDiscount = (!isFree && appliedReferral && !appliedVoucher && !hasUsedReferral) ? 5000 : 0;
+  const referralDiscount = 0;
 
   const totalCalculated = useMemo(() => {
     if (!isPremiumProgram || appliedVoucher) return 0;
@@ -436,15 +436,6 @@ function RegistrationForm() {
 
   const handleValidateReferral = async () => {
     if (!referralCodeInput.trim()) return;
-    
-    if (hasUsedReferral) {
-      toast({ 
-        title: "Referral Tidak Berlaku", 
-        description: "Potongan referral hanya berlaku untuk pendaftaran pertama kali di Hi AQLI.",
-        variant: "destructive"
-      });
-      return;
-    }
 
     setIsValidatingReferral(true);
     try {
@@ -455,17 +446,17 @@ function RegistrationForm() {
         .maybeSingle();
 
       if (error || !referrer) {
-        throw new Error("Kode Referral tidak valid atau tidak ditemukan.");
+        throw new Error("Kode undangan tidak valid atau tidak ditemukan.");
       }
 
       if (referrer.id === user?.id) {
-        throw new Error("Tidak bisa menggunakan kode referral milik sendiri.");
+        throw new Error("Tidak bisa menggunakan kode undangan milik sendiri.");
       }
 
       setAppliedReferral(referrer);
-      toast({ title: "Referral Berhasil!", description: `${fullSalutation} mendapatkan potongan Rp 5.000 dari ${referrer.referral_code}.` });
+      toast({ title: "Kode Undangan Terpasang!", description: `${fullSalutation} terhubung dengan undangan dari ${referrer.username || referrer.referral_code}.` });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Referral Gagal", description: err.message });
+      toast({ variant: "destructive", title: "Kode Tidak Ditemukan", description: err.message });
       setAppliedReferral(null);
     } finally {
       setIsValidatingReferral(false);
@@ -972,8 +963,8 @@ function RegistrationForm() {
                       <HeartHandshake className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-black text-[12px] uppercase tracking-widest text-slate-800">Hadiah Referral</h4>
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Gunakan kode teman & dapatkan keringanan Rp 5.000</p>
+                      <h4 className="font-black text-[12px] uppercase tracking-widest text-slate-800">Kode Ajak Teman</h4>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Opsional: masukkan kode undangan teman yang mengajak {fullSalutation}</p>
                     </div>
                   </div>
                   {appliedReferral && (
@@ -985,7 +976,7 @@ function RegistrationForm() {
                   <div className="bg-white p-4 rounded-2xl border-2 border-emerald-100 flex items-center justify-between shadow-sm animate-in zoom-in">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-emerald-600 uppercase flex items-center gap-1">
-                        <Zap className="w-3 h-3 fill-current" /> Potongan Langsung Aktif
+                        <Zap className="w-3 h-3 fill-current" /> Undangan Teman Terpasang
                       </span>
                       <span className="text-lg font-black text-[#800000] tracking-wider">{appliedReferral.referral_code}</span>
                       <p className="text-[10px] font-bold text-slate-400 capitalize">Oleh: {appliedReferral.username || "Sahabat AQLI"}</p>
@@ -999,7 +990,7 @@ function RegistrationForm() {
                         onClick={() => {
                           setAppliedReferral(null); 
                           setReferralCodeInput("");
-                          toast({ description: "Kode referral dihapus." });
+                          toast({ description: "Kode undangan dihapus." });
                         }}
                       >
                         GANTI KODE
@@ -1033,7 +1024,7 @@ function RegistrationForm() {
                     <div className="flex items-start gap-2 px-1">
                        <Info className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
                        <p className="text-[10px] text-amber-800 font-bold leading-tight italic">
-                         "Kehilangan link referral? Jangan khawatir {callSign}, silakan ketik manual kode referral teman {fullSalutation} di atas untuk tetap mendapatkan potongan infaq. (Khusus Pendaftar Baru)"
+                         "Diajak teman bergabung ke AQLI? Silakan ketik kode undangan teman {fullSalutation} di atas (opsional)."
                        </p>
                     </div>
                   </div>

@@ -336,49 +336,6 @@ export default function AdminRegistrationsPage() {
         await db.from("users").update(subUpdate).eq('id', reg.user_id);
       }
 
-      // Referral Reward Logic
-      const referralCode = reg.referral_code_used || userData?.referred_by_id;
-      if (referralCode && reg.payment_method !== 'voucher') {
-        let referrer = null;
-        if (reg.referral_code_used) {
-          const { data } = await db
-            .from("users")
-            .select("id, referral_balance, username")
-            .eq("referral_code", reg.referral_code_used)
-            .maybeSingle();
-          referrer = data;
-        } else if (userData?.referred_by_id) {
-          const { data } = await db
-            .from("users")
-            .select("id, referral_balance, username")
-            .eq("id", userData.referred_by_id)
-            .maybeSingle();
-          referrer = data;
-        }
-        
-        if (referrer) {
-          const { count } = await db
-            .from("halaqah_registrations")
-            .select("*", { count: 'exact', head: true })
-            .eq("user_id", reg.user_id)
-            .eq("status", "verified")
-            .neq("id", reg.id);
-          
-          if (count === 0) {
-            const newBal = (referrer.referral_balance || 0) + 5000;
-            await db
-              .from("users")
-              .update({ referral_balance: newBal })
-              .eq("id", referrer.id);
-            
-            toast({
-              title: "Reward Referral Berhasil! 🎁",
-              description: `Saldo Rp 5.000 masuk ke akun ${referrer.username}.`,
-            });
-          }
-        }
-      }
-
       toast({
         title: "Akses Diaktifkan! 🎉",
         description: `Masyallah, akses ${reg.halaqah_title} untuk ${reg.user_name} telah aktif.`,

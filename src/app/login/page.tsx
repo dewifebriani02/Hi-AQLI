@@ -117,7 +117,7 @@ function LoginContent() {
                   <ZapIcon className="w-4 h-4 fill-current" />
                 </div>
                 <AlertDescription className="text-[10px] font-black uppercase tracking-wider leading-tight">
-                  Kode Referal <span className="text-emerald-600 underline">{referralCode}</span> Aktif. <br/>
+                  Kode Undangan Teman <span className="text-emerald-600 underline">{referralCode}</span> Aktif. <br/>
                   <span className="opacity-70">Masuk untuk melanjutkan pendaftaran program Ukhti.</span>
                 </AlertDescription>
               </div>

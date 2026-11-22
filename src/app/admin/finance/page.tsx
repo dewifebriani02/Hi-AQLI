@@ -237,8 +237,8 @@ export default function MufradatFinancePage() {
           });
         }
 
-        // Handle Referral Commissions (Referrer gets 5k)
-        if (reg.referral_code_used) {
+        // Historical Referral Commissions only (legacy paid regs that actually received a referral discount)
+        if (reg.referral_code_used && refDiscount > 0 && reg.is_paid && amount > 0) {
           const referrer = usersData?.find(u => u.referral_code === reg.referral_code_used);
           if (referrer) {
             if (!months[monthKey].referralCommissions[referrer.id]) {
@@ -478,34 +478,6 @@ export default function MufradatFinancePage() {
 
       const { error: userError } = await db.from("users").update(updateData).eq('id', selectedUser.id);
       if (userError) throw userError;
-
-      // 3. Referral Bonus Logic
-      const referralCodeUsed = regData.referral_code_used || selectedUser.referred_by_id;
-      if (referralCodeUsed) {
-        // Check if any OTHER verified registrations exist
-        const { count } = await db
-          .from("halaqah_registrations")
-          .select("*", { count: 'exact', head: true })
-          .eq("user_id", selectedUser.id)
-          .eq("status", "verified")
-          .neq("id", newReg.id);
-
-        if (count === 0) {
-          let referrer = null;
-          if (regData.referral_code_used) {
-            const { data } = await db.from("users").select("id, referral_balance, username").eq("referral_code", regData.referral_code_used).maybeSingle();
-            referrer = data;
-          } else if (selectedUser.referred_by_id) {
-            const { data } = await db.from("users").select("id, referral_balance, username").eq("id", selectedUser.referred_by_id).maybeSingle();
-            referrer = data;
-          }
-
-          if (referrer) {
-            await db.from("users").update({ referral_balance: (referrer.referral_balance || 0) + 5000 }).eq("id", referrer.id);
-            console.log(`Manual Reward: 5000 to ${referrer.username}`);
-          }
-        }
-      }
 
       toast({
         title: "Transaksi Berhasil",
@@ -1412,9 +1384,9 @@ export default function MufradatFinancePage() {
                              <p className="text-[9px] font-black uppercase text-amber-600 mb-1 leading-none">Potongan & Komisi Ref</p>
                              <div className="flex items-baseline justify-between mb-1">
                                 <p className="text-lg font-black text-amber-700 leading-none">{FORMATTER.format(splits.totalRegDiscounts + (Object.values(splits.referralCommissions).reduce((a,c:any)=>a+c.amount,0)))}</p>
-                                <Badge className="bg-amber-100 text-amber-700 text-[8px] font-black border-none h-4">5rb/Ref</Badge>
+                                <Badge className="bg-amber-100 text-amber-700 text-[8px] font-black border-none h-4">Historis</Badge>
                              </div>
-                             <p className="text-[8px] font-bold text-slate-400 italic leading-none">Total Keringanan User + Komisi Referrer</p>
+                             <p className="text-[8px] font-bold text-slate-400 italic leading-none">Total Keringanan &amp; Komisi Historis</p>
                           </div>
                           <div className="p-4 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-200">
                              <p className="text-[9px] font-black uppercase text-blue-100 mb-1 leading-none">Net Pendaftaran</p>

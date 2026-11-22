@@ -119,7 +119,7 @@ function RegisterContent() {
           if (referralCode) {
             const { data: referrer } = await db
               .from('users')
-              .select('id, referral_balance')
+              .select('id')
               .eq('referral_code', referralCode.toUpperCase())
               .maybeSingle();
 
@@ -355,13 +355,13 @@ function RegisterContent() {
                     <AlertTriangle className="w-4 h-4" />}
                 </div>
                 <AlertDescription className="text-[10px] font-black uppercase tracking-wider leading-tight">
-                  {referralStatus.isLoading ? "Memvalidasi Kode Referral..." :
+                  {referralStatus.isLoading ? "Memeriksa Kode Undangan..." :
                     referralStatus.isValid ? (
-                      <>Alhamdulillah! Kode <span className="text-emerald-600 underline">{referralCode}</span> dari {referralStatus.referrerName} Aktif. <br />
-                        <span className="opacity-70 text-[9px]">Potongan Rp 5.000 otomatis berlaku.</span></>
+                      <>Alhamdulillah! Undangan <span className="text-emerald-600 underline">{referralCode}</span> dari {referralStatus.referrerName} Aktif. <br />
+                        <span className="opacity-70 text-[9px]">InsyaAllah belajar Al-Qur&apos;an lebih semangat bersama sahabat.</span></>
                     ) : (
-                      <>Maaf, Kode <span className="text-rose-600 underline">{referralCode}</span> Tidak Valid. <br />
-                        <span className="opacity-70 text-[9px]">Ukhti tetap bisa mendaftar tanpa potongan.</span></>
+                      <>Maaf, Kode Undangan <span className="text-rose-600 underline">{referralCode}</span> Tidak Valid. <br />
+                        <span className="opacity-70 text-[9px]">Ukhti tetap bisa melanjutkan pendaftaran seperti biasa.</span></>
                     )}
                 </AlertDescription>
               </div>
