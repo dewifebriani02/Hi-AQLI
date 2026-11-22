@@ -91,7 +91,8 @@ export async function GET(req: NextRequest) {
         [ids]
       ),
       pool.query(
-        `SELECT user_id, page_number FROM public.tikrar_page_quizzes WHERE user_id = ANY($1::uuid[]) AND passed
+        `SELECT user_id, page_number FROM public.tikrar_page_quizzes
+         WHERE user_id = ANY($1::uuid[]) AND passed AND COALESCE(question_types->>'source', '') <> 'prior_hafalan'
          UNION
          SELECT user_id, page_number FROM public.page_exams WHERE user_id = ANY($1::uuid[]) AND passed = true`,
         [ids]

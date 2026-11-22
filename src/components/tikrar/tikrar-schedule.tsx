@@ -538,7 +538,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                     </h4>
                     <p className="text-xs text-amber-900 leading-relaxed">
                       Ukhti memulai hafalan dari Hal. {startPage}, melewati {startPage - juzRange.startPage} halaman awal Juz {selectedJuz} (Hal. {juzRange.startPage}–{startPage - 1}).
-                      Tandai semua langkah pada halaman-halaman awal ini sebagai sudah tuntas agar tersimpan rapi di progres dan tidak terkunci saat murajaah.
+                      Centang ini <strong>hanya mencatat bahwa halaman tersebut sudah pernah dihafal sebelumnya</strong> (belum dianggap lulus ujian pilihan ganda 30 soal maupun setoran tasmi&apos; di aplikasi).
                     </p>
                   </div>
                 </div>
@@ -550,7 +550,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                     className="w-4 h-4 rounded text-[#6D123F] accent-[#6D123F] focus:ring-[#6D123F]"
                   />
                   <span className="text-xs font-black text-stone-800">
-                    Tandai semua langkah Hal. {juzRange.startPage} s.d. Hal. {startPage - 1} sudah tuntas (100% selesai &amp; tersimpan di progres)
+                    Catat Hal. {juzRange.startPage} s.d. Hal. {startPage - 1} sebagai sudah dihafal sebelumnya (belum ujian tulisan/pilihan ganda di aplikasi)
                   </span>
                 </label>
               </div>

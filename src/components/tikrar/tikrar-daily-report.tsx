@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  ClipboardCheck,
   Clock,
   ExternalLink,
   Flame,
@@ -902,6 +904,115 @@ export function TikrarDailyReport({
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Ujian Pilihan Ganda 30 Soal: Daftar Halaman Belum Ujian & Riwayat Skor */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+                <ClipboardCheck className="w-4 h-4 text-[#6D123F]" /> Belum Ujian Pilihan Ganda (30 Soal)
+              </h3>
+              <Badge
+                className={cn(
+                  'text-[10px] font-black border-none',
+                  (summary?.pendingQuizPages?.length || 0) > 0
+                    ? 'bg-amber-100 text-amber-900'
+                    : 'bg-emerald-100 text-emerald-800'
+                )}
+              >
+                {summary?.pendingQuizPages?.length || 0} Halaman
+              </Badge>
+            </div>
+            <p className="text-[11px] text-stone-600 leading-relaxed">
+              Halaman yang sudah dihafal (termasuk hafalan di luar aplikasi / sebelum jadwal) tetapi belum
+              memiliki skor lulus ujian pilihan ganda di aplikasi.
+            </p>
+            {(summary?.pendingQuizPages || []).length === 0 ? (
+              <div className="py-5 text-center text-xs text-emerald-700 font-bold bg-emerald-50/70 rounded-lg border border-emerald-200">
+                Semua halaman yang sudah dihafal sudah lulus ujian pilihan ganda!
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                {(summary?.pendingQuizPages || []).map((item) => (
+                  <div
+                    key={item.page}
+                    className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200 flex items-center justify-between gap-2 text-xs"
+                  >
+                    <div>
+                      <p className="font-black text-stone-900">
+                        Hal. {item.page} • {getSurahNameForPage(item.page)} (Juz {item.juz})
+                      </p>
+                      <p className="text-[11px] text-stone-600">
+                        {item.source === 'prior' ? 'Hafalan luar / sebelum jadwal' : 'Hafalan di aplikasi'}
+                        {item.lastScore !== null && item.lastScore !== undefined
+                          ? ` • Skor terakhir: ${item.lastScore}% (${item.lastCorrect}/${item.lastTotal})`
+                          : ' • Belum ada skor ujian'}
+                      </p>
+                    </div>
+                    <Button
+                      asChild
+                      size="sm"
+                      className="h-8 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-[11px] font-black rounded-lg shrink-0"
+                    >
+                      <Link href={`/tikrar/ujian?page=${item.page}`}>
+                        {item.lastScore !== null && item.lastScore !== undefined ? 'Ulangi Ujian' : 'Ujian 30 Soal'}
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+                <Trophy className="w-4 h-4 text-[#D4AF37]" /> Riwayat Skor Ujian Pilihan Ganda
+              </h3>
+              <span className="text-[11px] font-bold text-stone-500">
+                {summary?.quizPassedPages?.length || 0} Hal. Lulus
+              </span>
+            </div>
+            {(summary?.recentQuizzes || []).length === 0 ? (
+              <div className="py-6 text-center text-xs text-stone-500 bg-stone-50 rounded-lg border border-dashed border-stone-200">
+                Belum ada skor ujian pilihan ganda 30 soal yang tersimpan di database.
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                {(summary?.recentQuizzes || []).slice(0, 20).map((q, idx) => (
+                  <div
+                    key={`${q.page}-${q.createdAt}-${idx}`}
+                    className="p-2.5 rounded-lg bg-stone-50 border border-stone-200/80 flex items-center justify-between gap-2 text-xs"
+                  >
+                    <div>
+                      <p className="font-black text-stone-900">
+                        Hal. {q.page} • {getSurahNameForPage(q.page)}
+                      </p>
+                      <p className="text-[11px] text-stone-500">
+                        {q.correct}/{q.total} benar •{' '}
+                        {new Date(q.createdAt).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                    <Badge
+                      className={cn(
+                        'text-[10px] font-black border-none shrink-0',
+                        q.passed
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-600'
+                          : 'bg-rose-100 text-rose-800 hover:bg-rose-100'
+                      )}
+                    >
+                      {q.score}% • {q.passed ? 'LULUS' : 'Belum Lulus'}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             )}
           </div>

@@ -7,6 +7,7 @@ import {
   computeUnlockedPage,
   countCompletedSteps,
   generateTikrarStepSchedule,
+  MEMORIZED_STEP_COUNT,
   STEPS_PER_PAGE,
   TIKRAR_POINTS,
   type TikrarStepSchedule,
@@ -65,7 +66,8 @@ export async function loadClearedPages(db: Db, userId: string): Promise<{
 }> {
   // Berurutan: `db` bisa berupa satu PoolClient di dalam transaksi
   const { rows: quizRows } = await db.query(
-    `SELECT DISTINCT page_number FROM public.tikrar_page_quizzes WHERE user_id = $1 AND passed`,
+    `SELECT DISTINCT page_number FROM public.tikrar_page_quizzes
+     WHERE user_id = $1 AND passed AND COALESCE(question_types->>'source', '') <> 'prior_hafalan'`,
     [userId]
   );
   const { rows: subRows } = await db.query(
@@ -252,7 +254,7 @@ export async function buildTikrarSummary(userId: string) {
   const target = await loadActiveTarget(pool, userId);
   const { cleared, quizPassed, tasmiPassed } = await loadClearedPages(pool, userId);
 
-  const [{ rows: progressRows }, { rows: activityRows }, { rows: userRows }, { rows: quizRows }, { rows: targetHistory }] =
+  const [{ rows: progressRows }, { rows: activityRows }, { rows: userRows }, { rows: quizRows }, { rows: targetHistory }, { rows: priorRows }] =
     await Promise.all([
       pool.query(
         `SELECT page_number, juz, prep_listen_count, prep_translation_done, blocks, meta_counts, updated_at
@@ -268,14 +270,21 @@ export async function buildTikrarSummary(userId: string) {
       ),
       pool.query(`SELECT points FROM public.users WHERE id = $1`, [userId]),
       pool.query(
-        `SELECT page_number, score, correct_answers, total_questions, passed, created_at
-         FROM public.tikrar_page_quizzes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+        `SELECT page_number, juz, score, correct_answers, total_questions, passed, created_at
+         FROM public.tikrar_page_quizzes
+         WHERE user_id = $1 AND COALESCE(question_types->>'source', '') <> 'prior_hafalan'
+         ORDER BY created_at DESC LIMIT 200`,
         [userId]
       ),
       pool.query(
         `SELECT COUNT(*)::int AS n,
                 COUNT(*) FILTER (WHERE created_at >= now() - INTERVAL '30 days' AND NOT is_legacy)::int AS recent
          FROM public.tikrar_targets WHERE user_id = $1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT page_number, status, tested_by
+         FROM public.tikrar_prior_hafalan WHERE user_id = $1 ORDER BY page_number ASC`,
         [userId]
       ),
     ]);
@@ -340,6 +349,56 @@ export async function buildTikrarSummary(userId: string) {
     };
   }
 
+  const priorByPage = new Map<number, { status: string; testedBy: string | null }>();
+  for (const r of priorRows) {
+    priorByPage.set(Number(r.page_number), {
+      status: r.status,
+      testedBy: r.tested_by || null,
+    });
+  }
+
+  const latestQuizByPage = new Map<number, { score: number; correct: number; total: number; passed: boolean; createdAt: string }>();
+  const attemptsByPage = new Map<number, number>();
+  for (const q of quizRows) {
+    const p = Number(q.page_number);
+    attemptsByPage.set(p, (attemptsByPage.get(p) || 0) + 1);
+    if (!latestQuizByPage.has(p)) {
+      latestQuizByPage.set(p, {
+        score: Number(q.score),
+        correct: Number(q.correct_answers),
+        total: Number(q.total_questions),
+        passed: Boolean(q.passed),
+        createdAt: new Date(q.created_at).toISOString(),
+      });
+    }
+  }
+
+  const memorizedForQuizSet = new Set<number>();
+  for (const r of priorRows) memorizedForQuizSet.add(Number(r.page_number));
+  for (const r of progressRows) {
+    if (countCompletedSteps(r, false) >= MEMORIZED_STEP_COUNT) {
+      memorizedForQuizSet.add(Number(r.page_number));
+    }
+  }
+
+  const pendingQuizPages = Array.from(memorizedForQuizSet)
+    .filter((p) => !quizPassed.has(p))
+    .sort((a, b) => a - b)
+    .map((p) => {
+      const prior = priorByPage.get(p);
+      const last = latestQuizByPage.get(p);
+      return {
+        page: p,
+        juz: getJuzForPage(p),
+        source: (prior ? 'prior' : 'progress') as 'prior' | 'progress',
+        priorStatus: prior?.status || null,
+        lastScore: last?.score ?? null,
+        lastCorrect: last?.correct ?? null,
+        lastTotal: last?.total ?? null,
+        attempts: attemptsByPage.get(p) || 0,
+      };
+    });
+
   return {
     todayKey,
     target: targetInfo,
@@ -365,8 +424,11 @@ export async function buildTikrarSummary(userId: string) {
     stepsByPage,
     quizPassedPages: Array.from(quizPassed).sort((a, b) => a - b),
     tasmiPassedPages: Array.from(tasmiPassed).sort((a, b) => a - b),
-    recentQuizzes: quizRows.slice(0, 10).map((q) => ({
+    priorMemorizedPages: Array.from(priorByPage.keys()).sort((a, b) => a - b),
+    pendingQuizPages,
+    recentQuizzes: quizRows.slice(0, 100).map((q) => ({
       page: Number(q.page_number),
+      juz: Number(q.juz) || getJuzForPage(Number(q.page_number)),
       score: Number(q.score),
       correct: Number(q.correct_answers),
       total: Number(q.total_questions),

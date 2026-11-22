@@ -22,7 +22,14 @@ async function listRows(userId: string) {
             EXISTS (
               SELECT 1 FROM public.tikrar_page_quizzes q
               WHERE q.user_id = h.user_id AND q.page_number = h.page_number AND q.passed
-            ) AS quiz_passed
+                AND COALESCE(q.question_types->>'source', '') <> 'prior_hafalan'
+            ) AS quiz_passed,
+            (
+              SELECT q.score FROM public.tikrar_page_quizzes q
+              WHERE q.user_id = h.user_id AND q.page_number = h.page_number
+                AND COALESCE(q.question_types->>'source', '') <> 'prior_hafalan'
+              ORDER BY q.created_at DESC LIMIT 1
+            ) AS last_quiz_score
      FROM public.tikrar_prior_hafalan h
      WHERE h.user_id = $1
      ORDER BY h.page_number`,
@@ -33,6 +40,7 @@ async function listRows(userId: string) {
     status: r.status,
     testedBy: r.tested_by || null,
     quizPassed: Boolean(r.quiz_passed),
+    lastQuizScore: r.last_quiz_score !== null && r.last_quiz_score !== undefined ? Number(r.last_quiz_score) : null,
   }));
 }
 
@@ -47,7 +55,7 @@ async function listAllForStaff() {
   );
   const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
   if (userIds.length === 0) return [];
-  const [{ rows: subRows }, { rows: examRows }] = await Promise.all([
+  const [{ rows: subRows }, { rows: examRows }, { rows: quizRows }] = await Promise.all([
     pool.query(
       `SELECT user_id, page_number, blocks_range, status FROM public.tikrar_submissions
        WHERE user_id = ANY($1::uuid[]) AND status = 'passed'`,
@@ -55,6 +63,13 @@ async function listAllForStaff() {
     ),
     pool.query(
       `SELECT DISTINCT user_id, page_number FROM public.page_exams WHERE user_id = ANY($1::uuid[]) AND passed = true`,
+      [userIds]
+    ),
+    pool.query(
+      `SELECT user_id, page_number, score, passed, created_at
+       FROM public.tikrar_page_quizzes
+       WHERE user_id = ANY($1::uuid[]) AND COALESCE(question_types->>'source', '') <> 'prior_hafalan'
+       ORDER BY created_at DESC`,
       [userIds]
     ),
   ]);
@@ -74,9 +89,21 @@ async function listAllForStaff() {
     const subs = subRows.filter((s) => s.user_id === u.userId);
     const exams = new Set<number>(examRows.filter((e) => e.user_id === u.userId).map((e) => Number(e.page_number)));
     const aqliTested = buildClearedPageSet([], subs, exams);
+    const userQuizzes = quizRows.filter((q) => q.user_id === u.userId);
+    const quizPassedSet = new Set<number>(userQuizzes.filter((q) => q.passed).map((q) => Number(q.page_number)));
+    const latestQuizScore = new Map<number, number>();
+    for (const q of userQuizzes) {
+      const p = Number(q.page_number);
+      if (!latestQuizScore.has(p)) latestQuizScore.set(p, Number(q.score));
+    }
     return {
       ...u,
-      pages: u.pages.map((p: any) => ({ ...p, aqliTested: aqliTested.has(p.page) })),
+      pages: u.pages.map((p: any) => ({
+        ...p,
+        aqliTested: aqliTested.has(p.page),
+        quizPassed: quizPassedSet.has(p.page),
+        lastQuizScore: latestQuizScore.get(p.page) ?? null,
+      })),
     };
   });
 }

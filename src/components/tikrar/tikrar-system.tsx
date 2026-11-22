@@ -441,6 +441,11 @@ export function TikrarSystem({
     [summary?.quizPassedPages, summary?.tasmiPassedPages]
   );
   const quizPassedPages = useMemo(() => new Set<number>(summary?.quizPassedPages || []), [summary?.quizPassedPages]);
+  const priorMemorizedSet = useMemo(
+    () => new Set<number>(summary?.priorMemorizedPages || []),
+    [summary?.priorMemorizedPages]
+  );
+  const isPriorMemorizedPage = priorMemorizedSet.has(page);
   const pageLockReason = useMemo(() => {
     if (!user) return null;
     if (!activeTarget) return 'Isi Target & Jadwal terlebih dahulu sebelum mulai berlatih.';
@@ -1749,6 +1754,36 @@ export function TikrarSystem({
 
       
 
+      {(summary?.pendingQuizPages?.length || 0) > 0 && (
+        <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-3 sm:p-4 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="w-4 h-4 text-[#6D123F] shrink-0" />
+              <p className="text-xs font-black text-amber-950">
+                {summary!.pendingQuizPages.length} halaman sudah dihafal tetapi belum lulus ujian pilihan ganda (30 soal):
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {summary!.pendingQuizPages.slice(0, 12).map((pg) => (
+              <Link
+                key={pg.page}
+                href={`/tikrar/ujian?page=${pg.page}`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-amber-300 text-[11px] font-black text-[#6D123F] hover:bg-[#6D123F] hover:text-white transition-colors"
+              >
+                Hal. {pg.page}
+                {pg.lastScore !== null && pg.lastScore !== undefined ? ` (${pg.lastScore}%)` : ''}
+              </Link>
+            ))}
+            {summary!.pendingQuizPages.length > 12 && (
+              <span className="text-[11px] font-bold text-amber-900 px-2 py-1">
+                +{summary!.pendingQuizPages.length - 12} halaman lainnya di tab Rekap &amp; Laporan
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTarget && page < activeTarget.startPage && page >= juzPageRange.startPage && (
         <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
@@ -2136,7 +2171,7 @@ export function TikrarSystem({
               <div id="step-quiz" className={cn('rounded-xl', stepInfo('quiz')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2 p-2')}>
                 <StepTag info={stepInfo('quiz')} />
               </div>
-              {!isMetaTuntas('1_2_3_4') ? (
+              {!isMetaTuntas('1_2_3_4') && !isPriorMemorizedPage ? (
                 <Card className="border-2 border-dashed bg-muted py-10">
                   <CardContent className="flex flex-col items-center justify-center text-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-dashed">

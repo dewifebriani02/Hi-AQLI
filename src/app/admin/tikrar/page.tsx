@@ -18,6 +18,7 @@ import { TikrarGroupHeatmap } from '@/components/tikrar/tikrar-group-heatmap';
 import { TikrarManualSetoranForm } from '@/components/tikrar/tikrar-manual-setoran-form';
 import { TikrarPriorHafalanAdmin } from '@/components/tikrar/tikrar-prior-hafalan-admin';
 import { TikrarBlockAdmin } from '@/components/tikrar/tikrar-block-admin';
+import { TikrarQuizScoresAdmin } from '@/components/tikrar/tikrar-quiz-scores-admin';
 import { getJuzPageRange, TIKRAR_GRADE_LABELS, TIKRAR_WA_SALUTATION } from '@/lib/tikrar-schedule-generator';
 import {
   AlertCircle,
@@ -27,6 +28,7 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  ClipboardCheck,
   Clock,
   ExternalLink,
   Layers,
@@ -665,6 +667,13 @@ export default function AdminTikrarPage() {
               Atur Blok &amp; Ayat
             </TabsTrigger>
             <TabsTrigger
+              value="quizzes"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              Skor Ujian
+            </TabsTrigger>
+            <TabsTrigger
               value="prior"
               className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
@@ -1293,6 +1302,11 @@ export default function AdminTikrarPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Skor Ujian Pilihan Ganda 30 Soal & Daftar Halaman Belum Ujian */}
+        <TabsContent value="quizzes" className="outline-none">
+          <TikrarQuizScoresAdmin />
         </TabsContent>
 
         {/* Hafalan sebelum bergabung per thalibah: halaman yang perlu diuji tasmi' */}

@@ -75,7 +75,10 @@ export async function POST(req: NextRequest) {
     await client.query('BEGIN');
 
     const { rows: priorPass } = await client.query(
-      `SELECT 1 FROM public.tikrar_page_quizzes WHERE user_id = $1 AND page_number = $2 AND passed LIMIT 1`,
+      `SELECT 1 FROM public.tikrar_page_quizzes
+       WHERE user_id = $1 AND page_number = $2 AND passed
+         AND COALESCE(question_types->>'source', '') <> 'prior_hafalan'
+       LIMIT 1`,
       [ctx.userId, pageNumber]
     );
     const firstPass = passed && priorPass.length === 0;
@@ -89,8 +92,10 @@ export async function POST(req: NextRequest) {
 
     let pointsAwarded = 0;
     let activity = null;
-    // Hafalan lama: jangan beri poin, jangan catat keaktifan/streak, dan jangan ubah halaman target
-    if (firstPass && !isPriorPage) {
+    const inActiveTarget = Boolean(target && pageNumber >= target.startPage && pageNumber <= target.endPage);
+    const isPriorOnly = isPriorPage && !inActiveTarget;
+    // Hafalan lama di luar target aktif: jangan beri poin, jangan catat keaktifan/streak, dan jangan ubah halaman target
+    if (firstPass && !isPriorOnly) {
       const stepsBefore = await computeTotalCompletedSteps(client, ctx.userId, cleared);
       const nextCleared = new Set(cleared);
       nextCleared.add(pageNumber);
@@ -120,8 +125,8 @@ export async function POST(req: NextRequest) {
         firstPass,
         pointsAwarded,
         activity,
-        isPriorPage,
-        unlockedPage: isPriorPage ? null : computeUnlockedPageForTarget(target, cleared),
+        isPriorPage: isPriorOnly,
+        unlockedPage: isPriorOnly ? null : computeUnlockedPageForTarget(target, cleared),
       },
       error: null,
     });

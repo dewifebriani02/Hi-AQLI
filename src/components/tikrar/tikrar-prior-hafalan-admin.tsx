@@ -17,6 +17,8 @@ interface PriorPage {
   status: PriorStatus;
   testedBy: string | null;
   aqliTested: boolean;
+  quizPassed?: boolean;
+  lastQuizScore?: number | null;
 }
 
 interface PriorUser {
@@ -32,6 +34,8 @@ interface PriorRange {
   status: PriorStatus;
   testedBy: string | null;
   untestedPages: number[];
+  unquizzedPages: { page: number; lastQuizScore: number | null }[];
+  quizPassedCount: number;
 }
 
 /** Gabungkan halaman berurutan dengan status & penguji sama menjadi rentang */
@@ -42,6 +46,8 @@ function toRanges(pages: PriorPage[]): PriorRange[] {
     if (last && last.end + 1 === p.page && last.status === p.status && last.testedBy === p.testedBy) {
       last.end = p.page;
       if (!p.aqliTested) last.untestedPages.push(p.page);
+      if (p.quizPassed) last.quizPassedCount += 1;
+      else last.unquizzedPages.push({ page: p.page, lastQuizScore: p.lastQuizScore ?? null });
     } else {
       out.push({
         start: p.page,
@@ -49,6 +55,8 @@ function toRanges(pages: PriorPage[]): PriorRange[] {
         status: p.status,
         testedBy: p.testedBy,
         untestedPages: p.aqliTested ? [] : [p.page],
+        unquizzedPages: p.quizPassed ? [] : [{ page: p.page, lastQuizScore: p.lastQuizScore ?? null }],
+        quizPassedCount: p.quizPassed ? 1 : 0,
       });
     }
   }
@@ -195,8 +203,26 @@ export function TikrarPriorHafalanAdmin({
                           •{' '}
                           {done
                             ? 'semua sudah lulus tasmi\' AQLI'
-                            : `${r.untestedPages.length}/${r.end - r.start + 1} hal. belum diuji AQLI`}
+                            : `${r.untestedPages.length}/${r.end - r.start + 1} hal. belum diuji AQLI`}{' '}
+                          •{' '}
+                          <span className={r.unquizzedPages.length === 0 ? 'text-emerald-700 font-bold' : 'text-amber-800 font-bold'}>
+                            Ujian PG 30 soal: {r.quizPassedCount}/{r.end - r.start + 1} lulus
+                          </span>
                         </p>
+                        {r.unquizzedPages.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            <span className="text-[10px] font-bold text-amber-800">Belum ujian PG:</span>
+                            {r.unquizzedPages.map((uq) => (
+                              <span
+                                key={uq.page}
+                                className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-950 text-[10px] font-bold"
+                              >
+                                Hal. {uq.page}
+                                {uq.lastQuizScore !== null ? ` (${uq.lastQuizScore}%)` : ''}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       {!done && onTestPage && (
                         <Button

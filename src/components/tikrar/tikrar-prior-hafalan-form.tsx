@@ -16,6 +16,7 @@ interface PriorRow {
   status: PriorStatus;
   testedBy: string | null;
   quizPassed?: boolean;
+  lastQuizScore?: number | null;
 }
 
 const STATUS_LABEL: Record<PriorStatus, string> = {
@@ -32,17 +33,29 @@ function groupRanges(rows: PriorRow[]) {
     testedBy: string | null;
     quizPassedCount: number;
     nextQuizPage: number | null;
+    unquizzedPages: { page: number; lastQuizScore: number | null }[];
   }[] = [];
   for (const r of rows) {
     const last = out[out.length - 1];
     if (last && last.end + 1 === r.page && last.status === r.status && last.testedBy === r.testedBy) {
       last.end = r.page;
     } else {
-      out.push({ start: r.page, end: r.page, status: r.status, testedBy: r.testedBy, quizPassedCount: 0, nextQuizPage: null });
+      out.push({
+        start: r.page,
+        end: r.page,
+        status: r.status,
+        testedBy: r.testedBy,
+        quizPassedCount: 0,
+        nextQuizPage: null,
+        unquizzedPages: [],
+      });
     }
     const cur = out[out.length - 1];
     if (r.quizPassed) cur.quizPassedCount += 1;
-    else if (cur.nextQuizPage === null) cur.nextQuizPage = r.page;
+    else {
+      if (cur.nextQuizPage === null) cur.nextQuizPage = r.page;
+      cur.unquizzedPages.push({ page: r.page, lastQuizScore: r.lastQuizScore ?? null });
+    }
   }
   return out;
 }
@@ -257,42 +270,68 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
           ranges.map((r) => (
             <div
               key={`${r.start}-${r.status}`}
-              className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-xs"
+              className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs space-y-2.5"
             >
-              <div>
-                <p className="font-black text-stone-900">{rangeLabel(r.start, r.end)}</p>
-                <p className="text-[11px] text-stone-500">
-                  {STATUS_LABEL[r.status]}
-                  {r.testedBy ? ` • ${r.testedBy}` : ''} • {r.end - r.start + 1} hal.
-                </p>
-                <p className={cn('text-[11px] font-bold', r.nextQuizPage ? 'text-stone-600' : 'text-emerald-700')}>
-                  Lulus ujian 30 soal: {r.quizPassedCount}/{r.end - r.start + 1} hal.
-                </p>
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="font-black text-stone-900">{rangeLabel(r.start, r.end)}</p>
+                  <p className="text-[11px] text-stone-500">
+                    {STATUS_LABEL[r.status]}
+                    {r.testedBy ? ` • ${r.testedBy}` : ''} • {r.end - r.start + 1} hal.
+                  </p>
+                  <p className={cn('text-[11px] font-bold', r.nextQuizPage ? 'text-amber-800' : 'text-emerald-700')}>
+                    Lulus ujian pilihan ganda 30 soal: {r.quizPassedCount}/{r.end - r.start + 1} hal.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {r.nextQuizPage && (
+                    <Button
+                      asChild
+                      size="sm"
+                      className="h-9 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-[11px] font-black rounded-xl"
+                    >
+                      <Link href={`/tikrar/ujian?page=${r.nextQuizPage}`}>
+                        <ClipboardCheck className="w-3.5 h-3.5 mr-1" /> Ujian Hal. {r.nextQuizPage}
+                      </Link>
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={saving}
+                    onClick={() => send('DELETE', { start: r.start, end: r.end })}
+                    className="h-9 w-9 text-stone-500 hover:text-red-600"
+                    title="Hapus"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-              {r.nextQuizPage && (
-                <Button
-                  asChild
-                  size="sm"
-                  className="h-10 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-[11px] font-black rounded-xl"
-                >
-                  <Link href={`/tikrar/ujian?page=${r.nextQuizPage}`}>
-                    <ClipboardCheck className="w-3.5 h-3.5 mr-1" /> Ujian Hal. {r.nextQuizPage}
-                  </Link>
-                </Button>
+              {r.unquizzedPages.length > 0 && (
+                <div className="pt-2 border-t border-stone-200/80 space-y-1.5">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-900">
+                    Daftar Halaman Belum Lulus Ujian Pilihan Ganda ({r.unquizzedPages.length} hal.) — Klik untuk langsung ujian:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {r.unquizzedPages.map((uq) => (
+                      <Link
+                        key={uq.page}
+                        href={`/tikrar/ujian?page=${uq.page}`}
+                        className={cn(
+                          'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black border transition-colors',
+                          uq.lastQuizScore !== null
+                            ? 'bg-rose-50 border-rose-200 text-rose-800 hover:bg-rose-100'
+                            : 'bg-white border-[#6D123F]/25 text-[#6D123F] hover:bg-[#6D123F] hover:text-white'
+                        )}
+                      >
+                        Hal. {uq.page}
+                        {uq.lastQuizScore !== null ? ` (${uq.lastQuizScore}%)` : ''}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={saving}
-                onClick={() => send('DELETE', { start: r.start, end: r.end })}
-                className="h-10 w-10 text-stone-500 hover:text-red-600"
-                title="Hapus"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-              </div>
             </div>
           ))
         )}
