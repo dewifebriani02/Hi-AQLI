@@ -189,13 +189,15 @@ export interface TikrarProgressLike {
 export function stepValue(step: TikrarStepDef, prog: TikrarProgressLike | null | undefined): number {
   if (!prog) return 0;
   if (step.kind === 'prep') {
-    // Simak TM 1 (Blok A): pakai hitungan simak Blok A, simak versi lama, atau jika TM 1-1 sudah mulai dikerjakan
-    if ((Number(prog?.blocks?.[1]?.a?.count) || 0) > 0) return step.target;
+    // Simak TM 1 (Blok A): pakai hitungan simak Blok A / simak versi lama; fallback a.count > 0 hanya untuk data lama tanpa field listen
+    const hasExplicitListen = prog?.blocks?.[1]?.listen !== undefined;
+    if (!hasExplicitListen && (Number(prog?.blocks?.[1]?.a?.count) || 0) > 0) return step.target;
     return Math.min(step.target, Math.max(getBlockListenCount(prog, 1), Number(prog.prep_listen_count) || 0));
   }
   if (step.kind === 'listen') {
     const block = Number(step.key.split('.')[0]) as 1 | 2 | 3 | 4;
-    if ((Number(prog?.blocks?.[block]?.a?.count) || 0) > 0) return step.target;
+    const hasExplicitListen = prog?.blocks?.[block]?.listen !== undefined;
+    if (!hasExplicitListen && (Number(prog?.blocks?.[block]?.a?.count) || 0) > 0) return step.target;
     return Math.min(step.target, getBlockListenCount(prog, block));
   }
   if (step.kind === 'sub') {

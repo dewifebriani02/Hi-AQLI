@@ -889,8 +889,10 @@ export function TikrarSystem({
 
     async function loadProgress() {
       if (typeof window === 'undefined') return;
+      isHydratedRef.current = false;
 
       let nextPrepListen = 0;
+      let hasDbProgress = false;
       let nextPrepTrans = false;
       let hasExplicitMeta = false;
       const nextBlocks: any = {
@@ -952,6 +954,7 @@ export function TikrarSystem({
             const json = await res.json();
             const dbProg = json.data;
             if (dbProg) {
+              hasDbProgress = true;
               nextPrepListen = Math.max(nextPrepListen, Number(dbProg.prep_listen_count) || 0);
               nextPrepTrans = nextPrepTrans || Boolean(dbProg.prep_translation_done);
               if (dbProg.blocks) {
@@ -990,8 +993,8 @@ export function TikrarSystem({
         }
       }
 
-      // 3. Gabungkan DB completed blocks agar kunci berurutan konsisten
-      if (completedBlocksAllTime.size > 0) {
+      // 3. Gabungkan DB completed blocks agar kunci berurutan konsisten (hanya bila belum ada baris eksplisit di DB)
+      if (!hasDbProgress && completedBlocksAllTime.size > 0) {
         for (const b of [1, 2, 3, 4] as const) {
           if (completedBlocksAllTime.has(b)) {
             nextBlocks[b] = {
@@ -1041,7 +1044,7 @@ export function TikrarSystem({
     return () => {
       isCancelled = true;
     };
-  }, [page, isSelectedPageCleared, user?.id]);
+  }, [page, isSelectedPageCleared, user?.id, refreshSignal]);
 
   const totalProgress = useMemo(() => {
     let totalDone = 0;
@@ -1509,11 +1512,34 @@ export function TikrarSystem({
           ...prev,
           [b]: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
         }));
+        if (typeof window !== 'undefined') {
+          try {
+            const raw = localStorage.getItem(`tikrar_progress_p${page}`);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (b === 1) parsed.prepListenCount = 0;
+              if (!parsed.blocks) parsed.blocks = {};
+              parsed.blocks[b] = { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } };
+              localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify(parsed));
+            }
+          } catch {}
+        }
       } else if (targetReset.scope === 'counter' && targetReset.key) {
         const k = targetReset.key === 'prep' ? '1.listen' : targetReset.key;
         if (k.startsWith('meta.')) {
           const mk = k.slice(5);
           setMetaCounts((prev) => ({ ...prev, [mk]: 0 }));
+          if (typeof window !== 'undefined') {
+            try {
+              const raw = localStorage.getItem(`tikrar_progress_p${page}`);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (!parsed.metaCounts) parsed.metaCounts = {};
+                parsed.metaCounts[mk] = 0;
+                localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify(parsed));
+              }
+            } catch {}
+          }
         } else {
           const [bStr, part] = k.split('.');
           const b = Number(bStr) as 1 | 2 | 3 | 4;
@@ -1525,6 +1551,20 @@ export function TikrarSystem({
               delete nextB.understood;
               return { ...prev, [b]: nextB };
             });
+            if (typeof window !== 'undefined') {
+              try {
+                const raw = localStorage.getItem(`tikrar_progress_p${page}`);
+                if (raw) {
+                  const parsed = JSON.parse(raw);
+                  if (b === 1) parsed.prepListenCount = 0;
+                  if (parsed.blocks?.[b]) {
+                    parsed.blocks[b].listen = { count: 0 };
+                    delete parsed.blocks[b].understood;
+                  }
+                  localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify(parsed));
+                }
+              } catch {}
+            }
           } else if (part === 'a' || part === 'b' || part === 'combined') {
             setBlocks((prev: any) => ({
               ...prev,
@@ -1533,6 +1573,18 @@ export function TikrarSystem({
                 [part]: { count: 0 },
               },
             }));
+            if (typeof window !== 'undefined') {
+              try {
+                const raw = localStorage.getItem(`tikrar_progress_p${page}`);
+                if (raw) {
+                  const parsed = JSON.parse(raw);
+                  if (parsed.blocks?.[b]) {
+                    parsed.blocks[b][part] = { count: 0 };
+                  }
+                  localStorage.setItem(`tikrar_progress_p${page}`, JSON.stringify(parsed));
+                }
+              } catch {}
+            }
           }
         }
       }
@@ -1576,19 +1628,23 @@ export function TikrarSystem({
     const threshold = getMetaThreshold(key);
 
     if (delta > 0) {
-      playTikrarCount(nextCount, threshold);
+      if (currentCount < threshold && nextCount >= threshold) playTikrarDone();
+      else playTikrarTap();
     }
 
     setMetaCounts((p) => {
-      const minFloor = getStepMinCount(`meta.${key}`, {
-        prep_listen_count: prepListenCount,
-        prep_translation_done: prepTranslationDone,
-        blocks,
-        meta_counts: p,
-      });
+      const minFloor =
+        delta < 0
+          ? getStepMinCount(`meta.${key}`, {
+              prep_listen_count: prepListenCount,
+              prep_translation_done: prepTranslationDone,
+              blocks,
+              meta_counts: p,
+            })
+          : 0;
       return {
         ...p,
-        // Boleh lebih sampai berapa saja, bila langkah berikutnya sudah berjalan minimal minFloor
+        // Penambahan (+1 / +5) selalu naik dari posisi saat ini; minFloor hanya berlaku saat pengurangan (-1)
         [key]: Math.max(minFloor, (p[key] || 0) + delta),
       };
     });
@@ -3204,19 +3260,22 @@ function MaqtaCard({
     if (countersLocked) return;
     const currentCount = state?.[part]?.count || 0;
     const nextCount = currentCount + delta;
-    if (delta > 0) playTikrarCount(nextCount, PASS_THRESHOLD);
+    if (delta > 0) {
+      if (currentCount < PASS_THRESHOLD && nextCount >= PASS_THRESHOLD) playTikrarDone();
+      else playTikrarTap();
+    }
     if (delta < 0) {
       if (!canUndo?.(part)) return;
       onUndo?.(part);
     }
     onIncrement((p: any) => {
-      const minFloor = getMinCount ? getMinCount(part) : 0;
+      const minFloor = delta < 0 && getMinCount ? getMinCount(part) : 0;
       return {
         ...p,
         [id]: {
           ...p[id],
           [part]: {
-            // Boleh lebih sampai berapa saja, bila langkah berikutnya sudah dimulai minimal minFloor
+            // Penambahan (+1 / +5) selalu naik dari posisi saat ini; minFloor hanya berlaku saat pengurangan (-1)
             count: Math.max(minFloor, (p[id]?.[part]?.count || 0) + delta),
           },
         },
@@ -3745,20 +3804,21 @@ function MaqtaCard({
 
         <div id={`step-${id}.combined`} className="flex flex-col gap-1.5 shrink-0 scroll-mt-24">
           <div className="relative">
-          <Button
-            type="button"
-            onClick={() => addSubCount('combined', 1)}
+          <LongPressCounterButton
             disabled={isCombinedLocked}
+            onStep={(delta) => addSubCount('combined', delta)}
             className={cn(
-              'w-full h-20 flex-col rounded-2xl font-black uppercase tracking-widest py-2 transition-all relative touch-manipulation select-none active:scale-[0.97]',
+              'w-full min-h-[5rem] h-auto flex flex-col items-center justify-center rounded-2xl font-black uppercase tracking-wider py-2.5 px-3 transition-all relative touch-manipulation select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50',
               stepInfoFor?.('combined')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
               isDoneG
                 ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg'
                 : 'bg-[#6D123F] text-white hover:bg-[#6D123F]/90'
             )}
           >
-            <span className="text-[10px] flex items-center gap-1 leading-none opacity-80 mb-1">
-              {isCombinedLocked ? <Lock className="w-3 h-3" /> : null} GABUNG TM {id} (BLOK {letter}) • {isDoneG ? '+1 LAGI' : 'KETUK +1'}
+            <span className="text-[9.5px] sm:text-[10px] flex flex-wrap items-center justify-center gap-x-1 leading-tight opacity-85 mb-1 text-center">
+              {isCombinedLocked ? <Lock className="w-3 h-3 shrink-0" /> : null}
+              <span>GABUNG TM {id} (BLOK {letter})</span>
+              <span>• {isDoneG ? '+1 LAGI' : 'KETUK +1'} • TAHAN +5</span>
             </span>
             <span className="text-2xl leading-none">
               {state.combined.count} <span className="text-sm opacity-70">/ {PASS_THRESHOLD}</span>
@@ -3768,7 +3828,7 @@ function MaqtaCard({
                 <CheckCircle2 className="w-5 h-5 text-black" />
               </div>
             )}
-          </Button>
+          </LongPressCounterButton>
           </div>
           {(canUndo?.('combined') || (state.combined.count > 0 && canReset && !isLocked && onResetCounter)) && (
             <div className="flex items-center justify-center gap-1.5">
@@ -3860,26 +3920,27 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
         </div>
         <div className="flex-1 sm:flex-none sm:w-40 flex flex-col gap-1.5">
           <div className="relative">
-            <Button
-              type="button"
-              onClick={() => {
-                playTikrarCount(count + 1, threshold);
-                onIncrement(1);
-              }}
+            <LongPressCounterButton
+              onStep={(delta) => onIncrement(delta)}
               disabled={isLocked}
               className={cn(
-                'h-16 w-full rounded-2xl p-0 font-black text-xl transition-all shadow-md touch-manipulation select-none active:scale-[0.95]',
+                'h-16 w-full rounded-2xl p-0 font-black transition-all shadow-md touch-manipulation select-none active:scale-[0.95] flex flex-col items-center justify-center disabled:pointer-events-none disabled:opacity-50',
                 !isLocked && stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
                 isDone
                   ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 border-none'
                   : 'bg-[#6D123F] text-white hover:bg-[#6D123F]/90'
               )}
             >
-              <span className="flex items-center justify-center gap-1.5">
+              <span className="flex items-center justify-center gap-1.5 text-xl leading-none">
                 {isDone && <Check className="w-5 h-5 stroke-[3]" />}
                 +1
               </span>
-            </Button>
+              {!isLocked && (
+                <span className="text-[9px] font-bold opacity-80 leading-none mt-1 tracking-wide">
+                  Tahan +5
+                </span>
+              )}
+            </LongPressCounterButton>
           </div>
           {(canUndo || (count > 0 && canReset && onReset)) && (
             <div className="flex items-center justify-center gap-1.5">
@@ -3914,6 +3975,132 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
   );
 }
 
+function LongPressCounterButton({
+  disabled,
+  onStep,
+  initialDelayMs = 450,
+  repeatIntervalMs = 220,
+  className,
+  children,
+  onPointerDown,
+  onPointerUp,
+  onPointerLeave,
+  onPointerCancel,
+  onBlur,
+  onContextMenu,
+  ...rest
+}: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
+  onStep: (delta: number) => void;
+  initialDelayMs?: number;
+  repeatIntervalMs?: number;
+}) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resetClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPressRef = useRef(false);
+  const onStepRef = useRef(onStep);
+  const disabledRef = useRef(disabled);
+
+  onStepRef.current = onStep;
+  disabledRef.current = disabled;
+
+  const clearTimers = useCallback(() => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (disabled) clearTimers();
+  }, [disabled, clearTimers]);
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+      if (resetClickTimerRef.current !== null) clearTimeout(resetClickTimerRef.current);
+    };
+  }, [clearTimers]);
+
+  const stopAndScheduleClickReset = () => {
+    clearTimers();
+    if (didLongPressRef.current) {
+      if (resetClickTimerRef.current !== null) clearTimeout(resetClickTimerRef.current);
+      resetClickTimerRef.current = setTimeout(() => {
+        didLongPressRef.current = false;
+      }, 120);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onPointerDown={(e) => {
+        onPointerDown?.(e);
+        if (disabledRef.current) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (resetClickTimerRef.current !== null) {
+          clearTimeout(resetClickTimerRef.current);
+          resetClickTimerRef.current = null;
+        }
+        clearTimers();
+        didLongPressRef.current = false;
+        timerRef.current = setTimeout(() => {
+          if (disabledRef.current) return;
+          didLongPressRef.current = true;
+          onStepRef.current(5);
+          intervalRef.current = setInterval(() => {
+            if (disabledRef.current) {
+              clearTimers();
+              return;
+            }
+            onStepRef.current(5);
+          }, repeatIntervalMs);
+        }, initialDelayMs);
+      }}
+      onPointerUp={(e) => {
+        onPointerUp?.(e);
+        stopAndScheduleClickReset();
+      }}
+      onPointerLeave={(e) => {
+        onPointerLeave?.(e);
+        stopAndScheduleClickReset();
+      }}
+      onPointerCancel={(e) => {
+        onPointerCancel?.(e);
+        stopAndScheduleClickReset();
+      }}
+      onBlur={(e) => {
+        onBlur?.(e);
+        stopAndScheduleClickReset();
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e);
+      }}
+      onClick={(e) => {
+        if (disabledRef.current) return;
+        if (didLongPressRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          didLongPressRef.current = false;
+          return;
+        }
+        onStepRef.current(1);
+      }}
+      className={className}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
 function CounterBox({ id: customId, label, count, isLocked, onInc, color, threshold, canUndo, canReset, onReset, stepInfo }: any) {
   const isDone = count >= threshold;
   const themes: any = {
@@ -3928,10 +4115,9 @@ function CounterBox({ id: customId, label, count, isLocked, onInc, color, thresh
   return (
     <div id={elementId} className="flex flex-col gap-1.5 scroll-mt-24">
     <div className="relative">
-    <button
-      type="button"
+    <LongPressCounterButton
       disabled={isLocked}
-      onClick={() => onInc(1)}
+      onStep={(delta) => onInc(delta)}
       className={cn(
         'rounded-2xl border-2 flex flex-col items-center justify-center transition-all relative px-2 py-3 min-h-[88px] w-full shadow-sm gap-1 touch-manipulation select-none',
         isLocked ? 'opacity-50 grayscale cursor-not-allowed bg-muted shadow-none' : themes[color],
@@ -3947,14 +4133,14 @@ function CounterBox({ id: customId, label, count, isLocked, onInc, color, thresh
         <span className="text-xs font-bold opacity-50">/ {threshold}</span>
       </div>
       {!isLocked && (
-        <span className="text-[10px] font-black opacity-70 leading-none">
-          {isDone ? '+1 LAGI' : 'KETUK +1'}
+        <span className="text-[9px] sm:text-[10px] font-black opacity-75 leading-tight text-center">
+          {isDone ? '+1 LAGI • TAHAN +5' : 'KETUK +1 • TAHAN +5'}
         </span>
       )}
 
       {isLocked && <Lock className="absolute top-2 right-2 w-3.5 h-3.5 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
-    </button>
+    </LongPressCounterButton>
     </div>
     {(canUndo || (count > 0 && canReset && onReset)) && (
       <div className="flex items-center justify-center gap-1.5 flex-wrap">
