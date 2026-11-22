@@ -248,9 +248,28 @@ export default function AdminTikrarPage() {
     };
   }, [tikrarParticipants, submissions]);
 
+  const pendingQueueList = useMemo(() => {
+    return (submissions || [])
+      .filter((s: any) => s.status === 'pending')
+      .slice()
+      .sort((a: any, b: any) => {
+        const ta = new Date(a.submitted_at || a.created_at || 0).getTime();
+        const tb = new Date(b.submitted_at || b.created_at || 0).getTime();
+        return ta - tb;
+      });
+  }, [submissions]);
+
+  const queuePositionMap = useMemo(() => {
+    const map = new Map<string, number>();
+    pendingQueueList.forEach((s: any, idx: number) => {
+      if (s?.id) map.set(s.id, idx + 1);
+    });
+    return map;
+  }, [pendingQueueList]);
+
   const filteredSubmissions = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return (submissions || []).filter((s: any) => {
+    const list = (submissions || []).filter((s: any) => {
       if (subStatusFilter !== 'all' && s.status !== subStatusFilter) return false;
       if (sessionFilter !== 'all' && s.halaqah_id !== sessionFilter) return false;
       if (!q) return true;
@@ -260,6 +279,14 @@ export default function AdminTikrarPage() {
       const pageStr = String(s.page_number || '');
       return name.includes(q) || email.includes(q) || pageStr.includes(q);
     });
+    if (subStatusFilter === 'pending') {
+      return list.slice().sort((a: any, b: any) => {
+        const ta = new Date(a.submitted_at || a.created_at || 0).getTime();
+        const tb = new Date(b.submitted_at || b.created_at || 0).getTime();
+        return ta - tb;
+      });
+    }
+    return list;
   }, [submissions, subStatusFilter, sessionFilter, searchTerm, userMap]);
 
   const filteredParticipants = useMemo(() => {
@@ -850,6 +877,90 @@ export default function AdminTikrarPage() {
             </CardContent>
           </Card>
 
+          {pendingQueueList.length > 0 && (
+            <Card className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 shadow-sm">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-800" />
+                    <h3 className="text-xs font-black uppercase tracking-wider text-amber-950">
+                      Antrean Tasmi&apos; Sedang Menunggu ({pendingQueueList.length} Thalibah)
+                    </h3>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => refreshSubmissions()}
+                    className="h-7 text-[11px] font-bold bg-white border-amber-300 text-amber-950"
+                  >
+                    Segarkan Antrean
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {pendingQueueList.map((qItem: any, idx: number) => {
+                    const p = userMap.get(qItem.user_id);
+                    const qName = qItem.user_name || p?.full_name || p?.username || 'Thalibah HI AQLI';
+                    const qHalaqah = qItem.halaqah_id ? halaqahMap.get(qItem.halaqah_id) : null;
+                    const qWa = normalizePhone(p?.whatsapp || p?.phone);
+                    return (
+                      <div
+                        key={qItem.id}
+                        className="flex items-center justify-between gap-2 bg-white border border-amber-200 rounded-xl p-2.5 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-7 h-7 rounded-lg bg-[#6D123F] text-white font-black text-xs flex items-center justify-center shrink-0">
+                            #{idx + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-black text-slate-900 truncate">{qName}</p>
+                            <p className="text-[11px] text-slate-600 truncate">
+                              Juz {qItem.juz} • Hal. {qItem.page_number}
+                              {qHalaqah?.title ? ` • ${String(qHalaqah.title).replace('Hi Tikrar - ', '')}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {qWa && (
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[10px] font-bold border-emerald-200 text-emerald-700"
+                            >
+                              <a
+                                href={`https://wa.me/${qWa}?text=${encodeURIComponent(
+                                  `Assalamu'alaikum ${TIKRAR_WA_SALUTATION} ${qName}, silakan bersiap untuk giliran setoran tasmi' Live Zoom Halaman ${qItem.page_number} ya.`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                WA
+                              </a>
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => {
+                              setSubStatusFilter('pending');
+                              setTimeout(() => {
+                                document.getElementById(`sub-card-${qItem.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }, 80);
+                            }}
+                            className="h-7 px-2.5 text-[10px] font-black bg-[#6D123F] hover:bg-[#580e33] text-white rounded-lg"
+                          >
+                            Simak
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {loadingSubmissions ? (
             <Card className="border-none shadow-sm bg-white">
               <CardContent className="p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -893,15 +1004,22 @@ export default function AdminTikrarPage() {
                 const notifyWa = notifyWaMap[sub.id] ?? Boolean(waNumber);
                 const isRowBusy = verifyingKey?.startsWith(`${sub.id}:`);
 
+                const queuePos = queuePositionMap.get(sub.id);
                 return (
                   <Card
                     key={sub.id}
+                    id={`sub-card-${sub.id}`}
                     className="border border-slate-200 shadow-sm bg-white rounded-2xl overflow-hidden"
                   >
                     <CardContent className="p-5 space-y-4">
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2 flex-wrap">
+                            {sub.status === 'pending' && queuePos && (
+                              <Badge className="bg-[#6D123F] text-white font-black text-[10px] uppercase">
+                                Antrean #{queuePos}
+                              </Badge>
+                            )}
                             <Badge className="bg-[#800000] text-white font-black text-[10px] uppercase">
                               Juz {sub.juz} • Halaman {sub.page_number}
                             </Badge>

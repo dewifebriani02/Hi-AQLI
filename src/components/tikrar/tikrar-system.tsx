@@ -290,6 +290,9 @@ export function TikrarSystem({
   const { fontSize } = useFontSize();
   const [hasInitializedPage, setHasInitializedPage] = useState(false);
   const [isRequestingExam, setIsRequestingExam] = useState(false);
+  const [tasmiQueue, setTasmiQueue] = useState<any[]>([]);
+  const [serverMySubmissions, setServerMySubmissions] = useState<any[] | null>(null);
+  const [loadingTasmiQueue, setLoadingTasmiQueue] = useState(false);
 
   const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
 
@@ -425,16 +428,13 @@ export function TikrarSystem({
   const todayKey = useMemo(() => toDateKeyWIB(), []);
   // Target aktif dari Target & Jadwal: menentukan rentang halaman & gerbang ujian 30 soal
   const activeTarget = summary?.target || null;
-  const juzPageRange = useMemo(
-    () => getJuzPageRange(activeTarget?.juz ?? juz),
-    [activeTarget, juz]
-  );
+  const juzPageRange = useMemo(() => getJuzPageRange(juz), [juz]);
   const { startPage, endPage } = useMemo(
     () =>
-      activeTarget
+      activeTarget && juz === activeTarget.juz
         ? { startPage: activeTarget.startPage, endPage: activeTarget.endPage }
         : juzPageRange,
-    [activeTarget, juzPageRange]
+    [activeTarget, juz, juzPageRange]
   );
   const clearedPages = useMemo(
     () => new Set<number>([...(summary?.quizPassedPages || []), ...(summary?.tasmiPassedPages || [])]),
@@ -446,16 +446,41 @@ export function TikrarSystem({
     [summary?.priorMemorizedPages]
   );
   const isPriorMemorizedPage = priorMemorizedSet.has(page);
+  const fetchTasmiQueue = useCallback(async () => {
+    if (!user?.id) {
+      setTasmiQueue([]);
+      setServerMySubmissions(null);
+      return;
+    }
+    setLoadingTasmiQueue(true);
+    try {
+      const res = await authFetch('/api/tikrar/submissions');
+      const json = await res.json();
+      if (res.ok && json?.data) {
+        setTasmiQueue(Array.isArray(json.data.queue) ? json.data.queue : []);
+        setServerMySubmissions(Array.isArray(json.data.mySubmissions) ? json.data.mySubmissions : []);
+      }
+    } catch {
+      // ignore transient error
+    } finally {
+      setLoadingTasmiQueue(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchTasmiQueue();
+  }, [fetchTasmiQueue, refreshSignal]);
+
   const pageLockReason = useMemo(() => {
     if (!user) return null;
     if (!activeTarget) return 'Isi Target & Jadwal terlebih dahulu sebelum mulai berlatih.';
-    if (clearedPages.has(page)) return null;
+    if (clearedPages.has(page) || isPriorMemorizedPage) return null;
     if (page < activeTarget.startPage && page >= juzPageRange.startPage) return null;
     if (page > activeTarget.unlockedPage) {
       return `Halaman ${page} masih terkunci. Luluskan ujian ${QUIZ_QUESTION_COUNT} soal Halaman ${activeTarget.unlockedPage} terlebih dahulu.`;
     }
     return null;
-  }, [user, activeTarget, clearedPages, page, juzPageRange]);
+  }, [user, activeTarget, clearedPages, isPriorMemorizedPage, page, juzPageRange]);
   const lastQuizOnPage = useMemo(
     () => (summary?.recentQuizzes || []).find((q) => q.page === page) || null,
     [summary?.recentQuizzes, page]
@@ -472,6 +497,22 @@ export function TikrarSystem({
   const activeExam = useMemo(
     () => (userPageExams || []).find((e: any) => Number(e?.page_number) === page) || null,
     [userPageExams, page]
+  );
+
+  const effectiveSubmissions = serverMySubmissions ?? userSubmissions ?? [];
+  const activeSubmissionForPage = useMemo(() => {
+    const matching = effectiveSubmissions.filter((s: any) => Number(s?.page_number) === page);
+    if (matching.length === 0) return null;
+    return (
+      matching.find((s: any) => s.status === 'passed') ||
+      matching.find((s: any) => s.status === 'pending') ||
+      matching[0]
+    );
+  }, [effectiveSubmissions, page]);
+
+  const myPendingQueueEntry = useMemo(
+    () => tasmiQueue.find((q) => q.isMe && Number(q.pageNumber) === page) || null,
+    [tasmiQueue, page]
   );
 
   // Target Aktif di Juz Ini
@@ -1120,23 +1161,65 @@ export function TikrarSystem({
     if (!user || isRequestingExam) return;
     setIsRequestingExam(true);
     try {
-      await addDocumentNonBlocking('page_exams', {
-        user_id: user.id,
-        page_number: page,
-        score: 0,
-        passed: false,
-        created_at: new Date().toISOString(),
+      const res = await authFetch('/api/tikrar/submissions', {
+        method: 'POST',
+        body: JSON.stringify({
+          page_number: page,
+          blocks_range: 'blok_1_4',
+        }),
       });
-      const text = `Assalamu'alaikum Admin HI AQLI, saya ${
-        userData?.username || user.user_metadata?.full_name || 'Thalibah'
-      } telah tuntas Tikrar Halaman ${page} Juz ${juz}. Mohon jadwal ujian lisan. Syukron.`;
-      window.open(`https://wa.me/628567712914?text=${encodeURIComponent(text)}`, '_blank');
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error?.message || "Gagal mendaftarkan antrean tasmi'.");
+      }
+
+      const d = json.data || {};
+      if (Array.isArray(d.queue)) {
+        setTasmiQueue(d.queue);
+      } else {
+        fetchTasmiQueue();
+      }
+      if (d.submission) {
+        setServerMySubmissions((prev) => {
+          const base = prev ?? userSubmissions ?? [];
+          const filtered = base.filter((s: any) => s.id !== d.submission.id);
+          return [d.submission, ...filtered];
+        });
+      }
+      await refreshSubmissions();
+      onDataChanged?.();
+
+      const posLabel = d.queuePosition ? `Antrean #${d.queuePosition}` : 'Antrean Tasmi';
+      if (d.alreadyPassed) {
+        toast({
+          title: "Sudah Lulus Tasmi'",
+          description: `Halaman ${page} sudah tercatat lulus tasmi' oleh muallimah.`,
+        });
+      } else if (d.alreadyQueued) {
+        toast({
+          title: `Sudah Terdaftar (${posLabel})`,
+          description: `Halaman ${page} sudah berada di daftar antrean setoran tasmi'.`,
+        });
+      } else if (d.whatsappSent) {
+        toast({
+          title: `Masuk ${posLabel} & WA Admin Terkirim!`,
+          description: `Permohonan setoran Hal. ${page} otomatis masuk ke WhatsApp Admin HI AQLI dan daftar antrean.`,
+        });
+      } else {
+        toast({
+          title: `Masuk ${posLabel}`,
+          description: 'Membuka WhatsApp Admin HI AQLI sebagai konfirmasi cadangan...',
+        });
+        if (d.adminWaUrl) {
+          window.open(d.adminWaUrl, '_blank');
+        }
+      }
+    } catch (err: any) {
       toast({
-        title: 'Permohonan Dikirim',
-        description: 'Admin HI AQLI akan segera menjadwalkan ujian lisan Ukhti.',
+        variant: 'destructive',
+        title: "Gagal Mengajukan Tasmi'",
+        description: err?.message || 'Silakan coba lagi.',
       });
-    } catch {
-      toast({ variant: 'destructive', title: 'Gagal mengajukan ujian' });
     } finally {
       setIsRequestingExam(false);
     }
@@ -1565,8 +1648,14 @@ export function TikrarSystem({
             {Array.from({ length: juzPageRange.endPage - juzPageRange.startPage + 1 }, (_, idx) => {
               const pNum = juzPageRange.startPage + idx;
               const pCleared = clearedPages.has(pNum);
-              const isPriorPage = Boolean(activeTarget) && pNum < activeTarget!.startPage;
-              const pLocked = Boolean(activeTarget) && !pCleared && !isPriorPage && pNum > (activeTarget?.unlockedPage || 0);
+              const isPriorPage =
+                priorMemorizedSet.has(pNum) ||
+                (Boolean(activeTarget) && juz === activeTarget!.juz && pNum < activeTarget!.startPage);
+              const pLocked =
+                Boolean(activeTarget) &&
+                !pCleared &&
+                !isPriorPage &&
+                (juz !== activeTarget!.juz || pNum > (activeTarget?.unlockedPage || 0));
               return (
                 <option key={pNum} value={pNum}>
                   {pCleared ? '★ ' : isPriorPage ? '✓ ' : pLocked ? '🔒 ' : ''}Hal. {pNum}
@@ -1597,12 +1686,15 @@ export function TikrarSystem({
 
         {/* Baris 2 Audio & Quick Action */}
         <div className="flex items-center justify-between md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 flex-nowrap min-w-0">
-          {page !== recommendedPage && (
+          {activeTarget && (juz !== activeTarget.juz || page !== recommendedPage) && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setPage(recommendedPage)}
+              onClick={() => {
+                if (activeTarget) setJuz(activeTarget.juz);
+                setPage(recommendedPage);
+              }}
               className="h-9 px-2 sm:px-2.5 text-[11px] sm:text-xs font-black text-[#6D123F] hover:bg-[#6D123F]/10 truncate"
             >
               Ke Hal. {recommendedPage} →
@@ -2171,15 +2263,15 @@ export function TikrarSystem({
               <div id="step-quiz" className={cn('rounded-xl', stepInfo('quiz')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2 p-2')}>
                 <StepTag info={stepInfo('quiz')} />
               </div>
-              {!isMetaTuntas('1_2_3_4') && !isPriorMemorizedPage ? (
+              {!isMetaTuntas('1_2_3_4') && !isPriorMemorizedPage && !clearedPages.has(page) && !isSelectedPageCleared ? (
                 <Card className="border-2 border-dashed bg-muted py-10">
                   <CardContent className="flex flex-col items-center justify-center text-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-dashed">
                       <Lock className="w-6 h-6 text-muted-foreground" />
                     </div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[240px]">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest max-w-[260px]">
                       Selesaikan repetisi gabungan seluruh halaman (A–D min. 5x) untuk membuka
-                      simulasi &amp; ujian halaman.
+                      ujian halaman 30 soal &amp; setoran Tasmi&apos; ke muallimah.
                     </p>
                   </CardContent>
                 </Card>
@@ -2218,55 +2310,203 @@ export function TikrarSystem({
                       </Button>
                     </CardContent>
                   </Card>
-                  <Card
-                    className={cn(
-                      'border-none shadow-xl overflow-hidden transition-all border-b-4',
-                      activeExam
-                        ? 'bg-[#6D123F] text-white border-white'
-                        : 'bg-white text-[#6D123F] border-[#D4AF37] border-2'
-                    )}
-                  >
-                    <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
-                      <div className="space-y-2">
-                        <div className="w-12 h-12 rounded-2xl bg-[#6D123F]/10 flex items-center justify-center mb-4">
-                          {activeExam ? (
-                            <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" />
-                          ) : (
-                            <MessageSquare className="w-6 h-6 text-[#6D123F]" />
-                          )}
-                        </div>
-                        <h5 className="text-lg font-black leading-tight uppercase">
-                          {activeExam
-                            ? activeExam.passed
-                              ? "Tasmi' Lulus"
-                              : "Tasmi' Diajukan"
-                            : "Setoran Tasmi' ke Muallimah"}
-                        </h5>
-                        <p className="text-[11px] opacity-80 leading-relaxed">
-                          {activeExam
-                            ? `Status: ${activeExamStatusLabel}.`
-                            : "Tasmi' dinilai & diisi oleh muallimah. Tidak mengunci halaman berikutnya, tetapi tercatat sebagai \"sudah diuji\" di Itqan 30 Juz."}
-                        </p>
-                      </div>
-                      {!activeExam && (
-                        <Button
-                          onClick={handleRequestExam}
-                          disabled={isRequestingExam}
-                          className="bg-[#6D123F] text-white font-black w-full rounded-xl hover:bg-[#6D123F]/90 h-12 shadow-lg"
-                        >
-                          {isRequestingExam ? (
-                            <Loader2 className="animate-spin" />
-                          ) : (
-                            <>
-                              <Zap className="mr-2 w-4 h-4 fill-current text-[#D4AF37]" /> HUBUNGI MUALLIMAH
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
+                  {(() => {
+                    const isSubPassed =
+                      activeSubmissionForPage?.status === 'passed' ||
+                      Boolean(activeExam?.passed) ||
+                      Boolean(summary?.tasmiPassedPages?.includes(page));
+                    const isSubPending = !isSubPassed && (activeSubmissionForPage?.status === 'pending' || Boolean(activeExam && !activeExam.passed));
+                    const isSubRevision = !isSubPassed && activeSubmissionForPage?.status === 'needs_revision';
+                    const gradeLabel = activeSubmissionForPage?.grade
+                      ? TIKRAR_GRADE_LABELS[activeSubmissionForPage.grade] || activeSubmissionForPage.grade
+                      : null;
+                    const manualWaUrl = `https://wa.me/628567712914?text=${encodeURIComponent(
+                      `Assalamu'alaikum Admin HI AQLI, saya ${userData?.full_name || userData?.username || 'Thalibah'} sudah masuk antrean Setoran Tasmi' Halaman ${page} (Juz ${juz}). Mohon izin konfirmasi jadwal.`
+                    )}`;
+
+                    return (
+                      <Card
+                        className={cn(
+                          'border-none shadow-xl overflow-hidden transition-all border-b-4',
+                          isSubPassed || isSubPending
+                            ? 'bg-[#6D123F] text-white border-[#D4AF37]'
+                            : isSubRevision
+                            ? 'bg-rose-50 text-rose-950 border-rose-400 border-2'
+                            : 'bg-white text-[#6D123F] border-[#D4AF37] border-2'
+                        )}
+                      >
+                        <CardContent className="p-6 flex flex-col justify-between h-full gap-6">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-2 mb-4">
+                              <div
+                                className={cn(
+                                  'w-12 h-12 rounded-2xl flex items-center justify-center',
+                                  isSubPassed || isSubPending ? 'bg-white/15' : 'bg-[#6D123F]/10'
+                                )}
+                              >
+                                {isSubPassed ? (
+                                  <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" />
+                                ) : isSubPending ? (
+                                  <Clock className="w-6 h-6 text-[#D4AF37]" />
+                                ) : (
+                                  <MessageSquare className="w-6 h-6 text-[#6D123F]" />
+                                )}
+                              </div>
+                              {isSubPending && myPendingQueueEntry && (
+                                <Badge className="bg-[#D4AF37] text-black font-black text-[10px] uppercase">
+                                  Antrean #{myPendingQueueEntry.queueNumber}
+                                </Badge>
+                              )}
+                              {isSubPassed && gradeLabel && (
+                                <Badge className="bg-emerald-400 text-stone-950 font-black text-[10px] uppercase">
+                                  {gradeLabel}
+                                </Badge>
+                              )}
+                            </div>
+                            <h5 className="text-lg font-black leading-tight uppercase">
+                              {isSubPassed
+                                ? "Tasmi' Lulus"
+                                : isSubPending
+                                ? "Dalam Antrean Tasmi'"
+                                : isSubRevision
+                                ? "Perlu Perbaikan Tasmi'"
+                                : "Setoran Tasmi' ke Muallimah"}
+                            </h5>
+                            <p className="text-[11px] opacity-85 leading-relaxed">
+                              {isSubPassed
+                                ? `Alhamdulillah, Halaman ${page} sudah disimak dan lulus tasmi' oleh ${activeSubmissionForPage?.musyrifah_name || 'Muallimah'}.`
+                                : isSubPending
+                                ? `Terdaftar di antrean simak Live Zoom${myPendingQueueEntry ? ` (urutan #${myPendingQueueEntry.queueNumber} dari ${tasmiQueue.length} menunggu)` : ''}. Notifikasi otomatis telah dikirim ke Admin HI AQLI.`
+                                : isSubRevision
+                                ? activeSubmissionForPage?.feedback ||
+                                  "Muallimah memberi catatan perbaikan tajwid/kelancaran. Silakan murajaah lalu ajukan tasmi' ulang."
+                                : "Saat diklik, permohonan otomatis masuk daftar Antrean Tasmi' & langsung mengirim notifikasi ke WhatsApp Admin HI AQLI."}
+                            </p>
+                            {isSubPassed && activeSubmissionForPage?.feedback && (
+                              <p className="text-[11px] italic bg-white/10 rounded-lg px-2.5 py-1.5">
+                                &ldquo;{activeSubmissionForPage.feedback}&rdquo;
+                              </p>
+                            )}
+                          </div>
+
+                          {isSubPending ? (
+                            <div className="flex flex-wrap gap-2">
+                              {activeHalaqah?.zoom_link && !String(activeHalaqah.zoom_link).includes('hiaqli-tikrar-') && (
+                                <Button
+                                  asChild
+                                  className="bg-[#D4AF37] text-black font-black flex-1 rounded-xl hover:bg-[#D4AF37]/90 h-11 shadow-lg"
+                                >
+                                  <a href={activeHalaqah.zoom_link} target="_blank" rel="noopener noreferrer">
+                                    <Video className="mr-2 w-4 h-4" /> Buka Zoom Halaqah
+                                  </a>
+                                </Button>
+                              )}
+                              <Button
+                                asChild
+                                variant="outline"
+                                className="border-white/30 bg-white/10 text-white hover:bg-white/20 font-bold text-xs h-11 rounded-xl"
+                              >
+                                <a href={manualWaUrl} target="_blank" rel="noopener noreferrer">
+                                  <MessageCircle className="mr-1.5 w-4 h-4" /> Chat Admin WA
+                                </a>
+                              </Button>
+                            </div>
+                          ) : !isSubPassed ? (
+                            <Button
+                              onClick={handleRequestExam}
+                              disabled={isRequestingExam}
+                              className="bg-[#6D123F] text-white font-black w-full rounded-xl hover:bg-[#6D123F]/90 h-12 shadow-lg"
+                            >
+                              {isRequestingExam ? (
+                                <Loader2 className="animate-spin" />
+                              ) : (
+                                <>
+                                  <Zap className="mr-2 w-4 h-4 fill-current text-[#D4AF37]" />{' '}
+                                  {isSubRevision ? "AJUKAN TASMI' ULANG" : "HUBUNGI MUALLIMAH & MASUK ANTREAN"}
+                                </>
+                              )}
+                            </Button>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
                 </div>
               )}
+
+              {/* Daftar Antrean Setoran Tasmi' Saat Ini */}
+              <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#6D123F]" />
+                    <h5 className="text-xs font-black uppercase tracking-wider text-stone-900">
+                      Antrean Setoran Tasmi&apos; Saat Ini
+                    </h5>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 border-none text-[10px] font-black">
+                      {tasmiQueue.length} Thalibah Menunggu
+                    </Badge>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={fetchTasmiQueue}
+                      disabled={loadingTasmiQueue}
+                      className="h-7 px-2 text-[11px] font-bold text-[#6D123F]"
+                    >
+                      {loadingTasmiQueue ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Segarkan'}
+                    </Button>
+                  </div>
+                </div>
+                {tasmiQueue.length === 0 ? (
+                  <p className="text-xs text-stone-500 bg-stone-50 border border-dashed border-stone-200 rounded-xl p-3 text-center">
+                    Belum ada thalibah yang sedang menunggu di antrean tasmi&apos; saat ini.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {tasmiQueue.map((q) => (
+                      <div
+                        key={q.id}
+                        className={cn(
+                          'flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs',
+                          q.isMe
+                            ? 'bg-amber-50 border-[#D4AF37]'
+                            : 'bg-stone-50 border-stone-200/80'
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-6 h-6 rounded-lg bg-[#6D123F] text-white font-black text-[11px] flex items-center justify-center shrink-0">
+                            #{q.queueNumber}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-black text-stone-900 truncate">{q.name}</span>
+                              {q.isMe && (
+                                <Badge className="bg-[#6D123F] text-white text-[9px] font-black h-4 px-1.5">
+                                  Anda
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-stone-600 truncate">
+                              Juz {q.juz} • Hal. {q.pageNumber} (QS. {q.surahName})
+                              {q.halaqahTitle ? ` • ${String(q.halaqahTitle).replace('Hi Tikrar - ', '')}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-stone-500 shrink-0">
+                          {new Date(q.submittedAt).toLocaleString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

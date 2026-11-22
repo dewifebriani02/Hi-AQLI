@@ -296,6 +296,14 @@ export function TikrarPriorHafalanForm({ onSaved }: { onSaved?: () => void }) {
                     </Button>
                   )}
                   <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="h-9 border-[#6D123F]/30 text-[#6D123F] hover:bg-[#6D123F]/5 text-[11px] font-black rounded-xl"
+                  >
+                    <Link href={`/tikrar?page=${r.start}`}>Setor Tasmi&apos;</Link>
+                  </Button>
+                  <Button
                     type="button"
                     variant="ghost"
                     size="icon"

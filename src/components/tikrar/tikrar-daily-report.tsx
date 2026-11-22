@@ -138,6 +138,25 @@ export function TikrarDailyReport({
 
   // Progres real-time dari tabel tikrar_user_progress (menampung repetisi sub-blok A-1, A-2, dst.)
   const [allUserProgress, setAllUserProgress] = useState<any[]>([]);
+  const [tasmiQueue, setTasmiQueue] = useState<any[]>([]);
+
+  const fetchTasmiQueue = useCallback(async () => {
+    if (!user?.id) {
+      setTasmiQueue([]);
+      return;
+    }
+    try {
+      const res = await authFetch('/api/tikrar/submissions');
+      const json = await res.json();
+      if (res.ok && Array.isArray(json?.data?.queue)) {
+        setTasmiQueue(json.data.queue);
+      }
+    } catch {}
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchTasmiQueue();
+  }, [fetchTasmiQueue, refreshSignal]);
 
   const fetchProgress = useCallback(async () => {
     if (!user?.id) return;
@@ -859,6 +878,45 @@ export function TikrarDailyReport({
               <span className="text-[11px] font-bold text-stone-500">
                 {(userSubmissions || []).length} Setoran
               </span>
+            </div>
+
+            <div className="rounded-lg bg-amber-50/80 border border-amber-200 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-700" /> Antrean Tasmi&apos; Berjalan
+                </span>
+                <Badge className="bg-amber-200 text-amber-950 hover:bg-amber-200 border-none text-[10px] font-black">
+                  {tasmiQueue.length} Menunggu
+                </Badge>
+              </div>
+              {tasmiQueue.length === 0 ? (
+                <p className="text-[11px] text-amber-900/80">
+                  Belum ada thalibah yang sedang mengantri setoran tasmi&apos;.
+                </p>
+              ) : (
+                <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                  {tasmiQueue.map((q) => (
+                    <div
+                      key={q.id}
+                      className={cn(
+                        'flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md border text-[11px]',
+                        q.isMe ? 'bg-white border-[#6D123F]/40 font-bold' : 'bg-white/70 border-amber-200/80'
+                      )}
+                    >
+                      <span className="truncate text-stone-900">
+                        <strong className="text-[#6D123F]">#{q.queueNumber}</strong> {q.name}
+                        {q.isMe ? ' (Anda)' : ''} • Juz {q.juz} Hal. {q.pageNumber}
+                      </span>
+                      <span className="text-[10px] text-stone-500 shrink-0">
+                        {new Date(q.submittedAt).toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {recentSubmissions.length === 0 ? (

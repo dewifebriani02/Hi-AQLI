@@ -22,6 +22,7 @@ import { TikrarSchedule } from '@/components/tikrar/tikrar-schedule';
 import { HifzProgressChart } from '@/components/progress/hifz-progress-chart';
 import { useDoc, useUser } from '@/db';
 import { useTikrarSummary } from '@/hooks/use-tikrar-summary';
+import { getJuzForPage } from '@/lib/tikrar-schedule-generator';
 import { Loader2, Lock } from 'lucide-react';
 
 export default function TikrarPage() {
@@ -57,11 +58,28 @@ export default function TikrarPage() {
     if (refreshSignal > 0 && user?.id) refreshUser();
   }, [refreshSignal, user?.id, refreshUser]);
 
+  // Baca query ?page=X bila datang dari link cepat (mis. daftar halaman hafalan lama / laporan)
+  const [hasAppliedUrlPage, setHasAppliedUrlPage] = useState(false);
+  useEffect(() => {
+    if (hasAppliedUrlPage || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const rawPage = Number(params.get('page'));
+    if (Number.isFinite(rawPage) && rawPage >= 1 && rawPage <= 604) {
+      const pNum = Math.floor(rawPage);
+      setMushafTarget({ page: pNum, juz: getJuzForPage(pNum), timestamp: Date.now() });
+      setActiveTab('mushaf');
+    }
+    setHasAppliedUrlPage(true);
+  }, [hasAppliedUrlPage]);
+
   // Thalibah baru wajib mengisi Target & Jadwal terlebih dahulu
   const [hasRoutedInitialTab, setHasRoutedInitialTab] = useState(false);
   useEffect(() => {
     if (hasRoutedInitialTab || isSummaryLoading || !user) return;
-    if (!activeTarget) setActiveTab('schedule');
+    const hasUrlPage =
+      typeof window !== 'undefined' &&
+      Number(new URLSearchParams(window.location.search).get('page')) >= 1;
+    if (!activeTarget && !hasUrlPage) setActiveTab('schedule');
     setHasRoutedInitialTab(true);
   }, [hasRoutedInitialTab, isSummaryLoading, user, activeTarget]);
 
