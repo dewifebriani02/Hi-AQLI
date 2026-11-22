@@ -2109,16 +2109,16 @@ export function TikrarSystem({
             </Button>
           )}
 
-          <div className="flex items-center flex-wrap justify-end gap-1.5 sm:gap-2 ml-auto">
+          <div className="flex items-center flex-nowrap sm:flex-wrap justify-end gap-1 sm:gap-2 ml-auto">
             <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-xl h-9 gap-1.5 px-2.5 sm:px-3 font-bold border-[#6D123F]/20 text-[#6D123F] min-w-0"
+                  className="rounded-xl h-9 gap-1 sm:gap-1.5 px-2 sm:px-3 font-bold border-[#6D123F]/20 text-[#6D123F] min-w-0"
                 >
-                  <Mic2 className="w-4 h-4 shrink-0" />
-                  <span className="max-w-[85px] sm:max-w-[130px] truncate text-xs">
+                  <Mic2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                  <span className="max-w-[75px] sm:max-w-[130px] truncate text-[11px] sm:text-xs">
                     {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
                   </span>
                 </Button>
@@ -2250,7 +2250,7 @@ export function TikrarSystem({
               setSoundOn(next);
               if (next) playTikrarTap();
             }}
-            className="h-9 px-2 sm:px-3 text-xs font-bold border-[#6D123F]/20 text-[#6D123F] shrink-0"
+            className="h-9 px-2 sm:px-3 text-[11px] sm:text-xs font-bold border-[#6D123F]/20 text-[#6D123F] shrink-0"
             title={soundOn ? 'Matikan bunyi counter' : 'Nyalakan bunyi counter'}
           >
             {soundOn ? <Volume2 className="w-3.5 h-3.5 mr-1" /> : <VolumeX className="w-3.5 h-3.5 mr-1" />}
@@ -2274,7 +2274,7 @@ export function TikrarSystem({
                 variant="outline"
                 size="sm"
                 disabled={isResetting}
-                className="h-9 px-2.5 text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                className="h-9 px-2 sm:px-2.5 text-[11px] sm:text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 shrink-0"
                 title="Reset counter hafalan"
               >
                 {isResetting ? (
