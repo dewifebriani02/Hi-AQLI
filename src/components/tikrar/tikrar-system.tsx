@@ -2005,9 +2005,9 @@ export function TikrarSystem({
       </Card>
 
       {/* Bar Navigasi Juz, Halaman & Audio */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 bg-white p-2.5 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-[#6D123F]/10">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 sm:gap-3 bg-white p-2.5 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-[#6D123F]/10">
         {/* Baris 1: Kontrol Halaman Terkunci 1 Baris (Juz, <, Hal, >) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 w-full md:w-auto flex-nowrap min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full lg:w-auto flex-nowrap min-w-0">
           <select
             aria-label="Pilih Juz"
             value={juz}
@@ -2093,7 +2093,7 @@ export function TikrarSystem({
         </div>
 
         {/* Baris 2 Audio & Quick Action */}
-        <div className="flex items-center justify-between md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 flex-wrap min-w-0">
+        <div className="flex items-center justify-between lg:justify-end gap-1.5 sm:gap-2 w-full lg:w-auto shrink-0 flex-wrap min-w-0">
           {activeTarget && (juz !== activeTarget.juz || page !== recommendedPage) && (
             <Button
               type="button"
@@ -2115,10 +2115,10 @@ export function TikrarSystem({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-xl h-9 gap-2 font-bold border-[#6D123F]/20 text-[#6D123F]"
+                  className="rounded-xl h-9 gap-1.5 px-2.5 sm:px-3 font-bold border-[#6D123F]/20 text-[#6D123F] min-w-0"
                 >
-                  <Mic2 className="w-4 h-4" />
-                  <span className="max-w-[140px] truncate text-xs">
+                  <Mic2 className="w-4 h-4 shrink-0" />
+                  <span className="max-w-[85px] sm:max-w-[130px] truncate text-xs">
                     {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
                   </span>
                 </Button>
@@ -2224,28 +2224,21 @@ export function TikrarSystem({
           <Button
             type="button"
             variant={globalShowVerses ? 'outline' : 'default'}
-            size="sm"
+            size="icon"
             onClick={() => {
               setGlobalShowVerses((v) => !v);
               setExamRevealSeq((s) => s + 1);
             }}
             className={cn(
-              'h-9 text-xs font-bold',
+              'h-9 w-9 shrink-0 rounded-xl',
               globalShowVerses
-                ? 'border-[#6D123F]/20 text-[#6D123F]'
+                ? 'border-[#6D123F]/20 text-[#6D123F] hover:bg-[#6D123F]/5'
                 : 'bg-stone-900 hover:bg-stone-800 text-white border-stone-900'
             )}
+            aria-label={globalShowVerses ? 'Sembunyikan teks ayat' : 'Tampilkan teks ayat'}
             title={globalShowVerses ? 'Sembunyikan teks ayat saat counter' : 'Tampilkan kembali teks ayat'}
           >
-            {globalShowVerses ? (
-              <>
-                <EyeOff className="w-3.5 h-3.5 mr-1.5" /> Sembunyikan Ayat
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5 mr-1.5" /> Tampilkan Ayat
-              </>
-            )}
+            {globalShowVerses ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </Button>
           <Button
             type="button"
@@ -2257,10 +2250,10 @@ export function TikrarSystem({
               setSoundOn(next);
               if (next) playTikrarTap();
             }}
-            className="h-9 text-xs font-bold border-[#6D123F]/20 text-[#6D123F]"
+            className="h-9 px-2 sm:px-3 text-xs font-bold border-[#6D123F]/20 text-[#6D123F] shrink-0"
             title={soundOn ? 'Matikan bunyi counter' : 'Nyalakan bunyi counter'}
           >
-            {soundOn ? <Volume2 className="w-3.5 h-3.5 mr-1.5" /> : <VolumeX className="w-3.5 h-3.5 mr-1.5" />}
+            {soundOn ? <Volume2 className="w-3.5 h-3.5 mr-1" /> : <VolumeX className="w-3.5 h-3.5 mr-1" />}
             Bunyi {soundOn ? 'On' : 'Off'}
           </Button>
           {onOpenScheduleTab && (
@@ -3707,44 +3700,45 @@ function MaqtaCard({
           ) : (
             <>
           {/* Kontrol tampilan Per Kata & Terjemahan di dalam kotak atas */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-[10px] font-bold text-stone-600">
+          <div className="flex items-center justify-between gap-1.5 flex-nowrap">
+            <span className="text-[10px] font-bold text-stone-600 truncate min-w-0">
               Ketuk kata untuk arti
             </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1 shrink-0 flex-nowrap">
               <button
                 type="button"
                 onClick={() => setShowPerKata((v) => !v)}
                 className={cn(
-                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation',
+                  'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
                   showPerKata
                     ? 'bg-[#6D123F] text-white border-[#6D123F]'
                     : 'bg-white/80 text-[#6D123F] border-[#6D123F]/20 hover:bg-white'
                 )}
               >
-                <Languages className="w-3 h-3" />
+                <Languages className="w-3 h-3 shrink-0" />
                 Per Kata
               </button>
               <button
                 type="button"
                 onClick={() => setShowTranslation((v) => !v)}
                 className={cn(
-                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation',
+                  'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
                   showTranslation
                     ? 'bg-[#6D123F] text-white border-[#6D123F]'
                     : 'bg-white/80 text-[#6D123F] border-[#6D123F]/20 hover:bg-white'
                 )}
               >
-                <BookOpen className="w-3 h-3" />
+                <BookOpen className="w-3 h-3 shrink-0" />
                 Terjemah
               </button>
               <button
                 type="button"
                 onClick={() => setRevealInExam(false)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border bg-stone-900 text-white border-stone-900 hover:bg-stone-800 transition-colors touch-manipulation"
+                aria-label="Sembunyikan teks ayat blok ini"
+                title="Sembunyikan teks ayat"
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border bg-stone-900 text-white border-stone-900 hover:bg-stone-800 transition-colors touch-manipulation shrink-0"
               >
-                <EyeOff className="w-3 h-3" />
-                Sembunyikan
+                <EyeOff className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
