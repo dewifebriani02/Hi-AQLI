@@ -18,6 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { QURAN_CHAPTERS } from '@/lib/quran-data';
 import { SURAH_START_PAGES } from '@/lib/quran-mapping';
@@ -41,6 +49,7 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   Clock,
   ExternalLink,
@@ -94,8 +103,11 @@ export function TikrarDailyReport({
   const target = summary?.target || null;
   const { user } = useUser();
   const { toast } = useToast();
-  const [confirmResetAllOpen, setConfirmResetAllOpen] = useState(false);
-  const [isResettingAll, setIsResettingAll] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetMode, setResetMode] = useState<'page' | 'juz'>('page');
+  const [selectedResetPage, setSelectedResetPage] = useState<number>(582);
+  const [selectedResetJuz, setSelectedResetJuz] = useState<number>(30);
+  const [isResetting, setIsResetting] = useState(false);
   const { data: userData, refresh: refreshUser } = useDoc<any>(user?.id ? 'users' : null, user?.id);
 
   const halaqahOptions = useMemo(
@@ -194,41 +206,6 @@ export function TikrarDailyReport({
     fetchProgress();
   }, [fetchProgress, refreshSignal]);
 
-  const handleResetAllPages = async () => {
-    if (!user?.id || isResettingAll) return;
-    setIsResettingAll(true);
-    try {
-      const res = await authFetch('/api/tikrar/progress/reset', {
-        method: 'POST',
-        body: JSON.stringify({ scope: 'all' }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json.error) {
-        throw new Error(json.error?.message || 'Gagal mereset counter semua halaman.');
-      }
-      if (typeof window !== 'undefined') {
-        Object.keys(localStorage)
-          .filter((k) => k.startsWith('tikrar_progress_p'))
-          .forEach((k) => localStorage.removeItem(k));
-      }
-      await Promise.all([fetchProgress(), refreshLogs(), refreshSchedules(), refreshUser()]);
-      onDataChanged?.();
-      toast({
-        title: 'Semua Counter Direset',
-        description: 'Seluruh counter pengulangan di semua halaman telah dikembalikan ke 0.',
-      });
-      setConfirmResetAllOpen(false);
-    } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Reset Semua Halaman',
-        description: err?.message || 'Silakan coba lagi.',
-      });
-    } finally {
-      setIsResettingAll(false);
-    }
-  };
-
   useEffect(() => {
     if (refreshSignal > 0 && user?.id) {
       refreshUser();
@@ -303,6 +280,163 @@ export function TikrarDailyReport({
     }
     return startPage;
   }, [target, todayScheduledItems, userCurrPage, startPage, endPage]);
+
+  const progressByPageMap = useMemo(() => {
+    const map = new Map<number, { totalProgress: number; hasActivity: boolean }>();
+    (allUserProgress || []).forEach((p: any) => {
+      const pageNum = Number(p?.page_number);
+      if (!Number.isFinite(pageNum) || pageNum < 1 || pageNum > 604) return;
+      const bObj = typeof p?.blocks === 'object' && p?.blocks !== null ? p.blocks : {};
+      const mObj = typeof p?.meta_counts === 'object' && p?.meta_counts !== null ? p.meta_counts : {};
+      const hasBlockCount = [1, 2, 3, 4].some(
+        (b) =>
+          Number(bObj[b]?.listen?.count) > 0 ||
+          Number(bObj[b]?.a?.count) > 0 ||
+          Number(bObj[b]?.b?.count) > 0 ||
+          Number(bObj[b]?.combined?.count) > 0
+      );
+      const hasMetaCount = Object.values(mObj).some((v) => Number(v) > 0);
+      const totalProg = Number(p?.total_progress) || 0;
+      const hasActivity =
+        totalProg > 0 ||
+        Number(p?.prep_listen_count) > 0 ||
+        Boolean(p?.prep_translation_done) ||
+        hasBlockCount ||
+        hasMetaCount;
+      map.set(pageNum, { totalProgress: totalProg, hasActivity });
+    });
+    (userLogs || []).forEach((l: any) => {
+      const pageNum = Number(l?.page_number);
+      if (!Number.isFinite(pageNum) || pageNum < 1 || pageNum > 604 || !l?.completed) return;
+      const existing = map.get(pageNum);
+      if (!existing || !existing.hasActivity) {
+        map.set(pageNum, { totalProgress: existing?.totalProgress || 0, hasActivity: true });
+      }
+    });
+    return map;
+  }, [allUserProgress, userLogs]);
+
+  const resetPageOptions = useMemo(() => {
+    const activeJuzRange = getJuzPageRange(activeJuz);
+    const pageSet = new Set<number>([recommendedPage]);
+    for (let p = activeJuzRange.startPage; p <= activeJuzRange.endPage; p++) {
+      pageSet.add(p);
+    }
+    for (let p = startPage; p <= endPage; p++) {
+      pageSet.add(p);
+    }
+    progressByPageMap.forEach((info, p) => {
+      if (info.hasActivity) pageSet.add(p);
+    });
+    return Array.from(pageSet)
+      .sort((a, b) => a - b)
+      .map((p) => {
+        const info = progressByPageMap.get(p);
+        return {
+          page: p,
+          surah: getSurahNameForPage(p),
+          isActive: p === recommendedPage,
+          totalProgress: info?.totalProgress || 0,
+          hasActivity: Boolean(info?.hasActivity),
+        };
+      });
+  }, [activeJuz, startPage, endPage, recommendedPage, progressByPageMap]);
+
+  const resetJuzOptions = useMemo(() => {
+    return Array.from({ length: 30 }, (_, idx) => {
+      const juzNum = idx + 1;
+      const range = getJuzPageRange(juzNum);
+      let pagesWithProgress = 0;
+      for (let p = range.startPage; p <= range.endPage; p++) {
+        if (progressByPageMap.get(p)?.hasActivity) pagesWithProgress += 1;
+      }
+      return {
+        juz: juzNum,
+        startPage: range.startPage,
+        endPage: range.endPage,
+        isActive: juzNum === activeJuz,
+        pagesWithProgress,
+      };
+    });
+  }, [activeJuz, progressByPageMap]);
+
+  const selectedJuzRange = useMemo(
+    () => getJuzPageRange(selectedResetJuz),
+    [selectedResetJuz]
+  );
+
+  const openResetDialog = (mode: 'page' | 'juz') => {
+    setResetMode(mode);
+    setSelectedResetPage(recommendedPage);
+    setSelectedResetJuz(activeJuz);
+    setResetDialogOpen(true);
+  };
+
+  const handleResetScope = async () => {
+    if (!user?.id || isResetting) return;
+    setIsResetting(true);
+    try {
+      if (resetMode === 'page') {
+        const targetPage = Math.max(1, Math.min(604, Math.floor(Number(selectedResetPage) || recommendedPage)));
+        const targetJuz = getJuzForPage(targetPage);
+        const res = await authFetch('/api/tikrar/progress/reset', {
+          method: 'POST',
+          body: JSON.stringify({
+            scope: 'page',
+            page_number: targetPage,
+            juz: targetJuz,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.error) {
+          throw new Error(json.error?.message || `Gagal mereset counter Halaman ${targetPage}.`);
+        }
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(`tikrar_progress_p${targetPage}`);
+        }
+        await Promise.all([fetchProgress(), refreshLogs(), refreshSchedules(), refreshUser()]);
+        onDataChanged?.();
+        toast({
+          title: `Counter Halaman ${targetPage} Direset`,
+          description: `Semua counter pengulangan dan catatan pada Halaman ${targetPage} telah dikembalikan ke 0.`,
+        });
+      } else {
+        const targetJuz = Math.max(1, Math.min(30, Math.floor(Number(selectedResetJuz) || activeJuz)));
+        const juzRange = getJuzPageRange(targetJuz);
+        const res = await authFetch('/api/tikrar/progress/reset', {
+          method: 'POST',
+          body: JSON.stringify({
+            scope: 'juz',
+            juz: targetJuz,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.error) {
+          throw new Error(json.error?.message || `Gagal mereset counter Juz ${targetJuz}.`);
+        }
+        if (typeof window !== 'undefined') {
+          for (let p = juzRange.startPage; p <= juzRange.endPage; p++) {
+            localStorage.removeItem(`tikrar_progress_p${p}`);
+          }
+        }
+        await Promise.all([fetchProgress(), refreshLogs(), refreshSchedules(), refreshUser()]);
+        onDataChanged?.();
+        toast({
+          title: `Counter Juz ${targetJuz} Direset`,
+          description: `Seluruh counter pengulangan pada Juz ${targetJuz} (Hal. ${juzRange.startPage}–${juzRange.endPage}) telah dikembalikan ke 0.`,
+        });
+      }
+      setResetDialogOpen(false);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: resetMode === 'page' ? 'Gagal Reset Halaman' : 'Gagal Reset Juz',
+        description: err?.message || 'Silakan coba lagi.',
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const activeHalaqah = useMemo(() => {
     if (!tikrarHalaqahs || tikrarHalaqahs.length === 0) return null;
@@ -573,8 +707,8 @@ export function TikrarDailyReport({
     <Card className="border border-stone-200 bg-[#fdfbf7] shadow-md rounded-2xl overflow-hidden">
       <CardContent className="p-5 sm:p-6 space-y-6">
         {/* Header Rekap Pribadi & Shortcut ke Mushaf */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-[#6D123F] pb-4">
-          <div className="space-y-1">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b-2 border-[#6D123F] pb-4">
+          <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-black text-[#6D123F] tracking-widest uppercase">
                 REKAP PROGRES PRIBADI • JUZ {activeJuz} • HAL. {startPage}–{endPage}
@@ -629,21 +763,55 @@ export function TikrarDailyReport({
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {user && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isResettingAll}
-                onClick={() => setConfirmResetAllOpen(true)}
-                className="h-9 text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-              >
-                {isResettingAll ? (
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                )}
-                Reset Counter Semua Halaman
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isResetting}
+                    className="h-9 text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                  >
+                    {isResetting ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    Reset Counter
+                    <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 rounded-xl p-1.5">
+                  <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-wider text-stone-500 px-2 py-1">
+                    Pilih Cakupan Reset
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    onClick={() => openResetDialog('page')}
+                    className="rounded-lg text-xs font-bold text-stone-800 cursor-pointer gap-2 py-2 items-start"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span>Reset Per Halaman</span>
+                      <span className="text-[10px] font-medium text-stone-500">
+                        Default Hal. {recommendedPage} (atau pilih halaman)
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => openResetDialog('juz')}
+                    className="rounded-lg text-xs font-bold text-rose-700 focus:text-rose-800 focus:bg-rose-50 cursor-pointer gap-2 py-2 items-start"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span>Reset Per Juz</span>
+                      <span className="text-[10px] font-medium text-rose-600/80">
+                        Default Juz {activeJuz} (atau pilih juz)
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {onOpenScheduleTab && (
               <Button
@@ -1148,30 +1316,126 @@ export function TikrarDailyReport({
           </div>
         </div>
       </CardContent>
-      <AlertDialog open={confirmResetAllOpen} onOpenChange={(open) => { if (!open && !isResettingAll) setConfirmResetAllOpen(false); }}>
+      <AlertDialog open={resetDialogOpen} onOpenChange={(open) => { if (!open && !isResetting) setResetDialogOpen(false); }}>
         <AlertDialogContent className="rounded-2xl max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[#6D123F] font-black text-base">
-              Reset Counter Semua Halaman?
+              {resetMode === 'page' ? 'Reset Counter Per Halaman' : 'Reset Counter Per Juz'}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-stone-600 leading-relaxed">
-              Seluruh counter pengulangan di semua halaman (1–604) dan catatan progres harian akan dikembalikan ke 0. Status lulus ujian &amp; riwayat tasmi&apos; tetap aman.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-xs text-stone-600 leading-relaxed pt-1">
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-stone-100 rounded-xl">
+                  <button
+                    type="button"
+                    disabled={isResetting}
+                    onClick={() => setResetMode('page')}
+                    className={cn(
+                      'py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all',
+                      resetMode === 'page'
+                        ? 'bg-white text-[#6D123F] shadow-sm'
+                        : 'text-stone-600 hover:text-stone-900'
+                    )}
+                  >
+                    Per Halaman
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isResetting}
+                    onClick={() => setResetMode('juz')}
+                    className={cn(
+                      'py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all',
+                      resetMode === 'juz'
+                        ? 'bg-white text-rose-700 shadow-sm'
+                        : 'text-stone-600 hover:text-stone-900'
+                    )}
+                  >
+                    Per Juz
+                  </button>
+                </div>
+
+                {resetMode === 'page' ? (
+                  <div className="space-y-1.5">
+                    <label htmlFor="reset-page-select" className="block text-[11px] font-bold text-stone-700">
+                      Pilih Halaman yang Akan Direset:
+                    </label>
+                    <select
+                      id="reset-page-select"
+                      disabled={isResetting}
+                      value={selectedResetPage}
+                      onChange={(e) => setSelectedResetPage(Number(e.target.value))}
+                      className="w-full h-9 rounded-xl border border-stone-300 bg-white px-3 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#6D123F]/30"
+                    >
+                      {resetPageOptions.map((opt) => (
+                        <option key={opt.page} value={opt.page}>
+                          Hal. {opt.page} — {opt.surah}
+                          {opt.isActive ? ' (Halaman Aktif)' : ''}
+                          {opt.totalProgress > 0
+                            ? ` • ${opt.totalProgress}% progres`
+                            : opt.hasActivity
+                            ? ' • Ada progres'
+                            : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-stone-600 bg-amber-50/80 border border-amber-200 rounded-xl p-2.5">
+                      Semua counter (Simak, TM 1–4, dan gabungan antar blok) serta catatan harian pada{' '}
+                      <strong className="text-stone-900">
+                        Halaman {selectedResetPage} (QS. {getSurahNameForPage(selectedResetPage)})
+                      </strong>{' '}
+                      akan dikembalikan ke 0. Halaman lain, nilai ujian, &amp; riwayat tasmi&apos; tetap aman.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label htmlFor="reset-juz-select" className="block text-[11px] font-bold text-stone-700">
+                      Pilih Juz yang Akan Direset:
+                    </label>
+                    <select
+                      id="reset-juz-select"
+                      disabled={isResetting}
+                      value={selectedResetJuz}
+                      onChange={(e) => setSelectedResetJuz(Number(e.target.value))}
+                      className="w-full h-9 rounded-xl border border-stone-300 bg-white px-3 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+                    >
+                      {resetJuzOptions.map((opt) => (
+                        <option key={opt.juz} value={opt.juz}>
+                          Juz {opt.juz} (Hal. {opt.startPage}–{opt.endPage})
+                          {opt.isActive ? ' • Juz Aktif' : ''}
+                          {opt.pagesWithProgress > 0 ? ` • ${opt.pagesWithProgress} hal. ada progres` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-rose-900 bg-rose-50 border border-rose-200 rounded-xl p-2.5">
+                      Seluruh counter pengulangan dan catatan progres harian pada{' '}
+                      <strong>
+                        Juz {selectedResetJuz} (Hal. {selectedJuzRange.startPage}–{selectedJuzRange.endPage})
+                      </strong>{' '}
+                      akan dikembalikan ke 0. Juz lain, nilai ujian, &amp; riwayat tasmi&apos; tetap aman.
+                    </p>
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel disabled={isResettingAll} className="rounded-xl text-xs font-bold">
+            <AlertDialogCancel disabled={isResetting} className="rounded-xl text-xs font-bold">
               Batal
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={isResettingAll}
+              disabled={isResetting}
               onClick={(e) => {
                 e.preventDefault();
-                handleResetAllPages();
+                handleResetScope();
               }}
-              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black gap-1.5"
+              className={cn(
+                'rounded-xl text-white text-xs font-black gap-1.5',
+                resetMode === 'page'
+                  ? 'bg-amber-600 hover:bg-amber-700'
+                  : 'bg-rose-600 hover:bg-rose-700'
+              )}
             >
-              {isResettingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-              Ya, Reset Semua ke 0
+              {isResetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+              {resetMode === 'page' ? `Ya, Reset Hal. ${selectedResetPage}` : `Ya, Reset Juz ${selectedResetJuz}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1449,7 +1449,7 @@ export function TikrarSystem({
   };
 
   const [resetConfirm, setResetConfirm] = useState<{
-    scope: 'all' | 'page' | 'block' | 'counter';
+    scope: 'juz' | 'page' | 'block' | 'counter';
     block?: 1 | 2 | 3 | 4;
     key?: string;
     title: string;
@@ -1484,11 +1484,12 @@ export function TikrarSystem({
       skipNextDbSyncRef.current = true;
       playTikrarUndo();
 
-      if (targetReset.scope === 'all') {
+      if (targetReset.scope === 'juz') {
+        const range = getJuzPageRange(juz);
         if (typeof window !== 'undefined') {
-          Object.keys(localStorage)
-            .filter((k) => k.startsWith('tikrar_progress_p'))
-            .forEach((k) => localStorage.removeItem(k));
+          for (let p = range.startPage; p <= range.endPage; p++) {
+            localStorage.removeItem(`tikrar_progress_p${p}`);
+          }
         }
         setPrepListenCount(0);
         setPrepTranslationDone(false);
@@ -1599,8 +1600,8 @@ export function TikrarSystem({
       toast({
         title: 'Counter Berhasil Direset',
         description:
-          targetReset.scope === 'all'
-            ? 'Semua counter di seluruh halaman telah dikembalikan ke 0.'
+          targetReset.scope === 'juz'
+            ? `Semua counter pada Juz ${juz} (Hal. ${juzPageRange.startPage}–${juzPageRange.endPage}) telah dikembalikan ke 0.`
             : targetReset.scope === 'page'
             ? `Semua counter pada Halaman ${page} telah dikembalikan ke 0.`
             : targetReset.scope === 'block' && targetReset.block
@@ -2256,16 +2257,15 @@ export function TikrarSystem({
               <DropdownMenuItem
                 onClick={() =>
                   setResetConfirm({
-                    scope: 'all',
-                    title: 'Reset Counter Semua Halaman?',
-                    description:
-                      'Seluruh counter pengulangan di semua halaman (1–604) dan catatan progres harian akan dikembalikan ke 0. Status lulus ujian & tasmi\' tetap terjaga.',
+                    scope: 'juz',
+                    title: `Reset Counter Juz ${juz}?`,
+                    description: `Seluruh counter pengulangan dan catatan progres harian pada Juz ${juz} (Hal. ${juzPageRange.startPage}–${juzPageRange.endPage}) akan dikembalikan ke 0. Juz lain, status lulus ujian & tasmi' tetap terjaga.`,
                   })
                 }
                 className="rounded-lg text-xs font-bold text-rose-700 focus:text-rose-800 focus:bg-rose-50 cursor-pointer gap-2 py-2"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                <span>Reset Semua Halaman</span>
+                <span>Reset Juz Ini (Juz {juz})</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

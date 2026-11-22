@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
-import { getJuzForPage } from '@/lib/tikrar-schedule-generator';
+import { getJuzForPage, getJuzPageRange } from '@/lib/tikrar-schedule-generator';
 import {
   computeTikrarPageTotalProgress,
   createEmptyTikrarBlocks,
@@ -9,7 +9,7 @@ import {
   PASS_THRESHOLD,
 } from '@/lib/tikrar-steps';
 
-type ResetScope = 'all' | 'page' | 'block' | 'counter';
+type ResetScope = 'juz' | 'page' | 'block' | 'counter';
 
 function normalizeBlocks(raw: any) {
   const empty = createEmptyTikrarBlocks();
@@ -92,8 +92,15 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const scope = body?.scope as ResetScope;
-    if (!['all', 'page', 'block', 'counter'].includes(scope)) {
+    const rawScope = body?.scope;
+    if (rawScope === 'all') {
+      return NextResponse.json(
+        { error: { message: 'Reset semua halaman dinonaktifkan. Silakan reset per juz atau per halaman.' } },
+        { status: 400 }
+      );
+    }
+    const scope = rawScope as ResetScope;
+    if (!['juz', 'page', 'block', 'counter'].includes(scope)) {
       return NextResponse.json(
         { error: { message: 'Tipe reset tidak valid.' } },
         { status: 400 }
@@ -102,7 +109,17 @@ export async function POST(req: NextRequest) {
 
     await client.query('BEGIN');
 
-    if (scope === 'all') {
+    if (scope === 'juz') {
+      const rawJuz = Math.floor(Number(body?.juz));
+      if (!Number.isFinite(rawJuz) || rawJuz < 1 || rawJuz > 30) {
+        await client.query('ROLLBACK');
+        return NextResponse.json(
+          { error: { message: 'Nomor juz tidak valid (1–30).' } },
+          { status: 400 }
+        );
+      }
+
+      const { startPage, endPage } = getJuzPageRange(rawJuz);
       const emptyBlocks = createEmptyTikrarBlocks();
       const emptyMeta = createEmptyTikrarMetaCounts();
 
@@ -110,18 +127,21 @@ export async function POST(req: NextRequest) {
         `UPDATE public.tikrar_user_progress
          SET prep_listen_count = 0,
              prep_translation_done = false,
-             blocks = $2::jsonb,
-             meta_counts = $3::jsonb,
+             blocks = $5::jsonb,
+             meta_counts = $6::jsonb,
              tuntas_blocks = '[]'::jsonb,
              total_progress = 0,
              updated_at = now()
-         WHERE user_id = $1`,
-        [ctx.userId, JSON.stringify(emptyBlocks), JSON.stringify(emptyMeta)]
+         WHERE user_id = $1
+           AND (juz = $2 OR (page_number >= $3 AND page_number <= $4))`,
+        [ctx.userId, rawJuz, startPage, endPage, JSON.stringify(emptyBlocks), JSON.stringify(emptyMeta)]
       );
 
       await client.query(
-        `DELETE FROM public.tikrar_daily_logs WHERE user_id = $1`,
-        [ctx.userId]
+        `DELETE FROM public.tikrar_daily_logs
+         WHERE user_id = $1
+           AND (juz = $2 OR (page_number >= $3 AND page_number <= $4))`,
+        [ctx.userId, rawJuz, startPage, endPage]
       );
 
       await client.query(
@@ -129,13 +149,15 @@ export async function POST(req: NextRequest) {
          SET status = 'pending',
              completed_at = NULL,
              updated_at = now()
-         WHERE user_id = $1 AND status = 'completed'`,
-        [ctx.userId]
+         WHERE user_id = $1
+           AND (juz = $2 OR (page_number >= $3 AND page_number <= $4))
+           AND status = 'completed'`,
+        [ctx.userId, rawJuz, startPage, endPage]
       );
 
       await client.query('COMMIT');
       return NextResponse.json({
-        data: { scope: 'all', progress: null },
+        data: { scope: 'juz', juz: rawJuz, startPage, endPage, progress: null },
         error: null,
       });
     }
