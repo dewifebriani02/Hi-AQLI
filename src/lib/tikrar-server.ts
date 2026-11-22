@@ -1,6 +1,6 @@
 import type { PoolClient } from 'pg';
 import { pool } from '@/lib/db';
-import { addCalendarDays, getJuzForPage, getJuzPageRange, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
+import { addCalendarDays, getJuzForPage, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
 import {
   buildClearedPageSet,
   computeTargetStreak,
@@ -109,18 +109,26 @@ export async function loadClearedPages(db: Db, userId: string): Promise<{
   return { cleared, quizPassed, tasmiPassed };
 }
 
-/** Total langkah tuntas di seluruh halaman yang pernah dilatih (monoton, tidak bergantung target) */
+/** Total langkah tuntas pada halaman yang masuk target aktif (atau semua halaman bila target tidak diberikan) */
 export async function computeTotalCompletedSteps(
   db: Db,
   userId: string,
   cleared: Set<number>,
-  override?: { page: number; row: any }
+  override?: { page: number; row: any },
+  target?: ActiveTikrarTarget | null
 ): Promise<number> {
-  const { rows } = await db.query(
-    `SELECT page_number, prep_listen_count, prep_translation_done, blocks, meta_counts
-     FROM public.tikrar_user_progress WHERE user_id = $1`,
-    [userId]
-  );
+  const { rows } = target
+    ? await db.query(
+        `SELECT page_number, prep_listen_count, prep_translation_done, blocks, meta_counts
+         FROM public.tikrar_user_progress
+         WHERE user_id = $1 AND page_number >= $2 AND page_number <= $3`,
+        [userId, target.startPage, target.endPage]
+      )
+    : await db.query(
+        `SELECT page_number, prep_listen_count, prep_translation_done, blocks, meta_counts
+         FROM public.tikrar_user_progress WHERE user_id = $1`,
+        [userId]
+      );
   let total = 0;
   const seen = new Set<number>();
   for (const r of rows) {
@@ -129,7 +137,11 @@ export async function computeTotalCompletedSteps(
     const row = override && override.page === p ? override.row : r;
     total += countCompletedSteps(row, cleared.has(p));
   }
-  if (override && !seen.has(override.page)) {
+  if (
+    override &&
+    !seen.has(override.page) &&
+    (!target || (override.page >= target.startPage && override.page <= target.endPage))
+  ) {
     total += countCompletedSteps(override.row, cleared.has(override.page));
   }
   return total;
@@ -140,36 +152,34 @@ export function computeUnlockedPageForTarget(target: ActiveTikrarTarget | null, 
   return computeUnlockedPage(target.startPage, target.endPage, cleared);
 }
 
-/** Halaman boleh dilatih: halaman lulus (murajaah) atau halaman target <= halaman terbuka */
+/**
+ * Halaman boleh dilatih:
+ * - Di luar rentang target (pindah juz / murajaah halaman lama / coba juz baru): selalu boleh, `inTarget: false`
+ * - Di dalam rentang target: boleh jika sudah lulus (`cleared`) atau <= `unlockedPage`, `inTarget: true`
+ */
 export function isPagePracticeAllowed(
   page: number,
   target: ActiveTikrarTarget | null,
   cleared: Set<number>
-): { allowed: boolean; reason?: string; unlockedPage?: number } {
+): { allowed: boolean; reason?: string; unlockedPage?: number; inTarget: boolean } {
   if (!target) {
-    return { allowed: false, reason: 'Isi Target & Jadwal terlebih dahulu sebelum mulai berlatih.' };
-  }
-  if (cleared.has(page)) return { allowed: true };
-  const juzRange = getJuzPageRange(target.juz);
-  if (page < target.startPage && page >= juzRange.startPage) {
-    return { allowed: true };
+    return { allowed: false, reason: 'Isi Target & Jadwal terlebih dahulu sebelum mulai berlatih.', inTarget: false };
   }
   const unlockedPage = computeUnlockedPage(target.startPage, target.endPage, cleared);
-  if (page < target.startPage || page > target.endPage) {
-    return {
-      allowed: false,
-      reason: `Halaman ${page} di luar target (Hal. ${target.startPage}–${target.endPage}).`,
-      unlockedPage,
-    };
+  const inTarget = page >= target.startPage && page <= target.endPage;
+  if (!inTarget) {
+    return { allowed: true, unlockedPage, inTarget: false };
   }
+  if (cleared.has(page)) return { allowed: true, unlockedPage, inTarget: true };
   if (page > unlockedPage) {
     return {
       allowed: false,
       reason: `Halaman ${page} masih terkunci. Luluskan ujian ${QUIZ_QUESTION_COUNT} soal Halaman ${unlockedPage} terlebih dahulu.`,
       unlockedPage,
+      inTarget: true,
     };
   }
-  return { allowed: true, unlockedPage };
+  return { allowed: true, unlockedPage, inTarget: true };
 }
 
 async function loadMetDates(db: Db, userId: string): Promise<string[]> {
@@ -207,7 +217,8 @@ export async function recordTikrarActivity(
   const todayKey = toDateKeyWIB();
   const dailyQuota = input.target?.schedule.dailyQuota || 1;
   const clicksDelta = Math.max(0, Math.floor(input.clicksDelta));
-  const stepsAdvanced = input.stepsAfter > input.stepsBefore;
+  const stepsDelta = Math.max(0, input.stepsAfter - input.stepsBefore);
+  const stepsAdvanced = stepsDelta > 0;
 
   const { rows: exRows } = await client.query(
     `SELECT clicks, steps_start, steps_now, target_met, points_awarded
@@ -222,7 +233,11 @@ export async function recordTikrarActivity(
 
   const clicks = (Number(ex?.clicks) || 0) + clicksDelta;
   const stepsStart = ex ? Number(ex.steps_start) : input.stepsBefore;
-  const stepsNow = Math.max(Number(ex?.steps_now) || 0, input.stepsAfter);
+  const stepsNow = ex
+    ? stepsStart <= input.stepsBefore
+      ? Math.max(Number(ex.steps_now) || 0, input.stepsAfter)
+      : (Number(ex.steps_now) || stepsStart) + stepsDelta
+    : input.stepsAfter;
   const stepsToday = Math.max(0, stepsNow - stepsStart);
   const wasMet = Boolean(ex?.target_met);
   const targetMet = wasMet || (clicks > 0 && stepsToday >= dailyQuota);

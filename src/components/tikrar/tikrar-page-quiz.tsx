@@ -568,6 +568,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
     pointsAwarded: number;
     unlockedPage: number | null;
     isPriorPage?: boolean;
+    inActiveTarget?: boolean;
   } | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -674,6 +675,8 @@ export function TikrarPageQuiz({ page }: { page: number }) {
             title: 'Alhamdulillah, Lulus Ujian Halaman!',
             description: json.data.isPriorPage
               ? `Hafalan lama Hal. ${page} tercatat lulus ujian.`
+              : json.data.inActiveTarget === false
+              ? `Murajaah/latihan Hal. ${page} (di luar target) tercatat lulus ujian. Keaktifan & poin tetap hanya untuk target aktif.`
               : `+${json.data.pointsAwarded} Poin. Halaman berikutnya telah terbuka.`,
           });
         }
@@ -952,6 +955,8 @@ export function TikrarPageQuiz({ page }: { page: number }) {
             {passed
               ? result?.isPriorPage
                 ? `Lulus! Hal. ${page} (hafalan lama) tercatat lulus ujian. Dengan lulus tasmi', halaman ini naik ke lapis mutqin.`
+                : result?.inActiveTarget === false
+                ? `Lulus! Hal. ${page} (latihan/murajaah di luar target) tercatat lulus ujian. Keaktifan & poin tetap hanya mencatat target aktif.`
                 : `Lulus! ${
                     result?.unlockedPage && result.unlockedPage !== page
                       ? `Halaman ${result.unlockedPage} kini terbuka.`

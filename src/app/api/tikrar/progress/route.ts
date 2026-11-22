@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       ? body.undo_keys.filter((k: unknown) => typeof k === 'string' && /^([1-4]\.(a|b|combined)|meta\.[1-4_]+)$/.test(k)).slice(0, 30)
       : [];
 
-    // Gerbang: wajib punya target & halaman harus sudah terbuka (lulus ujian halaman sebelumnya)
+    // Gerbang: wajib punya target; halaman di dalam target wajib berurutan, halaman di luar target bebas untuk murajaah/coba juz lain
     const target = await loadActiveTarget(client, ctx.userId);
     const { cleared } = await loadClearedPages(client, ctx.userId);
     const gate = isPagePracticeAllowed(pageNumber, target, cleared);
@@ -96,7 +96,9 @@ export async function POST(req: NextRequest) {
 
     const existingRow = existingProgressRows[0] || null;
     const clicksBefore = countTotalClicks(existingRow);
-    const stepsBefore = await computeTotalCompletedSteps(client, ctx.userId, cleared);
+    const stepsBefore = gate.inTarget
+      ? await computeTotalCompletedSteps(client, ctx.userId, cleared, undefined, target)
+      : 0;
 
     let finalPrepListen = prepListenCount;
     let finalPrepTrans = prepTranslationDone;
@@ -170,9 +172,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 1. Simpan progres gabungan ke database (public.tikrar_user_progress)
+    // 1. Simpan progres counter ke database (public.tikrar_user_progress) agar murajaah & coba juz tetap tersimpan
     const { rows: progressRows } = await client.query(
-      `INSERT INTO public.tikrar_user_progress (\n         user_id, page_number, juz, prep_listen_count, prep_translation_done,
+      `INSERT INTO public.tikrar_user_progress (
+         user_id, page_number, juz, prep_listen_count, prep_translation_done,
          blocks, meta_counts, tuntas_blocks, total_progress, updated_at
        )
        VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb, $9, now())
@@ -222,75 +225,87 @@ export async function POST(req: NextRequest) {
     }
 
     const savedRow = progressRows[0];
-    const stepsAfter = await computeTotalCompletedSteps(client, ctx.userId, cleared, { page: pageNumber, row: savedRow });
-    const activity = await recordTikrarActivity(client, ctx.userId, {
-      clicksDelta: countTotalClicks(savedRow) - clicksBefore,
-      stepsBefore,
-      stepsAfter,
-      target,
-    });
-
-    // Perbarui posisi halaman terakhir aktif peserta di public.users agar selalu sinkron
-    await client.query(
-      `UPDATE public.users
-       SET tikrar_current_page = $1,
-           updated_at = now()
-       WHERE id = $2`,
-      [pageNumber, ctx.userId]
-    );
-
-    // 2. Blok yang BARU tuntas pada penyimpanan ini direkam ke public.tikrar_daily_logs (Laporan Blok Tuntas)
-    const newlyTuntasBlocks = tuntasBlocks.filter(
-      (b) => !(Number(existingRow?.blocks?.[b]?.combined?.count) >= 40)
-    );
+    let activity = null;
     let dailyLogSaved = null;
-    if (newlyTuntasBlocks.length > 0) {
-      const logDateKey = toDateKeyWIB();
 
-      // Ambil user halaqah_id
-      const { rows: uRows } = await client.query(
-        `SELECT tikrar_halaqah_id, points FROM public.users WHERE id = $1 FOR UPDATE`,
-        [ctx.userId]
+    // Keaktifan harian, poin, jadwal, dan halaman target aktif HANYA dicatat untuk halaman dalam Target & Jadwal aktif
+    if (gate.inTarget) {
+      const stepsAfter = await computeTotalCompletedSteps(
+        client,
+        ctx.userId,
+        cleared,
+        { page: pageNumber, row: savedRow },
+        target
       );
-      const userHalaqahId = uRows[0]?.tikrar_halaqah_id || null;
+      activity = await recordTikrarActivity(client, ctx.userId, {
+        clicksDelta: countTotalClicks(savedRow) - clicksBefore,
+        stepsBefore,
+        stepsAfter,
+        target,
+      });
 
-      // Ambil existing log hari ini untuk halaman ini
-      const { rows: existingLogRows } = await client.query(
-        `SELECT id, blocks_completed FROM public.tikrar_daily_logs
-         WHERE user_id = $1 AND log_date = $2::date AND page_number = $3
-         LIMIT 1`,
-        [ctx.userId, logDateKey, pageNumber]
-      );
-      const prevBlocks: number[] = Array.isArray(existingLogRows[0]?.blocks_completed)
-        ? existingLogRows[0].blocks_completed.map((n: any) => Number(n))
-        : [];
-      const mergedBlocks = Array.from(new Set<number>([...prevBlocks, ...newlyTuntasBlocks])).sort((a, b) => a - b);
-
-      const { rows: savedLogRows } = await client.query(
-        `INSERT INTO public.tikrar_daily_logs (\n           user_id, halaqah_id, log_date, juz, page_number, blocks_completed,
-           repetition_count, duration_minutes, completed, updated_at
-         )
-         VALUES ($1, $2, $3::date, $4, $5, $6::jsonb, 40, 30, true, now())
-         ON CONFLICT (user_id, log_date, page_number)
-         DO UPDATE SET
-           halaqah_id = COALESCE(EXCLUDED.halaqah_id, public.tikrar_daily_logs.halaqah_id),
-           blocks_completed = $6::jsonb,
-           completed = true,
-           updated_at = now()
-         RETURNING *`,
-        [ctx.userId, userHalaqahId, logDateKey, juz, pageNumber, JSON.stringify(mergedBlocks)]
-      );
-      dailyLogSaved = savedLogRows[0];
-
-      // Tandai jadwal selesai di tikrar_user_schedules
+      // Perbarui posisi halaman terakhir aktif peserta di public.users agar selalu sinkron dengan target
       await client.query(
-        `UPDATE public.tikrar_user_schedules
-         SET status = 'completed',
-             completed_at = COALESCE(completed_at, now()),
+        `UPDATE public.users
+         SET tikrar_current_page = $1,
              updated_at = now()
-         WHERE user_id = $1 AND page_number = $2 AND block_number = ANY($3::int[])`,
-        [ctx.userId, pageNumber, mergedBlocks]
+         WHERE id = $2`,
+        [pageNumber, ctx.userId]
       );
+
+      // 2. Blok yang BARU tuntas pada penyimpanan ini direkam ke public.tikrar_daily_logs (Laporan Blok Tuntas)
+      const newlyTuntasBlocks = tuntasBlocks.filter(
+        (b) => !(Number(existingRow?.blocks?.[b]?.combined?.count) >= 40)
+      );
+      if (newlyTuntasBlocks.length > 0) {
+        const logDateKey = toDateKeyWIB();
+
+        // Ambil user halaqah_id
+        const { rows: uRows } = await client.query(
+          `SELECT tikrar_halaqah_id, points FROM public.users WHERE id = $1 FOR UPDATE`,
+          [ctx.userId]
+        );
+        const userHalaqahId = uRows[0]?.tikrar_halaqah_id || null;
+
+        // Ambil existing log hari ini untuk halaman ini
+        const { rows: existingLogRows } = await client.query(
+          `SELECT id, blocks_completed FROM public.tikrar_daily_logs
+           WHERE user_id = $1 AND log_date = $2::date AND page_number = $3
+           LIMIT 1`,
+          [ctx.userId, logDateKey, pageNumber]
+        );
+        const prevBlocks: number[] = Array.isArray(existingLogRows[0]?.blocks_completed)
+          ? existingLogRows[0].blocks_completed.map((n: any) => Number(n))
+          : [];
+        const mergedBlocks = Array.from(new Set<number>([...prevBlocks, ...newlyTuntasBlocks])).sort((a, b) => a - b);
+
+        const { rows: savedLogRows } = await client.query(
+          `INSERT INTO public.tikrar_daily_logs (
+             user_id, halaqah_id, log_date, juz, page_number, blocks_completed,
+             repetition_count, duration_minutes, completed, updated_at
+           )
+           VALUES ($1, $2, $3::date, $4, $5, $6::jsonb, 40, 30, true, now())
+           ON CONFLICT (user_id, log_date, page_number)
+           DO UPDATE SET
+             halaqah_id = COALESCE(EXCLUDED.halaqah_id, public.tikrar_daily_logs.halaqah_id),
+             blocks_completed = $6::jsonb,
+             completed = true,
+             updated_at = now()
+           RETURNING *`,
+          [ctx.userId, userHalaqahId, logDateKey, juz, pageNumber, JSON.stringify(mergedBlocks)]
+        );
+        dailyLogSaved = savedLogRows[0];
+
+        // Tandai jadwal selesai di tikrar_user_schedules
+        await client.query(
+          `UPDATE public.tikrar_user_schedules
+           SET status = 'completed',
+               completed_at = COALESCE(completed_at, now()),
+               updated_at = now()
+           WHERE user_id = $1 AND page_number = $2 AND block_number = ANY($3::int[])`,
+          [ctx.userId, pageNumber, mergedBlocks]
+        );
+      }
     }
 
     await client.query('COMMIT');
@@ -299,8 +314,9 @@ export async function POST(req: NextRequest) {
       data: {
         progress: progressRows[0],
         dailyLog: dailyLogSaved,
-        pointsAwarded: activity.pointsAwarded,
+        pointsAwarded: activity?.pointsAwarded || 0,
         activity,
+        inTarget: gate.inTarget,
       },
       error: null,
     });

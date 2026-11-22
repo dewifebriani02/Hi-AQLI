@@ -525,8 +525,12 @@ export function TikrarDailyReport({
     };
 
     const recProg = allUserProgress.find((p: any) => Number(p.page_number) === recommendedPage);
+    const inTargetActive = allUserProgress.find(
+      (p: any) => Number(p.page_number) >= startPage && Number(p.page_number) <= endPage && hasActivity(p)
+    );
     const matched =
       (hasActivity(recProg) ? recProg : null) ||
+      inTargetActive ||
       allUserProgress.find(hasActivity) ||
       recProg ||
       allUserProgress[0];

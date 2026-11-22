@@ -100,12 +100,12 @@ export async function POST(req: NextRequest) {
     let activity = null;
     const inActiveTarget = Boolean(target && pageNumber >= target.startPage && pageNumber <= target.endPage);
     const isPriorOnly = isPriorPage && !inActiveTarget;
-    // Hafalan lama di luar target aktif: jangan beri poin, jangan catat keaktifan/streak, dan jangan ubah halaman target
-    if (firstPass && !isPriorOnly) {
-      const stepsBefore = await computeTotalCompletedSteps(client, ctx.userId, cleared);
+    // Halaman di luar target aktif (murajaah / juz lain / hafalan lama): jangan beri poin, jangan catat keaktifan/streak, dan jangan ubah halaman target
+    if (firstPass && inActiveTarget) {
+      const stepsBefore = await computeTotalCompletedSteps(client, ctx.userId, cleared, undefined, target);
       const nextCleared = new Set(cleared);
       nextCleared.add(pageNumber);
-      const stepsAfter = await computeTotalCompletedSteps(client, ctx.userId, nextCleared);
+      const stepsAfter = await computeTotalCompletedSteps(client, ctx.userId, nextCleared, undefined, target);
       activity = await recordTikrarActivity(client, ctx.userId, { clicksDelta: 1, stepsBefore, stepsAfter, target });
       pointsAwarded = activity.pointsAwarded + TIKRAR_POINTS.quizPassed;
       const nextPage = computeUnlockedPageForTarget(target, nextCleared);
@@ -132,7 +132,8 @@ export async function POST(req: NextRequest) {
         pointsAwarded,
         activity,
         isPriorPage: isPriorOnly,
-        unlockedPage: isPriorOnly ? null : computeUnlockedPageForTarget(target, cleared),
+        inActiveTarget,
+        unlockedPage: inActiveTarget ? computeUnlockedPageForTarget(target, cleared) : null,
       },
       error: null,
     });

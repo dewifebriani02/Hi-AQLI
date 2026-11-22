@@ -592,16 +592,33 @@ export function TikrarSystem({
     fetchTasmiQueue();
   }, [fetchTasmiQueue, refreshSignal]);
 
+  const isPageInActiveTarget = Boolean(
+    activeTarget && page >= activeTarget.startPage && page <= activeTarget.endPage
+  );
+  const navigateToPage = useCallback(
+    (targetP: number) => {
+      const pNum = Math.max(1, Math.min(604, Math.floor(targetP)));
+      const targetJuzForP =
+        activeTarget && pNum >= activeTarget.startPage && pNum <= activeTarget.endPage
+          ? activeTarget.juz
+          : getJuzForPage(pNum);
+      setJuz(targetJuzForP);
+      setPage(pNum);
+    },
+    [activeTarget]
+  );
+
   const pageLockReason = useMemo(() => {
     if (!user) return null;
     if (!activeTarget) return 'Isi Target & Jadwal terlebih dahulu sebelum mulai berlatih.';
+    // Halaman di luar target aktif (pindah juz / murajaah / coba juz baru) selalu terbuka tanpa mengunci counter
+    if (!isPageInActiveTarget) return null;
     if (clearedPages.has(page) || isPriorMemorizedPage) return null;
-    if (page < activeTarget.startPage && page >= juzPageRange.startPage) return null;
     if (page > activeTarget.unlockedPage) {
       return `Halaman ${page} masih terkunci. Luluskan ujian ${QUIZ_QUESTION_COUNT} soal Halaman ${activeTarget.unlockedPage} terlebih dahulu.`;
     }
     return null;
-  }, [user, activeTarget, clearedPages, isPriorMemorizedPage, page, juzPageRange]);
+  }, [user, activeTarget, isPageInActiveTarget, clearedPages, isPriorMemorizedPage, page]);
   const lastQuizOnPage = useMemo(
     () => (summary?.recentQuizzes || []).find((q) => q.page === page) || null,
     [summary?.recentQuizzes, page]
@@ -1135,14 +1152,16 @@ export function TikrarSystem({
                 description: `+${awarded} Poin keaktifan. Lanjutkan sampai ${act?.dailyQuota || 1} langkah untuk mencapai target hari ini.`,
               });
             }
-            if (act && typeof act.clicks === 'number') setLiveTodayClicks(act.clicks);
-            const stepsToday = Number(act?.stepsToday) || 0;
-            if (awarded > 0 || stepsToday !== lastStepsTodayRef.current) {
-              lastStepsTodayRef.current = stepsToday;
-              await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
-              // Hanya panggil onDataChanged jika target harian baru saja tercapai untuk mencegah refresh berulang
-              if (act?.justMetTarget) {
-                onDataChanged?.();
+            if (act) {
+              if (typeof act.clicks === 'number') setLiveTodayClicks(act.clicks);
+              const stepsToday = Number(act.stepsToday) || 0;
+              if (awarded > 0 || stepsToday !== lastStepsTodayRef.current) {
+                lastStepsTodayRef.current = stepsToday;
+                await Promise.all([refreshLogs(), refreshSchedules(), refreshUser()]);
+                // Hanya panggil onDataChanged jika target harian baru saja tercapai untuk mencegah refresh berulang
+                if (act.justMetTarget) {
+                  onDataChanged?.();
+                }
               }
             }
           }
@@ -1871,7 +1890,9 @@ export function TikrarSystem({
     : null;
 
   const scheduledLettersText =
-    scheduledBlockSetOnPage.size > 0
+    activeTarget && !isPageInActiveTarget
+      ? `Mode Murajaah / Bebas (Target Aktif: Juz ${activeTarget.juz})`
+      : scheduledBlockSetOnPage.size > 0
       ? `Target Jadwal: Blok ${Array.from(scheduledBlockSetOnPage)
           .sort((a, b) => a - b)
           .map((b) => BLOCK_LETTERS[b])
@@ -1990,11 +2011,15 @@ export function TikrarSystem({
           <select
             aria-label="Pilih Juz"
             value={juz}
-            disabled={loading || Boolean(activeTarget)}
+            disabled={loading}
             onChange={(e) => {
               const j = Number(e.target.value);
               setJuz(j);
-              setPage(JUZ_PAGES[j - 1] || 1);
+              if (activeTarget && j === activeTarget.juz) {
+                setPage(activeTarget.unlockedPage);
+              } else {
+                setPage(JUZ_PAGES[j - 1] || 1);
+              }
             }}
             className="h-10 rounded-xl border-2 border-[#6D123F]/20 bg-white px-2 sm:px-2.5 text-xs sm:text-sm font-black text-[#6D123F] shrink-0 w-[78px] sm:w-auto"
           >
@@ -2028,11 +2053,17 @@ export function TikrarSystem({
               const isPriorPage =
                 priorMemorizedSet.has(pNum) ||
                 (Boolean(activeTarget) && juz === activeTarget!.juz && pNum < activeTarget!.startPage);
+              const pInTarget = Boolean(
+                activeTarget &&
+                  juz === activeTarget.juz &&
+                  pNum >= activeTarget.startPage &&
+                  pNum <= activeTarget.endPage
+              );
               const pLocked =
-                Boolean(activeTarget) &&
+                pInTarget &&
                 !pCleared &&
                 !isPriorPage &&
-                (juz !== activeTarget!.juz || pNum > (activeTarget?.unlockedPage || 0));
+                pNum > (activeTarget?.unlockedPage || 0);
               return (
                 <option key={pNum} value={pNum}>
                   {pCleared ? '★ ' : isPriorPage ? '✓ ' : pLocked ? '🔒 ' : ''}Hal. {pNum}
@@ -2074,7 +2105,7 @@ export function TikrarSystem({
               }}
               className="h-9 px-2 sm:px-2.5 text-[11px] sm:text-xs font-black text-[#6D123F] hover:bg-[#6D123F]/10 truncate"
             >
-              Ke Hal. {recommendedPage} →
+              {juz !== activeTarget.juz ? `Ke Target (Juz ${activeTarget.juz} Hal. ${recommendedPage})` : `Ke Hal. ${recommendedPage}`} →
             </Button>
           )}
 
@@ -2305,22 +2336,24 @@ export function TikrarSystem({
         </div>
       )}
 
-      {activeTarget && page < activeTarget.startPage && page >= juzPageRange.startPage && (
+      {activeTarget && !isPageInActiveTarget && (
         <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <p className="text-xs font-bold text-emerald-950">
-              Halaman {page} adalah bagian awal Juz {activeTarget.juz} (sebelum target aktif Hal. {activeTarget.startPage}–{activeTarget.endPage}). Boleh dibaca dan dimurajaah kapan saja.
+            <p className="text-xs font-bold text-emerald-950 leading-relaxed">
+              {juz !== activeTarget.juz
+                ? `Mode Murajaah / Coba Juz ${juz} (di luar Target Aktif Juz ${activeTarget.juz} Hal. ${activeTarget.startPage}–${activeTarget.endPage}). Hitungan counter tetap tersimpan, sedangkan keaktifan & poin harian hanya mencatat progres Target dan Jadwal aktif.`
+                : `Halaman ${page} berada di luar rentang Target Aktif Juz ${activeTarget.juz} (Hal. ${activeTarget.startPage}–${activeTarget.endPage}). Boleh dimurajaah kapan saja; keaktifan & poin tetap hanya mencatat target aktif.`}
             </p>
           </div>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => setPage(activeTarget.unlockedPage)}
+            onClick={() => navigateToPage(activeTarget.unlockedPage)}
             className="border-emerald-300 text-emerald-900 hover:bg-emerald-100 font-bold text-xs h-8 px-3 rounded-xl shrink-0"
           >
-            Ke Halaman Aktif ({activeTarget.unlockedPage}) <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            Ke Target (Juz {activeTarget.juz} Hal. {activeTarget.unlockedPage}) <ArrowRight className="w-3.5 h-3.5 ml-1" />
           </Button>
         </div>
       )}
@@ -2335,7 +2368,7 @@ export function TikrarSystem({
             <Button
               type="button"
               size="sm"
-              onClick={() => setPage(activeTarget.unlockedPage)}
+              onClick={() => navigateToPage(activeTarget.unlockedPage)}
               className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
             >
               Ke Halaman {activeTarget.unlockedPage}
@@ -2393,7 +2426,7 @@ export function TikrarSystem({
                     <button
                       key={`${t.page}-${t.key}`}
                       type="button"
-                      onClick={() => (t.page === page ? scrollToStep(t.key) : setPage(t.page))}
+                      onClick={() => (t.page === page ? scrollToStep(t.key) : navigateToPage(t.page))}
                       className="px-2.5 py-1 rounded-full bg-white border border-[#D4AF37] text-[11px] font-black text-stone-800 hover:bg-[#D4AF37]/20"
                     >
                       Hal. {t.page} • {t.label}
@@ -2410,7 +2443,7 @@ export function TikrarSystem({
                       <button
                         key={`overdue-${ot.page}-${ot.key}`}
                         type="button"
-                        onClick={() => (ot.page === page ? scrollToStep(ot.key) : setPage(ot.page))}
+                        onClick={() => (ot.page === page ? scrollToStep(ot.key) : navigateToPage(ot.page))}
                         className="px-2 py-0.5 rounded-full bg-rose-100 border border-rose-300 text-[10px] font-black hover:bg-rose-200 text-rose-800"
                       >
                         Hal. {ot.page} • {ot.label}
@@ -2431,7 +2464,7 @@ export function TikrarSystem({
             <Button
               type="button"
               size="sm"
-              onClick={() => (todayTargets[0].page === page ? scrollToStep(todayTargets[0].key) : setPage(todayTargets[0].page))}
+              onClick={() => (todayTargets[0].page === page ? scrollToStep(todayTargets[0].key) : navigateToPage(todayTargets[0].page))}
               className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-10 px-4 rounded-xl shrink-0"
             >
               {todayTargets[0].page === page ? 'Ke Counter Target ↓' : `Buka Hal. ${todayTargets[0].page}`}
