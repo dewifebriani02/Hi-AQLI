@@ -1495,27 +1495,27 @@ export default function AdminTikrarPage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <div className="text-xs text-slate-600 space-y-0.5">
-                  <p className="font-bold text-slate-900">
-                    Endpoint Cron VPS: <code>/api/cron/tikrar-reminder?mode={reminderMode}</code>
+                <div className="text-xs text-slate-600 space-y-0.5 min-w-0 flex-1">
+                  <p className="font-bold text-slate-900 break-words">
+                    Endpoint Cron VPS: <code className="break-all">/api/cron/tikrar-reminder?mode={reminderMode}</code>
                   </p>
                   <p>
                     Dilengkapi proteksi anti-duplikat harian pada tabel <code>whatsapp_logs</code>.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   <Button
                     type="button"
                     variant="outline"
                     disabled={reminderLoading}
                     onClick={() => handleRunReminderCron(true)}
-                    className="font-black text-xs h-9 border-[#800000]/30 text-[#800000]"
+                    className="font-black text-xs h-auto min-h-9 py-2 whitespace-normal text-center border-[#800000]/30 text-[#800000] flex-1 sm:flex-none"
                   >
                     {reminderLoading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5 shrink-0" />
                     ) : (
-                      <Play className="w-3.5 h-3.5 mr-1.5" />
+                      <Play className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                     )}
                     Pratinjau Pesan (Dry-Run)
                   </Button>
@@ -1525,7 +1525,7 @@ export default function AdminTikrarPage() {
                       type="button"
                       disabled={reminderLoading}
                       onClick={() => handleRunReminderCron(false)}
-                      className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-9"
+                      className="bg-[#800000] hover:bg-[#800000]/90 text-white font-black text-xs h-auto min-h-9 py-2 whitespace-normal text-center flex-1 sm:flex-none"
                     >
                       {reminderLoading ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />

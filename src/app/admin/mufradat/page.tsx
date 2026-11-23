@@ -1045,7 +1045,7 @@ function MufradatMonitoringContent() {
 
           <Tabs defaultValue="templates" className="w-full">
             <div className="px-6 sm:px-8 bg-emerald-600/5 border-b">
-              <TabsList className="bg-transparent h-12 gap-6">
+              <TabsList className="bg-transparent h-auto sm:h-12 flex flex-wrap gap-2 sm:gap-6 w-full justify-start">
                 <TabsTrigger
                   value="templates"
                   className="data-[state=active]:border-b-4 data-[state=active]:border-emerald-600 rounded-none h-full font-black text-[11px] uppercase tracking-wider text-muted-foreground data-[state=active]:text-emerald-700"

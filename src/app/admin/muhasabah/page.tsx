@@ -395,7 +395,7 @@ export default function AdminMuhasabahPage() {
 
       <Tabs defaultValue="participants" className="w-full space-y-4 px-1">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-auto flex flex-wrap gap-1 w-fit shadow-sm">
+          <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-auto flex flex-wrap gap-1 w-full sm:w-fit shadow-sm">
             <TabsTrigger
               value="participants"
               className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-2 transition-all"

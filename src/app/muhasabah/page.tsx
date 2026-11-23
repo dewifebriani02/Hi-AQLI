@@ -373,7 +373,7 @@ export default function MuhasabahPage() {
                         >
                           {isDone && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37]" />}
                           <CardContent className="p-4 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-4 flex-1">
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                               {/* LEFT: Checkbox Indentifier */}
                               <div className={cn(
                                 "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm shrink-0 border-2",

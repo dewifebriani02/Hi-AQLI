@@ -538,7 +538,7 @@ export default function AdminRegistrationsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
-        <TabsList className="bg-slate-100 p-1 rounded-2xl w-fit">
+        <TabsList className="bg-slate-100 p-1 rounded-2xl h-auto flex flex-wrap gap-1 w-full sm:w-fit">
           <TabsTrigger value="pending" className="rounded-xl text-xs font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
             <AlertCircle className="w-3.5 h-3.5" />
             Antrean Menunggu ({filteredPending.length})
