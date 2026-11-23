@@ -112,6 +112,7 @@ import {
   getMetaThreshold,
   isBlockListenDone,
   generateTikrarStepSchedule,
+  MEMORIZED_STEP_COUNT,
   QUIZ_PASS_PERCENT,
   QUIZ_QUESTION_COUNT,
   STEPS_PER_PAGE,
@@ -822,9 +823,13 @@ export function TikrarSystem({
     }
   }, [page, juz]);
 
-  // Reset prompt per-sesi saat halaman berubah
+  const [showTrialCounter, setShowTrialCounter] = useState(false);
+
+  // Reset prompt per-sesi & kembalikan default Mode Tilawah saat halaman berubah
   useEffect(() => {
     setSimakPromptedBlocks({});
+    setShowTrialCounter(false);
+    setActiveVerseKey(null);
   }, [page]);
 
   // Fetch verses + custom block config secara atomik dan manfaatkan cache agar tidak berkedip
@@ -1286,6 +1291,43 @@ export function TikrarSystem({
     nextAudioUrlRef.current = null;
   };
 
+  const playTilawahVerseAt = async (vIdx: number) => {
+    if (!isAutoPlayingRef.current) return;
+    if (vIdx >= verses.length) {
+      stopAutoPlay();
+      return;
+    }
+    const v = verses[vIdx];
+    setPlayingVerseIndex(vIdx);
+    setActiveVerseKey(v.verse_key);
+    const url = await getAudioUrlByVerseKey(v.verse_key, blockReciterIdRef.current);
+    if (!isAutoPlayingRef.current) return;
+    if (!url) {
+      stopAutoPlay();
+      toast({ variant: 'destructive', title: 'Audio gagal dimuat', description: 'Coba lagi atau pilih qari lain.' });
+      return;
+    }
+    if (!audioRef.current) audioRef.current = new Audio();
+    const audio = audioRef.current;
+    audio.ontimeupdate = null;
+    audio.src = url;
+    audio.onended = () => {
+      if (isAutoPlayingRef.current) {
+        playTilawahVerseAt(vIdx + 1);
+      }
+    };
+    audio.play().catch(() => stopAutoPlay());
+  };
+
+  const startTilawahAudio = (startIdx = 0) => {
+    stopBlockAudio(false);
+    stopAutoPlay();
+    if (verses.length === 0) return;
+    setIsAutoPlaying(true);
+    isAutoPlayingRef.current = true;
+    playTilawahVerseAt(Math.max(0, Math.min(verses.length - 1, startIdx)));
+  };
+
   // Qari MP3Quran hanya punya audio per surah; simak per blok memakai audio per ayat
   const blockReciterId = currentReciter.provider === 'mp3quran' ? 21203 : currentReciter.id;
   const blockReciterIdRef = useRef(blockReciterId);
@@ -1473,6 +1515,18 @@ export function TikrarSystem({
     return true;
   };
   const isExamStageOpen = isMetaTuntas('1_2_3_4');
+  const isPageInItqan = Boolean(
+    isPriorMemorizedPage ||
+      clearedPages.has(page) ||
+      isSelectedPageCleared ||
+      (summary?.stepsByPage?.[page] ?? 0) >= MEMORIZED_STEP_COUNT ||
+      isExamStageOpen
+  );
+  const isOutOfTarget = Boolean(activeTarget && !isPageInActiveTarget);
+  const isOutOfTargetMurajaah = isOutOfTarget && isPageInItqan;
+  const isOutOfTargetUnmemorized = isOutOfTarget && !isPageInItqan;
+  const isTilawahMode = isOutOfTargetUnmemorized && !showTrialCounter;
+  const isTrialCounterMode = isOutOfTargetUnmemorized && showTrialCounter;
   const [globalShowVerses, setGlobalShowVerses] = useState(() => !isExamStageOpen);
   const [examRevealSeq, setExamRevealSeq] = useState(0);
   useEffect(() => {
@@ -1914,8 +1968,12 @@ export function TikrarSystem({
     : null;
 
   const scheduledLettersText =
-    activeTarget && !isPageInActiveTarget
-      ? `Mode Murajaah / Bebas (Target Aktif: Juz ${activeTarget.juz})`
+    isOutOfTarget
+      ? isPageInItqan
+        ? `Mode Murajaah (Target Aktif: Juz ${activeTarget!.juz})`
+        : showTrialCounter
+        ? `Mode Uji Coba Counter (Target Aktif: Juz ${activeTarget!.juz})`
+        : `Mode Tilawah (Target Aktif: Juz ${activeTarget!.juz})`
       : scheduledBlockSetOnPage.size > 0
       ? `Target Jadwal: Blok ${Array.from(scheduledBlockSetOnPage)
           .sort((a, b) => a - b)
@@ -2074,6 +2132,7 @@ export function TikrarSystem({
             {Array.from({ length: juzPageRange.endPage - juzPageRange.startPage + 1 }, (_, idx) => {
               const pNum = juzPageRange.startPage + idx;
               const pCleared = clearedPages.has(pNum);
+              const pMemorized = (summary?.stepsByPage?.[pNum] ?? 0) >= MEMORIZED_STEP_COUNT;
               const isPriorPage =
                 priorMemorizedSet.has(pNum) ||
                 (Boolean(activeTarget) && juz === activeTarget!.juz && pNum < activeTarget!.startPage);
@@ -2090,13 +2149,15 @@ export function TikrarSystem({
                 pNum > (activeTarget?.unlockedPage || 0);
               return (
                 <option key={pNum} value={pNum}>
-                  {pCleared ? '★ ' : isPriorPage ? '✓ ' : pLocked ? '🔒 ' : ''}Hal. {pNum}
+                  {pCleared ? '★ ' : isPriorPage || pMemorized ? '✓ ' : pLocked ? '🔒 ' : ''}Hal. {pNum}
                   {pNum === recommendedPage
                     ? ' (Halaman Aktif)'
                     : pCleared
                     ? ' (Lulus Ujian)'
                     : isPriorPage
                     ? ' (Hafalan Awal)'
+                    : pMemorized
+                    ? ' (Sudah Dihafal)'
                     : pLocked
                     ? ' (Terkunci)'
                     : ''}
@@ -2245,6 +2306,7 @@ export function TikrarSystem({
                 </div>
               </DialogContent>
             </Dialog>
+          {!isTilawahMode && (
           <Button
             type="button"
             variant={globalShowVerses ? 'outline' : 'default'}
@@ -2264,6 +2326,7 @@ export function TikrarSystem({
           >
             {globalShowVerses ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -2379,14 +2442,14 @@ export function TikrarSystem({
         </div>
       )}
 
-      {activeTarget && !isPageInActiveTarget && (
+      {isOutOfTargetMurajaah && activeTarget && (
         <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <p className="text-xs font-bold text-emerald-950 leading-relaxed">
               {juz !== activeTarget.juz
-                ? `Mode Murajaah / Coba Juz ${juz} (di luar Target Aktif Juz ${activeTarget.juz} Hal. ${activeTarget.startPage}–${activeTarget.endPage}). Hitungan counter tetap tersimpan, sedangkan keaktifan & poin harian hanya mencatat progres Target dan Jadwal aktif.`
-                : `Halaman ${page} berada di luar rentang Target Aktif Juz ${activeTarget.juz} (Hal. ${activeTarget.startPage}–${activeTarget.endPage}). Boleh dimurajaah kapan saja; keaktifan & poin tetap hanya mencatat target aktif.`}
+                ? `Mode Murajaah • Juz ${juz} Hal. ${page} sudah masuk Tab Itqan (di luar Target Aktif Juz ${activeTarget.juz} Hal. ${activeTarget.startPage}–${activeTarget.endPage}). Hitungan murajaah tetap tersimpan, sedangkan keaktifan & poin harian hanya mencatat progres Target dan Jadwal aktif.`
+                : `Mode Murajaah • Halaman ${page} sudah masuk Tab Itqan (di luar rentang Target Aktif Juz ${activeTarget.juz} Hal. ${activeTarget.startPage}–${activeTarget.endPage}). Boleh dimurajaah kapan saja; keaktifan & poin tetap hanya mencatat target aktif.`}
             </p>
           </div>
           <Button
@@ -2398,6 +2461,86 @@ export function TikrarSystem({
           >
             Ke Target (Juz {activeTarget.juz} Hal. {activeTarget.unlockedPage}) <ArrowRight className="w-3.5 h-3.5 ml-1" />
           </Button>
+        </div>
+      )}
+
+      {isTilawahMode && activeTarget && (
+        <div className="bg-sky-50/95 border border-sky-200 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <BookOpen className="w-4 h-4 text-sky-700 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="text-xs font-black text-sky-950 leading-relaxed">
+                Mode Tilawah • Juz {juz} Hal. {page} belum masuk Tab Itqan (di luar Target Aktif Juz {activeTarget.juz} Hal. {activeTarget.startPage}–{activeTarget.endPage}).
+              </p>
+              <p className="text-[11px] font-medium text-sky-900/85 leading-relaxed">
+                Mushaf dibuka untuk bacaan, terjemah &amp; simak audio tanpa memengaruhi poin Target Aktif. Ingin mencoba metode 4 Blok Tikrar di halaman ini?
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                stopAutoPlay();
+                setShowTrialCounter(true);
+              }}
+              className="border-sky-300 bg-white text-sky-900 hover:bg-sky-100 font-black text-xs h-8 px-3 rounded-xl shrink-0"
+            >
+              {totalProgress > 0
+                ? `Lanjutkan Counter Uji Coba (${Math.round(totalProgress)}%)`
+                : 'Buka Counter Uji Coba'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => navigateToPage(activeTarget.unlockedPage)}
+              className="border-[#6D123F]/25 bg-white text-[#6D123F] hover:bg-[#6D123F]/10 font-bold text-xs h-8 px-3 rounded-xl shrink-0"
+            >
+              Ke Target (Juz {activeTarget.juz} Hal. {activeTarget.unlockedPage}) <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isTrialCounterMode && activeTarget && (
+        <div className="bg-amber-50/95 border border-amber-300 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="text-xs font-black text-amber-950 leading-relaxed">
+                Mode Uji Coba Counter • Juz {juz} Hal. {page} belum masuk Tab Itqan (di luar Target Aktif Juz {activeTarget.juz} Hal. {activeTarget.startPage}–{activeTarget.endPage}).
+              </p>
+              <p className="text-[11px] font-medium text-amber-900/85 leading-relaxed">
+                Hitungan counter tetap tersimpan (dan masuk Tab Itqan bila dituntaskan sampai Gabung A–D), sedangkan keaktifan &amp; poin harian tetap hanya mencatat Target dan Jadwal aktif.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                stopBlockAudio(false);
+                setShowTrialCounter(false);
+              }}
+              className="border-amber-400 bg-white text-amber-950 hover:bg-amber-100 font-black text-xs h-8 px-3 rounded-xl shrink-0"
+            >
+              <BookOpen className="w-3.5 h-3.5 mr-1" /> Kembali ke Mode Tilawah
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => navigateToPage(activeTarget.unlockedPage)}
+              className="border-[#6D123F]/25 bg-white text-[#6D123F] hover:bg-[#6D123F]/10 font-bold text-xs h-8 px-3 rounded-xl shrink-0"
+            >
+              Ke Target (Juz {activeTarget.juz} Hal. {activeTarget.unlockedPage}) <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
 
@@ -2518,7 +2661,28 @@ export function TikrarSystem({
 
       <div className={cn(pageLockReason && 'pointer-events-none opacity-50 select-none')} aria-disabled={Boolean(pageLockReason)}>
       <TooltipProvider delayDuration={0}>
-        {/* Alur Kunci Berurutan: Blok A..D & Sub-Repetisi Gabungan (Opsi B) */}
+        {isTilawahMode ? (
+          <div className="mt-6">
+            <TilawahMushafCard
+              page={page}
+              juz={juz}
+              surahName={getSurahNameForPage(page)}
+              verses={verses}
+              loading={loading}
+              fontSize={fontSize}
+              isPlaying={isAutoPlaying}
+              playingVerseKey={activeVerseKey}
+              onTogglePlayAll={() => (isAutoPlaying ? stopAutoPlay() : startTilawahAudio(0))}
+              onPlayFromVerse={(idx: number) => startTilawahAudio(idx)}
+              totalProgress={totalProgress}
+              onOpenTrialCounter={() => {
+                stopAutoPlay();
+                setShowTrialCounter(true);
+              }}
+            />
+          </div>
+        ) : (
+        /* Alur Kunci Berurutan: Blok A..D & Sub-Repetisi Gabungan (Opsi B) */
         <div className="flex flex-col gap-8 mt-8">
           <div className="bg-[#6D123F] text-white p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 shadow-lg">
             <Info className="w-5 h-5 shrink-0 mt-0.5 text-[#D4AF37]" />
@@ -3180,6 +3344,7 @@ export function TikrarSystem({
           )}
 
         </div>
+        )}
       </TooltipProvider>
       </div>
 
@@ -3212,6 +3377,300 @@ export function TikrarSystem({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function TilawahMushafCard({
+  page,
+  juz,
+  surahName,
+  verses,
+  loading,
+  fontSize,
+  isPlaying,
+  playingVerseKey,
+  onTogglePlayAll,
+  onPlayFromVerse,
+  totalProgress,
+  onOpenTrialCounter,
+}: {
+  page: number;
+  juz: number;
+  surahName: string;
+  verses: Verse[];
+  loading: boolean;
+  fontSize: number;
+  isPlaying: boolean;
+  playingVerseKey: string | null;
+  onTogglePlayAll: () => void;
+  onPlayFromVerse: (idx: number) => void;
+  totalProgress: number;
+  onOpenTrialCounter: () => void;
+}) {
+  const [showPerKata, setShowPerKata] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(true);
+  const [openWord, setOpenWord] = useState<string | null>(null);
+  const [pinnedWord, setPinnedWord] = useState<string | null>(null);
+  const hideWordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setOpenWord(null);
+    setPinnedWord(null);
+  }, [page]);
+
+  useEffect(() => {
+    return () => {
+      if (hideWordTimerRef.current) clearTimeout(hideWordTimerRef.current);
+    };
+  }, []);
+
+  const showWord = (wid: string) => {
+    if (hideWordTimerRef.current) clearTimeout(hideWordTimerRef.current);
+    setOpenWord(wid);
+  };
+  const hideWordLater = (wid: string) => {
+    if (hideWordTimerRef.current) clearTimeout(hideWordTimerRef.current);
+    hideWordTimerRef.current = setTimeout(() => {
+      setOpenWord((cur) => (cur === wid ? null : cur));
+    }, 120);
+  };
+
+  const pageRangeLabel = useMemo(() => {
+    if (!verses || verses.length === 0) return 'Memuat ayat...';
+    const first = verses[0].verse_key;
+    const last = verses[verses.length - 1].verse_key;
+    const [s1, a1] = first.split(':');
+    const [s2, a2] = last.split(':');
+    const name1 = QURAN_CHAPTERS.find((c) => c.id === Number(s1))?.name_simple || `QS ${s1}`;
+    if (s1 === s2) {
+      return a1 === a2 ? `${name1}: ${a1}` : `${name1}: ${a1}–${a2}`;
+    }
+    const name2 = QURAN_CHAPTERS.find((c) => c.id === Number(s2))?.name_simple || `QS ${s2}`;
+    return `${name1} ${a1} – ${name2} ${a2}`;
+  }, [verses]);
+
+  return (
+    <Card className="border-2 border-sky-200 bg-white shadow-md overflow-hidden">
+      <div className="py-3 px-4 bg-sky-50/90 border-b border-sky-200 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Badge className="bg-sky-700 text-white hover:bg-sky-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 border-none shrink-0">
+            Mode Tilawah
+          </Badge>
+          <span className="text-xs font-black text-sky-950 truncate">
+            Juz {juz} • Hal. {page} • {surahName} ({pageRangeLabel})
+          </span>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onOpenTrialCounter}
+          className="h-8 px-3 rounded-xl border-amber-300 bg-white text-amber-900 hover:bg-amber-50 font-black text-[11px] shrink-0"
+        >
+          {totalProgress > 0
+            ? `Lanjutkan Counter Uji Coba (${Math.round(totalProgress)}%)`
+            : 'Buka Counter Uji Coba'}
+        </Button>
+      </div>
+
+      <CardContent className="p-4 sm:p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={loading || verses.length === 0}
+              onClick={onTogglePlayAll}
+              className={cn(
+                'h-9 px-3.5 rounded-xl font-black text-xs gap-1.5',
+                isPlaying
+                  ? 'bg-[#6D123F] hover:bg-[#6D123F]/90 text-white'
+                  : 'bg-sky-700 hover:bg-sky-800 text-white'
+              )}
+            >
+              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              {isPlaying ? 'Hentikan Murottal' : 'Putar Murottal Halaman'}
+            </Button>
+            {isPlaying && playingVerseKey && (
+              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900 text-[11px] font-black">
+                Memutar QS {playingVerseKey}
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowPerKata((v) => !v)}
+              className={cn(
+                'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-black border transition-colors touch-manipulation',
+                showPerKata
+                  ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                  : 'bg-white text-[#6D123F] border-[#6D123F]/25 hover:bg-[#6D123F]/5'
+              )}
+            >
+              <Languages className="w-3.5 h-3.5" />
+              Per Kata
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTranslation((v) => !v)}
+              className={cn(
+                'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-black border transition-colors touch-manipulation',
+                showTranslation
+                  ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                  : 'bg-white text-[#6D123F] border-[#6D123F]/25 hover:bg-[#6D123F]/5'
+              )}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Terjemah
+            </button>
+          </div>
+        </div>
+
+        {loading || verses.length === 0 ? (
+          <div className="py-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+            <Loader2 className="w-6 h-6 animate-spin text-sky-700" />
+            <span className="text-xs font-bold">Memuat ayat mushaf Halaman {page}...</span>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {verses.map((v, vIdx) => {
+              const isCur = v.verse_key === playingVerseKey;
+              const ayahNo = v.verse_key.split(':')[1];
+              const transText = v.translations?.[0]?.text?.replace(/<[^>]*>?/gm, '') || '';
+              return (
+                <div
+                  key={v.verse_key}
+                  id={`verse-card-${v.verse_key.replace(':', '-')}`}
+                  className={cn(
+                    'rounded-2xl border p-3.5 sm:p-4 transition-colors space-y-2.5',
+                    isCur
+                      ? 'bg-amber-50/90 border-amber-400 shadow-sm'
+                      : 'bg-[#FAF7F5]/60 border-stone-200/80'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-black text-[#6D123F] bg-white px-2.5 py-0.5 rounded-full border border-[#6D123F]/15">
+                      QS {v.verse_key}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => (isCur && isPlaying ? onTogglePlayAll() : onPlayFromVerse(vIdx))}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 hover:text-sky-950 px-2 py-0.5 rounded-lg hover:bg-sky-100/70 transition-colors"
+                      title={isCur && isPlaying ? 'Hentikan audio' : `Putar murottal mulai ayat ${ayahNo}`}
+                    >
+                      {isCur && isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                      <span>{isCur && isPlaying ? 'Berhenti' : `Putar Ayat ${ayahNo}`}</span>
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap justify-start items-start gap-x-1.5 gap-y-2" dir="rtl">
+                    {v.words.map((w: any, idx: number) => {
+                      const wid = `tilawah-${v.verse_key}-${idx}`;
+                      const isActualWord = w?.char_type_name !== 'end';
+                      if (isActualWord && (showPerKata || isCur)) {
+                        return (
+                          <Tooltip key={wid} open={openWord === wid || pinnedWord === wid} onOpenChange={() => {}}>
+                            <TooltipTrigger asChild>
+                              <span
+                                tabIndex={0}
+                                onMouseEnter={() => showWord(wid)}
+                                onMouseLeave={() => hideWordLater(wid)}
+                                onFocus={() => showWord(wid)}
+                                onBlur={() => hideWordLater(wid)}
+                                onClick={() => {
+                                  setPinnedWord((cur) => (cur === wid ? null : wid));
+                                  showWord(wid);
+                                }}
+                                className={cn(
+                                  'inline-flex flex-col items-center justify-start cursor-help rounded-lg px-1.5 py-1 outline-none transition-colors',
+                                  isCur ? 'bg-amber-200/75 ring-1 ring-amber-400/70' : 'bg-white/80 hover:bg-[#D4AF37]/20',
+                                  pinnedWord === wid && 'ring-2 ring-[#6D123F]/40'
+                                )}
+                              >
+                                <span style={{ fontSize: `${fontSize}px`, lineHeight: 1.55 }} className="font-arabic text-stone-950">
+                                  {w.text_uthmani}
+                                </span>
+                                <span
+                                  dir="ltr"
+                                  className="text-[10px] font-sans font-semibold text-[#6D123F] leading-tight text-center mt-0.5 max-w-[92px] break-words"
+                                >
+                                  {w.translation?.text || '-'}
+                                </span>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipPortal>
+                              <TooltipContent className="bg-[#6D123F] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                                <p className="text-xs font-bold">{w.translation?.text || '...'}</p>
+                              </TooltipContent>
+                            </TooltipPortal>
+                          </Tooltip>
+                        );
+                      }
+                      return (
+                        <Tooltip key={wid} open={openWord === wid || pinnedWord === wid} onOpenChange={() => {}}>
+                          <TooltipTrigger asChild>
+                            <span
+                              tabIndex={0}
+                              onMouseEnter={() => showWord(wid)}
+                              onMouseLeave={() => hideWordLater(wid)}
+                              onFocus={() => showWord(wid)}
+                              onBlur={() => hideWordLater(wid)}
+                              onClick={() => {
+                                setPinnedWord((cur) => (cur === wid ? null : wid));
+                                showWord(wid);
+                              }}
+                              style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+                              className={cn(
+                                'font-arabic text-stone-950 cursor-help hover:bg-[#D4AF37]/20 rounded px-0.5 outline-none transition-colors',
+                                pinnedWord === wid && 'bg-[#D4AF37]/30'
+                              )}
+                            >
+                              {w.text_uthmani}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipPortal>
+                            <TooltipContent className="bg-[#6D123F] text-white border-none shadow-lg py-1.5 px-3 z-[100]">
+                              <p className="text-xs font-bold">{w.translation?.text || '...'}</p>
+                            </TooltipContent>
+                          </TooltipPortal>
+                        </Tooltip>
+                      );
+                    })}
+                    <span className="inline-flex items-center justify-center px-2 rounded-full border border-[#6D123F]/20 text-[10px] font-bold mx-1 bg-white self-center">
+                      ({ayahNo})
+                    </span>
+                  </div>
+
+                  {showTranslation && transText && (
+                    <p className="text-xs leading-relaxed text-stone-700 bg-white/80 rounded-xl px-3 py-2 border-l-4 border-[#6D123F]/30">
+                      &ldquo;{transText}&rdquo;
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="rounded-2xl bg-amber-50/70 border border-amber-200 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <p className="text-xs font-semibold text-amber-950 leading-relaxed">
+            Ingin mencoba metode 4 Blok Tikrar pada halaman ini? Hitungan counter tetap tersimpan, sementara poin &amp; keaktifan harian tetap fokus pada Target Aktif.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={onOpenTrialCounter}
+            className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-9 px-4 rounded-xl shrink-0"
+          >
+            {totalProgress > 0
+              ? `Lanjutkan Uji Coba (${Math.round(totalProgress)}%)`
+              : 'Buka Counter Uji Coba'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
