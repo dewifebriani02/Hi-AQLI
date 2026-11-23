@@ -242,7 +242,7 @@ export default function MufradatReconciliationPage() {
   if (isRegLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Antrean Pendaftaran...</p>
       </div>
     );
@@ -253,7 +253,7 @@ export default function MufradatReconciliationPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-1 mt-2">
         <div className="space-y-1">
-          <h1 className="text-2xl font-black font-headline tracking-tight text-[#6D123F] uppercase">
+          <h1 className="text-2xl font-black font-headline tracking-tight text-primary uppercase">
             Rekonsiliasi BSI
           </h1>
           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2">
@@ -272,7 +272,7 @@ export default function MufradatReconciliationPage() {
           <Button 
             disabled={isProcessing}
             onClick={() => document.getElementById('bsi-upload')?.click()}
-            className="bg-white border-2 border-[#6D123F] text-[#6D123F] hover:bg-[#6D123F]/5 font-black h-11 px-5 rounded-xl shadow-sm gap-2 text-xs"
+            className="bg-white border-2 border-primary text-primary hover:bg-primary/5 font-black h-11 px-5 rounded-xl shadow-sm gap-2 text-xs"
           >
             {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             UNGGAH MUTASI BSI
@@ -354,7 +354,7 @@ export default function MufradatReconciliationPage() {
           <Card className="border-none shadow-xl rounded-2xl overflow-hidden bg-white">
             <CardHeader className="bg-slate-50 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5">
               <div>
-                <CardTitle className="text-base font-black text-[#6D123F] uppercase">
+                <CardTitle className="text-base font-black text-primary uppercase">
                   Antrean vs Mutasi Bank
                 </CardTitle>
                 <CardDescription className="text-xs font-medium">
@@ -399,14 +399,14 @@ export default function MufradatReconciliationPage() {
                       <TableRow key={m.registration.id} className={cn("transition-colors", m.isMatched ? "bg-emerald-50/40" : "bg-white")}>
                         <TableCell className="pl-6 py-4">
                           <div className="flex flex-col">
-                            <span className="font-black text-[#6D123F] text-xs">{m.registration.user_name}</span>
+                            <span className="font-black text-primary text-xs">{m.registration.user_name}</span>
                             <span className="text-[10px] font-bold text-slate-400">{m.registration.halaqah_title}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-black text-slate-800 text-xs">Rp {m.registration.amount?.toLocaleString('id-ID')}</span>
-                            <span className="text-[9px] font-black text-[#6D123F]">Kode: {m.registration.unique_code || 0}</span>
+                            <span className="text-[9px] font-black text-primary">Kode: {m.registration.unique_code || 0}</span>
                           </div>
                         </TableCell>
                         <TableCell>

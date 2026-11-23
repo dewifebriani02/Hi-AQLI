@@ -492,7 +492,7 @@ export default function MufradatGroupsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Memuat Daftar Batch Hi Mufradat...
         </p>
@@ -505,7 +505,7 @@ export default function MufradatGroupsPage() {
       {/* Header + KPI Strip */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[#6D123F]">
+          <div className="flex items-center gap-2 text-primary">
             <Layers className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Manajemen Batch &amp; Grup WA Hi Mufradat
@@ -526,11 +526,11 @@ export default function MufradatGroupsPage() {
             className={cn(
               "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border text-left transition-all",
               capacityFilter === "all"
-                ? "bg-[#6D123F]/5 border-[#6D123F]/40"
-                : "bg-slate-50 border-slate-200 hover:border-[#6D123F]/40"
+                ? "bg-primary/5 border-primary/40"
+                : "bg-slate-50 border-slate-200 hover:border-primary/40"
             )}
           >
-            <div className="p-2 rounded-xl bg-[#6D123F]/10 text-[#6D123F]">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Layers className="w-4 h-4" />
             </div>
             <div>
@@ -618,7 +618,7 @@ export default function MufradatGroupsPage() {
                 onClick={() => setCapacityFilter(f.key)}
                 className={cn(
                   "h-8 rounded-xl text-[11px] font-black",
-                  capacityFilter === f.key && "bg-[#6D123F] hover:bg-[#580e33] text-white"
+                  capacityFilter === f.key && "bg-primary hover:bg-[#580e33] text-white"
                 )}
               >
                 {f.label}
@@ -650,7 +650,7 @@ export default function MufradatGroupsPage() {
             <Button
               size="sm"
               onClick={openCreateDialog}
-              className="h-9 rounded-xl text-xs font-black bg-[#6D123F] hover:bg-[#580e33] text-white shadow-sm gap-1.5"
+              className="h-9 rounded-xl text-xs font-black bg-primary hover:bg-[#580e33] text-white shadow-sm gap-1.5"
             >
               <Plus className="w-4 h-4" /> Tambah Batch Baru
             </Button>
@@ -700,7 +700,7 @@ export default function MufradatGroupsPage() {
                       <TableRow key={group.id} className="hover:bg-slate-50/70">
                         <TableCell className="py-4 pl-6">
                           <div className="flex flex-col gap-0.5">
-                            <span className="font-black text-sm text-[#6D123F]">
+                            <span className="font-black text-sm text-primary">
                               {group.name}
                             </span>
                             <span className="text-[11px] text-slate-500 flex items-center gap-1">
@@ -751,7 +751,7 @@ export default function MufradatGroupsPage() {
                               <span className="text-[10px] font-bold uppercase text-slate-400">
                                 Muallimah:{" "}
                               </span>
-                              <span className="font-bold text-[#6D123F]">
+                              <span className="font-bold text-primary">
                                 {group.muallimah_name || "-"}
                               </span>
                             </div>
@@ -805,7 +805,7 @@ export default function MufradatGroupsPage() {
                               asChild
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-[11px] font-black text-[#6D123F] hover:bg-[#6D123F]/10 rounded-xl"
+                              className="h-8 text-[11px] font-black text-primary hover:bg-primary/10 rounded-xl"
                             >
                               <Link href={`/admin/mufradat?groupId=${group.id}`}>Monitor</Link>
                             </Button>
@@ -848,7 +848,7 @@ export default function MufradatGroupsPage() {
         }}
       >
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0 rounded-3xl border-none shadow-2xl">
-          <DialogHeader className="p-6 bg-[#6D123F] text-white">
+          <DialogHeader className="p-6 bg-primary text-white">
             <DialogTitle className="text-xl font-black uppercase">
               {dialogMode === "edit" ? "Edit Detail Batch" : "Tambah Batch Baru"}
             </DialogTitle>
@@ -1036,7 +1036,7 @@ export default function MufradatGroupsPage() {
 
             <Button
               onClick={handleSubmitGroupForm}
-              className="w-full h-11 bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md mt-2"
+              className="w-full h-11 bg-primary hover:bg-[#580e33] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md mt-2"
               disabled={isProcessing}
             >
               {isProcessing ? (
@@ -1089,7 +1089,7 @@ export default function MufradatGroupsPage() {
         <DialogContent className="max-w-xl max-h-[82vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
           <DialogHeader className="p-5 bg-slate-50 border-b">
             <div className="flex items-center justify-between gap-2">
-              <DialogTitle className="flex items-center gap-2 text-[#6D123F] font-black text-base">
+              <DialogTitle className="flex items-center gap-2 text-primary font-black text-base">
                 <Users className="w-5 h-5" />
                 {isAddingMember
                   ? "Tambah Peserta ke Batch"
@@ -1139,7 +1139,7 @@ export default function MufradatGroupsPage() {
                         <div className="flex items-center gap-3 min-w-0">
                           <Avatar className="h-9 w-9">
                             <AvatarImage src={u.photo_url || u.avatar_url} />
-                            <AvatarFallback className="text-xs font-black bg-[#6D123F] text-white">
+                            <AvatarFallback className="text-xs font-black bg-primary text-white">
                               {(u.full_name || u.username || "U").charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
@@ -1156,7 +1156,7 @@ export default function MufradatGroupsPage() {
                           size="sm"
                           onClick={() => handleJoinGroup(u.id, viewingGroupId!)}
                           disabled={isProcessing}
-                          className="bg-[#6D123F] hover:bg-[#580e33] text-white font-bold text-xs h-8 px-3 rounded-xl shrink-0"
+                          className="bg-primary hover:bg-[#580e33] text-white font-bold text-xs h-8 px-3 rounded-xl shrink-0"
                         >
                           Tambah
                         </Button>
@@ -1180,7 +1180,7 @@ export default function MufradatGroupsPage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar className="h-9 w-9">
                           <AvatarImage src={member.photo_url || member.avatar_url} />
-                          <AvatarFallback className="bg-[#6D123F] text-white text-xs font-black">
+                          <AvatarFallback className="bg-primary text-white text-xs font-black">
                             {(member.full_name || member.username || "U")
                               .charAt(0)
                               .toUpperCase()}

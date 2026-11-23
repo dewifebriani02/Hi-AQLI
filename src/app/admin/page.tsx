@@ -44,7 +44,7 @@ export default function AdminDashboard() {
   const { data: pendingTikrarSubs } = useCollection("tikrar_submissions", pendingTikrarOptions);
 
   const stats = [
-    { label: "Antrean Tasmi' Tikrar", value: pendingTikrarSubs?.length || 0, href: "/admin/tikrar", icon: Repeat, color: "text-[#6D123F]", bg: "bg-pink-50" },
+    { label: "Antrean Tasmi' Tikrar", value: pendingTikrarSubs?.length || 0, href: "/admin/tikrar", icon: Repeat, color: "text-primary", bg: "bg-pink-50" },
     { label: "Pendaftaran Baru", value: pending?.length || 0, href: "/admin/registrations", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Infaq Menunggu", value: pendingDonations?.length || 0, href: "/admin/donations", icon: HeartHandshake, color: "text-[#800000]", bg: "bg-red-50" },
     { label: "Thalibah Terdaftar", value: users?.length || 0, href: "/admin/users", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
@@ -64,11 +64,11 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
           <Link key={i} href={s.href} className="block group">
-            <Card className="border border-slate-200/80 dark:border-white/10 shadow-sm hover:border-[#6D123F]/40 hover:shadow-md transition-all rounded-2xl">
+            <Card className="border border-slate-200/80 dark:border-white/10 shadow-sm hover:border-primary/40 hover:shadow-md transition-all rounded-2xl">
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</p>
-                  <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-[#6D123F] transition-colors">{s.value}</p>
+                  <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors">{s.value}</p>
                 </div>
                 <div className={cn("p-3 rounded-2xl shrink-0", s.bg)}>
                   <s.icon className={cn("w-5 h-5", s.color)} />

@@ -159,7 +159,7 @@ export function TikrarQuizScoresAdmin() {
       <CardHeader className="pb-3 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base font-black flex items-center gap-2 text-[#6D123F]">
+            <CardTitle className="text-base font-black flex items-center gap-2 text-primary">
               <Trophy className="w-4 h-4 text-[#D4AF37]" /> Skor Ujian Halaman 60 Soal (Hafalan &amp; Terjemah Per Kata)
             </CardTitle>
             <CardDescription className="text-xs">
@@ -188,9 +188,9 @@ export function TikrarQuizScoresAdmin() {
             <p className="text-[10px] font-black uppercase text-emerald-700">Lulus (≥80%)</p>
             <p className="text-xl font-black text-emerald-800 mt-0.5">{stats.passedAttempts}</p>
           </div>
-          <div className="rounded-xl bg-[#6D123F]/5 border border-[#6D123F]/20 p-3">
-            <p className="text-[10px] font-black uppercase text-[#6D123F]">Rata-rata Skor</p>
-            <p className="text-xl font-black text-[#6D123F] mt-0.5">{stats.avgScore}%</p>
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-3">
+            <p className="text-[10px] font-black uppercase text-primary">Rata-rata Skor</p>
+            <p className="text-xl font-black text-primary mt-0.5">{stats.avgScore}%</p>
           </div>
           <div className="rounded-xl bg-amber-50 border border-amber-200 p-3">
             <p className="text-[10px] font-black uppercase text-amber-800">Belum Ujian PG</p>
@@ -207,7 +207,7 @@ export function TikrarQuizScoresAdmin() {
                 onClick={() => setViewMode('participants')}
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs font-black transition-colors',
-                  viewMode === 'participants' ? 'bg-[#6D123F] text-white' : 'text-slate-600'
+                  viewMode === 'participants' ? 'bg-primary text-white' : 'text-slate-600'
                 )}
               >
                 Per Thalibah ({filteredParticipants.length})
@@ -217,7 +217,7 @@ export function TikrarQuizScoresAdmin() {
                 onClick={() => setViewMode('attempts')}
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs font-black transition-colors',
-                  viewMode === 'attempts' ? 'bg-[#6D123F] text-white' : 'text-slate-600'
+                  viewMode === 'attempts' ? 'bg-primary text-white' : 'text-slate-600'
                 )}
               >
                 Riwayat Skor ({filteredAttempts.length})
@@ -240,7 +240,7 @@ export function TikrarQuizScoresAdmin() {
                     className={cn(
                       'px-2.5 py-1 rounded-full text-[11px] font-black border transition-colors',
                       filterMode === k
-                        ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                        ? 'bg-primary text-white border-primary'
                         : 'bg-white text-slate-600 border-slate-200'
                     )}
                   >
@@ -266,7 +266,7 @@ export function TikrarQuizScoresAdmin() {
       <CardContent className="space-y-3">
         {loading ? (
           <div className="py-12 flex justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-[#6D123F]" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : error ? (
           <p className="text-sm font-bold text-red-600">{error}</p>

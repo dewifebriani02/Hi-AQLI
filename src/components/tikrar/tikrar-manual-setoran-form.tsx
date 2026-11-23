@@ -91,17 +91,17 @@ export function TikrarManualSetoranForm({
   };
 
   return (
-    <Card className="rounded-3xl border border-[#6D123F]/20 shadow-sm bg-white dark:bg-slate-900 overflow-hidden">
+    <Card className="rounded-3xl border border-primary/20 shadow-sm bg-white dark:bg-slate-900 overflow-hidden">
       <div
         onClick={() => setIsOpen((v) => !v)}
         className="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors select-none"
       >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#6D123F]/10 text-[#6D123F] dark:text-rose-400 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary dark:text-rose-400 flex items-center justify-center">
             <ClipboardCheck className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs sm:text-sm font-black text-[#6D123F] dark:text-rose-400 flex items-center gap-2">
+            <h3 className="text-xs sm:text-sm font-black text-primary dark:text-rose-400 flex items-center gap-2">
               Input Setoran Tasmi&apos; Manual (Tanpa Antrean)
             </h3>
             <p className="text-[11px] text-slate-500 font-medium">
@@ -113,7 +113,7 @@ export function TikrarManualSetoranForm({
           type="button"
           variant={isOpen ? 'ghost' : 'outline'}
           size="sm"
-          className="rounded-xl text-xs font-bold h-8 gap-1.5 border-[#6D123F]/20 text-[#6D123F]"
+          className="rounded-xl text-xs font-bold h-8 gap-1.5 border-primary/20 text-primary"
         >
           {isOpen ? (
             <>
@@ -201,7 +201,7 @@ export function TikrarManualSetoranForm({
               type="button"
               onClick={submit}
               disabled={saving}
-              className="bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs h-9 rounded-xl shadow-sm"
+              className="bg-primary hover:bg-[#580e33] text-white font-black text-xs h-9 rounded-xl shadow-sm"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan Hasil Setoran'}
             </Button>

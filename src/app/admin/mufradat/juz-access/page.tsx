@@ -234,7 +234,7 @@ export default function MufradatJuzAccessPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin h-10 w-10 text-[#6D123F]" />
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Memuat Hak Akses Juz...
         </p>
@@ -247,7 +247,7 @@ export default function MufradatJuzAccessPage() {
       {/* Header + Clickable KPI Strip */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[#6D123F]">
+          <div className="flex items-center gap-2 text-primary">
             <ShieldCheck className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Manajemen Konten Hi Mufradat
@@ -268,11 +268,11 @@ export default function MufradatJuzAccessPage() {
             className={cn(
               "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border text-left transition-all",
               accessFilter === "all"
-                ? "bg-[#6D123F]/5 border-[#6D123F]/40"
-                : "bg-slate-50 border-slate-200 hover:border-[#6D123F]/40"
+                ? "bg-primary/5 border-primary/40"
+                : "bg-slate-50 border-slate-200 hover:border-primary/40"
             )}
           >
-            <div className="p-2 rounded-xl bg-[#6D123F]/10 text-[#6D123F]">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Users className="w-4 h-4" />
             </div>
             <div>
@@ -307,7 +307,7 @@ export default function MufradatJuzAccessPage() {
           <Button
             onClick={handleSyncJuz1All}
             disabled={isSaving === "bulk-sync"}
-            className="bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs h-11 px-4 rounded-2xl shadow-sm gap-2"
+            className="bg-primary hover:bg-[#580e33] text-white font-black text-xs h-11 px-4 rounded-2xl shadow-sm gap-2"
           >
             {isSaving === "bulk-sync" ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -370,7 +370,7 @@ export default function MufradatJuzAccessPage() {
                     className={cn(
                       "w-full p-3.5 flex items-center justify-between transition-all text-left",
                       isSelected
-                        ? "bg-[#6D123F]/5 border-l-4 border-l-[#6D123F]"
+                        ? "bg-primary/5 border-l-4 border-l-primary"
                         : "hover:bg-slate-50 border-l-4 border-l-transparent"
                     )}
                   >
@@ -399,7 +399,7 @@ export default function MufradatJuzAccessPage() {
                     <ChevronRight
                       className={cn(
                         "w-4 h-4 shrink-0 transition-transform",
-                        isSelected ? "translate-x-0.5 text-[#6D123F]" : "text-slate-300"
+                        isSelected ? "translate-x-0.5 text-primary" : "text-slate-300"
                       )}
                     />
                   </button>
@@ -503,7 +503,7 @@ export default function MufradatJuzAccessPage() {
                           className={cn(
                             "group relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all h-20",
                             isActive
-                              ? "bg-white border-[#6D123F] text-[#6D123F] shadow-sm scale-[1.01]"
+                              ? "bg-white border-primary text-primary shadow-sm scale-[1.01]"
                               : "bg-white/60 border-slate-200/70 text-slate-400 hover:border-slate-300 hover:bg-white"
                           )}
                         >

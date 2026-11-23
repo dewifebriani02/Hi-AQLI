@@ -545,7 +545,7 @@ export default function AdminClassesPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin h-10 w-10 text-[#6D123F]" />
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Katalog Kelas...</p>
       </div>
     );
@@ -557,12 +557,12 @@ export default function AdminClassesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Link href="/admin" className="hover:text-[#6D123F] font-bold">Dashboard Admin</Link>
+            <Link href="/admin" className="hover:text-primary font-bold">Dashboard Admin</Link>
             <span>/</span>
-            <span className="text-[#6D123F] font-bold">Katalog Kelas & Halaqah</span>
+            <span className="text-primary font-bold">Katalog Kelas & Halaqah</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-slate-900 flex items-center gap-2.5">
-            <Library className="w-7 h-7 text-[#6D123F]" />
+            <Library className="w-7 h-7 text-primary" />
             Katalog Kelas & Halaqah
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
@@ -583,7 +583,7 @@ export default function AdminClassesPage() {
 
           <Button 
             onClick={handleOpenAdd}
-            className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-bold gap-2 rounded-xl text-xs h-9 shadow-sm"
+            className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 rounded-xl text-xs h-9 shadow-sm"
           >
             <Plus className="w-4 h-4" /> Buat Kelas Baru
           </Button>
@@ -595,7 +595,7 @@ export default function AdminClassesPage() {
         <div className="p-3.5 rounded-2xl border bg-white border-slate-200 text-left">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Kelas</span>
-            <Library className="w-4 h-4 text-[#6D123F]" />
+            <Library className="w-4 h-4 text-primary" />
           </div>
           <p className="text-xl font-black text-slate-900 mt-1">{kpiStats.total}</p>
         </div>
@@ -774,7 +774,7 @@ export default function AdminClassesPage() {
                     className="h-8 px-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-white gap-1.5"
                     onClick={() => { setSelectedHalaqah(halaqah); setIsParticipantsOpen(true); }}
                   >
-                    <Users className="w-3.5 h-3.5 text-[#6D123F]" />
+                    <Users className="w-3.5 h-3.5 text-primary" />
                     Peserta ({regCount})
                   </Button>
 
@@ -813,7 +813,7 @@ export default function AdminClassesPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <Library className="w-5 h-5 text-[#6D123F]" />
+              <Library className="w-5 h-5 text-primary" />
               {editingHalaqah ? "Edit Data Kelas" : "Tambah Kelas Baru"}
             </DialogTitle>
             <DialogDescription>
@@ -897,12 +897,12 @@ export default function AdminClassesPage() {
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-bold uppercase text-slate-700">Format Jadwal</Label>
                 <div className="flex items-center gap-2">
-                  <span className={cn("text-[11px] font-bold", form.scheduleType === 'preset' ? "text-[#6D123F]" : "text-slate-400")}>Pilihan Hari</span>
+                  <span className={cn("text-[11px] font-bold", form.scheduleType === 'preset' ? "text-primary" : "text-slate-400")}>Pilihan Hari</span>
                   <Switch
                     checked={form.scheduleType === 'custom'}
                     onCheckedChange={(checked) => setForm({ ...form, scheduleType: checked ? 'custom' : 'preset' })}
                   />
-                  <span className={cn("text-[11px] font-bold", form.scheduleType === 'custom' ? "text-[#6D123F]" : "text-slate-400")}>Jadwal Khusus</span>
+                  <span className={cn("text-[11px] font-bold", form.scheduleType === 'custom' ? "text-primary" : "text-slate-400")}>Jadwal Khusus</span>
                 </div>
               </div>
 
@@ -1018,7 +1018,7 @@ export default function AdminClassesPage() {
                   placeholder="Contoh: 50000"
                   value={form.basePrice}
                   onChange={(e) => setForm({ ...form, basePrice: parseInt(e.target.value) || 0 })}
-                  className="rounded-xl font-bold text-[#6D123F]"
+                  className="rounded-xl font-bold text-primary"
                 />
               </div>
             )}
@@ -1028,7 +1028,7 @@ export default function AdminClassesPage() {
             <Button 
               onClick={handleSave} 
               disabled={isSaving}
-              className="w-full bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-bold gap-2 h-11 rounded-xl"
+              className="w-full bg-primary hover:bg-primary/90 text-white font-bold gap-2 h-11 rounded-xl"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               {editingHalaqah ? "Simpan Perubahan Kelas" : "Buat Kelas Sekarang"}
@@ -1042,7 +1042,7 @@ export default function AdminClassesPage() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <Users className="w-5 h-5 text-[#6D123F]" />
+              <Users className="w-5 h-5 text-primary" />
               Daftar Peserta: {selectedHalaqah?.title}
             </DialogTitle>
             <DialogDescription>
@@ -1071,7 +1071,7 @@ export default function AdminClassesPage() {
                 <Button
                   onClick={handleAddParticipant}
                   disabled={!newParticipantId || isAddingParticipant}
-                  className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-bold text-xs rounded-xl px-4"
+                  className="bg-primary hover:bg-primary/90 text-white font-bold text-xs rounded-xl px-4"
                 >
                   {isAddingParticipant ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4 mr-1" />}
                   Tambah
@@ -1081,7 +1081,7 @@ export default function AdminClassesPage() {
 
             {/* Participants List */}
             {isParticipantsLoading ? (
-              <div className="py-12 text-center"><Loader2 className="animate-spin h-6 w-6 mx-auto text-[#6D123F]" /></div>
+              <div className="py-12 text-center"><Loader2 className="animate-spin h-6 w-6 mx-auto text-primary" /></div>
             ) : (!participants || participants.length === 0) ? (
               <div className="py-12 text-center text-slate-400 text-xs italic border-2 border-dashed rounded-xl">
                 Belum ada thalibah yang terdaftar di kelas ini.

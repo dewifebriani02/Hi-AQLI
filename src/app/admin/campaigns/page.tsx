@@ -256,7 +256,7 @@ export default function AdminCampaignsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
-        <Loader2 className="animate-spin h-10 w-10 text-[#6D123F]" />
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Kampanye Infaq...</p>
       </div>
     );
@@ -267,7 +267,7 @@ export default function AdminCampaignsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1 mt-2">
         <div>
-          <h1 className="text-2xl font-black font-headline tracking-tight text-[#6D123F] uppercase">
+          <h1 className="text-2xl font-black font-headline tracking-tight text-primary uppercase">
             Kampanye Infaq
           </h1>
           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
@@ -278,7 +278,7 @@ export default function AdminCampaignsPage() {
           {!showForm ? (
             <Button
               onClick={() => setShowForm(true)}
-              className="bg-[#6D123F] hover:bg-[#520d2f] text-white font-black text-xs gap-2 uppercase tracking-wider rounded-xl shadow-md h-11 px-5"
+              className="bg-primary hover:bg-[#520d2f] text-white font-black text-xs gap-2 uppercase tracking-wider rounded-xl shadow-md h-11 px-5"
             >
               <Plus className="w-4 h-4" /> Tambah Kampanye
             </Button>
@@ -299,7 +299,7 @@ export default function AdminCampaignsPage() {
         <Card className="border-none shadow-sm bg-white rounded-2xl p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Program</p>
           <p className="text-2xl font-black mt-1 text-slate-800">{stats.total}</p>
-          <p className="text-[10px] font-bold text-[#6D123F] mt-1">{stats.active} Aktif Berjalan</p>
+          <p className="text-[10px] font-bold text-primary mt-1">{stats.active} Aktif Berjalan</p>
         </Card>
         <Card className="border-none shadow-sm bg-white rounded-2xl p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Target Dana</p>
@@ -311,7 +311,7 @@ export default function AdminCampaignsPage() {
           <p className="text-2xl font-black mt-1 text-emerald-600">Rp {stats.totalCollected.toLocaleString('id-ID')}</p>
           <p className="text-[10px] font-bold text-emerald-700 mt-1">Dari Donatur Terverifikasi</p>
         </Card>
-        <Card className="border-none shadow-sm bg-[#6D123F] text-white rounded-2xl p-4">
+        <Card className="border-none shadow-sm bg-primary text-white rounded-2xl p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Penyaluran</p>
           <p className="text-2xl font-black mt-1">Hi Berbagi</p>
           <p className="text-[10px] font-bold text-amber-200 mt-1">Transparan & Amanah</p>
@@ -321,7 +321,7 @@ export default function AdminCampaignsPage() {
       {/* Form Tambah/Edit */}
       {showForm && (
         <Card className="border-none shadow-2xl overflow-hidden bg-white mx-1 rounded-2xl animate-in slide-in-from-top-4 duration-300">
-          <CardHeader className="bg-[#6D123F] text-white py-5 px-6">
+          <CardHeader className="bg-primary text-white py-5 px-6">
             <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
               <HeartHandshake className="w-4 h-4 text-[#D4AF37]" />
               {editingId ? "Edit Rincian Kampanye" : "Buat Kampanye Infaq Baru"}
@@ -355,7 +355,7 @@ export default function AdminCampaignsPage() {
                       className={cn(
                         "cursor-pointer text-[10px] font-black px-3 py-1.5 rounded-lg border transition-all",
                         category === cat
-                          ? "bg-[#6D123F] text-white border-[#6D123F] shadow-sm"
+                          ? "bg-primary text-white border-primary shadow-sm"
                           : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
                       )}
                     >
@@ -420,7 +420,7 @@ export default function AdminCampaignsPage() {
 
             {/* Bank Info */}
             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
-              <p className="text-xs font-black uppercase tracking-widest text-[#6D123F]">
+              <p className="text-xs font-black uppercase tracking-widest text-primary">
                 Informasi Rekening Tujuan & Kontak
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -473,7 +473,7 @@ export default function AdminCampaignsPage() {
                   type="file"
                   accept="image/*"
                   onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                  className="h-12 border-2 rounded-xl text-xs py-3 cursor-pointer file:bg-[#6D123F] file:text-white file:border-0 file:rounded-lg file:px-3 file:py-1 file:mr-3 file:font-bold file:-mt-1 hover:file:bg-[#520d2f]"
+                  className="h-12 border-2 rounded-xl text-xs py-3 cursor-pointer file:bg-primary file:text-white file:border-0 file:rounded-lg file:px-3 file:py-1 file:mr-3 file:font-bold file:-mt-1 hover:file:bg-[#520d2f]"
                 />
                 {imageUrl && !imageFile && (
                   <div className="w-14 h-14 rounded-xl border overflow-hidden shrink-0">
@@ -494,7 +494,7 @@ export default function AdminCampaignsPage() {
               <Button
                 onClick={handleSave}
                 disabled={loading}
-                className="bg-[#6D123F] hover:bg-[#520d2f] text-white font-black uppercase tracking-wider gap-2 h-12 flex-1 rounded-xl shadow-lg"
+                className="bg-primary hover:bg-[#520d2f] text-white font-black uppercase tracking-wider gap-2 h-12 flex-1 rounded-xl shadow-lg"
               >
                 {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <Save className="w-4 h-4" />}
                 {editingId ? "Simpan Perubahan Kampanye" : "Terbitkan Kampanye Sekarang"}
@@ -514,7 +514,7 @@ export default function AdminCampaignsPage() {
               className={cn(
                 "cursor-pointer text-[10px] font-black px-3 py-1.5 rounded-lg border transition-all whitespace-nowrap",
                 selectedCategory === cat
-                  ? "bg-[#6D123F] text-white border-[#6D123F] shadow-sm"
+                  ? "bg-primary text-white border-primary shadow-sm"
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
               )}
             >
@@ -537,7 +537,7 @@ export default function AdminCampaignsPage() {
       <Card className="border-none shadow-xl overflow-hidden bg-white mx-1 rounded-2xl">
         <CardHeader className="bg-slate-50 px-6 py-4 border-b flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-slate-800">
-            <Target className="w-4 h-4 text-[#6D123F]" /> Daftar Program Kampanye
+            <Target className="w-4 h-4 text-primary" /> Daftar Program Kampanye
           </CardTitle>
           <Badge variant="outline" className="bg-white text-xs font-bold">
             {filteredCampaigns.length} Program
@@ -588,7 +588,7 @@ export default function AdminCampaignsPage() {
                               )}
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <span className="text-xs font-black text-[#6D123F] uppercase truncate">
+                              <span className="text-xs font-black text-primary uppercase truncate">
                                 {camp.title}
                               </span>
                               <span className="text-[10px] text-muted-foreground truncate">
@@ -640,7 +640,7 @@ export default function AdminCampaignsPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 font-black text-[9px] gap-1 border-[#6D123F] text-[#6D123F] hover:bg-[#6D123F] hover:text-white rounded-lg transition-colors"
+                              className="h-8 font-black text-[9px] gap-1 border-primary text-primary hover:bg-primary hover:text-white rounded-lg transition-colors"
                               onClick={() => copyPromoMessage(camp)}
                             >
                               <Copy className="w-3 h-3" /> PROMOSI
@@ -648,7 +648,7 @@ export default function AdminCampaignsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-600 hover:text-[#6D123F] hover:bg-slate-100 rounded-lg"
+                              className="h-8 w-8 text-slate-600 hover:text-primary hover:bg-slate-100 rounded-lg"
                               onClick={() => populateForm(camp)}
                             >
                               <Pencil className="w-3.5 h-3.5" />

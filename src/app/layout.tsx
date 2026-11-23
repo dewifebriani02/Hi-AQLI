@@ -170,7 +170,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                     className={cn(
                       "md:hidden shrink-0",
                       isAdminRoute
-                        ? "text-[#6D123F] bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl"
+                        ? "text-primary bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl"
                         : "text-slate-400"
                     )}
                   />

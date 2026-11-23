@@ -495,9 +495,9 @@ export default function AdminGroupsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Link href="/admin" className="hover:text-[#6D123F] font-bold">Dashboard Admin</Link>
+            <Link href="/admin" className="hover:text-primary font-bold">Dashboard Admin</Link>
             <span>/</span>
-            <span className="text-[#6D123F] font-bold">Grup & Robot WhatsApp</span>
+            <span className="text-primary font-bold">Grup & Robot WhatsApp</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-slate-900 flex items-center gap-2.5">
             <MessageSquare className="w-7 h-7 text-emerald-600" />
@@ -541,13 +541,13 @@ export default function AdminGroupsPage() {
           className={cn(
             "p-3 rounded-2xl border text-left transition-all",
             categoryFilter === 'all' && activeTab === 'groups'
-              ? "bg-[#6D123F]/5 border-[#6D123F] shadow-sm"
+              ? "bg-primary/5 border-primary shadow-sm"
               : "bg-white hover:bg-slate-50 border-slate-200"
           )}
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Semua Grup</span>
-            <Layers className="w-3.5 h-3.5 text-[#6D123F]" />
+            <Layers className="w-3.5 h-3.5 text-primary" />
           </div>
           <p className="text-xl font-black text-slate-900 mt-1">{counts.all}</p>
         </button>
@@ -612,7 +612,7 @@ export default function AdminGroupsPage() {
       {/* Safety Alert Banner */}
       <div className="bg-gradient-to-r from-emerald-50 via-amber-50 to-blue-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-[#6D123F] text-white rounded-xl shadow-sm mt-0.5 sm:mt-0">
+          <div className="p-2 bg-primary text-white rounded-xl shadow-sm mt-0.5 sm:mt-0">
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
@@ -636,7 +636,7 @@ export default function AdminGroupsPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all",
             activeTab === 'groups'
-              ? "border-[#6D123F] text-[#6D123F] bg-[#6D123F]/5 rounded-t-xl"
+              ? "border-primary text-primary bg-primary/5 rounded-t-xl"
               : "border-transparent text-slate-500 hover:text-slate-800"
           )}
         >
@@ -649,7 +649,7 @@ export default function AdminGroupsPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all",
             activeTab === 'logs'
-              ? "border-[#6D123F] text-[#6D123F] bg-[#6D123F]/5 rounded-t-xl"
+              ? "border-primary text-primary bg-primary/5 rounded-t-xl"
               : "border-transparent text-slate-500 hover:text-slate-800"
           )}
         >
@@ -668,7 +668,7 @@ export default function AdminGroupsPage() {
                 variant={categoryFilter === 'all' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setCategoryFilter('all')}
-                className={cn("h-8 px-3 rounded-xl text-xs font-bold", categoryFilter === 'all' && "bg-[#6D123F] hover:bg-[#6D123F]/90 text-white")}
+                className={cn("h-8 px-3 rounded-xl text-xs font-bold", categoryFilter === 'all' && "bg-primary hover:bg-primary/90 text-white")}
               >
                 Semua ({counts.all})
               </Button>
@@ -712,7 +712,7 @@ export default function AdminGroupsPage() {
           {/* Group List Grid */}
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3">
-              <RefreshCw className="w-8 h-8 animate-spin text-[#6D123F]" />
+              <RefreshCw className="w-8 h-8 animate-spin text-primary" />
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Memuat data grup...</p>
             </div>
           ) : filteredGroups.length === 0 ? (
@@ -836,7 +836,7 @@ export default function AdminGroupsPage() {
                             "rounded-xl font-bold text-xs h-9 text-white gap-1.5 shadow-xs",
                             isTikrar && "bg-emerald-700 hover:bg-emerald-800",
                             isMufradat && "bg-amber-700 hover:bg-amber-800",
-                            !isTikrar && !isMufradat && "bg-[#6D123F] hover:bg-[#6D123F]/90"
+                            !isTikrar && !isMufradat && "bg-primary hover:bg-primary/90"
                           )}
                         >
                           <Send className="w-3.5 h-3.5" />

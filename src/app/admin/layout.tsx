@@ -88,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (isUserLoading || isAuthorizing) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 text-[#6D123F] animate-spin" />
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Memasuki Area Terbatas...</p>
       </div>
     );
@@ -116,7 +116,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-          <Button asChild className="flex-1 bg-[#6D123F] hover:bg-[#6D123F]/90 font-black uppercase text-[10px] tracking-widest h-14 rounded-2xl shadow-lg">
+          <Button asChild className="flex-1 bg-primary hover:bg-primary/90 font-black uppercase text-[10px] tracking-widest h-14 rounded-2xl shadow-lg">
             <Link href="/"><Home className="w-4 h-4 mr-2" /> KEMBALI KE BERANDA</Link>
           </Button>
           <Button 
@@ -172,7 +172,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all",
                     isSubActive
-                      ? "bg-white dark:bg-slate-900 text-[#6D123F] dark:text-rose-400 shadow-sm font-black"
+                      ? "bg-white dark:bg-slate-900 text-primary dark:text-rose-400 shadow-sm font-black"
                       : "text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/50"
                   )}
                 >

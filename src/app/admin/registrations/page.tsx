@@ -396,7 +396,7 @@ export default function AdminRegistrationsPage() {
   if (isPendingLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin h-10 w-10 text-[#6D123F]" />
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Antrean Pendaftaran...</p>
       </div>
     );
@@ -408,12 +408,12 @@ export default function AdminRegistrationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Link href="/admin" className="hover:text-[#6D123F] font-bold">Dashboard Admin</Link>
+            <Link href="/admin" className="hover:text-primary font-bold">Dashboard Admin</Link>
             <span>/</span>
-            <span className="text-[#6D123F] font-bold">Verifikasi Pendaftaran</span>
+            <span className="text-primary font-bold">Verifikasi Pendaftaran</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-slate-900 flex items-center gap-2.5">
-            <CheckCircle2 className="w-7 h-7 text-[#6D123F]" />
+            <CheckCircle2 className="w-7 h-7 text-primary" />
             Verifikasi Pendaftaran & Pembayaran
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
@@ -441,7 +441,7 @@ export default function AdminRegistrationsPage() {
           className={cn(
             "p-3.5 rounded-2xl border text-left transition-all",
             activeTab === 'pending'
-              ? "bg-[#6D123F]/5 border-[#6D123F] shadow-sm"
+              ? "bg-primary/5 border-primary shadow-sm"
               : "bg-white hover:bg-slate-50 border-slate-200"
           )}
         >
@@ -486,8 +486,8 @@ export default function AdminRegistrationsPage() {
 
         <div className="p-3.5 rounded-2xl border bg-white border-slate-200 text-left">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#6D123F]">Dana Terkumpul</span>
-            <span className="text-[10px] font-black bg-[#6D123F]/10 text-[#6D123F] px-1.5 py-0.5 rounded">IDR</span>
+            <span className="text-[10px] font-black uppercase tracking-wider text-primary">Dana Terkumpul</span>
+            <span className="text-[10px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded">IDR</span>
           </div>
           <p className="text-lg font-black text-slate-900 mt-1 truncate">
             Rp {kpiStats.funds.toLocaleString('id-ID')}
@@ -539,15 +539,15 @@ export default function AdminRegistrationsPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
         <TabsList className="bg-slate-100 p-1 rounded-2xl w-fit">
-          <TabsTrigger value="pending" className="rounded-xl text-xs font-bold gap-2 data-[state=active]:bg-[#6D123F] data-[state=active]:text-white">
+          <TabsTrigger value="pending" className="rounded-xl text-xs font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
             <AlertCircle className="w-3.5 h-3.5" />
             Antrean Menunggu ({filteredPending.length})
           </TabsTrigger>
-          <TabsTrigger value="verified" className="rounded-xl text-xs font-bold gap-2 data-[state=active]:bg-[#6D123F] data-[state=active]:text-white">
+          <TabsTrigger value="verified" className="rounded-xl text-xs font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
             <CheckCircle2 className="w-3.5 h-3.5" />
             Riwayat Terverifikasi ({filteredVerified.length})
           </TabsTrigger>
-          <TabsTrigger value="rejected" className="rounded-xl text-xs font-bold gap-2 data-[state=active]:bg-[#6D123F] data-[state=active]:text-white">
+          <TabsTrigger value="rejected" className="rounded-xl text-xs font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
             <Ban className="w-3.5 h-3.5" />
             Ditolak / Batal ({filteredRejected.length})
           </TabsTrigger>
@@ -571,7 +571,7 @@ export default function AdminRegistrationsPage() {
                   <Card key={reg.id} className="border rounded-2xl shadow-sm bg-white overflow-hidden transition-all hover:shadow-md">
                     <div className="bg-slate-50/80 px-5 py-3 border-b flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="text-[10px] font-bold border-[#6D123F]/20 text-[#6D123F] bg-white flex items-center gap-1.5">
+                        <Badge variant="outline" className="text-[10px] font-bold border-primary/20 text-primary bg-white flex items-center gap-1.5">
                           <BookOpen className="w-3 h-3" /> {reg.halaqah_title}
                         </Badge>
                         <Badge className={cn(
@@ -594,7 +594,7 @@ export default function AdminRegistrationsPage() {
                         {/* User Profile */}
                         <div className="lg:col-span-4 space-y-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-[#6D123F]/10 flex items-center justify-center text-[#6D123F] shrink-0 font-black text-base">
+                            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0 font-black text-base">
                               {(reg.user_name || 'U')[0].toUpperCase()}
                             </div>
                             <div className="flex flex-col min-w-0">
@@ -628,7 +628,7 @@ export default function AdminRegistrationsPage() {
                             <div className="flex items-center justify-between border-t pt-2 border-slate-200">
                               <span className="text-[10px] font-black uppercase text-slate-400">Nominal Infaq</span>
                               <div className="text-right">
-                                <span className="text-base font-black text-[#6D123F]">
+                                <span className="text-base font-black text-primary">
                                   Rp {(Number(reg.amount) || 0).toLocaleString('id-ID')}
                                 </span>
                                 {Number(reg.amount) === 0 && reg.payment_method !== 'voucher' && (
@@ -671,7 +671,7 @@ export default function AdminRegistrationsPage() {
                         {/* Actions */}
                         <div className="lg:col-span-4 flex flex-col gap-2">
                           <Button
-                            className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-bold h-11 gap-2 rounded-xl text-xs shadow-sm"
+                            className="bg-primary hover:bg-primary/90 text-white font-bold h-11 gap-2 rounded-xl text-xs shadow-sm"
                             onClick={() => handleApprove(reg)}
                             disabled={processingId === reg.id}
                           >
@@ -747,7 +747,7 @@ export default function AdminRegistrationsPage() {
                           </TableCell>
 
                           <TableCell className="py-3">
-                            <span className="text-xs font-bold text-[#6D123F]">{reg.halaqah_title}</span>
+                            <span className="text-xs font-bold text-primary">{reg.halaqah_title}</span>
                           </TableCell>
 
                           <TableCell className="py-3">
@@ -789,7 +789,7 @@ export default function AdminRegistrationsPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 w-8 p-0 text-slate-400 hover:text-[#6D123F] rounded-lg"
+                                className="h-8 w-8 p-0 text-slate-400 hover:text-primary rounded-lg"
                                 onClick={() => openEdit(reg)}
                                 title="Koreksi Nominal / Bulan Tagihan"
                               >
@@ -890,7 +890,7 @@ export default function AdminRegistrationsPage() {
       {/* EDIT PAYMENT MODAL */}
       <Dialog open={!!editingReg} onOpenChange={(open) => !open && setEditingReg(null)}>
         <DialogContent className="max-w-md rounded-2xl overflow-hidden p-0 border shadow-2xl">
-          <DialogHeader className="p-6 bg-[#6D123F] text-white">
+          <DialogHeader className="p-6 bg-primary text-white">
             <DialogTitle className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
               <Pencil className="w-5 h-5" /> Edit Detail Pembayaran
             </DialogTitle>
@@ -914,7 +914,7 @@ export default function AdminRegistrationsPage() {
                   type="number" 
                   value={editAmount} 
                   onChange={(e) => setEditAmount(e.target.value)}
-                  className="h-10 rounded-xl font-bold text-[#6D123F]"
+                  className="h-10 rounded-xl font-bold text-primary"
                 />
               </div>
               <div className="space-y-1.5">
@@ -942,7 +942,7 @@ export default function AdminRegistrationsPage() {
               Batal
             </Button>
             <Button 
-              className="flex-1 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-bold h-10 rounded-xl text-xs"
+              className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold h-10 rounded-xl text-xs"
               onClick={handleUpdateReg}
               disabled={isSaving}
             >
@@ -1019,7 +1019,7 @@ export default function AdminRegistrationsPage() {
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-900 text-base">
-              <ImageIcon className="w-5 h-5 text-[#6D123F]" />
+              <ImageIcon className="w-5 h-5 text-primary" />
               Bukti Pembayaran Pendaftar
             </DialogTitle>
             <DialogDescription className="text-xs">

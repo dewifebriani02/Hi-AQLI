@@ -197,7 +197,7 @@ export default function AdminVouchersPage() {
   if (isVouchersLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Data Voucher Promo...</p>
       </div>
     );
@@ -208,7 +208,7 @@ export default function AdminVouchersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1 mt-2">
         <div>
-          <h1 className="text-2xl font-black font-headline tracking-tight text-[#6D123F] uppercase">
+          <h1 className="text-2xl font-black font-headline tracking-tight text-primary uppercase">
             Voucher Promo
           </h1>
           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
@@ -221,7 +221,7 @@ export default function AdminVouchersPage() {
             "font-black uppercase text-xs h-11 px-5 rounded-xl shadow-md transition-all gap-2",
             showCreateForm
               ? "bg-slate-200 text-slate-700 hover:bg-slate-300"
-              : "bg-[#6D123F] hover:bg-[#520d2f] text-white"
+              : "bg-primary hover:bg-[#520d2f] text-white"
           )}
         >
           {showCreateForm ? <ChevronLeft className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -232,10 +232,10 @@ export default function AdminVouchersPage() {
       {/* Form Tambah Voucher */}
       {showCreateForm && (
         <Card className="border-none shadow-2xl bg-white overflow-hidden rounded-2xl animate-in slide-in-from-top-4 duration-300 mx-1">
-          <div className="h-2 bg-[#6D123F]" />
+          <div className="h-2 bg-primary" />
           <CardHeader className="p-6">
             <CardTitle className="text-base font-black uppercase tracking-tight flex items-center gap-2 text-slate-900">
-              <Ticket className="w-5 h-5 text-[#6D123F]" /> Generate Kode Promo Baru
+              <Ticket className="w-5 h-5 text-primary" /> Generate Kode Promo Baru
             </CardTitle>
             <CardDescription className="text-xs font-medium">
               Satu kode voucher dapat dibatasi kuota atau masa berlakunya untuk program tertentu.
@@ -252,7 +252,7 @@ export default function AdminVouchersPage() {
                     placeholder="Contoh: AQLIRAMADHAN" 
                     value={newVoucher.code}
                     onChange={(e) => setNewVoucher({...newVoucher, code: e.target.value.toUpperCase()})}
-                    className="h-12 border-2 rounded-xl font-mono font-bold text-[#6D123F] uppercase"
+                    className="h-12 border-2 rounded-xl font-mono font-bold text-primary uppercase"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -328,7 +328,7 @@ export default function AdminVouchersPage() {
               <Button 
                 type="submit" 
                 disabled={isCreating}
-                className="bg-[#6D123F] hover:bg-[#520d2f] text-white font-black px-8 h-12 rounded-xl shadow-lg transition-all text-xs uppercase"
+                className="bg-primary hover:bg-[#520d2f] text-white font-black px-8 h-12 rounded-xl shadow-lg transition-all text-xs uppercase"
               >
                 {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                 Aktifkan Voucher
@@ -348,7 +348,7 @@ export default function AdminVouchersPage() {
               className={cn(
                 "cursor-pointer text-[10px] font-black px-3 py-1.5 rounded-lg border transition-all uppercase",
                 programFilter === p
-                  ? "bg-[#6D123F] text-white border-[#6D123F] shadow-sm"
+                  ? "bg-primary text-white border-primary shadow-sm"
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
               )}
             >
@@ -371,7 +371,7 @@ export default function AdminVouchersPage() {
       <Card className="border-none shadow-xl bg-white overflow-hidden rounded-2xl mx-1">
         <div className="bg-slate-50 px-6 py-4 border-b flex items-center justify-between">
           <h3 className="text-xs font-black uppercase tracking-widest text-slate-600 flex items-center gap-2">
-            <Ticket className="w-4 h-4 text-[#6D123F]" /> Daftar Voucher Aktif & Riwayat
+            <Ticket className="w-4 h-4 text-primary" /> Daftar Voucher Aktif & Riwayat
           </h3>
           <Badge variant="outline" className="font-bold text-[10px] bg-white">
             {filteredVouchers.length} Kode
@@ -405,13 +405,13 @@ export default function AdminVouchersPage() {
                       <TableCell className="py-5 pl-6">
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-2">
-                            <code className="bg-[#6D123F] text-white px-2.5 py-0.5 rounded-lg font-mono font-black text-xs tracking-wider">
+                            <code className="bg-primary text-white px-2.5 py-0.5 rounded-lg font-mono font-black text-xs tracking-wider">
                               {v.code}
                             </code>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-slate-400 hover:text-[#6D123F] hover:bg-slate-100 rounded-md"
+                              className="h-6 w-6 text-slate-400 hover:text-primary hover:bg-slate-100 rounded-md"
                               onClick={() => copyCode(v.code)}
                               title="Salin Kode"
                             >
@@ -445,12 +445,12 @@ export default function AdminVouchersPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-1.5 font-black text-xs text-slate-700">
-                            <Users className="w-3.5 h-3.5 text-[#6D123F]" />
+                            <Users className="w-3.5 h-3.5 text-primary" />
                             {v.usageCount} {v.usage_limit ? `/ ${v.usage_limit}` : 'Penggunaan'}
                           </div>
                           <div className="w-28 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-[#6D123F] rounded-full transition-all" 
+                              className="h-full bg-primary rounded-full transition-all" 
                               style={{ width: v.usage_limit ? `${Math.min(100, (v.usageCount / v.usage_limit) * 100)}%` : v.usageCount > 0 ? '25%' : '0%' }} 
                             />
                           </div>
@@ -492,13 +492,13 @@ export default function AdminVouchersPage() {
           {redemptions?.slice(0, 6).map((r: any) => (
             <div key={r.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-all">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-[#6D123F]">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-primary">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-slate-800">{r.users?.username || 'Thalibah'}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    Klaim <strong className="text-[#6D123F]">{r.vouchers?.code}</strong> &bull; {format(new Date(r.redeemed_at), 'dd/MM/yy HH:mm')}
+                    Klaim <strong className="text-primary">{r.vouchers?.code}</strong> &bull; {format(new Date(r.redeemed_at), 'dd/MM/yy HH:mm')}
                   </span>
                 </div>
               </div>

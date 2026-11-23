@@ -198,7 +198,7 @@ export default function MufradatReportsPage() {
   if (loadingGroups || loadingUsers || loadingAttempts) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Menganalisis Data Performa...
         </p>
@@ -211,7 +211,7 @@ export default function MufradatReportsPage() {
       {/* Header + KPI Strip */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[#6D123F]">
+          <div className="flex items-center gap-2 text-primary">
             <BarChart3 className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Analitik &amp; Laporan Kinerja Hi Mufradat
@@ -227,8 +227,8 @@ export default function MufradatReportsPage() {
 
         {/* KPI Pills */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border bg-[#6D123F]/5 border-[#6D123F]/20">
-            <div className="p-2 rounded-xl bg-[#6D123F]/10 text-[#6D123F]">
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border bg-primary/5 border-primary/20">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Users className="w-4 h-4" />
             </div>
             <div>
@@ -324,7 +324,7 @@ export default function MufradatReportsPage() {
           <Button
             asChild
             size="sm"
-            className="h-9 bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs px-4 rounded-xl shadow-sm"
+            className="h-9 bg-primary hover:bg-[#580e33] text-white font-black text-xs px-4 rounded-xl shadow-sm"
           >
             <Link href="/admin/mufradat/groups">
               <Zap className="w-3.5 h-3.5 mr-1.5" />
@@ -345,7 +345,7 @@ export default function MufradatReportsPage() {
               Klik <strong>Monitor</strong> untuk melihat progres detail peserta dalam batch tersebut.
             </CardDescription>
           </div>
-          <TrendingUp className="w-5 h-5 text-[#6D123F]" />
+          <TrendingUp className="w-5 h-5 text-primary" />
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
@@ -465,7 +465,7 @@ export default function MufradatReportsPage() {
                             asChild
                             size="sm"
                             variant="outline"
-                            className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200 hover:border-[#6D123F] hover:text-[#6D123F]"
+                            className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200 hover:border-primary hover:text-primary"
                           >
                             <Link href={`/admin/mufradat?groupId=${group.id}`}>
                               Monitor

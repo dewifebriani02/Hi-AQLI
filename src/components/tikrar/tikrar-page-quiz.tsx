@@ -769,7 +769,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center py-20 gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-[#6D123F]" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
           Menyusun {QUIZ_QUESTION_COUNT} soal ujian (Part 1 Hafalan &amp; Part 2 Terjemah Per Kata)…
         </p>
@@ -793,7 +793,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
         className={cn(
           'rounded-xl border px-3 py-2 flex items-center justify-between gap-2 text-xs',
           phase === 'part1'
-            ? 'bg-[#6D123F] text-white border-[#6D123F]'
+            ? 'bg-primary text-white border-primary'
             : 'bg-emerald-50 text-emerald-900 border-emerald-200'
         )}
       >
@@ -806,9 +806,9 @@ export function TikrarPageQuiz({ page }: { page: number }) {
         className={cn(
           'rounded-xl border px-3 py-2 flex items-center justify-between gap-2 text-xs',
           phase === 'part2'
-            ? 'bg-[#6D123F] text-white border-[#6D123F]'
+            ? 'bg-primary text-white border-primary'
             : phase === 'part2_select'
-            ? 'bg-[#D4AF37]/20 text-[#6D123F] border-[#D4AF37]'
+            ? 'bg-[#D4AF37]/20 text-primary border-[#D4AF37]'
             : phase === 'finished'
             ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
             : 'bg-stone-100 text-stone-500 border-stone-200'
@@ -831,7 +831,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
     return (
       <div className="space-y-4">
         <PartStepper />
-        <Progress value={(QUIZ_PART1_COUNT / QUIZ_QUESTION_COUNT) * 100} className="h-2 [&>div]:bg-[#6D123F]" />
+        <Progress value={(QUIZ_PART1_COUNT / QUIZ_QUESTION_COUNT) * 100} className="h-2 [&>div]:bg-primary" />
         <Card className="border-2 border-[#D4AF37]/40 shadow-xl overflow-hidden rounded-3xl">
           <CardContent className="p-6 sm:p-8 text-center space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black">
@@ -840,10 +840,10 @@ export function TikrarPageQuiz({ page }: { page: number }) {
             </div>
 
             <div className="space-y-2">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-[#6D123F] text-[#D4AF37] flex items-center justify-center shadow-md">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-primary text-[#D4AF37] flex items-center justify-center shadow-md">
                 <BookOpenCheck className="w-7 h-7" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black font-headline text-[#6D123F]">
+              <h2 className="text-xl sm:text-2xl font-black font-headline text-primary">
                 Lanjut Part 2: Ujian Terjemah Per Kata ({QUIZ_PART2_COUNT} Soal)
               </h2>
               <p className="text-xs sm:text-sm text-stone-600 max-w-md mx-auto">
@@ -856,9 +856,9 @@ export function TikrarPageQuiz({ page }: { page: number }) {
               <button
                 type="button"
                 onClick={() => startPart2('runut')}
-                className="p-5 rounded-2xl border-2 border-stone-200 hover:border-[#6D123F] hover:bg-[#6D123F]/5 transition-all flex flex-col items-center gap-2.5 group"
+                className="p-5 rounded-2xl border-2 border-stone-200 hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center gap-2.5 group"
               >
-                <div className="w-10 h-10 rounded-full bg-stone-100 text-stone-500 group-hover:bg-[#6D123F] group-hover:text-white transition-colors flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-stone-100 text-stone-500 group-hover:bg-primary group-hover:text-white transition-colors flex items-center justify-center">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
@@ -889,7 +889,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
                 <span className="absolute -top-2.5 px-2 py-0.5 rounded-full bg-[#D4AF37] text-black text-[9px] font-black uppercase">
                   Rekomendasi
                 </span>
-                <div className="w-10 h-10 rounded-full bg-[#6D123F] text-[#D4AF37] group-hover:bg-emerald-600 group-hover:text-white transition-colors flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-primary text-[#D4AF37] group-hover:bg-emerald-600 group-hover:text-white transition-colors flex items-center justify-center">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
@@ -924,7 +924,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
             <Trophy className={cn('w-10 h-10', passed ? 'text-black' : 'text-stone-500')} />
           </div>
           <div>
-            <p className="text-5xl font-black text-[#6D123F]">{score}%</p>
+            <p className="text-5xl font-black text-primary">{score}%</p>
             <p className="text-sm font-bold text-stone-600 mt-1">
               {totalCorrect} dari {totalQ} soal benar • batas lulus {QUIZ_PASS_PERCENT}%
             </p>
@@ -935,7 +935,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
               <p className="text-[10px] font-black uppercase tracking-wider text-stone-500">
                 Part 1 • Hafalan Ayat
               </p>
-              <p className="text-lg font-black text-[#6D123F] mt-0.5">
+              <p className="text-lg font-black text-primary mt-0.5">
                 {part1Correct}/{part1Questions.length}{' '}
                 <span className="text-xs font-bold text-stone-500">({p1Pct}%)</span>
               </p>
@@ -944,7 +944,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
               <p className="text-[10px] font-black uppercase tracking-wider text-stone-500">
                 Part 2 • Terjemah Per Kata ({mufradatMode})
               </p>
-              <p className="text-lg font-black text-[#6D123F] mt-0.5">
+              <p className="text-lg font-black text-primary mt-0.5">
                 {part2Correct}/{part2Questions.length}{' '}
                 <span className="text-xs font-bold text-stone-500">({p2Pct}%)</span>
               </p>
@@ -965,7 +965,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
               : 'Belum lulus. Ulangi murajaah ayat & mufradat halaman ini lalu coba ujian lagi.'}
           </p>
 
-          {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#6D123F]" />}
+          {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary" />}
           {submitError && <p className="text-xs font-bold text-red-600">{submitError}</p>}
 
           {wrongReview.length > 0 && (
@@ -1002,11 +1002,11 @@ export function TikrarPageQuiz({ page }: { page: number }) {
             <Button
               onClick={start}
               variant="outline"
-              className="rounded-xl font-black border-[#6D123F]/30 text-[#6D123F]"
+              className="rounded-xl font-black border-primary/30 text-primary"
             >
               <RotateCcw className="w-4 h-4 mr-2" /> Ulangi Ujian ({QUIZ_QUESTION_COUNT} Soal)
             </Button>
-            <Button asChild className="rounded-xl font-black bg-[#6D123F] hover:bg-[#6D123F]/90 text-white">
+            <Button asChild className="rounded-xl font-black bg-primary hover:bg-primary/90 text-white">
               <Link href="/tikrar">
                 Kembali ke Mushaf <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
@@ -1037,7 +1037,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
             </Badge>
           )}
         </div>
-        <span className="text-xs font-black text-[#6D123F]">
+        <span className="text-xs font-black text-primary">
           Part {q.part}: {currentIdx + 1}/{currentList.length} (Total {totalAnsweredIndex}/{QUIZ_QUESTION_COUNT}) •
           Benar {part1Correct + part2Correct}
         </span>
@@ -1045,10 +1045,10 @@ export function TikrarPageQuiz({ page }: { page: number }) {
 
       <Progress
         value={(totalAnsweredIndex / QUIZ_QUESTION_COUNT) * 100}
-        className="h-2 [&>div]:bg-[#6D123F]"
+        className="h-2 [&>div]:bg-primary"
       />
 
-      <Card className="border-2 border-[#6D123F]/10 shadow-md rounded-2xl">
+      <Card className="border-2 border-primary/10 shadow-md rounded-2xl">
         <CardContent className="p-6 space-y-5">
           <p className="text-xs font-black uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
             {q.part === 2 && <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />}
@@ -1058,7 +1058,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
           {q.type === 'mufradat_scrambled' ? (
             <div className="space-y-5">
               <div className="text-center py-2">
-                <p dir="rtl" className="font-arabic text-5xl leading-[2] text-[#6D123F]">
+                <p dir="rtl" className="font-arabic text-5xl leading-[2] text-primary">
                   {q.arabic}
                 </p>
               </div>
@@ -1082,7 +1082,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
                     <Badge
                       key={`${chipIdx}-${pos}`}
                       onClick={() => handleScrambledClick(chipIdx, true)}
-                      className="bg-[#6D123F] text-white hover:bg-[#6D123F]/90 cursor-pointer py-1.5 px-3 rounded-lg text-sm font-bold"
+                      className="bg-primary text-white hover:bg-primary/90 cursor-pointer py-1.5 px-3 rounded-lg text-sm font-bold"
                     >
                       {q.scrambledOptions![chipIdx]}
                     </Badge>
@@ -1110,7 +1110,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
                         'rounded-xl border-2 font-bold transition-all',
                         used
                           ? 'opacity-30 scale-95'
-                          : 'hover:border-[#6D123F]/40 hover:bg-[#6D123F]/5 bg-white'
+                          : 'hover:border-primary/40 hover:bg-primary/5 bg-white'
                       )}
                     >
                       {word}
@@ -1136,7 +1136,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
                   className={cn(
                     'font-arabic text-stone-900',
                     q.part === 2
-                      ? 'text-5xl leading-[2.1] text-center py-2 text-[#6D123F]'
+                      ? 'text-5xl leading-[2.1] text-center py-2 text-primary'
                       : 'text-3xl leading-[2.2] text-right'
                   )}
                 >
@@ -1170,7 +1170,7 @@ export function TikrarPageQuiz({ page }: { page: number }) {
                         q.optionsArabic
                           ? 'font-arabic text-2xl leading-loose'
                           : 'text-sm font-bold text-left',
-                        !selected && 'border-stone-200 hover:border-[#6D123F]/40 hover:bg-[#6D123F]/5',
+                        !selected && 'border-stone-200 hover:border-primary/40 hover:bg-primary/5',
                         selected && isAnswer && 'border-emerald-500 bg-emerald-50',
                         selected && isChosen && !isAnswer && 'border-red-400 bg-red-50',
                         selected && !isAnswer && !isChosen && 'border-stone-100 opacity-60'

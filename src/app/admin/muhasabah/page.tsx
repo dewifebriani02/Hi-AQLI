@@ -305,13 +305,13 @@ export default function AdminMuhasabahPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1 mt-2">
         <div>
-          <div className="flex items-center gap-2 text-[#6D123F]">
+          <div className="flex items-center gap-2 text-primary">
             <Shield className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Evaluasi Hati & Akhlak Muslimah (30 Hari Terakhir)
             </span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-black font-headline tracking-tight text-[#6D123F] uppercase">
+          <h1 className="text-2xl md:text-3xl font-black font-headline tracking-tight text-primary uppercase">
             Laporan HI Muhasabah
           </h1>
           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
@@ -325,7 +325,7 @@ export default function AdminMuhasabahPage() {
             variant="outline"
             className="font-black text-xs h-11 px-4 border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 rounded-xl shadow-sm"
           >
-            <Download className="w-4 h-4 text-[#6D123F]" /> Ekspor CSV
+            <Download className="w-4 h-4 text-primary" /> Ekspor CSV
           </Button>
         </div>
       </div>
@@ -339,9 +339,9 @@ export default function AdminMuhasabahPage() {
                 Bermuhasabah (30H)
               </p>
               <p className="text-3xl font-black text-slate-900 mt-1">{kpis.active30dCount}</p>
-              <p className="text-[10px] font-bold text-[#6D123F] mt-1">Thalibah Aktif</p>
+              <p className="text-[10px] font-bold text-primary mt-1">Thalibah Aktif</p>
             </div>
-            <div className="p-3.5 rounded-2xl bg-rose-50 text-[#6D123F]">
+            <div className="p-3.5 rounded-2xl bg-rose-50 text-primary">
               <Users className="w-5 h-5" />
             </div>
           </CardContent>
@@ -383,10 +383,10 @@ export default function AdminMuhasabahPage() {
               <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                 Total Evaluasi (30H)
               </p>
-              <p className="text-3xl font-black text-[#6D123F] mt-1">{kpis.totalEvaluations}</p>
-              <p className="text-[10px] font-bold text-[#6D123F] mt-1">Poin Terpenuhi</p>
+              <p className="text-3xl font-black text-primary mt-1">{kpis.totalEvaluations}</p>
+              <p className="text-[10px] font-bold text-primary mt-1">Poin Terpenuhi</p>
             </div>
-            <div className="p-3.5 rounded-2xl bg-rose-50 text-[#6D123F]">
+            <div className="p-3.5 rounded-2xl bg-rose-50 text-primary">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </CardContent>
@@ -398,13 +398,13 @@ export default function AdminMuhasabahPage() {
           <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-auto flex flex-wrap gap-1 w-fit shadow-sm">
             <TabsTrigger
               value="participants"
-              className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-4 py-2 transition-all"
+              className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-2 transition-all"
             >
               Laporan Evaluasi Peserta
             </TabsTrigger>
             <TabsTrigger
               value="points"
-              className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-4 py-2 transition-all"
+              className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-2 transition-all"
             >
               Rekap 14 Poin Muhasabah
             </TabsTrigger>
@@ -433,7 +433,7 @@ export default function AdminMuhasabahPage() {
                   <SelectItem value="active_today" className="text-xs font-bold text-emerald-600">Sudah Evaluasi Hari Ini ({kpis.activeToday})</SelectItem>
                   <SelectItem value="inactive_today" className="text-xs font-bold text-amber-600">Belum Evaluasi Hari Ini ({userReports.length - kpis.activeToday})</SelectItem>
                   <SelectItem value="need_motivation" className="text-xs font-bold text-rose-600">Perlu Motivasi (&lt; 50%)</SelectItem>
-                  <SelectItem value="consistent" className="text-xs font-bold text-[#6D123F]">Sangat Istiqomah (&ge; 70%)</SelectItem>
+                  <SelectItem value="consistent" className="text-xs font-bold text-primary">Sangat Istiqomah (&ge; 70%)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -456,8 +456,8 @@ export default function AdminMuhasabahPage() {
           {isLoading ? (
             <Card className="border-none shadow-sm bg-white rounded-2xl">
               <CardContent className="p-16 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                <Loader2 className="w-8 h-8 animate-spin text-[#6D123F]" />
-                <p className="text-xs font-black uppercase tracking-widest text-[#6D123F]">Memuat laporan muhasabah...</p>
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-xs font-black uppercase tracking-widest text-primary">Memuat laporan muhasabah...</p>
               </CardContent>
             </Card>
           ) : filteredReports.length === 0 ? (
@@ -498,7 +498,7 @@ export default function AdminMuhasabahPage() {
                             className={cn(
                               "text-[10px] font-black rounded-lg border",
                               u.todayCount > 0
-                                ? "border-amber-300 text-[#6D123F] bg-amber-50/50"
+                                ? "border-amber-300 text-primary bg-amber-50/50"
                                 : "border-slate-200 text-slate-500 bg-slate-50"
                             )}
                           >
@@ -513,11 +513,11 @@ export default function AdminMuhasabahPage() {
                         <div className="max-w-md space-y-1.5">
                           <div className="flex justify-between text-[10px] font-black uppercase text-slate-500">
                             <span>Istiqomah 30 Hari</span>
-                            <span className="text-[#6D123F] font-bold">{u.consistencyPct}%</span>
+                            <span className="text-primary font-bold">{u.consistencyPct}%</span>
                           </div>
                           <Progress
                             value={u.consistencyPct}
-                            className="h-2 bg-slate-100 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-[#6D123F] [&>div]:to-[#D4AF37]"
+                            className="h-2 bg-slate-100 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-[#D4AF37]"
                           />
                         </div>
                       </div>
@@ -526,7 +526,7 @@ export default function AdminMuhasabahPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="font-bold text-xs h-9 text-slate-600 hover:text-[#6D123F] hover:bg-rose-50 rounded-xl gap-1"
+                          className="font-bold text-xs h-9 text-slate-600 hover:text-primary hover:bg-rose-50 rounded-xl gap-1"
                           onClick={() => setSelectedUserDetail(u)}
                         >
                           <Eye className="w-3.5 h-3.5" /> Rincian
@@ -562,11 +562,11 @@ export default function AdminMuhasabahPage() {
             <div key={category} className="space-y-3">
               <div className="flex items-center gap-2">
                 {category === '4 Syarat Wanita Surga' ? (
-                  <Heart className="w-4 h-4 text-[#6D123F]" />
+                  <Heart className="w-4 h-4 text-primary" />
                 ) : (
-                  <Shield className="w-4 h-4 text-[#6D123F]" />
+                  <Shield className="w-4 h-4 text-primary" />
                 )}
-                <h3 className="text-xs font-black uppercase tracking-widest text-[#6D123F]">
+                <h3 className="text-xs font-black uppercase tracking-widest text-primary">
                   {category}
                 </h3>
                 <div className="h-[1px] flex-1 bg-slate-200" />
@@ -581,7 +581,7 @@ export default function AdminMuhasabahPage() {
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-black text-slate-900">{item.label}</p>
                           <div className="text-right shrink-0">
-                            <p className="text-lg font-black text-[#6D123F] leading-none">
+                            <p className="text-lg font-black text-primary leading-none">
                               {item.total}x
                             </p>
                             <p className="text-[10px] font-bold text-muted-foreground mt-0.5">
@@ -606,8 +606,8 @@ export default function AdminMuhasabahPage() {
       <Dialog open={!!selectedUserDetail} onOpenChange={(open) => !open && setSelectedUserDetail(null)}>
         <DialogContent className="max-w-2xl rounded-2xl p-6 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-base font-black text-[#6D123F] uppercase flex items-center gap-2">
-              <Shield className="w-5 h-5 text-[#6D123F]" /> Rincian HI Muhasabah &bull; {selectedUserDetail?.full_name || selectedUserDetail?.username}
+            <DialogTitle className="text-base font-black text-primary uppercase flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" /> Rincian HI Muhasabah &bull; {selectedUserDetail?.full_name || selectedUserDetail?.username}
             </DialogTitle>
             <p className="text-xs text-muted-foreground font-medium">
               Status evaluasi 14 poin akhlak & hati hari ini ({todayStr}).
@@ -630,7 +630,7 @@ export default function AdminMuhasabahPage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase text-muted-foreground">Istiqomah</p>
-                <p className="text-xl font-black text-[#6D123F] mt-0.5">
+                <p className="text-xl font-black text-primary mt-0.5">
                   {selectedUserDetail?.consistencyPct || 0}%
                 </p>
               </div>
@@ -641,11 +641,11 @@ export default function AdminMuhasabahPage() {
                 const itemsInCat = MUHASABAH_ITEMS.filter((item) => item.sub === category);
                 return (
                   <div key={category} className="space-y-2">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-[#6D123F] flex items-center gap-1.5">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
                       {category === '4 Syarat Wanita Surga' ? (
-                        <Heart className="w-3.5 h-3.5 text-[#6D123F]" />
+                        <Heart className="w-3.5 h-3.5 text-primary" />
                       ) : (
-                        <Shield className="w-3.5 h-3.5 text-[#6D123F]" />
+                        <Shield className="w-3.5 h-3.5 text-primary" />
                       )}
                       {category}
                     </h4>

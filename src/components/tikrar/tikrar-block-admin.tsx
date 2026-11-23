@@ -685,7 +685,7 @@ export function TikrarBlockAdmin() {
                   value={pageInput}
                   onChange={(e) => setPageInput(e.target.value)}
                   onBlur={handlePageInputSubmit}
-                  className="w-14 h-7 text-center font-black text-sm bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-[#6D123F]"
+                  className="w-14 h-7 text-center font-black text-sm bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <span className="text-[10px] font-bold text-slate-400">/ 604</span>
               </form>
@@ -747,7 +747,7 @@ export function TikrarBlockAdmin() {
               className={cn(
                 'rounded-xl text-xs font-black h-10 px-5 text-white shadow-md transition-all',
                 hasUnsavedChanges
-                  ? 'bg-[#6D123F] hover:bg-[#580e33] ring-2 ring-[#6D123F]/30'
+                  ? 'bg-primary hover:bg-[#580e33] ring-2 ring-primary/30'
                   : 'bg-slate-800 hover:bg-slate-700'
               )}
             >
@@ -763,16 +763,16 @@ export function TikrarBlockAdmin() {
       </Card>
 
       {/* Bar Langkah Pemotongan Sub-Blok (1 -> 8) */}
-      <Card className="rounded-3xl border-2 border-[#6D123F]/15 bg-gradient-to-r from-[#6D123F]/[0.03] via-white to-amber-500/[0.04] dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 shadow-sm">
+      <Card className="rounded-3xl border-2 border-primary/15 bg-gradient-to-r from-primary/[0.03] via-white to-amber-500/[0.04] dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 shadow-sm">
         <CardContent className="p-4 sm:p-5 space-y-3.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#6D123F] text-white flex items-center justify-center font-black text-xs shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-black text-xs shadow-sm">
                 {activeTargetIndex + 1}/8
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-[#6D123F] dark:text-pink-400">
+                  <span className="text-xs font-black uppercase tracking-wider text-primary dark:text-pink-400">
                     Sedang Mengatur: {activeTarget.label}
                   </span>
                   <span className="text-[11px] font-bold text-slate-500">
@@ -868,7 +868,7 @@ export function TikrarBlockAdmin() {
         <Card className="lg:col-span-7 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm bg-white dark:bg-slate-900 overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 bg-slate-50/70 dark:bg-slate-800/40">
             <div className="flex items-center gap-2">
-              <MousePointerClick className="w-4 h-4 text-[#6D123F]" />
+              <MousePointerClick className="w-4 h-4 text-primary" />
               <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
                 Kanvas Mushaf Halaman {pageNumber}
               </span>
@@ -877,7 +877,7 @@ export function TikrarBlockAdmin() {
               className={cn(
                 'text-[10px] font-black border',
                 clickStep === 'start'
-                  ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                  ? 'bg-primary text-white border-primary'
                   : 'bg-amber-500 text-white border-amber-600 animate-pulse'
               )}
             >
@@ -890,7 +890,7 @@ export function TikrarBlockAdmin() {
           <CardContent className="p-5 sm:p-7">
             {isLoadingPage ? (
               <div className="py-24 flex flex-col items-center justify-center gap-3 text-slate-400">
-                <Loader2 className="w-8 h-8 animate-spin text-[#6D123F]" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <p className="text-xs font-bold uppercase tracking-widest">
                   Memuat Mushaf Halaman {pageNumber}...
                 </p>
@@ -914,7 +914,7 @@ export function TikrarBlockAdmin() {
                           dir="ltr"
                           className="w-full my-3 py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 flex items-center justify-between"
                         >
-                          <span className="text-xs font-black uppercase tracking-widest text-[#6D123F] dark:text-amber-400">
+                          <span className="text-xs font-black uppercase tracking-widest text-primary dark:text-amber-400">
                             Awal Surah ({v.verse_key.split(':')[0]})
                           </span>
                           <span className="font-arabic text-base text-slate-600 dark:text-slate-300">
@@ -931,7 +931,7 @@ export function TikrarBlockAdmin() {
                                 key={`${v.verse_key}:end:${idx}`}
                                 onClick={() => handleAssignWholeVerse(v.verse_key)}
                                 title={`Klik nomor ayat untuk memasukkan seluruh Ayat ${v.verse_key} ke ${activeTarget.label}`}
-                                className="inline-flex items-center justify-center mx-1 px-2 py-0.5 rounded-full text-xs font-sans font-black bg-slate-100 hover:bg-[#6D123F] hover:text-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 align-middle cursor-pointer transition-colors"
+                                className="inline-flex items-center justify-center mx-1 px-2 py-0.5 rounded-full text-xs font-sans font-black bg-slate-100 hover:bg-primary hover:text-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 align-middle cursor-pointer transition-colors"
                               >
                                 ﴿{ayahNumber}﴾
                               </span>
@@ -970,7 +970,7 @@ export function TikrarBlockAdmin() {
                                   ? cn(pal.bg, pal.text, pal.border)
                                   : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800',
                                 isCurrentTarget &&
-                                  cn('ring-2 shadow-sm font-bold', pal?.ring || 'ring-[#6D123F]'),
+                                  cn('ring-2 shadow-sm font-bold', pal?.ring || 'ring-primary'),
                                 (isStartBoundary || isEndBoundary) && 'relative'
                               )}
                             >
@@ -1004,7 +1004,7 @@ export function TikrarBlockAdmin() {
         <div className="lg:col-span-5 space-y-4">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-[#6D123F]" />
+              <Layers className="w-4 h-4 text-primary" />
               <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
                 Hasil Potongan 4 Blok (Preview Kartu Peserta)
               </h3>
@@ -1038,7 +1038,7 @@ export function TikrarBlockAdmin() {
                 className={cn(
                   'rounded-3xl border transition-all overflow-hidden bg-white dark:bg-slate-900',
                   isSub1Active || isSub2Active
-                    ? 'border-[#6D123F] shadow-md'
+                    ? 'border-primary shadow-md'
                     : 'border-slate-200 dark:border-white/10 shadow-sm'
                 )}
               >
@@ -1125,7 +1125,7 @@ export function TikrarBlockAdmin() {
                         setActiveTarget(ALL_SUB_BLOCK_TARGETS[bIdx * 2]);
                         setClickStep('start');
                       }}
-                      className="text-[#6D123F] dark:text-rose-400 font-semibold cursor-pointer hover:underline"
+                      className="text-primary dark:text-rose-400 font-semibold cursor-pointer hover:underline"
                       title={`TM${bId}-1 (Sub 1 Maroon)`}
                     >
                       {wordsSub1.map((w) => w.text_uthmani).join(' ')}

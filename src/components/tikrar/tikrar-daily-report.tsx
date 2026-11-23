@@ -711,20 +711,20 @@ export function TikrarDailyReport({
     <Card className="border border-stone-200 bg-[#fdfbf7] shadow-md rounded-2xl overflow-hidden">
       <CardContent className="p-5 sm:p-6 space-y-6">
         {/* Header Rekap Pribadi & Shortcut ke Mushaf */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b-2 border-[#6D123F] pb-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b-2 border-primary pb-4">
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-black text-[#6D123F] tracking-widest uppercase">
+              <span className="text-[11px] font-black text-primary tracking-widest uppercase">
                 REKAP PROGRES PRIBADI • JUZ {activeJuz} • HAL. {startPage}–{endPage}
               </span>
               <Badge
                 variant="outline"
-                className="border-[#6D123F]/20 text-[#6D123F] bg-white text-[10px] font-bold"
+                className="border-primary/20 text-primary bg-white text-[10px] font-bold"
               >
                 Halaman Aktif: Hal. {recommendedPage} (QS. {getSurahNameForPage(recommendedPage)})
               </Badge>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black font-headline text-[#6D123F]">
+            <h2 className="text-xl sm:text-2xl font-black font-headline text-primary">
               Ringkasan Laporan &amp; Riwayat Setoran Tasmi&apos;
             </h2>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-600">
@@ -746,7 +746,7 @@ export function TikrarDailyReport({
                   href={activeHalaqah.zoom_link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[#6D123F] font-bold hover:underline"
+                  className="inline-flex items-center gap-1 text-primary font-bold hover:underline"
                 >
                   <Video className="w-3.5 h-3.5" /> Live Zoom
                   <ExternalLink className="w-2.5 h-2.5" />
@@ -833,7 +833,7 @@ export function TikrarDailyReport({
                 type="button"
                 size="sm"
                 onClick={() => onOpenMushafTab(recommendedPage, activeJuz)}
-                className="h-9 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-xs font-black px-4 rounded-xl shadow-sm"
+                className="h-9 bg-primary hover:bg-primary/90 text-white text-xs font-black px-4 rounded-xl shadow-sm"
               >
                 <BookOpen className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" />
                 Buka Mushaf (Hal. {recommendedPage})
@@ -879,7 +879,7 @@ export function TikrarDailyReport({
                 <Flame className="w-4 h-4 fill-orange-500 text-orange-600" />
                 {summary?.streak ?? 0} Hari
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-black text-[#6D123F]">
+              <span className="inline-flex items-center gap-1 text-xs font-black text-primary">
                 <Trophy className="w-3.5 h-3.5 text-[#D4AF37]" />
                 {summary?.points ?? (Number(userData?.points) || 0)} Poin
               </span>
@@ -891,7 +891,7 @@ export function TikrarDailyReport({
               Blok Tercatat (Hal. {startPage}–{endPage})
             </span>
             <div className="flex items-baseline justify-between gap-2 mt-1">
-              <span className="text-xl font-black text-[#6D123F]">
+              <span className="text-xl font-black text-primary">
                 {juzRecap.completedBlocksInJuz}/{juzRecap.totalBlocksInJuz}
               </span>
               <span className="text-[11px] font-bold text-stone-500">Blok Selesai</span>
@@ -972,7 +972,7 @@ export function TikrarDailyReport({
           <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3.5">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
-                <CalendarDays className="w-4 h-4 text-[#6D123F]" /> Riwayat Laporan Harian Terakhir
+                <CalendarDays className="w-4 h-4 text-primary" /> Riwayat Laporan Harian Terakhir
               </h3>
               <span className="text-[11px] font-bold text-stone-500">
                 {(userLogs || []).length} Laporan Tuntas
@@ -988,11 +988,11 @@ export function TikrarDailyReport({
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
                     </span>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#6D123F]">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-primary">
                       Aktivitas Sedang Berjalan (Real-Time)
                     </span>
                   </div>
-                  <Badge className="bg-[#6D123F] text-white hover:bg-[#6D123F] text-[10px] font-black px-2 py-0.5">
+                  <Badge className="bg-primary text-white hover:bg-primary text-[10px] font-black px-2 py-0.5">
                     Hal. {activeStageInfo.pageNumber}
                   </Badge>
                 </div>
@@ -1013,7 +1013,7 @@ export function TikrarDailyReport({
                       type="button"
                       size="sm"
                       onClick={() => onOpenMushafTab(activeStageInfo.pageNumber, activeStageInfo.juz)}
-                      className="h-8 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-[11px] font-bold px-3 rounded-xl shadow-sm shrink-0"
+                      className="h-8 bg-primary hover:bg-primary/90 text-white text-[11px] font-bold px-3 rounded-xl shadow-sm shrink-0"
                     >
                       Lanjutkan
                     </Button>
@@ -1114,7 +1114,7 @@ export function TikrarDailyReport({
           <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-[#6D123F]" /> Status Setoran Tasmi&apos; (Diisi Muallimah)
+                <Award className="w-4 h-4 text-primary" /> Status Setoran Tasmi&apos; (Diisi Muallimah)
               </h3>
               <span className="text-[11px] font-bold text-stone-500">
                 {(userSubmissions || []).length} Setoran
@@ -1141,11 +1141,11 @@ export function TikrarDailyReport({
                       key={q.id}
                       className={cn(
                         'flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md border text-[11px]',
-                        q.isMe ? 'bg-white border-[#6D123F]/40 font-bold' : 'bg-white/70 border-amber-200/80'
+                        q.isMe ? 'bg-white border-primary/40 font-bold' : 'bg-white/70 border-amber-200/80'
                       )}
                     >
                       <span className="truncate text-stone-900">
-                        <strong className="text-[#6D123F]">#{q.queueNumber}</strong> {q.name}
+                        <strong className="text-primary">#{q.queueNumber}</strong> {q.name}
                         {q.isMe ? ' (Anda)' : ''} • Juz {q.juz} Hal. {q.pageNumber}
                       </span>
                       <span className="text-[10px] text-stone-500 shrink-0">
@@ -1213,7 +1213,7 @@ export function TikrarDailyReport({
           <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
-                <ClipboardCheck className="w-4 h-4 text-[#6D123F]" /> Belum Ujian Halaman (60 Soal)
+                <ClipboardCheck className="w-4 h-4 text-primary" /> Belum Ujian Halaman (60 Soal)
               </h3>
               <Badge
                 className={cn(
@@ -1255,7 +1255,7 @@ export function TikrarDailyReport({
                     <Button
                       asChild
                       size="sm"
-                      className="h-8 bg-[#6D123F] hover:bg-[#6D123F]/90 text-white text-[11px] font-black rounded-lg shrink-0"
+                      className="h-8 bg-primary hover:bg-primary/90 text-white text-[11px] font-black rounded-lg shrink-0"
                     >
                       <Link href={`/tikrar/ujian?page=${item.page}`}>
                         {item.lastScore !== null && item.lastScore !== undefined ? 'Ulangi Ujian' : 'Ujian 60 Soal'}
@@ -1323,7 +1323,7 @@ export function TikrarDailyReport({
       <AlertDialog open={resetDialogOpen} onOpenChange={(open) => { if (!open && !isResetting) setResetDialogOpen(false); }}>
         <AlertDialogContent className="rounded-2xl max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#6D123F] font-black text-base">
+            <AlertDialogTitle className="text-primary font-black text-base">
               {resetMode === 'page' ? 'Reset Counter Per Halaman' : 'Reset Counter Per Juz'}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -1336,7 +1336,7 @@ export function TikrarDailyReport({
                     className={cn(
                       'py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all',
                       resetMode === 'page'
-                        ? 'bg-white text-[#6D123F] shadow-sm'
+                        ? 'bg-white text-primary shadow-sm'
                         : 'text-stone-600 hover:text-stone-900'
                     )}
                   >
@@ -1367,7 +1367,7 @@ export function TikrarDailyReport({
                       disabled={isResetting}
                       value={selectedResetPage}
                       onChange={(e) => setSelectedResetPage(Number(e.target.value))}
-                      className="w-full h-9 rounded-xl border border-stone-300 bg-white px-3 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#6D123F]/30"
+                      className="w-full h-9 rounded-xl border border-stone-300 bg-white px-3 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                       {resetPageOptions.map((opt) => (
                         <option key={opt.page} value={opt.page}>

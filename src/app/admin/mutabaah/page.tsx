@@ -321,13 +321,13 @@ export default function AdminMutabaahPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1 mt-2">
         <div>
-          <div className="flex items-center gap-2 text-[#6D123F]">
+          <div className="flex items-center gap-2 text-primary">
             <Sparkles className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Monitoring Ibadah Yaumiyah (30 Hari Terakhir)
             </span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-black font-headline tracking-tight text-[#6D123F] uppercase">
+          <h1 className="text-2xl md:text-3xl font-black font-headline tracking-tight text-primary uppercase">
             Laporan Mutaba&apos;ah Yaumiyah
           </h1>
           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
@@ -341,7 +341,7 @@ export default function AdminMutabaahPage() {
             variant="outline"
             className="font-black text-xs h-11 px-4 border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 rounded-xl shadow-sm"
           >
-            <Download className="w-4 h-4 text-[#6D123F]" /> Ekspor CSV
+            <Download className="w-4 h-4 text-primary" /> Ekspor CSV
           </Button>
         </div>
       </div>
@@ -355,9 +355,9 @@ export default function AdminMutabaahPage() {
                 Aktif (30 Hari)
               </p>
               <p className="text-3xl font-black text-slate-900 mt-1">{kpis.active30dCount}</p>
-              <p className="text-[10px] font-bold text-[#6D123F] mt-1">Thalibah Beramal</p>
+              <p className="text-[10px] font-bold text-primary mt-1">Thalibah Beramal</p>
             </div>
-            <div className="p-3.5 rounded-2xl bg-rose-50 text-[#6D123F]">
+            <div className="p-3.5 rounded-2xl bg-rose-50 text-primary">
               <Users className="w-5 h-5" />
             </div>
           </CardContent>
@@ -399,10 +399,10 @@ export default function AdminMutabaahPage() {
               <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                 Total Amalan (30H)
               </p>
-              <p className="text-3xl font-black text-[#6D123F] mt-1">{kpis.totalCheckins}</p>
-              <p className="text-[10px] font-bold text-[#6D123F] mt-1">Checklist Tercatat</p>
+              <p className="text-3xl font-black text-primary mt-1">{kpis.totalCheckins}</p>
+              <p className="text-[10px] font-bold text-primary mt-1">Checklist Tercatat</p>
             </div>
-            <div className="p-3.5 rounded-2xl bg-rose-50 text-[#6D123F]">
+            <div className="p-3.5 rounded-2xl bg-rose-50 text-primary">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </CardContent>
@@ -414,13 +414,13 @@ export default function AdminMutabaahPage() {
           <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-auto flex flex-wrap gap-1 w-fit shadow-sm">
             <TabsTrigger
               value="participants"
-              className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-4 py-2 transition-all"
+              className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-2 transition-all"
             >
               Rekap Konsistensi Peserta
             </TabsTrigger>
             <TabsTrigger
               value="activities"
-              className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-4 py-2 transition-all"
+              className="rounded-lg font-black text-xs uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-2 transition-all"
             >
               Statistik Amalan ({MUTABAAH_ACTIVITIES.length})
             </TabsTrigger>
@@ -449,7 +449,7 @@ export default function AdminMutabaahPage() {
                   <SelectItem value="active_today" className="text-xs font-bold text-emerald-600">Sudah Isi Hari Ini ({kpis.activeToday})</SelectItem>
                   <SelectItem value="inactive_today" className="text-xs font-bold text-amber-600">Belum Isi Hari Ini ({userReports.length - kpis.activeToday})</SelectItem>
                   <SelectItem value="need_motivation" className="text-xs font-bold text-rose-600">Perlu Motivasi (&lt; 50%)</SelectItem>
-                  <SelectItem value="consistent" className="text-xs font-bold text-[#6D123F]">Sangat Istiqomah (&ge; 70%)</SelectItem>
+                  <SelectItem value="consistent" className="text-xs font-bold text-primary">Sangat Istiqomah (&ge; 70%)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -472,8 +472,8 @@ export default function AdminMutabaahPage() {
           {isLoading ? (
             <Card className="border-none shadow-sm bg-white rounded-2xl">
               <CardContent className="p-16 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                <Loader2 className="w-8 h-8 animate-spin text-[#6D123F]" />
-                <p className="text-xs font-black uppercase tracking-widest text-[#6D123F]">Memuat rekap mutaba&apos;ah...</p>
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-xs font-black uppercase tracking-widest text-primary">Memuat rekap mutaba&apos;ah...</p>
               </CardContent>
             </Card>
           ) : filteredReports.length === 0 ? (
@@ -529,11 +529,11 @@ export default function AdminMutabaahPage() {
                         <div className="max-w-md space-y-1.5">
                           <div className="flex justify-between text-[10px] font-black uppercase text-slate-500">
                             <span>Konsistensi 30 Hari</span>
-                            <span className="text-[#6D123F] font-bold">{u.consistencyPct}%</span>
+                            <span className="text-primary font-bold">{u.consistencyPct}%</span>
                           </div>
                           <Progress
                             value={u.consistencyPct}
-                            className="h-2 bg-slate-100 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-[#6D123F] [&>div]:to-[#D4AF37]"
+                            className="h-2 bg-slate-100 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-[#D4AF37]"
                           />
                         </div>
                       </div>
@@ -542,7 +542,7 @@ export default function AdminMutabaahPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="font-bold text-xs h-9 text-slate-600 hover:text-[#6D123F] hover:bg-rose-50 rounded-xl gap-1"
+                          className="font-bold text-xs h-9 text-slate-600 hover:text-primary hover:bg-rose-50 rounded-xl gap-1"
                           onClick={() => setSelectedUserDetail(u)}
                         >
                           <Eye className="w-3.5 h-3.5" /> Rincian
@@ -586,7 +586,7 @@ export default function AdminMutabaahPage() {
                       <p className="text-sm font-black text-slate-900">{act.label}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-lg font-black text-[#6D123F] leading-none">{act.total}x</p>
+                      <p className="text-lg font-black text-primary leading-none">{act.total}x</p>
                       <p className="text-[10px] font-bold text-muted-foreground mt-0.5">
                         {act.participantCount} thalibah
                       </p>
@@ -607,7 +607,7 @@ export default function AdminMutabaahPage() {
       <Dialog open={!!selectedUserDetail} onOpenChange={(open) => !open && setSelectedUserDetail(null)}>
         <DialogContent className="max-w-2xl rounded-2xl p-6 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-base font-black text-[#6D123F] uppercase flex items-center gap-2">
+            <DialogTitle className="text-base font-black text-primary uppercase flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Rincian Mutaba&apos;ah &bull; {selectedUserDetail?.full_name || selectedUserDetail?.username}
             </DialogTitle>
             <p className="text-xs text-muted-foreground font-medium">
@@ -631,14 +631,14 @@ export default function AdminMutabaahPage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase text-muted-foreground">Konsistensi</p>
-                <p className="text-xl font-black text-[#6D123F] mt-0.5">
+                <p className="text-xl font-black text-primary mt-0.5">
                   {selectedUserDetail?.consistencyPct || 0}%
                 </p>
               </div>
             </div>
 
             <div>
-              <h4 className="text-xs font-black uppercase tracking-widest text-[#6D123F] mb-3 flex items-center gap-1.5">
+              <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" /> Status Amalan Hari Ini ({MUTABAAH_ACTIVITIES.length} Item)
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

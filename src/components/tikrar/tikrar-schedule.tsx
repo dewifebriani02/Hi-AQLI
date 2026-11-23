@@ -210,7 +210,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
       <Dialog open={showIstiqomah} onOpenChange={setShowIstiqomah}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] max-h-[88dvh] flex flex-col p-0 overflow-hidden rounded-2xl">
           <DialogHeader className="p-5 pb-3 shrink-0 border-b border-stone-100">
-            <DialogTitle className="text-[#6D123F] font-black">Istiqomah Lebih Utama</DialogTitle>
+            <DialogTitle className="text-primary font-black">Istiqomah Lebih Utama</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               {recentChanges >= 2
                 ? `Ukhti sudah mengubah target ${recentChanges} kali dalam 30 hari terakhir. Sering berganti target bisa membuat hafalan tidak kokoh.`
@@ -218,7 +218,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3.5 p-5 overflow-y-auto flex-1">
-            <div className="rounded-2xl bg-[#6D123F]/5 border border-[#6D123F]/10 p-3.5 space-y-1.5">
+            <div className="rounded-2xl bg-primary/5 border border-primary/10 p-3.5 space-y-1.5">
               <p dir="rtl" className="font-arabic text-xl sm:text-2xl leading-relaxed text-right text-stone-900">
                 أَحَبُّ الْأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ
               </p>
@@ -245,7 +245,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             <Button
               type="button"
               onClick={() => setShowIstiqomah(false)}
-              className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black rounded-xl h-10 sm:h-11 text-xs sm:text-sm"
+              className="bg-primary hover:bg-primary/90 text-white font-black rounded-xl h-10 sm:h-11 text-xs sm:text-sm"
             >
               Tetap dengan Target Sekarang
             </Button>
@@ -266,7 +266,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
 
       {!showForm && target ? (
         <Card className="border border-stone-200 shadow-md rounded-2xl overflow-hidden bg-white">
-          <CardHeader className="bg-[#6D123F] text-white border-b-4 border-[#D4AF37] p-5 sm:p-6">
+          <CardHeader className="bg-primary text-white border-b-4 border-[#D4AF37] p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest mb-1">
@@ -314,7 +314,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               </div>
               <div className="bg-[#fdfbf7] border border-stone-200 rounded-xl p-3.5 space-y-1">
                 <p className="text-[10px] font-black uppercase text-stone-500">Progres Target</p>
-                <p className="text-sm font-black text-[#6D123F]">
+                <p className="text-sm font-black text-primary">
                   {target.completedSteps} / {target.totalSteps} Langkah
                 </p>
                 <Progress value={(target.completedSteps / Math.max(1, target.totalSteps)) * 100} className="h-1.5" />
@@ -344,7 +344,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
 
             <div className="bg-amber-50/70 border border-amber-200/90 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#6D123F] text-white flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
                   <BookOpen className="w-5 h-5 text-[#D4AF37]" />
                 </div>
                 <div>
@@ -363,7 +363,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               <Button
                 type="button"
                 onClick={() => onOpenMushafTarget?.({ page: target.unlockedPage, juz: target.juz })}
-                className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black text-xs h-10 px-5 rounded-xl gap-2 shrink-0"
+                className="bg-primary hover:bg-primary/90 text-white font-black text-xs h-10 px-5 rounded-xl gap-2 shrink-0"
               >
                 <BookOpen className="w-4 h-4 text-[#D4AF37]" /> Buka Mushaf <ArrowRight className="w-3.5 h-3.5" />
               </Button>
@@ -372,7 +372,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
         </Card>
       ) : (
         <Card className="border border-stone-200 shadow-md rounded-2xl overflow-hidden bg-white">
-          <CardHeader className="bg-[#6D123F] text-white border-b-4 border-[#D4AF37]">
+          <CardHeader className="bg-primary text-white border-b-4 border-[#D4AF37]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest mb-1">
@@ -438,7 +438,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                     setStartPage(r.startPage);
                     setEndPage(r.endPage);
                   }}
-                  className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-black text-[#6D123F]"
+                  className="w-full h-10 rounded-xl border border-stone-300 bg-white px-3 text-sm font-black text-primary"
                 >
                   {Array.from({ length: 30 }, (_, idx) => {
                     const r = getJuzPageRange(idx + 1);
@@ -547,7 +547,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                     type="checkbox"
                     checked={markPriorPagesDone}
                     onChange={(e) => setMarkPriorPagesDone(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#6D123F] accent-[#6D123F] focus:ring-[#6D123F]"
+                    className="w-4 h-4 rounded text-primary accent-primary focus:ring-primary"
                   />
                   <span className="text-xs font-black text-stone-800">
                     Catat Hal. {juzRange.startPage} s.d. Hal. {startPage - 1} sebagai sudah dihafal sebelumnya (belum ujian tulisan/pilihan ganda di aplikasi)
@@ -584,7 +584,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                       className={cn(
                         "relative text-left rounded-2xl border-2 p-3.5 transition-all flex flex-col justify-between gap-2.5",
                         isSel
-                          ? "border-[#6D123F] bg-[#6D123F]/5 shadow-sm ring-1 ring-[#6D123F]/20"
+                          ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
                           : "border-stone-200 hover:border-stone-300 bg-white"
                       )}
                     >
@@ -594,9 +594,9 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                             className={cn(
                               "text-[10px] font-black border-none px-2 py-0.5",
                               opt.isRecommended
-                                ? "bg-[#6D123F] text-[#D4AF37]"
+                                ? "bg-primary text-[#D4AF37]"
                                 : isSel
-                                ? "bg-[#6D123F]/15 text-[#6D123F]"
+                                ? "bg-primary/15 text-primary"
                                 : "bg-stone-100 text-stone-600"
                             )}
                           >
@@ -609,7 +609,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                         <p className="text-base font-black text-stone-900 pt-0.5">
                           {opt.monthlyPagesLabel}
                         </p>
-                        <p className="text-xs font-bold text-[#6D123F]">
+                        <p className="text-xs font-bold text-primary">
                           {opt.dailyPortionLabel}
                         </p>
                       </div>
@@ -624,13 +624,13 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               </div>
             </div>
 
-            <div className="bg-[#fdfbf7] border border-[#6D123F]/20 rounded-xl p-4 text-xs text-stone-700 leading-relaxed space-y-1.5">
+            <div className="bg-[#fdfbf7] border border-primary/20 rounded-xl p-4 text-xs text-stone-700 leading-relaxed space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-black text-sm text-[#6D123F]">
+                <span className="font-black text-sm text-primary">
                   Ringkasan Target: {paceMeta.monthlyPagesLabel} ({paceMeta.durationMonths} Bulan)
                 </span>
                 {paceMeta.isRecommended && (
-                  <Badge className="bg-[#6D123F] text-[#D4AF37] border-none text-[10px] font-black">
+                  <Badge className="bg-primary text-[#D4AF37] border-none text-[10px] font-black">
                     Rekomendasi Utama
                   </Badge>
                 )}
@@ -642,7 +642,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                   <span className="text-stone-500 font-medium"> (~{(preview.activeDays / 20).toFixed(1)} bulan)</span>
                 )}. Porsi harian:{" "}
                 <strong className="text-stone-900">{paceMeta.dailyPortionLabel}</strong> (setara{" "}
-                <span className="text-[#6D123F] font-bold">{preview.dailyQuota} langkah sistematis/hari</span>).
+                <span className="text-primary font-bold">{preview.dailyQuota} langkah sistematis/hari</span>).
               </p>
               <p className="text-[11px] text-stone-500">
                 📅 Periode estimasi: <strong>{formatDate(startDateKey, false, true)}</strong> s.d.{" "}
@@ -658,7 +658,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
       <Card className="border border-stone-200 shadow-sm rounded-2xl overflow-hidden bg-white">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-[#6D123F]" />
+            <CalendarDays className="w-5 h-5 text-primary" />
             <CardTitle className="text-base font-black">
               {showForm ? 'Pratinjau Jadwal' : 'Jadwal Per Langkah'} ({activeSchedule.days.length} hari aktif)
             </CardTitle>

@@ -161,7 +161,7 @@ export default function AdminDonationsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
-        <Loader2 className="animate-spin h-10 w-10 text-[#6D123F]" />
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Transaksi Infaq...</p>
       </div>
     );
@@ -172,7 +172,7 @@ export default function AdminDonationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1 mt-2">
         <div>
-          <h1 className="text-2xl font-black font-headline tracking-tight text-[#6D123F] uppercase">
+          <h1 className="text-2xl font-black font-headline tracking-tight text-primary uppercase">
             Transaksi Infaq
           </h1>
           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
@@ -190,7 +190,7 @@ export default function AdminDonationsPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-1">
-        <Card className="border-none shadow-md bg-gradient-to-br from-[#6D123F] to-[#4A0A2A] text-white overflow-hidden relative">
+        <Card className="border-none shadow-md bg-gradient-to-br from-primary to-[#4A0A2A] text-white overflow-hidden relative">
           <div className="absolute right-[-10px] top-[-10px] opacity-15">
             <HeartHandshake className="w-28 h-28" />
           </div>
@@ -208,15 +208,15 @@ export default function AdminDonationsPage() {
           <CardContent className="p-6">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Penerima Beasiswa</p>
             <p className="text-3xl font-black mt-1 text-slate-800">{(learnersCount || 0).toLocaleString('id-ID')}</p>
-            <p className="text-[10px] font-bold text-[#6D123F] mt-4 uppercase">Thalibah Aktif Belajar</p>
+            <p className="text-[10px] font-bold text-primary mt-4 uppercase">Thalibah Aktif Belajar</p>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-white overflow-hidden border-l-4 border-[#6D123F]">
+        <Card className="border-none shadow-sm bg-white overflow-hidden border-l-4 border-primary">
           <CardContent className="p-6">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Kampanye Infaq Aktif</p>
             <p className="text-3xl font-black mt-1 text-slate-800">{campaigns?.length || 0}</p>
-            <p className="text-[10px] font-bold text-[#6D123F] mt-4 uppercase truncate">
+            <p className="text-[10px] font-bold text-primary mt-4 uppercase truncate">
               {campaigns?.slice(0, 2).map(c => c.title).join(' & ') || 'Belum Ada Kampanye'}
             </p>
           </CardContent>
@@ -264,7 +264,7 @@ export default function AdminDonationsPage() {
       <Card className="border-none shadow-xl overflow-hidden bg-white mx-1 rounded-2xl">
         <CardHeader className="bg-slate-50 px-6 py-4 border-b flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-slate-800">
-            <Filter className="w-4 h-4 text-[#6D123F]" /> Riwayat Transaksi Infaq
+            <Filter className="w-4 h-4 text-primary" /> Riwayat Transaksi Infaq
           </CardTitle>
           <Badge variant="outline" className="bg-white text-xs font-bold">
             {filteredDonations.length} Transaksi
@@ -355,7 +355,7 @@ export default function AdminDonationsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-xs font-black text-[#6D123F]">
+                          <span className="text-xs font-black text-primary">
                             Rp {d.amount?.toLocaleString('id-ID')}
                           </span>
                           {d.unique_code && (
@@ -431,7 +431,7 @@ export default function AdminDonationsPage() {
             <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed">
               Apakah Anda yakin ingin memverifikasi transaksi infaq dari{" "}
               <strong className="text-slate-900">{verifyTarget?.sender}</strong> sebesar{" "}
-              <strong className="text-[#6D123F]">Rp {verifyTarget?.amount?.toLocaleString('id-ID')}</strong>?
+              <strong className="text-primary">Rp {verifyTarget?.amount?.toLocaleString('id-ID')}</strong>?
               Status transaksi akan diubah menjadi <strong className="text-emerald-600">Berhasil</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -452,7 +452,7 @@ export default function AdminDonationsPage() {
         <DialogContent className="max-w-xl rounded-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-sm font-black uppercase text-slate-900 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#6D123F]" /> Bukti Transfer Infaq
+              <FileText className="w-4 h-4 text-primary" /> Bukti Transfer Infaq
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4 flex flex-col items-center justify-center bg-slate-50 rounded-xl p-4 border border-slate-200 min-h-[300px]">

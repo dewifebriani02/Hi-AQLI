@@ -653,7 +653,7 @@ export default function MufradatFinancePage() {
   if (isGroupsLoading || isRegLoading || isDonationsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
           Menghitung Data Keuangan...
         </p>
@@ -665,23 +665,23 @@ export default function MufradatFinancePage() {
     <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8 pb-32">
       {/* HEADER */}
       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-        <Link href="/admin" className="hover:text-[#6D123F] transition-colors">
+        <Link href="/admin" className="hover:text-primary transition-colors">
           Admin
         </Link>
         <ChevronRight className="w-3 h-3" />
         <Link
           href="/admin/mufradat"
-          className="hover:text-[#6D123F] transition-colors"
+          className="hover:text-primary transition-colors"
         >
           Hi Mufradat
         </Link>
         <ChevronRight className="w-3 h-3" />
-        <span className="text-[#6D123F]">Laporan Keuangan</span>
+        <span className="text-primary">Laporan Keuangan</span>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black font-headline tracking-tighter text-[#6D123F] uppercase italic">
+          <h1 className="text-3xl sm:text-4xl font-black font-headline tracking-tighter text-primary uppercase italic">
             MONITOR KEUANGAN
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
@@ -693,13 +693,13 @@ export default function MufradatFinancePage() {
         <div className="flex items-center gap-3">
           <Dialog open={isManualOpen} onOpenChange={setIsManualOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black h-12 rounded-xl shadow-lg gap-2">
+              <Button className="bg-primary hover:bg-primary/90 text-white font-black h-12 rounded-xl shadow-lg gap-2">
                 <Plus className="w-5 h-5" />
                 <span className="hidden sm:inline">TRANSAKSI MANUAL</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
-              <DialogHeader className="p-8 bg-[#6D123F] text-white">
+              <DialogHeader className="p-8 bg-primary text-white">
                 <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
                   <Plus className="w-5 h-5" /> Input Transaksi Manual
                 </DialogTitle>
@@ -805,11 +805,11 @@ export default function MufradatFinancePage() {
 
                 {manualType === 'initial' && (
                   <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <Label className="text-[10px] font-black uppercase text-[#6D123F] tracking-widest">
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">
                       Uang Pendaftaran (Registration Fee)
                     </Label>
                     <Select value={manualRegFee} onValueChange={setManualRegFee}>
-                      <SelectTrigger className="h-12 border-2 border-[#6D123F]/30 rounded-xl font-black">
+                      <SelectTrigger className="h-12 border-2 border-primary/30 rounded-xl font-black">
                         <SelectValue placeholder="Pilih Nominal" />
                       </SelectTrigger>
                       <SelectContent>
@@ -842,7 +842,7 @@ export default function MufradatFinancePage() {
                   Batal
                 </Button>
                 <Button
-                  className="flex-[2] bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black h-12 rounded-xl shadow-lg"
+                  className="flex-[2] bg-primary hover:bg-primary/90 text-white font-black h-12 rounded-xl shadow-lg"
                   onClick={handleSubmitManualTransaction}
                   disabled={isManualLoading}
                 >
@@ -898,7 +898,7 @@ export default function MufradatFinancePage() {
                       type="number"
                       value={editAmount}
                       onChange={(e) => setEditAmount(e.target.value)}
-                      className="h-12 border-2 rounded-xl font-black text-[#6D123F]"
+                      className="h-12 border-2 rounded-xl font-black text-primary"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1058,7 +1058,7 @@ export default function MufradatFinancePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-xl bg-[#6D123F] text-white overflow-hidden">
+        <Card className="border-none shadow-xl bg-primary text-white overflow-hidden">
           <CardContent className="p-6 flex flex-col justify-between h-full">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] mb-1">
@@ -1257,7 +1257,7 @@ export default function MufradatFinancePage() {
                         <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">
                           Infaq Bulanan Bersih
                         </p>
-                        <p className="text-sm font-black text-[#6D123F]">
+                        <p className="text-sm font-black text-primary">
                           {FORMATTER.format(splits.baseInfaq)}
                         </p>
                       </div>
@@ -1305,7 +1305,7 @@ export default function MufradatFinancePage() {
 
                     {/* RECIPIENT TABLE */}
                     <div className="space-y-3">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6D123F] flex items-center gap-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <Wallet className="w-4 h-4" /> Rincian Distribusi Fee
                         per Group
                       </h4>
@@ -1532,7 +1532,7 @@ export default function MufradatFinancePage() {
                         </div>
                       ) : (
                         <Button
-                          className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black uppercase text-xs h-14 px-10 rounded-2xl shadow-xl shadow-[#6D123F]/20 gap-3 active:scale-95 transition-all"
+                          className="bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs h-14 px-10 rounded-2xl shadow-xl shadow-primary/20 gap-3 active:scale-95 transition-all"
                           onClick={() => handleOpenPreview(monthData)}
                           disabled={isCairkanLoading}
                         >
@@ -1561,7 +1561,7 @@ export default function MufradatFinancePage() {
               <CardTitle className="text-lg font-black text-slate-800 uppercase tracking-tighter">
                 Daftar Seluruh Transaksi
               </CardTitle>
-              <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-[#6D123F]">
+              <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-primary">
                 Histori Pendapatan Mufradat
               </CardDescription>
             </div>
@@ -1570,7 +1570,7 @@ export default function MufradatFinancePage() {
               <input
                 type="text"
                 placeholder="Cari nama atau kelas..."
-                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#6D123F]/20 focus:border-[#6D123F] outline-none transition-all"
+                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -1679,7 +1679,7 @@ export default function MufradatFinancePage() {
                         <div className="flex flex-col">
                           <span className={cn(
                             "text-xs font-black",
-                            (Number(reg.amount) || 0) === 0 ? "text-rose-500 animate-pulse" : "text-[#6D123F]"
+                            (Number(reg.amount) || 0) === 0 ? "text-rose-500 animate-pulse" : "text-primary"
                           )}>
                             {FORMATTER.format(Number(reg.amount) || 0)}
                           </span>
@@ -1827,8 +1827,8 @@ export default function MufradatFinancePage() {
       </Card>
 
       {/* FOOTER TIPS */}
-      <div className="bg-[#6D123F]/5 p-6 rounded-2xl border-2 border-dashed border-[#6D123F]/20 max-w-2xl mx-auto">
-        <h4 className="flex items-center gap-2 font-black text-[#6D123F] mb-2 uppercase tracking-tight text-sm">
+      <div className="bg-primary/5 p-6 rounded-2xl border-2 border-dashed border-primary/20 max-w-2xl mx-auto">
+        <h4 className="flex items-center gap-2 font-black text-primary mb-2 uppercase tracking-tight text-sm">
           Informasi Pencairan:
         </h4>
         <ul className="text-[11px] space-y-2 text-muted-foreground font-medium leading-relaxed list-disc pl-4 italic">
@@ -1850,7 +1850,7 @@ export default function MufradatFinancePage() {
       {/* PAYOUT PREVIEW MODAL */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0 border-none shadow-2xl rounded-3xl">
-          <DialogHeader className="p-8 bg-[#6D123F] text-white">
+          <DialogHeader className="p-8 bg-primary text-white">
             <DialogTitle className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
               <ShieldCheck className="w-8 h-8 text-amber-400" /> Review Pencairan Dana
             </DialogTitle>
@@ -1905,7 +1905,7 @@ export default function MufradatFinancePage() {
                               {hasBank ? (
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-[11px] font-black text-slate-700">{userProfile.bank_name}</span>
-                                  <span className="text-[10px] font-bold text-[#6D123F]">{userProfile.bank_account_number}</span>
+                                  <span className="text-[10px] font-bold text-primary">{userProfile.bank_account_number}</span>
                                   <span className="text-[9px] font-medium text-slate-400 italic">a.n. {userProfile.bank_account_holder}</span>
                                 </div>
                               ) : (
@@ -1937,7 +1937,7 @@ export default function MufradatFinancePage() {
                           {data.bank?.no ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[11px] font-black text-slate-700">{data.bank.name}</span>
-                              <span className="text-[10px] font-bold text-[#6D123F]">{data.bank.no}</span>
+                              <span className="text-[10px] font-bold text-primary">{data.bank.no}</span>
                               <span className="text-[9px] font-medium text-slate-400 italic">a.n. {data.bank.holder}</span>
                             </div>
                           ) : (
@@ -1982,7 +1982,7 @@ export default function MufradatFinancePage() {
               Batal
             </Button>
             <Button 
-               className="flex-[2] bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-black h-12 rounded-xl shadow-xl shadow-[#6D123F]/20 gap-3"
+               className="flex-[2] bg-primary hover:bg-primary/90 text-white font-black h-12 rounded-xl shadow-xl shadow-primary/20 gap-3"
                onClick={() => handleCairkan(previewMonthData)}
                disabled={isCairkanLoading}
             >

@@ -389,7 +389,7 @@ export default function AdminUsersPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin h-10 w-10 text-[#6D123F]" />
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Database Pengguna...</p>
       </div>
     );
@@ -401,12 +401,12 @@ export default function AdminUsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Link href="/admin" className="hover:text-[#6D123F] font-bold">Dashboard Admin</Link>
+            <Link href="/admin" className="hover:text-primary font-bold">Dashboard Admin</Link>
             <span>/</span>
-            <span className="text-[#6D123F] font-bold">Database Pengguna & Role</span>
+            <span className="text-primary font-bold">Database Pengguna & Role</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-slate-900 flex items-center gap-2.5">
-            <UserCog className="w-7 h-7 text-[#6D123F]" />
+            <UserCog className="w-7 h-7 text-primary" />
             Database Pengguna & Role
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
@@ -427,14 +427,14 @@ export default function AdminUsersPage() {
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-bold gap-2 rounded-xl text-xs h-9 shadow-sm">
+              <Button className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 rounded-xl text-xs h-9 shadow-sm">
                 <UserPlus className="w-4 h-4" /> Tambah User
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-lg">
-                  <UserPlus className="w-5 h-5 text-[#6D123F]" />
+                  <UserPlus className="w-5 h-5 text-primary" />
                   Tambah User Baru
                 </DialogTitle>
                 <DialogDescription>
@@ -559,7 +559,7 @@ export default function AdminUsersPage() {
                 <Button 
                   onClick={handleAddUser} 
                   disabled={isAddingUser}
-                  className="w-full bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-bold gap-2 h-11 rounded-xl"
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-bold gap-2 h-11 rounded-xl"
                 >
                   {isAddingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   Simpan User ke Database
@@ -577,13 +577,13 @@ export default function AdminUsersPage() {
           className={cn(
             "p-3 rounded-2xl border text-left transition-all",
             roleFilter === 'all' && statusFilter === 'all'
-              ? "bg-[#6D123F]/5 border-[#6D123F] shadow-sm"
+              ? "bg-primary/5 border-primary shadow-sm"
               : "bg-white hover:bg-slate-50 border-slate-200"
           )}
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Semua User</span>
-            <Users className="w-3.5 h-3.5 text-[#6D123F]" />
+            <Users className="w-3.5 h-3.5 text-primary" />
           </div>
           <p className="text-xl font-black text-slate-900 mt-1">{kpiStats.total}</p>
         </button>
@@ -713,7 +713,7 @@ export default function AdminUsersPage() {
       <Card className="border shadow-sm rounded-2xl overflow-hidden bg-white">
         <div className="bg-slate-50/70 px-6 py-3.5 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#6D123F]" />
+            <Users className="w-4 h-4 text-primary" />
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
               Daftar Pengguna ({filteredUsers.length})
             </h3>
@@ -754,7 +754,7 @@ export default function AdminUsersPage() {
                               ? "bg-rose-100 text-rose-700"
                               : u.role_id === 'admin' 
                               ? "bg-amber-100 text-amber-800" 
-                              : "bg-[#6D123F]/10 text-[#6D123F]"
+                              : "bg-primary/10 text-primary"
                           )}>
                             {(u.full_name || u.username || 'U')[0].toUpperCase()}
                           </div>
@@ -908,7 +908,7 @@ export default function AdminUsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-slate-600 hover:bg-[#6D123F]/10 hover:text-[#6D123F] rounded-xl"
+                            className="h-8 w-8 p-0 text-slate-600 hover:bg-primary/10 hover:text-primary rounded-xl"
                             onClick={() => {
                               setEditingUser({ ...u });
                               setIsEditDialogOpen(true);
@@ -978,7 +978,7 @@ export default function AdminUsersPage() {
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <ShieldCheck className="w-5 h-5 text-[#6D123F]" />
+              <ShieldCheck className="w-5 h-5 text-primary" />
               Edit Profil Pengguna
             </DialogTitle>
             <DialogDescription>
@@ -1067,7 +1067,7 @@ export default function AdminUsersPage() {
               {/* Bank Account */}
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
                 <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-[#6D123F]" />
+                  <CreditCard className="w-4 h-4 text-primary" />
                   <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Informasi Payout / Rekening</span>
                 </div>
                 <div className="space-y-1.5">
@@ -1124,7 +1124,7 @@ export default function AdminUsersPage() {
             <Button 
               onClick={handleUpdateUser} 
               disabled={isSavingEdit}
-              className="w-full bg-[#6D123F] hover:bg-[#6D123F]/90 text-white font-bold gap-2 h-11 rounded-xl"
+              className="w-full bg-primary hover:bg-primary/90 text-white font-bold gap-2 h-11 rounded-xl"
             >
               {isSavingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               Simpan Perubahan

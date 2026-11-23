@@ -300,7 +300,7 @@ export default function AdminMabarManagementPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin w-10 h-10 text-[#6D123F]" />
+        <Loader2 className="animate-spin w-10 h-10 text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Menyiapkan Ruang Mabar...
         </p>
@@ -313,7 +313,7 @@ export default function AdminMabarManagementPage() {
       {/* Header + Clickable KPI Strip */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[#6D123F]">
+          <div className="flex items-center gap-2 text-primary">
             <Trophy className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Kompetisi Hafalan Realtime Hi Mufradat
@@ -335,11 +335,11 @@ export default function AdminMabarManagementPage() {
             className={cn(
               "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border text-left transition-all",
               statusFilter === "all"
-                ? "bg-[#6D123F]/5 border-[#6D123F]/40 ring-1 ring-[#6D123F]/20"
-                : "bg-slate-50 dark:bg-slate-800 border-slate-200/80 dark:border-white/10 hover:border-[#6D123F]/40"
+                ? "bg-primary/5 border-primary/40 ring-1 ring-primary/20"
+                : "bg-slate-50 dark:bg-slate-800 border-slate-200/80 dark:border-white/10 hover:border-primary/40"
             )}
           >
-            <div className="p-2 rounded-xl bg-[#6D123F]/10 text-[#6D123F]">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Trophy className="w-4 h-4" />
             </div>
             <div>
@@ -443,7 +443,7 @@ export default function AdminMabarManagementPage() {
                 className={cn(
                   "text-[11px] font-black rounded-xl h-8",
                   statusFilter === st.key &&
-                    "bg-[#6D123F] hover:bg-[#580e33] text-white"
+                    "bg-primary hover:bg-[#580e33] text-white"
                 )}
               >
                 {st.label}
@@ -469,7 +469,7 @@ export default function AdminMabarManagementPage() {
               className="h-9 rounded-xl font-bold text-xs border-slate-200"
             >
               <Link href="/mufradat/mabar">
-                <ExternalLink className="w-3.5 h-3.5 mr-1.5 text-[#6D123F]" />
+                <ExternalLink className="w-3.5 h-3.5 mr-1.5 text-primary" />
                 Halaman Mabar
               </Link>
             </Button>
@@ -477,7 +477,7 @@ export default function AdminMabarManagementPage() {
             <Button
               onClick={openCreateDialog}
               size="sm"
-              className="h-9 bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs px-4 rounded-xl shadow-sm gap-1.5"
+              className="h-9 bg-primary hover:bg-[#580e33] text-white font-black text-xs px-4 rounded-xl shadow-sm gap-1.5"
             >
               <Plus className="w-4 h-4" />
               Jadwalkan Mabar
@@ -528,7 +528,7 @@ export default function AdminMabarManagementPage() {
                           <Button
                             size="sm"
                             onClick={openCreateDialog}
-                            className="mt-1 bg-[#6D123F] hover:bg-[#580e33] text-white rounded-xl text-xs font-bold"
+                            className="mt-1 bg-primary hover:bg-[#580e33] text-white rounded-xl text-xs font-bold"
                           >
                             <Plus className="w-3.5 h-3.5 mr-1.5" />
                             Buat Sesi Pertama
@@ -584,7 +584,7 @@ export default function AdminMabarManagementPage() {
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className="font-bold text-xs text-[#6D123F] border-[#6D123F]/20 bg-[#6D123F]/5 gap-1"
+                            className="font-bold text-xs text-primary border-primary/20 bg-primary/5 gap-1"
                           >
                             <Hash className="w-3 h-3" />
                             Juz {session.juz_id}
@@ -612,7 +612,7 @@ export default function AdminMabarManagementPage() {
                               title="Buka ruangan Mabar"
                             >
                               <Link href={`/mufradat/mabar/${session.id}`}>
-                                <ExternalLink className="w-3.5 h-3.5 mr-1 text-[#6D123F]" />
+                                <ExternalLink className="w-3.5 h-3.5 mr-1 text-primary" />
                                 Room
                               </Link>
                             </Button>
@@ -647,7 +647,7 @@ export default function AdminMabarManagementPage() {
                               variant="ghost"
                               size="icon"
                               disabled={isProcessing}
-                              className="h-8 w-8 text-slate-500 hover:text-[#6D123F] hover:bg-slate-100 rounded-xl"
+                              className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-xl"
                               onClick={() => openEditDialog(session)}
                               title="Edit Jadwal"
                             >
@@ -764,7 +764,7 @@ export default function AdminMabarManagementPage() {
             <Button
               onClick={handleSaveMabar}
               disabled={isProcessing}
-              className="bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs rounded-xl px-5"
+              className="bg-primary hover:bg-[#580e33] text-white font-black text-xs rounded-xl px-5"
             >
               {isProcessing && (
                 <Loader2 className="animate-spin w-3.5 h-3.5 mr-1.5" />

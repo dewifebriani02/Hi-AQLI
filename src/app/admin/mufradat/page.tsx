@@ -488,7 +488,7 @@ function MufradatMonitoringContent() {
   if (isUsersLoading || isAttemptsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#6D123F]" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Memuat Data Progress Hi Mufradat...
         </p>
@@ -501,7 +501,7 @@ function MufradatMonitoringContent() {
       {/* Header + Clickable KPI Strip */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[#6D123F]">
+          <div className="flex items-center gap-2 text-primary">
             <BookOpen className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Portal Monitoring &amp; Reminder Hi Mufradat
@@ -526,11 +526,11 @@ function MufradatMonitoringContent() {
             className={cn(
               "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border text-left transition-all",
               statusFilter === "all" && mainTab === "participants"
-                ? "bg-[#6D123F]/5 border-[#6D123F]/40 ring-1 ring-[#6D123F]/20"
-                : "bg-slate-50 dark:bg-slate-800 border-slate-200/80 dark:border-white/10 hover:border-[#6D123F]/40"
+                ? "bg-primary/5 border-primary/40 ring-1 ring-primary/20"
+                : "bg-slate-50 dark:bg-slate-800 border-slate-200/80 dark:border-white/10 hover:border-primary/40"
             )}
           >
-            <div className="p-2 rounded-xl bg-[#6D123F]/10 text-[#6D123F]">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Users className="w-4 h-4" />
             </div>
             <div>
@@ -633,14 +633,14 @@ function MufradatMonitoringContent() {
           <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-1.5 rounded-2xl h-auto flex flex-wrap gap-1 w-full sm:w-fit shadow-sm">
             <TabsTrigger
               value="participants"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-4 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-2 gap-1.5"
             >
               <Users className="w-3.5 h-3.5" />
               Monitor Peserta ({filteredStats.length})
             </TabsTrigger>
             <TabsTrigger
               value="logs"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-4 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-2 gap-1.5"
             >
               <History className="w-3.5 h-3.5" />
               Log Pengiriman WA ({waLogs?.length || 0})
@@ -677,7 +677,7 @@ function MufradatMonitoringContent() {
               className="h-9 rounded-xl font-bold text-xs border-slate-200"
             >
               <Link href="/mufradat">
-                <ExternalLink className="w-3.5 h-3.5 mr-1.5 text-[#6D123F]" />
+                <ExternalLink className="w-3.5 h-3.5 mr-1.5 text-primary" />
                 Halaman Peserta
               </Link>
             </Button>
@@ -706,7 +706,7 @@ function MufradatMonitoringContent() {
                     className={cn(
                       "text-[11px] font-black rounded-xl h-8",
                       statusFilter === st.key &&
-                        "bg-[#6D123F] hover:bg-[#580e33] text-white"
+                        "bg-primary hover:bg-[#580e33] text-white"
                     )}
                   >
                     {st.label}
@@ -778,7 +778,7 @@ function MufradatMonitoringContent() {
                         <TableRow className="bg-slate-50/90 dark:bg-slate-800/40 border-y border-slate-200/70">
                           <TableCell colSpan={7} className="py-2 pl-6">
                             <div className="flex items-center gap-2">
-                              <span className="font-black text-[11px] uppercase tracking-wider text-[#6D123F]">
+                              <span className="font-black text-[11px] uppercase tracking-wider text-primary">
                                 {groupName}
                               </span>
                               <Badge variant="outline" className="bg-white text-[10px] h-5 font-bold">
@@ -793,7 +793,7 @@ function MufradatMonitoringContent() {
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-9 w-9 border border-slate-200">
                                   <AvatarImage src={u.photo_url || u.photoURL} />
-                                  <AvatarFallback className="bg-[#6D123F] text-white text-xs font-black">
+                                  <AvatarFallback className="bg-primary text-white text-xs font-black">
                                     {(u.full_name || u.username || "U")?.[0]?.toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
@@ -1163,7 +1163,7 @@ function MufradatMonitoringContent() {
                 return (
                   <div key={cat} className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-black text-xs uppercase tracking-wider text-[#6D123F]">
+                      <h3 className="font-black text-xs uppercase tracking-wider text-primary">
                         Jadwal Reminder {cat.replace("_", " ")}
                       </h3>
                       {config?.updated_at && (
@@ -1257,7 +1257,7 @@ function MufradatMonitoringContent() {
 
             <TabsContent value="server" className="p-6 sm:p-8 space-y-6">
               <div className="space-y-3">
-                <h3 className="font-black text-xs uppercase tracking-wider text-[#6D123F]">
+                <h3 className="font-black text-xs uppercase tracking-wider text-primary">
                   Test Kirim ke Peserta
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -1323,7 +1323,7 @@ function MufradatMonitoringContent() {
                     }
                   }}
                   disabled={!selectedTestUser || isTriggering}
-                  className="w-full h-11 bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs uppercase tracking-wider rounded-xl"
+                  className="w-full h-11 bg-primary hover:bg-[#580e33] text-white font-black text-xs uppercase tracking-wider rounded-xl"
                 >
                   {isTriggering ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -1337,7 +1337,7 @@ function MufradatMonitoringContent() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-black text-xs uppercase tracking-wider text-[#6D123F]">
+                    <h3 className="font-black text-xs uppercase tracking-wider text-primary">
                       Status WatZap Gateway
                     </h3>
                     <Badge
@@ -1376,7 +1376,7 @@ function MufradatMonitoringContent() {
                         href="https://watzap.id"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#6D123F] hover:underline font-bold text-xs"
+                        className="text-primary hover:underline font-bold text-xs"
                       >
                         Buka WatZap →
                       </a>
@@ -1385,7 +1385,7 @@ function MufradatMonitoringContent() {
                 </div>
 
                 <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200">
-                  <h3 className="font-black text-xs uppercase tracking-wider text-[#6D123F]">
+                  <h3 className="font-black text-xs uppercase tracking-wider text-primary">
                     Limit &amp; Keamanan
                   </h3>
                   <div className="grid grid-cols-2 gap-3 text-xs font-bold">
@@ -1422,7 +1422,7 @@ export default function AdminMufradatPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#6D123F]" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       }
     >

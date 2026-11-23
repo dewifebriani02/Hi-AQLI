@@ -593,7 +593,7 @@ export default function AdminTikrarPage() {
       {/* Header + Quick KPI Strip */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[#6D123F]">
+          <div className="flex items-center gap-2 text-primary">
             <Repeat className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-widest">
               Portal Musyrifah &amp; Administrator HI Tikrar
@@ -612,9 +612,9 @@ export default function AdminTikrarPage() {
           <button
             type="button"
             onClick={() => setActiveTab('participants')}
-            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 text-left hover:border-[#6D123F]/40 transition-colors"
+            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 text-left hover:border-primary/40 transition-colors"
           >
-            <div className="p-2 rounded-xl bg-[#6D123F]/10 text-[#6D123F]">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Users className="w-4 h-4" />
             </div>
             <div>
@@ -681,49 +681,49 @@ export default function AdminTikrarPage() {
           <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-1.5 rounded-2xl h-auto flex flex-wrap gap-1 w-full sm:w-fit shadow-sm">
             <TabsTrigger
               value="submissions"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
               <Video className="w-3.5 h-3.5" />
               Antrean Tasmi&apos; ({kpis.pendingSubCount})
             </TabsTrigger>
             <TabsTrigger
               value="blocks"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
               <Layers className="w-3.5 h-3.5" />
               Atur Blok &amp; Ayat
             </TabsTrigger>
             <TabsTrigger
               value="quizzes"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
               <ClipboardCheck className="w-3.5 h-3.5" />
               Skor Ujian
             </TabsTrigger>
             <TabsTrigger
               value="prior"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
               <BookOpen className="w-3.5 h-3.5" />
               Hafalan Lama
             </TabsTrigger>
             <TabsTrigger
               value="heatmap"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
               <CalendarDays className="w-3.5 h-3.5" />
               Heatmap Grup
             </TabsTrigger>
             <TabsTrigger
               value="participants"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
               <Users className="w-3.5 h-3.5" />
               Peserta &amp; Juz ({kpis.activeCount})
             </TabsTrigger>
             <TabsTrigger
               value="sessions"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
               <Link2 className="w-3.5 h-3.5" />
               Sesi &amp; Link Zoom
@@ -735,7 +735,7 @@ export default function AdminTikrarPage() {
             </TabsTrigger>
             <TabsTrigger
               value="reminders"
-              className="rounded-xl font-black text-xs data-[state=active]:bg-[#6D123F] data-[state=active]:text-white px-3.5 py-2 gap-1.5"
+              className="rounded-xl font-black text-xs data-[state=active]:bg-primary data-[state=active]:text-white px-3.5 py-2 gap-1.5"
             >
               <BellRing className="w-3.5 h-3.5" />
               Robot WA
@@ -744,7 +744,7 @@ export default function AdminTikrarPage() {
 
           <Button asChild variant="outline" size="sm" className="rounded-xl font-bold text-xs border-slate-200 shrink-0 self-start sm:self-center">
             <Link href="/tikrar">
-              <BookOpen className="w-3.5 h-3.5 mr-1.5 text-[#6D123F]" /> Lihat Halaman Peserta
+              <BookOpen className="w-3.5 h-3.5 mr-1.5 text-primary" /> Lihat Halaman Peserta
             </Link>
           </Button>
         </div>
@@ -776,7 +776,7 @@ export default function AdminTikrarPage() {
                 type="button"
                 size="sm"
                 onClick={() => setActiveTab('sessions')}
-                className="bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs shrink-0 rounded-xl"
+                className="bg-primary hover:bg-[#580e33] text-white font-black text-xs shrink-0 rounded-xl"
               >
                 <Settings2 className="w-3.5 h-3.5 mr-1.5" />
                 Perbarui Link Zoom
@@ -799,7 +799,7 @@ export default function AdminTikrarPage() {
                       className={cn(
                         'px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors',
                         sessionFilter === 'all'
-                          ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                          ? 'bg-primary text-white border-primary'
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       )}
                     >
@@ -813,7 +813,7 @@ export default function AdminTikrarPage() {
                         className={cn(
                           'px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors',
                           sessionFilter === h.id
-                            ? 'bg-[#6D123F] text-white border-[#6D123F]'
+                            ? 'bg-primary text-white border-primary'
                             : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                         )}
                       >
@@ -827,7 +827,7 @@ export default function AdminTikrarPage() {
                   {selectedHalaqahObj?.zoom_link && (
                     <Button
                       asChild
-                      className="bg-[#6D123F] hover:bg-[#580e33] text-white font-black text-xs h-9 rounded-xl shrink-0"
+                      className="bg-primary hover:bg-[#580e33] text-white font-black text-xs h-9 rounded-xl shrink-0"
                     >
                       <a href={selectedHalaqahObj.zoom_link} target="_blank" rel="noopener noreferrer">
                         <Video className="w-4 h-4 mr-1.5 text-[#D4AF37]" />
@@ -856,7 +856,7 @@ export default function AdminTikrarPage() {
                       onClick={() => setSubStatusFilter(st.key)}
                       className={cn(
                         'text-[11px] font-black rounded-xl h-8',
-                        subStatusFilter === st.key && 'bg-[#6D123F] hover:bg-[#580e33] text-white'
+                        subStatusFilter === st.key && 'bg-primary hover:bg-[#580e33] text-white'
                       )}
                     >
                       {st.label}
@@ -909,7 +909,7 @@ export default function AdminTikrarPage() {
                         className="flex items-center justify-between gap-2 bg-white border border-amber-200 rounded-xl p-2.5 text-xs"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="w-7 h-7 rounded-lg bg-[#6D123F] text-white font-black text-xs flex items-center justify-center shrink-0">
+                          <span className="w-7 h-7 rounded-lg bg-primary text-white font-black text-xs flex items-center justify-center shrink-0">
                             #{idx + 1}
                           </span>
                           <div className="min-w-0">
@@ -948,7 +948,7 @@ export default function AdminTikrarPage() {
                                 document.getElementById(`sub-card-${qItem.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                               }, 80);
                             }}
-                            className="h-7 px-2.5 text-[10px] font-black bg-[#6D123F] hover:bg-[#580e33] text-white rounded-lg"
+                            className="h-7 px-2.5 text-[10px] font-black bg-primary hover:bg-[#580e33] text-white rounded-lg"
                           >
                             Simak
                           </Button>
@@ -1016,7 +1016,7 @@ export default function AdminTikrarPage() {
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2 flex-wrap">
                             {sub.status === 'pending' && queuePos && (
-                              <Badge className="bg-[#6D123F] text-white font-black text-[10px] uppercase">
+                              <Badge className="bg-primary text-white font-black text-[10px] uppercase">
                                 Antrean #{queuePos}
                               </Badge>
                             )}
@@ -1681,7 +1681,7 @@ export default function AdminTikrarPage() {
                 onClick={() => setParticipantScope('registered')}
                 className={cn(
                   'text-xs font-bold h-8 rounded-lg',
-                  participantScope === 'registered' && 'bg-[#6D123F] text-white shadow-sm hover:bg-[#580e33]'
+                  participantScope === 'registered' && 'bg-primary text-white shadow-sm hover:bg-[#580e33]'
                 )}
               >
                 Hanya Peserta Tikrar ({kpis.activeCount})
@@ -1693,7 +1693,7 @@ export default function AdminTikrarPage() {
                 onClick={() => setParticipantScope('all')}
                 className={cn(
                   'text-xs font-bold h-8 rounded-lg',
-                  participantScope === 'all' && 'bg-[#6D123F] text-white shadow-sm hover:bg-[#580e33]'
+                  participantScope === 'all' && 'bg-primary text-white shadow-sm hover:bg-[#580e33]'
                 )}
               >
                 Semua Akun Sistem ({(users || []).length})

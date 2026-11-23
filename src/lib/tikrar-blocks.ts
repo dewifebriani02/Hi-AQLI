@@ -148,7 +148,7 @@ export const SYAAMIL_BLOCK_THEME = {
     badgeText: 'TM 4 (BLOK D)',
     badgeClass: 'bg-rose-700 text-white',
     cardBorder: 'border-rose-300',
-    headerBg: 'bg-[#6D123F]',
+    headerBg: 'bg-primary',
     softHeaderBg: 'bg-rose-100/75 text-rose-950 border-rose-200',
     verseBg: 'bg-rose-100/80 border-rose-300',
     accentText: 'text-rose-950',

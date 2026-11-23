@@ -260,7 +260,7 @@ export default function AdminThalibahPage() {
   if (isUsersLoading || isRegistrationsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin h-10 w-10 text-[#6D123F]" />
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Memuat Direktori Thalibah...</p>
       </div>
     );
@@ -272,14 +272,14 @@ export default function AdminThalibahPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Link href="/admin" className="hover:text-[#6D123F] font-bold">Dashboard Admin</Link>
+            <Link href="/admin" className="hover:text-primary font-bold">Dashboard Admin</Link>
             <span>/</span>
-            <Link href="/admin/users" className="hover:text-[#6D123F] font-bold">Database Pengguna</Link>
+            <Link href="/admin/users" className="hover:text-primary font-bold">Database Pengguna</Link>
             <span>/</span>
-            <span className="text-[#6D123F] font-bold">Direktori Thalibah</span>
+            <span className="text-primary font-bold">Direktori Thalibah</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-slate-900 flex items-center gap-2.5">
-            <GraduationCap className="w-7 h-7 text-[#6D123F]" />
+            <GraduationCap className="w-7 h-7 text-primary" />
             Direktori Thalibah & Blacklist
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
@@ -293,7 +293,7 @@ export default function AdminThalibahPage() {
               variant="ghost"
               size="sm"
               onClick={() => setViewMode("grid")}
-              className={cn("h-8 px-2.5 rounded-lg text-xs font-bold", viewMode === "grid" ? "bg-white shadow-sm text-[#6D123F]" : "text-slate-500")}
+              className={cn("h-8 px-2.5 rounded-lg text-xs font-bold", viewMode === "grid" ? "bg-white shadow-sm text-primary" : "text-slate-500")}
             >
               <LayoutGrid className="w-3.5 h-3.5 mr-1" /> Kartu
             </Button>
@@ -301,7 +301,7 @@ export default function AdminThalibahPage() {
               variant="ghost"
               size="sm"
               onClick={() => setViewMode("table")}
-              className={cn("h-8 px-2.5 rounded-lg text-xs font-bold", viewMode === "table" ? "bg-white shadow-sm text-[#6D123F]" : "text-slate-500")}
+              className={cn("h-8 px-2.5 rounded-lg text-xs font-bold", viewMode === "table" ? "bg-white shadow-sm text-primary" : "text-slate-500")}
             >
               <List className="w-3.5 h-3.5 mr-1" /> Tabel
             </Button>
@@ -326,13 +326,13 @@ export default function AdminThalibahPage() {
           className={cn(
             "p-3.5 rounded-2xl border text-left transition-all",
             filterStatus === 'all' && filterProgram === 'all'
-              ? "bg-[#6D123F]/5 border-[#6D123F] shadow-sm"
+              ? "bg-primary/5 border-primary shadow-sm"
               : "bg-white hover:bg-slate-50 border-slate-200"
           )}
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Thalibah</span>
-            <Users className="w-4 h-4 text-[#6D123F]" />
+            <Users className="w-4 h-4 text-primary" />
           </div>
           <p className="text-xl font-black text-slate-900 mt-1">{kpiStats.total}</p>
         </button>
@@ -466,7 +466,7 @@ export default function AdminThalibahPage() {
                       "w-12 h-12 rounded-xl flex items-center justify-center text-base font-black shrink-0",
                       thalibah.is_blacklisted 
                         ? "bg-rose-100 text-rose-700" 
-                        : "bg-[#6D123F]/10 text-[#6D123F]"
+                        : "bg-primary/10 text-primary"
                     )}>
                       {(thalibah.full_name || thalibah.username || 'U')[0].toUpperCase()}
                     </div>
@@ -617,7 +617,7 @@ export default function AdminThalibahPage() {
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0",
-                            thalibah.is_blacklisted ? "bg-rose-100 text-rose-700" : "bg-[#6D123F]/10 text-[#6D123F]"
+                            thalibah.is_blacklisted ? "bg-rose-100 text-rose-700" : "bg-primary/10 text-primary"
                           )}>
                             {(thalibah.full_name || thalibah.username || 'U')[0].toUpperCase()}
                           </div>
@@ -731,7 +731,7 @@ export default function AdminThalibahPage() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <GraduationCap className="w-5 h-5 text-[#6D123F]" />
+              <GraduationCap className="w-5 h-5 text-primary" />
               Detail Data Thalibah
             </DialogTitle>
             <DialogDescription>
