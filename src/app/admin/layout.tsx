@@ -9,17 +9,13 @@ import {
   Loader2,
   Home,
   LogOut,
-  LayoutDashboard,
-  Repeat,
   BookOpen,
   Users,
   ClipboardCheck,
   UserCog,
   CalendarCheck,
   HeartHandshake,
-  MessageSquare,
   Shield,
-  Library,
   Trophy,
   Coffee,
   BarChart3,
@@ -31,18 +27,6 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useUserPermissions, getProgramTypeFromPath } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
-
-const ADMIN_NAV_ITEMS = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/tikrar', label: 'Hi Tikrar', icon: Repeat, program: 'hi_tikrar' as const },
-  { href: '/admin/mufradat', label: 'Hi Mufradat', icon: BookOpen, program: 'hi_mufradat' as const },
-  { href: '/admin/groups', label: 'Grup & Robot WA', icon: MessageSquare },
-  { href: '/admin/registrations', label: 'Verifikasi Daftar', icon: ClipboardCheck, superOnly: true },
-  { href: '/admin/classes', label: 'Katalog Kelas', icon: Library, superOnly: true },
-  { href: '/admin/users', label: 'Database Peserta', icon: UserCog, superOnly: true },
-  { href: '/admin/mutabaah', label: 'Mutabaah & Muhasabah', icon: CalendarCheck, superOnly: true },
-  { href: '/admin/donations', label: 'Infaq & Kampanye', icon: HeartHandshake, superOnly: true },
-];
 
 const MUFRADAT_SUB_NAV = [
   { href: '/admin/mufradat', label: 'Monitor & Reminder', icon: BookOpen, exact: true },
@@ -151,13 +135,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  const visibleNavItems = ADMIN_NAV_ITEMS.filter((item) => {
-    if (isSuperUser) return true;
-    if (item.superOnly) return false;
-    if (item.program) return canAccessProgram(item.program);
-    return true;
-  });
-
   const isMufradatSection = pathname?.startsWith('/admin/mufradat');
   const isUsersSection = pathname?.startsWith('/admin/users') || pathname?.startsWith('/admin/thalibah');
   const isMutabaahSection = pathname?.startsWith('/admin/mutabaah') || pathname?.startsWith('/admin/muhasabah');
@@ -177,55 +154,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     ? INFAQ_SUB_NAV
     : null;
 
-  // 4. Authorized Access with Unified Admin Sub-Navbar
+  // 4. Authorized Access (navigasi modul utama menggunakan AppSidebar agar tidak redundan)
   return (
     <div className="space-y-4">
-      <div className="max-w-6xl mx-auto space-y-2">
-        <nav
-          aria-label="Navigasi Cepat Admin"
-          className="flex items-center justify-between gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-1.5 rounded-2xl shadow-sm overflow-x-auto no-scrollbar"
-        >
-          <div className="flex items-center gap-1">
-            {visibleNavItems.map((item) => {
-              const Icon = item.icon;
-              let isActive = item.exact
-                ? pathname === item.href
-                : pathname?.startsWith(item.href);
-
-              if (item.href === '/admin/users' && isUsersSection) isActive = true;
-              if (item.href === '/admin/mutabaah' && isMutabaahSection) isActive = true;
-              if (item.href === '/admin/donations' && isInfaqSection) isActive = true;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all",
-                    isActive
-                      ? "bg-[#6D123F] text-white shadow-sm"
-                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 whitespace-nowrap shrink-0"
-          >
-            <Home className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Beranda Aplikasi</span>
-          </Link>
-        </nav>
-
-        {/* Sub-Navigation Bar for Multi-Page Modules (Hi Mufradat, Mutabaah/Muhasabah, Infaq/Kampanye) */}
-        {activeSubNav && (
-          <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-white/5 p-1 rounded-xl overflow-x-auto no-scrollbar w-fit">
+      {activeSubNav && (
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-white/5 p-1 rounded-xl overflow-x-auto no-scrollbar max-w-full w-fit">
             {activeSubNav.map((sub) => {
               const SubIcon = sub.icon;
               const isSubActive = (sub as any).exact
@@ -248,8 +182,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div>{children}</div>
     </div>

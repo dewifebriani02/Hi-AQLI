@@ -17,7 +17,7 @@ import {
 import {
   GraduationCap,
   HeartHandshake,
-  Settings,
+  Home,
   ShieldCheck,
   Lock,
   UserCog,
@@ -29,6 +29,7 @@ import {
   CheckCircle,
   BookOpen,
   Users,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import dynamic from 'next/dynamic';
@@ -41,11 +42,13 @@ interface AdminMenuItem {
   href?: string;
   label: string;
   icon: LucideIcon;
-  subItems?: { href: string; label: string }[];
+  generalAdmin?: boolean;
+  subItems?: { href: string; label: string; superOnly?: boolean }[];
 }
 
 const adminItems: AdminMenuItem[] = [
-  { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck },
+  { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck, generalAdmin: true },
+  { href: "/admin/groups", label: "Grup & Robot WA", icon: MessageSquare, generalAdmin: true },
   { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
   { href: "/admin/users", label: "Manajemen Users", icon: UserCog },
   { href: "/admin/thalibah", label: "Direktori Thalibah", icon: Users },
@@ -57,8 +60,8 @@ const adminItems: AdminMenuItem[] = [
     subItems: [
       { href: "/admin/mufradat/groups", label: "Kelola Group" },
       { href: "/admin/mufradat", label: "Monitor Peserta & Group" },
+      { href: "/admin/mufradat/juz-access", label: "Hak Akses Juz" },
       { href: "/admin/mufradat/leave", label: "Kelola Permohonan Cuti" },
-      { href: "/admin/registrations", label: "Verifikasi Pembayaran" },
       { href: "/admin/mufradat/reports", label: "Laporan Kinerja" },
       { href: "/admin/mufradat/mabar", label: "Kelola Mabar Terjadwal" },
     ]
@@ -69,6 +72,7 @@ const adminItems: AdminMenuItem[] = [
     subItems: [
       { href: "/admin/donations", label: "Daftar Infaq" },
       { href: "/admin/campaigns", label: "Kelola Kampanye" },
+      { href: "/admin/finance/reconciliation", label: "Rekonsiliasi Keuangan", superOnly: true },
     ]
   },
   {
@@ -82,7 +86,7 @@ const adminItems: AdminMenuItem[] = [
     label: "Kelola Hi Tikrar",
     icon: BookOpen,
     subItems: [
-      { href: "/admin/tikrar", label: "Peserta Tikrar" },
+      { href: "/admin/tikrar", label: "Portal & Antrean Tikrar" },
     ]
   },
   {
@@ -122,7 +126,14 @@ export function AppSidebar() {
 
   // Define program mapping for menu filtering
   const programMenuMap: Record<string, string[]> = {
-    hi_mufradat: ["/admin/mufradat", "/admin/mufradat/groups", "/admin/mufradat/leave", "/admin/mufradat/reports", "/admin/mufradat/mabar"],
+    hi_mufradat: [
+      "/admin/mufradat",
+      "/admin/mufradat/groups",
+      "/admin/mufradat/juz-access",
+      "/admin/mufradat/leave",
+      "/admin/mufradat/reports",
+      "/admin/mufradat/mabar",
+    ],
     hi_tikrar: ["/admin/tikrar"],
     hi_ngaji: ["/admin/classes"],
     hi_berbagi: ["/admin/donations", "/admin/campaigns"],
@@ -134,12 +145,15 @@ export function AppSidebar() {
   const filteredItems: AdminMenuItem[] = adminItems
     .map((item): AdminMenuItem | null => {
       if (!item.subItems) {
-        return isSuperUser ? item : null;
+        if (isSuperUser) return item;
+        if (item.generalAdmin && isMusyrifah) return item;
+        return null;
       }
 
       if (isSuperUser) return item;
 
       const allowedSubItems = item.subItems.filter(sub => {
+        if (sub.superOnly) return false;
         const program = Object.entries(programMenuMap).find(([_, paths]) => paths.includes(sub.href));
         return program ? canAccessProgram(program[0] as any) : false;
       });
@@ -254,12 +268,12 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              tooltip="Pengaturan Admin"
+              tooltip="Beranda Aplikasi"
               className="text-white hover:bg-white/10 h-11"
             >
-              <Link href="/admin" onClick={handleLinkClick}>
-                <Settings className="text-white size-5" />
-                <span className="font-bold group-data-[collapsible=icon]:hidden">Pengaturan</span>
+              <Link href="/" onClick={handleLinkClick}>
+                <Home className="text-white size-5" />
+                <span className="font-bold group-data-[collapsible=icon]:hidden">Beranda Aplikasi</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

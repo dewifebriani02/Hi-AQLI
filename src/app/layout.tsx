@@ -7,16 +7,15 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/common/bottom-nav';
 import { PWAInstallPrompt } from '@/components/common/pwa-install-prompt';
-import { AuthProvider, useUser, db } from '@/db';
-import { signOut } from '@/db';
-import { useDoc, useCollection } from '@/db';
-import { Trophy, Zap, Star, ShieldAlert, LogOut, Smartphone, Minus, Plus } from 'lucide-react';
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { AuthProvider, useUser, db, signOut, useDoc } from '@/db';
+import { useUserPermissions } from '@/lib/permissions';
+import { Trophy, Zap, ShieldAlert, LogOut, Smartphone, Minus, Plus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import dynamic from 'next/dynamic';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { FontSizeProvider, useFontSize } from '@/contexts/font-size-context';
 
 const Logo = dynamic(() => import('@/components/common/logo').then(mod => mod.Logo), { 
@@ -27,18 +26,17 @@ const Logo = dynamic(() => import('@/components/common/logo').then(mod => mod.Lo
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, isUserLoading } = useUser();
   const { fontSize, increaseFontSize, decreaseFontSize } = useFontSize();
-  const isAuthPage = pathname === '/login' || pathname === '/register';
+  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname?.startsWith('/auth/');
+  const isAdminRoute = pathname?.startsWith('/admin');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const { data: isAdminDoc } = useDoc("roles_admin", user?.id);
-  const { data: isSuperAdminDoc } = useDoc("roles_superadmin", user?.id);
+  const { isSuperUser, isMusyrifah } = useUserPermissions(user?.id);
   const { data: userData, isLoading: isUserDocLoading } = useDoc("users", user?.id);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
@@ -119,7 +117,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('open-pwa-install', handleOpenPWA);
   }, []);
 
-  const hasAdminAccess = !!isAdminDoc?.id || !!isSuperAdminDoc?.id;
+  const hasAdminAccess = isSuperUser || isMusyrifah;
   const points = userData?.points || 0;
   const isBlacklisted = !!userData?.is_blacklisted;
   const salutation = userData?.salutation || "Ukhti";
@@ -154,20 +152,29 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   const showAdminUI = hasAdminAccess && !isBlacklisted;
   const showUserUI = !isUserLoading;
-  const showBottomNav = !isBlacklisted;
+  // Sembunyikan BottomNav peserta di portal /admin/* dan halaman autentikasi
+  const showBottomNav = !isBlacklisted && !isAdminRoute && !isAuthPage;
 
   return (
     <>
       <SidebarProvider defaultOpen={false}>
       <div className="relative flex min-h-screen w-full">
-        {/* Sidebar hanya muncul untuk admin di md ke atas */}
+        {/* Sidebar hanya muncul untuk admin/musyrifah */}
         {showAdminUI && <AppSidebar />}
         <SidebarInset className="w-full min-w-0 flex flex-col overflow-x-clip">
-          {/* Padding bottom untuk BottomNav (selalu ada) */}
-          <div className="flex flex-col flex-1 w-full min-w-0 pb-24">
+          <div className={cn("flex flex-col flex-1 w-full min-w-0", showBottomNav ? "pb-24" : "pb-6")}>
             <header className="sticky top-0 z-40 flex h-16 sm:h-20 items-center justify-between gap-2 px-3 sm:px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
               <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                {showAdminUI && <SidebarTrigger className="md:hidden text-slate-400 shrink-0" />}
+                {showAdminUI && (
+                  <SidebarTrigger
+                    className={cn(
+                      "md:hidden shrink-0",
+                      isAdminRoute
+                        ? "text-[#6D123F] bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl"
+                        : "text-slate-400"
+                    )}
+                  />
+                )}
                 <Link href="/" className="transition-transform hover:scale-105 active:scale-95 min-w-0">
                   <Logo variant="default" showText={true} className="scale-90 sm:scale-110 md:scale-125 origin-left" textClassName="text-lg sm:text-2xl md:text-3xl font-black tracking-tight" imageSize={40} />
                 </Link>
@@ -250,7 +257,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarInset>
       </div>
-      <BottomNav />
+      {showBottomNav && <BottomNav />}
       <Toaster />
       <PWAInstallPrompt 
         deferredPrompt={deferredPrompt} 
