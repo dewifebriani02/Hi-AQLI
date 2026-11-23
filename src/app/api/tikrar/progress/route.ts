@@ -164,10 +164,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Identifikasi blok-blok yang tuntas (combined >= 40)
+    // Identifikasi blok-blok yang tuntas (bagian 1, bagian 2, dan gabung blok >= 40)
     const tuntasBlocks: number[] = [];
     for (const b of [1, 2, 3, 4] as const) {
-      if (Number(finalBlocks?.[b]?.combined?.count) >= 40) {
+      if (
+        Number(finalBlocks?.[b]?.a?.count) >= PASS_THRESHOLD &&
+        Number(finalBlocks?.[b]?.b?.count) >= PASS_THRESHOLD &&
+        Number(finalBlocks?.[b]?.combined?.count) >= PASS_THRESHOLD
+      ) {
         tuntasBlocks.push(b);
       }
     }

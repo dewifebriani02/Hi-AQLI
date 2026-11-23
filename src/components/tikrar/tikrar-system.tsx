@@ -1027,19 +1027,23 @@ export function TikrarSystem({
 
       // Gabungan antar blok wajib diklik 10x sendiri. Hanya diisi otomatis bila halaman sudah lulus,
       // atau (data lama) blok sesudahnya sudah mulai dikerjakan agar blok itu tidak terkunci lagi.
+      const blockDone = (b: 1 | 2 | 3 | 4) =>
+        nextBlocks[b].a.count >= PASS_THRESHOLD &&
+        nextBlocks[b].b.count >= PASS_THRESHOLD &&
+        nextBlocks[b].combined.count >= PASS_THRESHOLD;
       const blockStarted = (b: 1 | 2 | 3 | 4) =>
         nextBlocks[b].a.count > 0 || nextBlocks[b].b.count > 0 || nextBlocks[b].combined.count > 0;
       if (!hasExplicitMeta) {
-        if (blockStarted(3)) {
+        if (blockDone(1) && blockDone(2) && blockStarted(3)) {
           nextMeta['1_2'] = Math.max(nextMeta['1_2'], getMetaThreshold('1_2'));
         }
-        if (blockStarted(4)) {
+        if (blockDone(1) && blockDone(2) && blockDone(3) && blockStarted(4)) {
           nextMeta['1_2'] = Math.max(nextMeta['1_2'], getMetaThreshold('1_2'));
           nextMeta['2_3'] = Math.max(nextMeta['2_3'], getMetaThreshold('2_3'));
           nextMeta['1_2_3'] = Math.max(nextMeta['1_2_3'], getMetaThreshold('1_2_3'));
         }
       }
-      if (isSelectedPageCleared && !hasExplicitMeta && nextBlocks[4].combined.count >= PASS_THRESHOLD) {
+      if (isSelectedPageCleared && !hasExplicitMeta && blockDone(1) && blockDone(2) && blockDone(3) && blockDone(4)) {
         Object.keys(nextMeta).forEach((k) => {
           nextMeta[k] = Math.max(nextMeta[k], getMetaThreshold(k));
         });
@@ -1447,8 +1451,27 @@ export function TikrarSystem({
 
   const isPrepTuntas = isBlockListenDone({ prep_listen_count: prepListenCount, blocks }, 1);
   const blockListenDone = (b: 1 | 2 | 3 | 4) => isBlockListenDone({ prep_listen_count: prepListenCount, blocks }, b);
-  const isTuntasTM = (mid: number) => blocks[mid].combined.count >= PASS_THRESHOLD;
-  const isMetaTuntas = (key: string) => (metaCounts[key] || 0) >= getMetaThreshold(key);
+  const isBlockSelfTuntas = (mid: 1 | 2 | 3 | 4) =>
+    blockListenDone(mid) &&
+    (blocks[mid]?.a?.count || 0) >= PASS_THRESHOLD &&
+    (blocks[mid]?.b?.count || 0) >= PASS_THRESHOLD &&
+    (blocks[mid]?.combined?.count || 0) >= PASS_THRESHOLD;
+  const isTuntasTM = (mid: 1 | 2 | 3 | 4): boolean => {
+    if (mid === 1) return isBlockSelfTuntas(1);
+    if (mid === 2) return isTuntasTM(1) && isBlockSelfTuntas(2);
+    if (mid === 3) return isMetaTuntas('1_2') && isBlockSelfTuntas(3);
+    return isMetaTuntas('1_2_3') && isBlockSelfTuntas(4);
+  };
+  const isMetaTuntas = (key: string): boolean => {
+    if ((metaCounts[key] || 0) < getMetaThreshold(key)) return false;
+    if (key === '1_2') return isTuntasTM(2);
+    if (key === '2_3') return isTuntasTM(3);
+    if (key === '1_2_3') return isMetaTuntas('2_3');
+    if (key === '3_4') return isTuntasTM(4);
+    if (key === '2_3_4') return isMetaTuntas('3_4');
+    if (key === '1_2_3_4') return isMetaTuntas('2_3_4');
+    return true;
+  };
   const isExamStageOpen = isMetaTuntas('1_2_3_4');
   const [globalShowVerses, setGlobalShowVerses] = useState(() => !isExamStageOpen);
   const [examRevealSeq, setExamRevealSeq] = useState(0);
@@ -1803,11 +1826,12 @@ export function TikrarSystem({
   const targetTotalClicks = todayClicks + remainingTargetClicks;
   const todayClicksPct = targetTotalClicks > 0 ? Math.min(100, Math.round((todayClicks / targetTotalClicks) * 100)) : 0;
 
+  const completedStepsCount = countCompletedSteps(localProgress, clearedPages.has(page));
   const stepInfo = (key: string): StepInfo | null => {
     if (!activeTarget || !user) return null;
     const step = TIKRAR_STEPS.find((st) => st.key === key);
     if (!step) return null;
-    const done = step.kind === 'quiz' ? clearedPages.has(page) : stepValue(step, localProgress) >= step.target;
+    const done = step.kind === 'quiz' ? clearedPages.has(page) : step.index < completedStepsCount;
     const stepDate = stepDates[key] || null;
     const isOverdue = !done && !!stepDate && stepDate < todayKey;
     return {
@@ -1829,8 +1853,8 @@ export function TikrarSystem({
 
   // Blocks that have reached TUNTAS (40x on A-1, A-2, and Gabung A)
   const tuntasBlockNumbers = useMemo(
-    () => ([1, 2, 3, 4] as const).filter((id) => blocks[id]?.combined?.count >= PASS_THRESHOLD),
-    [blocks]
+    () => ([1, 2, 3, 4] as const).filter((id) => isTuntasTM(id)),
+    [blocks, metaCounts, prepListenCount]
   );
 
   const newlyTuntasToday = useMemo(
@@ -2557,7 +2581,7 @@ export function TikrarSystem({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-6">
             <MaqtaCard
               id={1}
               canUndo={(part: string) => canUndoKey('1.' + part)}
@@ -2725,7 +2749,7 @@ export function TikrarSystem({
             }
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <MetaStep
               stepKey="2_3"
               label="GABUNG TM 2 & TM 3 (BLOK B & C)"
@@ -3225,7 +3249,7 @@ function MaqtaCard({
   onResetBlock,
   onResetCounter,
 }: any) {
-  const isDoneG = state.combined.count >= PASS_THRESHOLD;
+  // isCombinedDone computed after countersLocked & isCombinedLocked
   const isPlaying = Boolean(playback);
   const playingVerse = isPlaying ? verses[playback.verseIdx] : null;
   const playingVerseKey = playingVerse?.verse_key || null;
@@ -3461,7 +3485,8 @@ function MaqtaCard({
     );
   };
 
-  const isCombinedLocked = countersLocked || state.b.count < PASS_THRESHOLD;
+  const isCombinedLocked = countersLocked || state.a.count < PASS_THRESHOLD || state.b.count < PASS_THRESHOLD;
+  const isCombinedDone = !isCombinedLocked && state.combined.count >= PASS_THRESHOLD;
   const hasBlockActivity =
     listenCount > 0 ||
     state.a.count > 0 ||
@@ -3473,7 +3498,7 @@ function MaqtaCard({
     <Card
       className={cn(
         'border-2 transition-all shadow-md overflow-hidden flex flex-col h-full',
-        isDoneG ? 'border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10' : theme.cardBorder,
+        isCombinedDone ? 'border-[#D4AF37] bg-[#D4AF37]/5 shadow-[#D4AF37]/10' : theme.cardBorder,
         isLocked && 'opacity-50 grayscale select-none'
       )}
     >
@@ -3492,11 +3517,11 @@ function MaqtaCard({
               <Star className="w-2.5 h-2.5 fill-current" /> TARGET HARI INI
             </Badge>
           )}
-          {isSavedInDb ? (
+          {!isLocked && isCombinedDone && isSavedInDb ? (
             <Badge className="bg-emerald-400 text-black font-black text-[8px] tracking-widest h-4">
               TERCATAT
             </Badge>
-          ) : isDoneG ? (
+          ) : !isLocked && isCombinedDone ? (
             <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4">
               TUNTAS
             </Badge>
@@ -3838,7 +3863,7 @@ function MaqtaCard({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2 shrink-0">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 shrink-0 items-stretch">
           <CounterBox
             id={`step-${id}.a`}
             label={`TM ${id}-1 (${letter}-1) • ${part1Range}`}
@@ -3875,20 +3900,20 @@ function MaqtaCard({
             className={cn(
               'w-full min-h-[5rem] h-auto flex flex-col items-center justify-center rounded-2xl font-black uppercase tracking-wider py-2.5 px-3 transition-all relative touch-manipulation select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50',
               stepInfoFor?.('combined')?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
-              isDoneG
+              isCombinedDone
                 ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 shadow-lg'
                 : 'bg-[#6D123F] text-white hover:bg-[#6D123F]/90'
             )}
           >
-            <span className="text-[9.5px] sm:text-[10px] flex flex-wrap items-center justify-center gap-x-1 leading-tight opacity-85 mb-1 text-center">
+            <span className="text-[9.5px] sm:text-[10px] flex flex-wrap items-center justify-center gap-x-1 leading-tight opacity-85 mb-1 text-center px-7">
               {isCombinedLocked ? <Lock className="w-3 h-3 shrink-0" /> : null}
               <span>GABUNG TM {id} (BLOK {letter})</span>
-              <span>• {isDoneG ? '+1 LAGI' : 'KETUK +1'} • TAHAN +5</span>
+              <span>• {isCombinedLocked ? 'TERKUNCI' : (isCombinedDone ? '+1 LAGI • TAHAN +5' : 'KETUK +1 • TAHAN +5')}</span>
             </span>
             <span className="text-2xl leading-none">
               {state.combined.count} <span className="text-sm opacity-70">/ {PASS_THRESHOLD}</span>
             </span>
-            {isDoneG && (
+            {isCombinedDone && (
               <div className="absolute top-2 right-2">
                 <CheckCircle2 className="w-5 h-5 text-black" />
               </div>
@@ -3929,7 +3954,7 @@ function MaqtaCard({
 }
 
 function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, highlight, canUndo, canReset, onReset, stepInfo, threshold = 10 }: any) {
-  const isDone = count >= threshold;
+  const isDone = !isLocked && count >= threshold;
   const elementId = customId || (stepKey ? `step-meta.${stepKey}` : (stepInfo ? `step-${stepInfo.key}` : undefined));
   return (
     <div
@@ -3941,7 +3966,7 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
         isLocked && 'opacity-40 grayscale select-none'
       )}
     >
-      <div className="flex items-center gap-3 overflow-hidden">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <div
           className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0',
@@ -3960,7 +3985,7 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
           </span>
           <span
             className={cn(
-              'text-[11px] font-black uppercase tracking-tight truncate',
+              'text-[11px] font-black uppercase tracking-tight leading-snug break-words',
               highlight ? 'text-[#6D123F]' : 'text-black'
             )}
           >
@@ -4167,7 +4192,7 @@ function LongPressCounterButton({
 }
 
 function CounterBox({ id: customId, label, count, isLocked, onInc, color, threshold, canUndo, canReset, onReset, stepInfo }: any) {
-  const isDone = count >= threshold;
+  const isDone = !isLocked && count >= threshold;
   const themes: any = {
     maroon: isDone
       ? 'bg-[#991B1B] text-white border-[#991B1B]'
@@ -4178,30 +4203,28 @@ function CounterBox({ id: customId, label, count, isLocked, onInc, color, thresh
   };
   const elementId = customId || (stepInfo ? `step-${stepInfo.key}` : undefined);
   return (
-    <div id={elementId} className="flex flex-col gap-1.5 scroll-mt-24">
+    <div id={elementId} className="flex flex-col gap-1.5 h-full scroll-mt-24">
     <div className="relative">
     <LongPressCounterButton
       disabled={isLocked}
       onStep={(delta) => onInc(delta)}
       className={cn(
-        'rounded-2xl border-2 flex flex-col items-center justify-center transition-all relative px-2 py-3 min-h-[88px] w-full shadow-sm gap-1 touch-manipulation select-none',
+        'rounded-2xl border-2 flex flex-col items-center justify-center transition-all relative px-2 py-3 h-[98px] sm:h-[104px] w-full shadow-sm gap-1 touch-manipulation select-none',
         isLocked ? 'opacity-50 grayscale cursor-not-allowed bg-muted shadow-none' : themes[color],
         !isLocked && 'active:scale-[0.96] cursor-pointer',
         stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2'
       )}
     >
-      <span className="text-[10px] font-black uppercase opacity-70 tracking-wider truncate w-full text-center leading-none">
+      <span className="text-[10px] font-black uppercase opacity-70 tracking-wider truncate w-full text-center leading-none px-6">
         {label}
       </span>
       <div className="flex items-baseline gap-1 leading-none">
         <span className="text-3xl font-black">{count}</span>
         <span className="text-xs font-bold opacity-50">/ {threshold}</span>
       </div>
-      {!isLocked && (
-        <span className="text-[9px] sm:text-[10px] font-black opacity-75 leading-tight text-center">
-          {isDone ? '+1 LAGI • TAHAN +5' : 'KETUK +1 • TAHAN +5'}
-        </span>
-      )}
+      <span className="text-[9px] sm:text-[10px] font-black opacity-75 leading-tight text-center">
+        {isLocked ? 'TERKUNCI' : isDone ? '+1 LAGI • TAHAN +5' : 'KETUK +1 • TAHAN +5'}
+      </span>
 
       {isLocked && <Lock className="absolute top-2 right-2 w-3.5 h-3.5 text-muted-foreground" />}
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}

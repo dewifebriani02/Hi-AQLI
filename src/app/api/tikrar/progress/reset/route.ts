@@ -39,7 +39,11 @@ function normalizeMetaCounts(raw: any) {
 function computeTuntasBlocks(blocks: Record<1 | 2 | 3 | 4, any>): number[] {
   const tuntas: number[] = [];
   for (const b of [1, 2, 3, 4] as const) {
-    if ((Number(blocks?.[b]?.combined?.count) || 0) >= PASS_THRESHOLD) {
+    if (
+      (Number(blocks?.[b]?.a?.count) || 0) >= PASS_THRESHOLD &&
+      (Number(blocks?.[b]?.b?.count) || 0) >= PASS_THRESHOLD &&
+      (Number(blocks?.[b]?.combined?.count) || 0) >= PASS_THRESHOLD
+    ) {
       tuntas.push(b);
     }
   }
@@ -318,7 +322,7 @@ export async function POST(req: NextRequest) {
       } else if (part === 'a' || part === 'b' || part === 'combined') {
         const subPart = part as 'a' | 'b' | 'combined';
         blocks[b][subPart] = { count: 0 };
-        if (part === 'combined') clearedBlock = b;
+        clearedBlock = b;
       }
     }
 
