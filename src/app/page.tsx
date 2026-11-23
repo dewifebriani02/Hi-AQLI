@@ -51,7 +51,15 @@ import {
   Loader2
 } from 'lucide-react';
 import Link from "next/link";
-import {useUser, db } from "@/db";
+import { useUser, db, authFetch } from "@/db";
+import { toDateKeyWIB } from "@/lib/tikrar-schedule-generator";
+import {
+  computeActivity7Days,
+  computeCombinedPageStats,
+  computeCombinedStreak,
+  getWeekStartKeyWIB,
+  type CombinedPageStats,
+} from "@/lib/dashboard-stats";
 import { useDoc, useCollection } from "@/db";
 import { useToast } from "@/hooks/use-toast";
 import { QURAN_CHAPTERS, SURAH_MAP_STR } from "@/lib/quran-data";
@@ -138,7 +146,11 @@ export default function DashboardPage() {
       setIsForcerSaving(false);
     }
   };
-  const [streakDays, setStreakDays] = useState(0);
+  const [combinedStats, setCombinedStats] = useState<{
+    streakDays: number;
+    activity7Days: boolean[];
+    pageStats: CombinedPageStats;
+  } | null>(null);
   const [historyPage, setHistoryPage] = useState(0);
   const [nextPrayer, setNextPrayer] = useState<{ name: string, time: string, location?: string } | null>(null);
   const [manualCity, setManualCity] = useState<string | null>(null);
@@ -337,97 +349,70 @@ export default function DashboardPage() {
     }
   }, [manualCity]);
 
-  // Hitung Streak Belajar dari quiz_attempts
+  // Ambil statistik gabungan Hi Mufradat + Hi Tikrar dari server
   useEffect(() => {
-    if (!quizAttempts || quizAttempts.length === 0) {
-      setStreakDays(0);
+    if (!user?.id) {
+      setCombinedStats(null);
       return;
     }
 
-    // Hitung streak hari berturut-turut dengan aktivitas
-    const streakMap = new Map<string, boolean>();
-    quizAttempts.forEach((attempt: any) => {
-      if (attempt.created_at) {
-        const date = new Date(attempt.created_at).toISOString().split('T')[0];
-        streakMap.set(date, true);
-      }
-    });
-
-    // Hitung streak dari hari ini ke belakang
-    let streak = 0;
-    let checkDate = new Date();
-
-    // Cek apakah hari ini ada aktivitas
-    while (true) {
-      const dateStr = checkDate.toISOString().split('T')[0];
-      if (streakMap.has(dateStr)) {
-        streak++;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else {
-        // Jika hari ini tidak ada aktivitas, cek kemarin (streak bisa continue)
-        if (streak === 0) {
-          checkDate.setDate(checkDate.getDate() - 1);
-          // Coba sampai 7 hari ke belakang
-          if (streak > -7) continue;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch('/api/dashboard/stats', { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && json?.data) {
+          setCombinedStats({
+            streakDays: Number(json.data.streakDays) || 0,
+            activity7Days: Array.isArray(json.data.activity7Days)
+              ? json.data.activity7Days
+              : Array(7).fill(false),
+            pageStats: json.data.pageStats,
+          });
         }
-        break;
+      } catch (err) {
+        console.error('Failed to fetch combined dashboard stats:', err);
       }
-    }
+    })();
 
-    setStreakDays(streak);
-  }, [quizAttempts]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
-  // Activity dots for current week (Monday to Sunday)
-  const activity7Days = useMemo(() => {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
-    const monday = new Date(new Date().setDate(diff));
-    monday.setHours(0,0,0,0);
-
-    const currentWeekDays = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      return d.toISOString().split('T')[0];
-    });
-
+  // Fallback lokal dari quiz_attempts sementara menunggu respon /api/dashboard/stats
+  const fallbackStats = useMemo(() => {
+    const todayKey = toDateKeyWIB();
+    const weekStartKey = getWeekStartKeyWIB(todayKey);
     const activeDates = new Set<string>();
+    const passedMufradat: any[] = [];
+
     quizAttempts?.forEach((a: any) => {
       if (a.created_at) {
-        activeDates.add(new Date(a.created_at).toISOString().split('T')[0]);
+        activeDates.add(toDateKeyWIB(a.created_at));
       }
-    });
-
-    return currentWeekDays.map(date => activeDates.has(date));
-  }, [quizAttempts]);
-
-  // Page stats (weekly and total)
-  const pageStats = useMemo(() => {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
-    const startOfWeek = new Date(now.setDate(diff)).toISOString().split('T')[0] + 'T00:00:00Z';
-
-    const weeklyPages = new Set();
-    const totalPagesEver = new Set();
-
-    quizAttempts?.forEach((a: any) => {
       if (a.quiz_id?.startsWith('mufradat_page_') && a.is_passed) {
-        const pageId = a.page_id || a.quiz_id.replace('mufradat_page_', '');
-        if (pageId) {
-          totalPagesEver.add(Number(pageId));
-          if (a.created_at >= startOfWeek) {
-            weeklyPages.add(Number(pageId));
-          }
-        }
+        passedMufradat.push(a);
       }
     });
 
     return {
-      weekly: weeklyPages.size,
-      total: totalPagesEver.size
+      streakDays: computeCombinedStreak(activeDates, todayKey),
+      activity7Days: computeActivity7Days(activeDates, todayKey),
+      pageStats: computeCombinedPageStats({
+        mufradatPassedAttempts: passedMufradat,
+        tikrarQuizPassed: [],
+        tikrarSubmissionsPassed: [],
+        pageExamsPassed: [],
+        weekStartKey,
+      }),
     };
   }, [quizAttempts]);
+
+  const streakDays = combinedStats ? combinedStats.streakDays : fallbackStats.streakDays;
+  const activity7Days = combinedStats ? combinedStats.activity7Days : fallbackStats.activity7Days;
+  const pageStats = combinedStats ? combinedStats.pageStats : fallbackStats.pageStats;
 
   // Date Formatting
   const gregorianDate = new Intl.DateTimeFormat('id-ID', {
@@ -812,12 +797,13 @@ export default function DashboardPage() {
               <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-orange-50 text-orange-600"><Flame className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /></div>
               <Badge variant="outline" className="text-[7px] sm:text-[8px] font-black border-orange-200 text-orange-700 bg-orange-50 px-1 h-3 sm:h-4">ISTIQOMAH</Badge>
             </div>
-            <div className="flex items-center justify-between mt-auto">
-              <div>
+            <div className="flex items-center justify-between gap-1 mt-auto">
+              <div className="min-w-0">
                 <p className="text-xl sm:text-2xl font-black text-black">{streakDays} Hari</p>
                 <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Streak Belajar</p>
+                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">Mufradat &bull; Tikrar</p>
               </div>
-              <div className="flex gap-0.5">
+              <div className="flex gap-0.5 shrink-0">
                 {activity7Days.map((active, i) => (
                   <div 
                     key={i} 
@@ -838,15 +824,18 @@ export default function DashboardPage() {
               <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50 text-[#D4AF37]"><Target className="w-4 h-4 sm:w-5 sm:h-5" /></div>
               <Badge variant="outline" className="text-[7px] sm:text-[8px] font-black border-amber-200 text-amber-700 bg-amber-50 px-1 h-3 sm:h-4">TARGET</Badge>
             </div>
-            <div className="flex items-center justify-between mt-auto">
-              <div>
+            <div className="flex items-center justify-between gap-1 mt-auto">
+              <div className="min-w-0">
                 <div className="flex items-baseline gap-1.5">
                   <p className="text-xl sm:text-2xl font-black text-black">{pageStats.weekly}</p>
                   <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">/ {pageStats.total} Total</p>
                 </div>
                 <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Halaman Pekan Ini</p>
+                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight truncate">
+                  Muf {pageStats.mufradat.total} &bull; Tik {pageStats.tikrar.total}
+                </p>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <p className="text-[8px] font-black text-amber-600 uppercase">Min. 1 Hlm</p>
                 {pageStats.weekly >= 1 ? (
                   <Badge className="bg-emerald-500 text-white text-[7px] h-3.5 px-1 font-black">TERCAPAI</Badge>
