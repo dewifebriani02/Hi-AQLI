@@ -449,7 +449,7 @@ function MufradatPageContent() {
         onComplete={handleCompleteOnboarding} 
         salutation={fullSalutation} 
       />
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-4 px-1">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mt-4 px-1">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-[#800000] mb-1">
             <BookOpen className="w-5 h-5" />
@@ -460,11 +460,11 @@ function MufradatPageContent() {
         </div>
 
         <div className={cn(
-          "shrink-0 w-full sm:w-auto",
+          "shrink-0 w-full lg:w-auto",
           activeTab === 'rank' ? "hidden" : "block"
         )}>
           {user && (
-            <div className="grid grid-cols-3 gap-1.5 w-full sm:flex sm:flex-row sm:gap-2 sm:w-auto sm:items-end">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full lg:flex lg:flex-row lg:gap-2 lg:w-auto lg:items-end">
               <Button asChild variant="outline" className="min-h-[3.5rem] h-auto sm:h-12 py-2 sm:py-0 px-1.5 sm:px-5 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 group transition-all bg-white shadow-sm flex-1 min-w-0">
                 <Link href="/mufradat/billing" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3 min-w-0 w-full sm:w-auto">
                   <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors shrink-0">
@@ -649,8 +649,8 @@ function MufradatPageContent() {
 
         <TabsContent value="ranking" className="focus-visible:outline-none space-y-4">
           <Card className="border-none shadow-xl overflow-hidden rounded-3xl bg-white">
-            <CardHeader className="bg-gradient-to-br from-[#800000] to-rose-900 text-white p-8">
-              <div className="flex items-center justify-between">
+            <CardHeader className="bg-gradient-to-br from-[#800000] to-rose-900 text-white p-5 sm:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Trophy className="w-6 h-6 text-amber-400 fill-current" />
@@ -696,8 +696,8 @@ function MufradatPageContent() {
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {groupRankings.map((u: any, idx: number) => (
-                      <div key={u.id} className="group p-4 flex items-center justify-between hover:bg-slate-50 transition-colors border-b last:border-0 border-slate-100">
-                        <div className="flex items-center gap-4">
+                      <div key={u.id} className="group p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors border-b last:border-0 border-slate-100">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                           {/* Rank Display */}
                           <div className={cn(
                             "w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm transition-all",
@@ -717,8 +717,8 @@ function MufradatPageContent() {
                             </AvatarFallback>
                           </Avatar>
                           
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5">
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-bold text-slate-800 leading-tight group-hover:text-[#800000] transition-colors">
                                 {u.full_name || u.username || 'Ukhti'}
                               </span>
@@ -726,7 +726,7 @@ function MufradatPageContent() {
                                 <span className="text-[9px] bg-[#800000]/10 text-[#800000] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Saya</span>
                               )}
                             </div>
-                            <div className="flex items-center gap-3 mt-1.5">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                               <div className="flex items-center gap-1 group/stat" title="Points">
                                 <ZapIcon className="w-3 h-3 text-amber-500 fill-amber-500 animate-pulse" />
                                 <span className="text-xs font-black text-amber-600">{u.points} <span className="text-[9px] font-medium text-slate-400">POIN PEKANAN</span></span>
@@ -751,7 +751,7 @@ function MufradatPageContent() {
                           </div>
                         </div>
 
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0">
                           <div className="flex items-center gap-2">
                              {u.reactionSummary.total > 0 && (
                                <div className="flex items-center -space-x-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 shadow-sm animate-in fade-in zoom-in">

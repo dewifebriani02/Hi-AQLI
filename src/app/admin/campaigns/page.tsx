@@ -295,7 +295,7 @@ export default function AdminCampaignsPage() {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-1">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-1">
         <Card className="border-none shadow-sm bg-white rounded-2xl p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Program</p>
           <p className="text-2xl font-black mt-1 text-slate-800">{stats.total}</p>
@@ -308,7 +308,7 @@ export default function AdminCampaignsPage() {
         </Card>
         <Card className="border-none shadow-sm bg-white rounded-2xl p-4 border-l-4 border-emerald-500">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Terkumpul Nyata</p>
-          <p className="text-2xl font-black mt-1 text-emerald-600">Rp {stats.totalCollected.toLocaleString('id-ID')}</p>
+          <p className="text-lg sm:text-xl xl:text-2xl font-black mt-1 text-emerald-600 break-words">Rp {stats.totalCollected.toLocaleString('id-ID')}</p>
           <p className="text-[10px] font-bold text-emerald-700 mt-1">Dari Donatur Terverifikasi</p>
         </Card>
         <Card className="border-none shadow-sm bg-primary text-white rounded-2xl p-4">

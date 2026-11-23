@@ -287,9 +287,9 @@ export default function MufradatReportsPage() {
 
       {/* Controls */}
       <Card className="rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm bg-white dark:bg-slate-900">
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
-            <div className="relative w-full sm:w-64">
+        <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 min-w-0">
+            <div className="relative w-full sm:flex-1 lg:w-64 lg:flex-none">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
                 placeholder="Cari nama batch..."
@@ -303,7 +303,7 @@ export default function MufradatReportsPage() {
               value={sortBy}
               onValueChange={(v) => setSortBy(v as SortKey)}
             >
-              <SelectTrigger className="w-full sm:w-52 h-9 border-slate-200 bg-slate-50 rounded-xl text-xs font-bold text-slate-700">
+              <SelectTrigger className="w-full sm:w-52 shrink-0 h-9 border-slate-200 bg-slate-50 rounded-xl text-xs font-bold text-slate-700">
                 <SelectValue placeholder="Urutkan berdasarkan" />
               </SelectTrigger>
               <SelectContent>
@@ -324,7 +324,7 @@ export default function MufradatReportsPage() {
           <Button
             asChild
             size="sm"
-            className="h-9 bg-primary hover:bg-[#580e33] text-white font-black text-xs px-4 rounded-xl shadow-sm"
+            className="h-9 w-full lg:w-auto shrink-0 bg-primary hover:bg-[#580e33] text-white font-black text-xs px-4 rounded-xl shadow-sm"
           >
             <Link href="/admin/mufradat/groups">
               <Zap className="w-3.5 h-3.5 mr-1.5" />

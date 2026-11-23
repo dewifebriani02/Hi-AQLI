@@ -189,14 +189,14 @@ export default function AdminDonationsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 px-1">
         <Card className="border-none shadow-md bg-gradient-to-br from-primary to-[#4A0A2A] text-white overflow-hidden relative">
           <div className="absolute right-[-10px] top-[-10px] opacity-15">
             <HeartHandshake className="w-28 h-28" />
           </div>
           <CardContent className="p-6 relative z-10">
             <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Total Dana Terkumpul</p>
-            <p className="text-3xl font-black mt-1">Rp {stats.total.toLocaleString('id-ID')}</p>
+            <p className="text-2xl xl:text-3xl font-black mt-1 break-words">Rp {stats.total.toLocaleString('id-ID')}</p>
             <div className="flex items-center gap-2 mt-4 text-[11px] font-bold text-amber-200">
               <TrendingUp className="w-3.5 h-3.5 text-[#D4AF37]" />
               <span>DARI {stats.count} TRANSAKSI TERVERIFIKASI</span>

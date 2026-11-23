@@ -1672,8 +1672,8 @@ export default function AdminTikrarPage() {
 
         {/* TAB 5: Peserta, Target Juz & Ujian Halaman */}
         <TabsContent value="participants" className="space-y-4 outline-none">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-fit">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full sm:w-fit">
               <Button
                 type="button"
                 size="sm"
@@ -1700,7 +1700,7 @@ export default function AdminTikrarPage() {
               </Button>
             </div>
 
-            <div className="relative w-full md:w-80">
+            <div className="relative w-full lg:w-80">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
                 value={searchTerm}

@@ -688,7 +688,7 @@ function MufradatMonitoringContent() {
         <TabsContent value="participants" className="space-y-4 outline-none">
           {/* Filter Panel */}
           <Card className="rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm bg-white dark:bg-slate-900">
-            <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 {(
                   [
@@ -714,9 +714,9 @@ function MufradatMonitoringContent() {
                 ))}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
                 <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                  <SelectTrigger className="w-full sm:w-48 h-9 border-slate-200 bg-slate-50 rounded-xl text-xs font-bold text-slate-700">
+                  <SelectTrigger className="w-full sm:w-48 lg:w-44 xl:w-48 shrink-0 h-9 border-slate-200 bg-slate-50 rounded-xl text-xs font-bold text-slate-700">
                     <SelectValue placeholder="Pilih Batch/Grup" />
                   </SelectTrigger>
                   <SelectContent>
@@ -729,7 +729,7 @@ function MufradatMonitoringContent() {
                   </SelectContent>
                 </Select>
 
-                <div className="relative w-full sm:w-64">
+                <div className="relative w-full sm:flex-1 lg:w-60 xl:w-64 lg:flex-none min-w-0">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <Input
                     placeholder="Cari nama, WA, atau email..."

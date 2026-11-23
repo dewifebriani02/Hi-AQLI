@@ -507,12 +507,12 @@ export default function AdminRegistrationsPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select 
             value={filterProgram} 
             onValueChange={setFilterProgram}
           >
-            <SelectTrigger className="w-[180px] h-10 text-xs rounded-xl bg-slate-50 border-slate-200">
+            <SelectTrigger className="w-full sm:w-[180px] h-10 text-xs rounded-xl bg-slate-50 border-slate-200">
               <SelectValue placeholder="Semua Program" />
             </SelectTrigger>
             <SelectContent>
