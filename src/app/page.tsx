@@ -1030,7 +1030,7 @@ export default function DashboardPage() {
 
                 const promoItems = [
                   { id: 'mufradat', name: 'Hi Mufradat', icon: Activity, color: 'bg-amber-400', locked: false },
-                  { id: 'tikrar', name: 'Hi Tikrar', icon: Award, color: 'bg-indigo-400', locked: true },
+                  { id: 'tikrar', name: 'Hi Tikrar', icon: Award, color: 'bg-indigo-400', locked: false },
                   { id: 'ngaji', name: 'Hi Ngaji', icon: BookOpen, color: 'bg-cyan-400', locked: true },
                   { id: 'irab', name: 'Hi Irab', icon: Search, color: 'bg-emerald-400', locked: true },
                 ];
