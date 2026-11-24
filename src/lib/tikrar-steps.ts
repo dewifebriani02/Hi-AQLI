@@ -378,10 +378,10 @@ export function addMonthsToDateKey(dateKey: string, months: number): string {
 
 /** Hari aktif dalam periode [startDate, startDate + durasi) */
 export function listActiveDaysInPeriod(startDate: string, durationMonths: number, activeDaysPerWeek: number): string[] {
-  const endExclusive = addMonthsToDateKey(dateKeyOf(startDate), Math.max(1, Math.min(4, Math.floor(durationMonths) || 2)));
+  const endExclusive = addMonthsToDateKey(dateKeyOf(startDate), Math.max(1, Math.min(24, Math.floor(durationMonths) || 2)));
   const days: string[] = [];
   let cursor = startDate;
-  for (let guard = 0; guard < 400 && cursor < endExclusive; guard++) {
+  for (let guard = 0; guard < 1500 && cursor < endExclusive; guard++) {
     if (isActiveStudyDay(cursor, activeDaysPerWeek)) days.push(cursor);
     cursor = addCalendarDays(cursor, 1);
   }
@@ -393,11 +393,16 @@ function dateKeyOf(s: string) {
 }
 
 export function getDailyQuotaForPace(durationMonths: number): number {
-  const m = Math.max(1, Math.min(4, Math.floor(durationMonths) || 2));
-  if (m === 1) return STEPS_PER_PAGE; // 1 halaman (23 langkah) / hari aktif
-  if (m === 2) return 11;             // 1/2 halaman (11 langkah) / hari aktif (~42 hari)
-  if (m === 3) return 8;              // ~1.4 TM (8 langkah) / hari aktif (~58 hari)
-  return 6;                           // 1/4 halaman (6 langkah) / hari aktif (~77 hari)
+  const m = Math.max(1, Math.min(24, Math.floor(durationMonths) || 2));
+  if (m === 1) return STEPS_PER_PAGE; // 1 halaman (23 langkah) / hari aktif -> 1 hari aktif/hal (~20 hari aktif)
+  if (m === 2) return 12;             // ~1/2 halaman (12 langkah) / hari aktif -> 2 hari aktif/hal (~39 hari aktif)
+  if (m === 3) return 8;              // ~1/3 halaman (8 langkah) / hari aktif -> 3 hari aktif/hal (~58 hari aktif)
+  if (m === 4) return 6;              // ~1/4 halaman (6 langkah) / hari aktif -> 4 hari aktif/hal (~77 hari aktif)
+  if (m === 5) return 5;              // 1 halaman / pekan (5 langkah) / hari aktif -> 5 hari aktif/hal (~92 hari aktif)
+  if (m <= 7) return 4;               // 1 blok TM (4 langkah) / hari aktif -> 6 hari aktif/hal (~115 hari aktif / 6 bln)
+  if (m <= 9) return 3;               // 3 langkah / hari aktif -> 8 hari aktif/hal (~154 hari aktif / 8 bln)
+  if (m < 18) return 2;               // 2 langkah / hari aktif -> 10-11 hari aktif (~2 pekan)/hal (~230 hari aktif / 10 bln)
+  return 1;                           // 1 langkah / hari aktif -> 23 hari aktif (~1 bulan)/hal (460 hari aktif / 23 bln)
 }
 
 export function generateTikrarStepSchedule(params: TikrarTargetParams): TikrarStepSchedule {
@@ -412,7 +417,7 @@ export function generateTikrarStepSchedule(params: TikrarTargetParams): TikrarSt
   let cursor = 0;
   let dayIdx = 0;
 
-  for (let guard = 0; guard < 2000 && cursor < totalSteps; guard++) {
+  for (let guard = 0; guard < 5000 && cursor < totalSteps; guard++) {
     if (isActiveStudyDay(cursorDate, activeDaysPerWeek)) {
       dayIdx += 1;
       const fromStep = cursor;

@@ -38,13 +38,17 @@ export const TIKRAR_GRADE_LABELS: Record<string, string> = {
   perlu_perbaikan: 'Perlu Perbaikan Tajwid/Kelancaran',
 };
 
+export type TikrarPaceDuration = 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 23 | number;
+
 export interface TikrarPaceOption {
-  durationMonths: 1 | 2 | 3 | 4;
+  durationMonths: number;
+  juzPaceLabel: string;
   name: string;
   badge: string;
   targetLabel: string;
   monthlyPagesLabel: string;
   dailyPortionLabel: string;
+  estimatedTimePerPage: string;
   estimatedTimePerDay: string;
   description: string;
   tikrarLevel: number;
@@ -53,51 +57,151 @@ export interface TikrarPaceOption {
 
 export const TIKRAR_PACE_OPTIONS: readonly TikrarPaceOption[] = [
   {
-    durationMonths: 2,
-    name: '10 Halaman / Bulan',
-    badge: '⭐ Rekomendasi',
-    targetLabel: '1/2 Halaman (TM 1 & 2) / Hari Aktif',
-    monthlyPagesLabel: '10 Hal / Bulan',
-    dailyPortionLabel: '1/2 Halaman (TM 1 & 2) / hari',
-    estimatedTimePerDay: '~45–60 mnt/hari',
-    description: 'Paling seimbang & mutqin. Target 1 Juz tuntas dalam 2 bulan (~40–46 hari aktif).',
-    tikrarLevel: 2,
-    isRecommended: true,
-  },
-  {
-    durationMonths: 4,
-    name: '5 Halaman / Bulan',
-    badge: 'Santai Pemula',
-    targetLabel: '1/4 Halaman (TM 1) / Hari Aktif',
-    monthlyPagesLabel: '5 Hal / Bulan',
-    dailyPortionLabel: '1/4 Halaman (TM 1) / hari',
-    estimatedTimePerDay: '~20–30 mnt/hari',
-    description: 'Sangat ringan & bertahap. Cocok untuk ibu rumah tangga & pekerja yang sibuk.',
-    tikrarLevel: 4,
-  },
-  {
-    durationMonths: 3,
-    name: '7 Halaman / Bulan',
-    badge: 'Santai Terukur',
-    targetLabel: '7 TM / Pekan (~1,4 TM / Hari)',
-    monthlyPagesLabel: '7 Hal / Bulan',
-    dailyPortionLabel: '~1–2 TM / hari',
-    estimatedTimePerDay: '~30–45 mnt/hari',
-    description: 'Ritme santai berkesinambungan. Target 1 Juz tuntas dalam 3 bulan (~58 hari aktif).',
-    tikrarLevel: 3,
-  },
-  {
     durationMonths: 1,
+    juzPaceLabel: '1 Juz per 1 Bulan',
     name: '20 Halaman / Bulan',
     badge: 'Intensif Mutqin',
     targetLabel: '1 Halaman (TM 1–4) / Hari Aktif',
     monthlyPagesLabel: '20 Hal / Bulan',
     dailyPortionLabel: '1 Halaman (TM 1–4) / hari',
+    estimatedTimePerPage: '1 Hari Aktif / Halaman',
     estimatedTimePerDay: '~1,5–2,5 jam/hari',
     description: 'Fokus intensif mutqin cepat. Target 1 Juz tuntas dalam 1 bulan (~20–23 hari aktif).',
     tikrarLevel: 1,
   },
+  {
+    durationMonths: 2,
+    juzPaceLabel: '1 Juz per 2 Bulan',
+    name: '10 Halaman / Bulan',
+    badge: '⭐ Rekomendasi',
+    targetLabel: '1/2 Halaman (TM 1 & 2) / Hari Aktif',
+    monthlyPagesLabel: '10 Hal / Bulan',
+    dailyPortionLabel: '1/2 Halaman (TM 1 & 2) / hari',
+    estimatedTimePerPage: '2 Hari Aktif / Halaman',
+    estimatedTimePerDay: '~45–60 mnt/hari',
+    description: 'Paling seimbang & mutqin. Target 1 Juz tuntas dalam 2 bulan (~39–42 hari aktif).',
+    tikrarLevel: 2,
+    isRecommended: true,
+  },
+  {
+    durationMonths: 3,
+    juzPaceLabel: '1 Juz per 3 Bulan',
+    name: '7 Halaman / Bulan',
+    badge: 'Santai Terukur',
+    targetLabel: '~1/3 Halaman (8 Langkah) / Hari Aktif',
+    monthlyPagesLabel: '~7 Hal / Bulan',
+    dailyPortionLabel: '~1/3 Halaman (~1,4 TM) / hari',
+    estimatedTimePerPage: '3 Hari Aktif / Halaman',
+    estimatedTimePerDay: '~30–45 mnt/hari',
+    description: 'Ritme santai berkesinambungan. Target 1 Juz tuntas dalam 3 bulan (~58 hari aktif).',
+    tikrarLevel: 3,
+  },
+  {
+    durationMonths: 4,
+    juzPaceLabel: '1 Juz per 4 Bulan',
+    name: '5 Halaman / Bulan',
+    badge: 'Santai Pemula',
+    targetLabel: '1/4 Halaman (6 Langkah) / Hari Aktif',
+    monthlyPagesLabel: '5 Hal / Bulan',
+    dailyPortionLabel: '1/4 Halaman (TM 1+) / hari',
+    estimatedTimePerPage: '4 Hari Aktif / Halaman',
+    estimatedTimePerDay: '~20–30 mnt/hari',
+    description: 'Sangat ringan & bertahap. Cocok untuk ibu rumah tangga & pekerja yang sibuk.',
+    tikrarLevel: 4,
+  },
+  {
+    durationMonths: 5,
+    juzPaceLabel: '1 Juz per 5 Bulan',
+    name: '4 Halaman / Bulan',
+    badge: '1 Hal / Pekan',
+    targetLabel: '1 Halaman / Pekan (5 Langkah / Hari)',
+    monthlyPagesLabel: '4 Hal / Bulan',
+    dailyPortionLabel: '1 Halaman / Pekan (5 langkah/hari)',
+    estimatedTimePerPage: '5 Hari Aktif (1 Pekan) / Halaman',
+    estimatedTimePerDay: '~15–25 mnt/hari',
+    description: 'Target 1 halaman tuntas setiap pekan (5 hari aktif). 1 Juz selesai dalam ~5 bulan.',
+    tikrarLevel: 5,
+  },
+  {
+    durationMonths: 6,
+    juzPaceLabel: '1 Juz per 6 Bulan',
+    name: '3–4 Halaman / Bulan',
+    badge: 'Bertahap Ringan',
+    targetLabel: '1 Blok TM (4 Langkah) / Hari Aktif',
+    monthlyPagesLabel: '~3,5 Hal / Bulan',
+    dailyPortionLabel: '1 Blok TM (4 langkah) / hari',
+    estimatedTimePerPage: '6 Hari Aktif (~1,2 Pekan) / Halaman',
+    estimatedTimePerDay: '~15–20 mnt/hari',
+    description: 'Fokus 1 blok TM penuh per hari aktif. 1 Juz selesai dalam ~6 bulan (115 hari aktif).',
+    tikrarLevel: 6,
+  },
+  {
+    durationMonths: 8,
+    juzPaceLabel: '1 Juz per 8 Bulan',
+    name: '2,5 Halaman / Bulan',
+    badge: 'Ritme Lambat',
+    targetLabel: '3 Langkah / Hari Aktif',
+    monthlyPagesLabel: '2,5 Hal / Bulan',
+    dailyPortionLabel: '3 Langkah / hari aktif',
+    estimatedTimePerPage: '8 Hari Aktif (~1,5 Pekan) / Halaman',
+    estimatedTimePerDay: '~10–15 mnt/hari',
+    description: 'Cukup 3 langkah per hari aktif. 1 halaman selesai dalam ~8 hari aktif (~1,5 pekan).',
+    tikrarLevel: 8,
+  },
+  {
+    durationMonths: 10,
+    juzPaceLabel: '1 Juz per 10 Bulan',
+    name: '2 Halaman / Bulan',
+    badge: '1 Hal / 2 Pekan',
+    targetLabel: '1 Halaman / 2 Pekan (2 Langkah / Hari)',
+    monthlyPagesLabel: '2 Hal / Bulan',
+    dailyPortionLabel: '1 Halaman / 2 Pekan (2 langkah/hari)',
+    estimatedTimePerPage: '2 Pekan (10–11 Hari Aktif) / Halaman',
+    estimatedTimePerDay: '~8–12 mnt/hari',
+    description: 'Cocok untuk thalibah yang sanggup 1 halaman per 2 pekan (~2 halaman/bulan).',
+    tikrarLevel: 10,
+  },
+  {
+    durationMonths: 23,
+    juzPaceLabel: '1 Juz per 23 Bulan',
+    name: '~1 Halaman / Bulan',
+    badge: '1 Langkah / Hari',
+    targetLabel: '1 Langkah / Hari Aktif',
+    monthlyPagesLabel: '~1 Hal / Bulan',
+    dailyPortionLabel: '1 Langkah saja / hari aktif',
+    estimatedTimePerPage: '23 Hari Aktif (4 Pekan 3 Hari) / Halaman',
+    estimatedTimePerDay: '~3–5 mnt/hari',
+    description: 'Porsi paling ringan: cukup 1 langkah per hari aktif (23 hari aktif / halaman).',
+    tikrarLevel: 23,
+  },
 ];
+
+/** Hitung teks estimasi waktu per halaman secara dinamis menurut kuota langkah harian & hari aktif/pekan */
+export function formatEstimatedTimePerPage(
+  dailyQuota: number,
+  activeDaysPerWeek = 5,
+  stepsPerPage = 23
+): string {
+  const quota = Math.max(1, Math.floor(dailyQuota || 1));
+  const adw = Math.max(1, Math.min(7, Math.floor(activeDaysPerWeek || 5)));
+  const activeDaysPerPage = Math.ceil(stepsPerPage / quota);
+  // Untuk 2 langkah/hari pada 5 hari aktif/pekan (23 langkah = 11.5 hari aktif ~ 2 pekan)
+  if (quota === 2 && adw === 5) {
+    return '2 Pekan (10–11 Hari Aktif) / Halaman';
+  }
+  if (activeDaysPerPage === 1) {
+    return '1 Hari Aktif / Halaman';
+  }
+  if (activeDaysPerPage < adw) {
+    return `${activeDaysPerPage} Hari Aktif / Halaman`;
+  }
+  const fullWeeks = Math.floor(activeDaysPerPage / adw);
+  const remDays = activeDaysPerPage % adw;
+  if (remDays === 0) {
+    return `${fullWeeks} Pekan (${activeDaysPerPage} Hari Aktif) / Halaman`;
+  }
+  return `${activeDaysPerPage} Hari Aktif (${fullWeeks} Pekan ${remDays} Hari) / Halaman`;
+}
 
 export function getJuzPageRange(juzInput: number): {
   juz: number;
@@ -240,7 +344,7 @@ export interface GeneratedScheduleResult {
 }
 
 function getBlocksForDaySlot(durationMonths: number, slotInWeek: number): number {
-  const m = Math.max(1, Math.min(4, Math.floor(durationMonths || 2)));
+  const m = Math.max(1, Math.min(24, Math.floor(durationMonths || 2)));
   if (m === 1) return 4; // 1 halaman (4 blok) / hari
   if (m === 2) return 2; // 1/2 halaman (2 blok) / hari
   if (m === 3) {
@@ -248,7 +352,7 @@ function getBlocksForDaySlot(durationMonths: number, slotInWeek: number): number
     const pattern = [2, 1, 2, 1, 1, 1, 1];
     return pattern[slotInWeek % pattern.length];
   }
-  return 1; // 4 bulan: 1 blok / hari
+  return 1; // >=4 bulan: minimal 1 blok per slot jadwal blok
 }
 
 export function generateTikrarSchedule(params: {
@@ -258,8 +362,8 @@ export function generateTikrarSchedule(params: {
   startDate?: Date | string;
   startFromPage?: number;
 }): GeneratedScheduleResult {
-  const { juz, startPage, endPage, totalPages } = getJuzPageRange(params.juz);
-  const durationMonths = Math.max(1, Math.min(4, Math.floor(Number(params.durationMonths) || 2)));
+  const { juz, startPage, endPage } = getJuzPageRange(params.juz);
+  const durationMonths = Math.max(1, Math.min(24, Math.floor(Number(params.durationMonths) || 2)));
   const activeDaysPerWeek = Math.max(1, Math.min(7, Math.floor(Number(params.activeDaysPerWeek) || 5)));
   const startDateKey = toDateKeyWIB(params.startDate || new Date());
 

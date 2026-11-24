@@ -6,6 +6,7 @@ import { generateTikrarStepSchedule, normalizeTargetRange, TIKRAR_STEPS } from '
 import { buildTikrarSummary } from '@/lib/tikrar-server';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+let durationConstraintMigrated = false;
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,11 +42,21 @@ export async function POST(req: NextRequest) {
       Number(body.start_page ?? body.start_from_page),
       Number(body.end_page)
     );
-    const durationMonths = Math.max(1, Math.min(4, Math.floor(Number(body.duration_months) || 2)));
+    const durationMonths = Math.max(1, Math.min(24, Math.floor(Number(body.duration_months) || 2)));
     const activeDaysPerWeek = Math.max(1, Math.min(7, Math.floor(Number(body.active_days_per_week) || 5)));
     const startDate = toDateKeyWIB(body.start_date || new Date());
     const rawHalaqahId = typeof body.halaqah_id === 'string' ? body.halaqah_id.trim() : '';
     const halaqahId = UUID_RE.test(rawHalaqahId) ? rawHalaqahId : null;
+
+    if (!durationConstraintMigrated) {
+      await client
+        .query(`
+          ALTER TABLE public.tikrar_targets DROP CONSTRAINT IF EXISTS tikrar_targets_duration_months_check;
+          ALTER TABLE public.tikrar_targets ADD CONSTRAINT tikrar_targets_duration_months_check CHECK (duration_months BETWEEN 1 AND 36);
+        `)
+        .catch(() => {});
+      durationConstraintMigrated = true;
+    }
 
     const schedule = generateTikrarStepSchedule({ juz, startPage, endPage, startDate, durationMonths, activeDaysPerWeek });
 

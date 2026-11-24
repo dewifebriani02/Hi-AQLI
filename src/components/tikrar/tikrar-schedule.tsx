@@ -21,9 +21,9 @@ import { cn } from '@/lib/utils';
 import {
   DAY_NAMES_ID,
   formatDateID,
+  formatEstimatedTimePerPage,
   getDayOfWeekFromKey,
   getJuzPageRange,
-  parseDateKeyUTC,
   TIKRAR_PACE_OPTIONS,
   toDateKeyWIB,
 } from '@/lib/tikrar-schedule-generator';
@@ -71,7 +71,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
   const juzRange = useMemo(() => getJuzPageRange(selectedJuz), [selectedJuz]);
   const [startPage, setStartPage] = useState<number>(juzRange.startPage);
   const [endPage, setEndPage] = useState<number>(juzRange.endPage);
-  const [durationMonths, setDurationMonths] = useState<1 | 2 | 3 | 4>(2);
+  const [durationMonths, setDurationMonths] = useState<number>(2);
   const [activeDaysPerWeek, setActiveDaysPerWeek] = useState<number>(5);
   const [startDateKey, setStartDateKey] = useState<string>(todayKey);
   const [selectedHalaqahId, setSelectedHalaqahId] = useState<string>('');
@@ -94,7 +94,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
       setSelectedJuz(target.juz);
       setStartPage(target.startPage);
       setEndPage(target.endPage);
-      setDurationMonths(Math.max(1, Math.min(4, target.durationMonths)) as 1 | 2 | 3 | 4);
+      setDurationMonths(Math.max(1, Math.min(24, target.durationMonths)));
       setActiveDaysPerWeek(target.activeDaysPerWeek);
       setStartDateKey(target.startDate);
       if (target.halaqahId) setSelectedHalaqahId(target.halaqahId);
@@ -184,7 +184,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
       const targetPaceSaved = TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) || paceMeta;
       toast({
         title: 'Target & Jadwal Tersimpan',
-        description: `Juz ${selectedJuz} • Hal. ${startPage}–${endPage} • ${targetPaceSaved.monthlyPagesLabel} (${targetPaceSaved.dailyPortionLabel}). Membuka Mushaf Hal. ${startPage}...`,
+        description: `Juz ${selectedJuz} • Hal. ${startPage}–${endPage} • ${targetPaceSaved.juzPaceLabel} (${targetPaceSaved.dailyPortionLabel}). Membuka Mushaf Hal. ${startPage}...`,
       });
       setIsEditing(false);
       onScheduleSaved?.({ page: json.data?.summary?.target?.unlockedPage || startPage, juz: selectedJuz });
@@ -195,15 +195,26 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
     }
   };
 
-  const paceMeta = TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) || TIKRAR_PACE_OPTIONS[0];
+  const paceMeta = TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === durationMonths) || TIKRAR_PACE_OPTIONS[1];
   const targetPace = useMemo(() => {
     if (!target) return null;
     return (
       TIKRAR_PACE_OPTIONS.find((p) => p.durationMonths === target.durationMonths) ||
-      TIKRAR_PACE_OPTIONS[0]
+      TIKRAR_PACE_OPTIONS[1]
     );
   }, [target]);
   const totalPagesSelected = endPage - startPage + 1;
+  const previewPerPageLabel = useMemo(
+    () => formatEstimatedTimePerPage(preview.dailyQuota, activeDaysPerWeek, STEPS_PER_PAGE),
+    [preview.dailyQuota, activeDaysPerWeek]
+  );
+  const targetPerPageLabel = useMemo(
+    () =>
+      target
+        ? formatEstimatedTimePerPage(target.dailyQuota, target.activeDaysPerWeek, STEPS_PER_PAGE)
+        : previewPerPageLabel,
+    [target, previewPerPageLabel]
+  );
 
   return (
     <div className="space-y-8 pb-20">
@@ -276,7 +287,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                   Juz {target.juz} • Hal. {target.startPage}–{target.endPage}
                 </CardTitle>
                 <CardDescription className="text-white/80 text-xs mt-0.5">
-                  Target: {targetPace?.monthlyPagesLabel} ({targetPace?.dailyPortionLabel}) • {target.activeDaysPerWeek} hari aktif/pekan • Periode {formatDate(target.startDate, false, true)} – {formatDate(target.endDate, true, true)}
+                  Target: {targetPace?.juzPaceLabel || `1 Juz per ${target.durationMonths} Bulan`} ({targetPace?.monthlyPagesLabel}) • Estimasi: {targetPerPageLabel} • {target.activeDaysPerWeek} hari aktif/pekan • Periode {formatDate(target.startDate, false, true)} – {formatDate(target.endDate, true, true)}
                 </CardDescription>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
@@ -307,6 +318,9 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 </p>
                 <p className="text-[11px] text-stone-600 font-bold">
                   Porsi: {targetPace?.dailyPortionLabel || `${target.dailyQuota} langkah`}
+                </p>
+                <p className="text-[10px] text-primary font-extrabold">
+                  📄 {targetPerPageLabel}
                 </p>
                 <p className={cn('text-[11px] font-bold', summary?.today.targetMet ? 'text-emerald-700' : 'text-amber-700')}>
                   {summary?.today.targetMet ? '✓ Tercapai' : 'Belum tercapai'}
@@ -559,13 +573,13 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             <div className="space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <label className="text-xs font-black uppercase tracking-wider text-stone-700">
-                  7. Target Hafalan / Bulan &amp; Ritme Harian
+                  7. Pilihan Target Bulan (1 Juz per N Bulan) &amp; Estimasi Waktu per Halaman
                 </label>
                 <span className="text-[11px] text-stone-500 font-medium">
                   Pilih porsi yang paling realistis untuk istiqomah
                 </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {TIKRAR_PACE_OPTIONS.map((opt) => {
                   const sched = generateTikrarStepSchedule({
                     juz: selectedJuz,
@@ -576,6 +590,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                     activeDaysPerWeek,
                   });
                   const isSel = durationMonths === opt.durationMonths;
+                  const perPageEst = formatEstimatedTimePerPage(sched.dailyQuota, activeDaysPerWeek, STEPS_PER_PAGE);
                   return (
                     <button
                       key={opt.durationMonths}
@@ -602,16 +617,20 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                           >
                             {opt.badge}
                           </Badge>
-                          <span className="text-[11px] font-bold text-stone-400">
-                            {opt.durationMonths} Bulan
+                          <span className="text-[11px] font-bold text-stone-500">
+                            {opt.monthlyPagesLabel}
                           </span>
                         </div>
                         <p className="text-base font-black text-stone-900 pt-0.5">
-                          {opt.monthlyPagesLabel}
+                          {opt.juzPaceLabel}
                         </p>
                         <p className="text-xs font-bold text-primary">
                           {opt.dailyPortionLabel}
                         </p>
+                      </div>
+
+                      <div className="rounded-lg bg-primary/5 border border-primary/10 px-2.5 py-1.5 text-[11px] font-extrabold text-primary">
+                        📄 Estimasi: {perPageEst}
                       </div>
 
                       <div className="pt-2 border-t border-stone-100 space-y-0.5 text-[11px] text-stone-500">
@@ -627,7 +646,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             <div className="bg-[#fdfbf7] border border-primary/20 rounded-xl p-4 text-xs text-stone-700 leading-relaxed space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-black text-sm text-primary">
-                  Ringkasan Target: {paceMeta.monthlyPagesLabel} ({paceMeta.durationMonths} Bulan)
+                  Ringkasan Target: {paceMeta.juzPaceLabel} ({paceMeta.monthlyPagesLabel})
                 </span>
                 {paceMeta.isRecommended && (
                   <Badge className="bg-primary text-[#D4AF37] border-none text-[10px] font-black">
@@ -636,12 +655,15 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 )}
               </div>
               <p className="text-stone-700">
-                Total <strong>{totalPagesSelected} halaman</strong> diselesaikan dalam waktu{" "}
-                <strong>{preview.activeDays} hari aktif belajar</strong>
-                {preview.activeDays !== 40 && (
-                  <span className="text-stone-500 font-medium"> (~{(preview.activeDays / 20).toFixed(1)} bulan)</span>
-                )}. Porsi harian:{" "}
-                <strong className="text-stone-900">{paceMeta.dailyPortionLabel}</strong> (setara{" "}
+                Estimasi waktu per halaman:{" "}
+                <strong className="text-primary">{previewPerPageLabel}</strong>. Total{" "}
+                <strong>{totalPagesSelected} halaman</strong> ({preview.totalSteps} langkah) diselesaikan dalam waktu{" "}
+                <strong>{preview.activeDays} hari aktif belajar</strong>{" "}
+                <span className="text-stone-500 font-medium">
+                  ({Math.ceil(preview.activeDays / activeDaysPerWeek)} pekan / ~
+                  {(preview.activeDays / (activeDaysPerWeek * 4)).toFixed(1)} bulan)
+                </span>
+                . Porsi harian: <strong className="text-stone-900">{paceMeta.dailyPortionLabel}</strong> (setara{" "}
                 <span className="text-primary font-bold">{preview.dailyQuota} langkah sistematis/hari</span>).
               </p>
               <p className="text-[11px] text-stone-500">
