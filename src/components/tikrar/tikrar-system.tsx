@@ -3853,6 +3853,72 @@ function MaqtaCard({
     return { tokensA: itemsA, tokensB: itemsB };
   }, [verses, subSplit]);
 
+  const { partAVerses, partBVerses, isPlayingInPartA, isPlayingInPartB } = useMemo(() => {
+    const keysA = new Set<string>(tokensA.map((t: any) => t.verse_key).filter(Boolean));
+    const keysB = new Set<string>(tokensB.map((t: any) => t.verse_key).filter(Boolean));
+    const vA = verses.filter((v: any) => keysA.has(v.verse_key));
+    const vB = verses.filter((v: any) => keysB.has(v.verse_key) && (!keysA.has(v.verse_key) || vA.length === 0));
+    const vBForDisplay = vB.length > 0 ? vB : verses.filter((v: any) => keysB.has(v.verse_key));
+    const playA = Boolean(playingVerseKey && keysA.has(playingVerseKey));
+    const playB = Boolean(playingVerseKey && keysB.has(playingVerseKey) && !playA);
+    return {
+      partAVerses: vA,
+      partBVerses: vBForDisplay,
+      isPlayingInPartA: playA,
+      isPlayingInPartB: playB,
+    };
+  }, [tokensA, tokensB, verses, playingVerseKey]);
+
+  const renderSubBlockTranslations = (partVerses: any[], showActivePlayingHere: boolean) => {
+    if (!showTranslation && !showActivePlayingHere) return null;
+    if (showTranslation && partVerses.length === 0) return null;
+    return (
+      <div className="pt-2 mt-1 border-t border-stone-200/70 space-y-1.5" dir="ltr">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+            {showActivePlayingHere && playingVerse && !showTranslation
+              ? `Terjemahan QS ${playingVerse.verse_key}`
+              : "Terjemahan Ayat"}
+          </span>
+          {showActivePlayingHere && playingVerse && (
+            <span className="text-[10px] font-black text-primary bg-amber-100 px-2 py-0.5 rounded-full border border-[#D4AF37]/50">
+              Putaran {playback.loop + 1}/5
+            </span>
+          )}
+        </div>
+        {showTranslation ? (
+          <div className="space-y-1.5">
+            {partVerses.map((v: any) => {
+              const isCur = v.verse_key === playingVerseKey;
+              const text = v.translations?.[0]?.text?.replace(/<[^>]*>?/gm, "") || "Memuat terjemahan...";
+              return (
+                <p
+                  key={v.verse_key}
+                  className={cn(
+                    "text-xs leading-relaxed rounded-lg px-2.5 py-1.5 border-l-4 transition-colors text-left",
+                    isCur
+                      ? "bg-amber-100/90 border-[#D4AF37] text-stone-950 font-semibold"
+                      : "bg-stone-50/90 border-primary/40 text-stone-800"
+                  )}
+                >
+                  <span className="font-black text-primary mr-1.5">({v.verse_key.split(":")[1]})</span>
+                  &ldquo;{text}&rdquo;
+                </p>
+              );
+            })}
+          </div>
+        ) : showActivePlayingHere && playingVerse ? (
+          <p className="text-xs sm:text-sm text-stone-900 leading-relaxed italic font-medium bg-amber-50/90 rounded-lg p-2.5 border-l-4 border-[#D4AF37] text-left">
+            <span className="font-black not-italic text-primary mr-1.5">
+              ({playingVerse.verse_key.split(":")[1]})
+            </span>
+            &ldquo;{playingVerse.translations?.[0]?.text?.replace(/<[^>]*>?/gm, "") || "Memuat terjemahan..."}&rdquo;
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   const addSubCount = (part: 'a' | 'b' | 'combined', delta: number) => {
     if (countersLocked) return;
     const currentCount = state?.[part]?.count || 0;
@@ -4285,9 +4351,10 @@ function MaqtaCard({
                 onClick={() => setRevealInExam(false)}
                 aria-label="Sembunyikan teks ayat blok ini"
                 title="Sembunyikan teks ayat"
-                className="inline-flex items-center justify-center w-7 h-7 rounded-full border bg-stone-900 text-white border-stone-900 hover:bg-stone-800 transition-colors touch-manipulation shrink-0"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border bg-stone-900 text-white border-stone-900 hover:bg-stone-800 transition-colors touch-manipulation whitespace-nowrap"
               >
-                <EyeOff className="w-3.5 h-3.5" />
+                <EyeOff className="w-3 h-3 shrink-0" />
+                <span>Tutup Ayat</span>
               </button>
             </div>
           </div>
@@ -4313,9 +4380,12 @@ function MaqtaCard({
                 <div className="h-5 bg-primary/10 rounded-lg w-4/6 mx-auto" />
               </div>
             ) : (
-              <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
-                {tokensA.map((t) => renderToken(t, showTajwid ? 'text-stone-950' : 'text-[#991B1B]'))}
-              </div>
+              <>
+                <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
+                  {tokensA.map((t) => renderToken(t, showTajwid ? 'text-stone-950' : 'text-[#991B1B]'))}
+                </div>
+                {renderSubBlockTranslations(partAVerses, isPlayingInPartA)}
+              </>
             )}
           </div>
 
@@ -4338,52 +4408,11 @@ function MaqtaCard({
               <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
                 {tokensB.map((t) => renderToken(t, 'text-stone-950'))}
               </div>
+              {renderSubBlockTranslations(partBVerses, isPlayingInPartB)}
             </div>
           )}
 
           {showTajwid && <TajwidLegendBar />}
-
-          {/* Terjemahan kalimat terintegrasi di dalam kotak atas (tanpa mengulang teks Arab) */}
-          {(playingVerse || showTranslation) && (
-            <div className="bg-white/75 rounded-xl p-3 border border-[#D4AF37]/60 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-primary">
-                  {playingVerse ? `Terjemahan Ayat ${playingVerse.verse_key}` : `Terjemahan TM ${id} (Blok ${letter})`}
-                </span>
-                {playingVerse && (
-                  <span className="text-[10px] font-black text-primary">
-                    Putaran {playback.loop + 1}/5
-                  </span>
-                )}
-              </div>
-              {showTranslation ? (
-                <div className="space-y-1.5">
-                  {verses.map((v: any) => {
-                    const isCur = v.verse_key === playingVerseKey;
-                    const text = v.translations?.[0]?.text?.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...';
-                    return (
-                      <p
-                        key={v.verse_key}
-                        className={cn(
-                          'text-xs leading-relaxed rounded-lg px-2.5 py-1.5 border-l-4 transition-colors',
-                          isCur
-                            ? 'bg-amber-100/90 border-[#D4AF37] text-stone-950 font-semibold'
-                            : 'bg-white/80 border-primary/40 text-stone-800'
-                        )}
-                      >
-                        <span className="font-black text-primary mr-1.5">({v.verse_key.split(':')[1]})</span>
-                        &ldquo;{text}&rdquo;
-                      </p>
-                    );
-                  })}
-                </div>
-              ) : playingVerse ? (
-                <p className="text-xs sm:text-sm text-stone-900 leading-relaxed italic font-medium bg-white/85 rounded-lg p-2.5 border-l-4 border-primary">
-                  &ldquo;{playingVerse.translations?.[0]?.text?.replace(/<[^>]*>?/gm, '') || 'Memuat terjemahan...'}&rdquo;
-                </p>
-              ) : null}
-            </div>
-          )}
             </>
           )}
         </div>

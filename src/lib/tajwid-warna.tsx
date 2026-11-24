@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type TajwidCategoryKey =
@@ -250,40 +251,97 @@ export function renderTajwidWord(
   });
 }
 
+const LEGEND_STORAGE_KEY = 'aqli_tikrar_tajwid_legend_open';
+const LEGEND_SYNC_EVENT = 'aqli-tajwid-legend-sync';
+
 /**
- * Komponen baris legenda warna hukum tajwid yang ringkas & responsif.
+ * Komponen baris legenda warna hukum tajwid yang ringkas, responsif & bisa di-hide/unhide.
  */
 export function TajwidLegendBar({ className }: { className?: string }) {
+  const [isOpen, setIsOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const saved = localStorage.getItem(LEGEND_STORAGE_KEY);
+      return saved === '1' || saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handleSync = (e: Event) => {
+      const detail = (e as CustomEvent<boolean>).detail;
+      if (typeof detail === 'boolean') setIsOpen(detail);
+    };
+    window.addEventListener(LEGEND_SYNC_EVENT, handleSync);
+    return () => window.removeEventListener(LEGEND_SYNC_EVENT, handleSync);
+  }, []);
+
+  const toggleOpen = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    try {
+      localStorage.setItem(LEGEND_STORAGE_KEY, next ? '1' : '0');
+      window.dispatchEvent(new CustomEvent(LEGEND_SYNC_EVENT, { detail: next }));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
   return (
     <div
       className={cn(
-        'rounded-xl bg-white/95 border border-stone-200/90 px-3 py-2 shadow-2xs space-y-1.5',
+        'rounded-xl bg-white/95 border border-stone-200/90 px-3 py-2 shadow-2xs transition-all',
+        isOpen && 'space-y-2',
         className
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-black uppercase tracking-wider text-primary">
-          Panduan Warna Tajwid
-        </span>
-        <span className="text-[9.5px] font-semibold text-stone-500">
-          Standar Mushaf Tajwid
-        </span>
-      </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        {TAJWID_LEGEND_ITEMS.map((item) => (
-          <span
-            key={item.key}
-            title={item.description}
-            className="inline-flex items-center gap-1.5 text-[10.5px] font-bold text-stone-800"
-          >
-            <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: item.dotColor }}
-            />
-            <span>{item.shortLabel}</span>
+      <button
+        type="button"
+        onClick={toggleOpen}
+        aria-expanded={isOpen}
+        className="w-full flex items-center justify-between gap-2 text-left group touch-manipulation"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Palette className="w-3.5 h-3.5 text-primary shrink-0" />
+          <span className="text-[10px] font-black uppercase tracking-wider text-primary truncate">
+            Panduan Warna Tajwid
           </span>
-        ))}
-      </div>
+          {!isOpen && (
+            <span className="inline-flex items-center gap-1 shrink-0">
+              {TAJWID_LEGEND_ITEMS.slice(0, 6).map((item) => (
+                <span
+                  key={item.key}
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: item.dotColor }}
+                />
+              ))}
+            </span>
+          )}
+        </div>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-100 group-hover:bg-primary/10 text-[9.5px] font-bold text-stone-700 group-hover:text-primary transition-colors shrink-0">
+          <span>{isOpen ? 'Sembunyikan' : 'Lihat Panduan'}</span>
+          {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-1.5 border-t border-stone-100">
+          {TAJWID_LEGEND_ITEMS.map((item) => (
+            <span
+              key={item.key}
+              title={item.description}
+              className="inline-flex items-center gap-1.5 text-[10.5px] font-bold text-stone-800"
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: item.dotColor }}
+              />
+              <span>{item.shortLabel}</span>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
