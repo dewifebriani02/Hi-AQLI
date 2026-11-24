@@ -2053,8 +2053,11 @@ export function TikrarSystem({
       : 'MENUNGGU JADWAL ADMIN'
     : null;
 
+  const isGuestMode = !user && !isUserLoading;
   const scheduledLettersText =
-    isOutOfTarget
+    isGuestMode
+      ? "Mode Uji Coba"
+      : isOutOfTarget
       ? isPageInItqan
         ? `Mode Murajaah (Target Aktif: Juz ${activeTarget!.juz})`
         : showTrialCounter
@@ -2501,11 +2504,36 @@ export function TikrarSystem({
         </div>
       )}
 
+      {isGuestMode && (
+        <div className="bg-amber-50/95 border border-amber-300 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <Sparkles className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-xs font-black text-amber-950 leading-relaxed">
+                Mode Uji Coba (Tanpa Login) • Juz {juz} Hal. {page}
+              </p>
+              <p className="text-[11px] font-medium text-amber-900/85 leading-relaxed">
+                Ukhti sedang mencoba metode 4 Blok Tikrar. Hitungan counter tersimpan sementara di perangkat ini — masuk akun untuk menyimpan progres permanen, mengatur Target &amp; Jadwal, dan membuka Tab Itqan.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <Button
+              asChild
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-white font-black text-[11px] sm:text-xs h-8 px-3 rounded-xl flex-1 sm:flex-initial"
+            >
+              <Link href="/login">Masuk Akun <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {isTilawahMode && activeTarget && (
-        <div className="bg-sky-50/95 border border-sky-200 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-2.5">
+        <div className="bg-sky-50/95 border border-sky-200 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-start gap-2.5 min-w-0">
             <BookOpen className="w-4 h-4 text-sky-700 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 min-w-0">
               <p className="text-xs font-black text-sky-950 leading-relaxed">
                 Mode Tilawah • Juz {juz} Hal. {page} belum masuk Tab Itqan (di luar Target Aktif Juz {activeTarget.juz} Hal. {activeTarget.startPage}–{activeTarget.endPage}).
               </p>
@@ -2514,7 +2542,7 @@ export function TikrarSystem({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
             <Button
               type="button"
               size="sm"
@@ -2523,30 +2551,30 @@ export function TikrarSystem({
                 stopAutoPlay();
                 setShowTrialCounter(true);
               }}
-              className="border-sky-300 bg-white text-sky-900 hover:bg-sky-100 font-black text-xs h-8 px-3 rounded-xl shrink-0"
+              className="border-sky-300 bg-white text-sky-900 hover:bg-sky-100 font-black text-[11px] sm:text-xs h-8 px-2.5 sm:px-3 rounded-xl whitespace-nowrap w-full sm:w-auto"
             >
               {totalProgress > 0
-                ? `Lanjutkan Counter Uji Coba (${Math.round(totalProgress)}%)`
-                : 'Buka Counter Uji Coba'}
+                ? `Uji Coba (${Math.round(totalProgress)}%)`
+                : 'Counter Uji Coba'}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="outline"
               onClick={() => navigateToPage(activeTarget.unlockedPage)}
-              className="border-primary/25 bg-white text-primary hover:bg-primary/10 font-bold text-xs h-8 px-3 rounded-xl shrink-0"
+              className="border-primary/25 bg-white text-primary hover:bg-primary/10 font-bold text-[11px] sm:text-xs h-8 px-2.5 sm:px-3 rounded-xl whitespace-nowrap w-full sm:w-auto"
             >
-              Ke Target (Juz {activeTarget.juz} Hal. {activeTarget.unlockedPage}) <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              Ke Target (Hal. {activeTarget.unlockedPage}) <ArrowRight className="w-3 h-3 ml-1 shrink-0" />
             </Button>
           </div>
         </div>
       )}
 
       {isTrialCounterMode && activeTarget && (
-        <div className="bg-amber-50/95 border border-amber-300 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-2.5">
+        <div className="bg-amber-50/95 border border-amber-300 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-start gap-2.5 min-w-0">
             <Sparkles className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 min-w-0">
               <p className="text-xs font-black text-amber-950 leading-relaxed">
                 Mode Uji Coba Counter • Juz {juz} Hal. {page} belum masuk Tab Itqan (di luar Target Aktif Juz {activeTarget.juz} Hal. {activeTarget.startPage}–{activeTarget.endPage}).
               </p>
@@ -2555,7 +2583,7 @@ export function TikrarSystem({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
             <Button
               type="button"
               size="sm"
@@ -2564,18 +2592,18 @@ export function TikrarSystem({
                 stopBlockAudio(false);
                 setShowTrialCounter(false);
               }}
-              className="border-amber-400 bg-white text-amber-950 hover:bg-amber-100 font-black text-xs h-8 px-3 rounded-xl shrink-0"
+              className="border-amber-400 bg-white text-amber-950 hover:bg-amber-100 font-black text-[11px] sm:text-xs h-8 px-2.5 sm:px-3 rounded-xl whitespace-nowrap w-full sm:w-auto"
             >
-              <BookOpen className="w-3.5 h-3.5 mr-1" /> Kembali ke Mode Tilawah
+              <BookOpen className="w-3.5 h-3.5 mr-1 shrink-0" /> Mode Tilawah
             </Button>
             <Button
               type="button"
               size="sm"
               variant="outline"
               onClick={() => navigateToPage(activeTarget.unlockedPage)}
-              className="border-primary/25 bg-white text-primary hover:bg-primary/10 font-bold text-xs h-8 px-3 rounded-xl shrink-0"
+              className="border-primary/25 bg-white text-primary hover:bg-primary/10 font-bold text-[11px] sm:text-xs h-8 px-2.5 sm:px-3 rounded-xl whitespace-nowrap w-full sm:w-auto"
             >
-              Ke Target (Juz {activeTarget.juz} Hal. {activeTarget.unlockedPage}) <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              Ke Target (Hal. {activeTarget.unlockedPage}) <ArrowRight className="w-3 h-3 ml-1 shrink-0" />
             </Button>
           </div>
         </div>
@@ -3528,13 +3556,13 @@ function TilawahMushafCard({
 
   return (
     <Card className="border-2 border-sky-200 bg-white shadow-md overflow-hidden">
-      <div className="py-3 px-4 bg-sky-50/90 border-b border-sky-200 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Badge className="bg-sky-700 text-white hover:bg-sky-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 border-none shrink-0">
+      <div className="py-2.5 px-3 sm:px-4 bg-sky-50/90 border-b border-sky-200 flex items-center justify-between gap-2 flex-nowrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+          <Badge className="bg-sky-700 text-white hover:bg-sky-700 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 border-none shrink-0">
             Mode Tilawah
           </Badge>
-          <span className="text-xs font-black text-sky-950 truncate">
-            Juz {juz} • Hal. {page} • {surahName} ({pageRangeLabel})
+          <span className="text-[11px] sm:text-xs font-black text-sky-950 truncate">
+            Juz {juz} • Hal. {page} • {surahName}
           </span>
         </div>
         <Button
@@ -3542,80 +3570,82 @@ function TilawahMushafCard({
           size="sm"
           variant="outline"
           onClick={onOpenTrialCounter}
-          className="h-8 px-3 rounded-xl border-amber-300 bg-white text-amber-900 hover:bg-amber-50 font-black text-[11px] shrink-0"
+          className="h-7 sm:h-8 px-2.5 sm:px-3 rounded-xl border-amber-300 bg-white text-amber-900 hover:bg-amber-50 font-black text-[10px] sm:text-[11px] shrink-0 whitespace-nowrap"
         >
           {totalProgress > 0
-            ? `Lanjutkan Counter Uji Coba (${Math.round(totalProgress)}%)`
-            : 'Buka Counter Uji Coba'}
+            ? `Uji Coba (${Math.round(totalProgress)}%)`
+            : 'Counter Uji Coba'}
         </Button>
       </div>
 
-      <CardContent className="p-4 sm:p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100">
-          <div className="flex flex-wrap items-center gap-2">
+      <CardContent className="p-3.5 sm:p-5 space-y-4">
+        <div className="flex flex-col gap-2 pb-3 border-b border-stone-100">
+          <div className="flex items-center justify-between gap-1.5 flex-nowrap">
             <Button
               type="button"
               size="sm"
               disabled={loading || verses.length === 0}
               onClick={onTogglePlayAll}
               className={cn(
-                'h-9 px-3.5 rounded-xl font-black text-xs gap-1.5',
+                'h-8 px-2.5 sm:px-3.5 rounded-full font-black text-[11px] gap-1 shrink-0 whitespace-nowrap',
                 isPlaying
                   ? 'bg-primary hover:bg-primary/90 text-white'
                   : 'bg-sky-700 hover:bg-sky-800 text-white'
               )}
             >
-              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              {isPlaying ? 'Hentikan Murottal' : 'Putar Murottal Halaman'}
+              {isPlaying ? <Pause className="w-3 h-3 shrink-0" /> : <Play className="w-3 h-3 shrink-0" />}
+              <span>{isPlaying ? 'Stop Audio' : 'Murottal'}</span>
             </Button>
-            {isPlaying && playingVerseKey && (
-              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900 text-[11px] font-black">
+
+            <div className="flex items-center gap-1 flex-nowrap shrink-0">
+              <button
+                type="button"
+                onClick={onToggleTajwid}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 sm:px-2.5 h-8 rounded-full text-[10px] sm:text-[11px] font-black border transition-colors touch-manipulation whitespace-nowrap shrink-0',
+                  showTajwid
+                    ? 'bg-emerald-700 text-white border-emerald-700'
+                    : 'bg-white text-primary border-primary/25 hover:bg-primary/5'
+                )}
+              >
+                <Palette className="w-3 h-3 shrink-0" />
+                <span>Tajwid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPerKata((v) => !v)}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 sm:px-2.5 h-8 rounded-full text-[10px] sm:text-[11px] font-black border transition-colors touch-manipulation whitespace-nowrap shrink-0',
+                  showPerKata
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-primary border-primary/25 hover:bg-primary/5'
+                )}
+              >
+                <Languages className="w-3 h-3 shrink-0" />
+                <span>Per Kata</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTranslation((v) => !v)}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 sm:px-2.5 h-8 rounded-full text-[10px] sm:text-[11px] font-black border transition-colors touch-manipulation whitespace-nowrap shrink-0',
+                  showTranslation
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-primary border-primary/25 hover:bg-primary/5'
+                )}
+              >
+                <BookOpen className="w-3 h-3 shrink-0" />
+                <span>Terjemah</span>
+              </button>
+            </div>
+          </div>
+          {isPlaying && playingVerseKey && (
+            <div className="flex items-center">
+              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900 text-[10px] font-black">
                 Memutar QS {playingVerseKey}
               </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              type="button"
-              onClick={onToggleTajwid}
-              className={cn(
-                'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-black border transition-colors touch-manipulation',
-                showTajwid
-                  ? 'bg-emerald-700 text-white border-emerald-700'
-                  : 'bg-white text-primary border-primary/25 hover:bg-primary/5'
-              )}
-            >
-              <Palette className="w-3.5 h-3.5" />
-              Tajwid
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPerKata((v) => !v)}
-              className={cn(
-                'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-black border transition-colors touch-manipulation',
-                showPerKata
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white text-primary border-primary/25 hover:bg-primary/5'
-              )}
-            >
-              <Languages className="w-3.5 h-3.5" />
-              Per Kata
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowTranslation((v) => !v)}
-              className={cn(
-                'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-black border transition-colors touch-manipulation',
-                showTranslation
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white text-primary border-primary/25 hover:bg-primary/5'
-              )}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              Terjemah
-            </button>
-          </div>
+            </div>
+          )}
         </div>
 
         {showTajwid && <TajwidLegendBar />}
