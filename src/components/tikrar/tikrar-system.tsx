@@ -2943,7 +2943,7 @@ export function TikrarSystem({
 
           <MetaStep
             stepKey="1_2"
-            label="GABUNG TM 1 & TM 2 (BLOK A & B) • SYARAT SETORAN 1/2 HALAMAN PERTAMA"
+            label="GABUNG TM 1 & TM 2 (BLOK A & B)"
             count={metaCounts['1_2']}
             threshold={10}
             isLocked={!isTuntasTM(1) || !isTuntasTM(2)}
