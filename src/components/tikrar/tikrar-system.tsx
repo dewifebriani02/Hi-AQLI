@@ -993,7 +993,7 @@ export function TikrarSystem({
         setMetaCounts({ ...nextMeta });
       }
 
-      // 2. Ambil dari Database jika user sudah login
+      // 2. Ambil dari Database jika user sudah login (Database adalah sumber kebenaran utama antar perangkat HP & Laptop)
       if (user?.id) {
         try {
           const res = await authFetch(`/api/tikrar/progress?page=${page}`);
@@ -1002,38 +1002,46 @@ export function TikrarSystem({
             const dbProg = json.data;
             if (dbProg) {
               hasDbProgress = true;
-              nextPrepListen = Math.max(nextPrepListen, Number(dbProg.prep_listen_count) || 0);
-              nextPrepTrans = nextPrepTrans || Boolean(dbProg.prep_translation_done);
-              if (dbProg.blocks) {
-                for (const b of [1, 2, 3, 4] as const) {
-                  if (dbProg.blocks[b]) {
-                    const localUnderstood = nextBlocks[b]?.understood;
-                    const dbUnderstood = dbProg.blocks[b]?.understood;
-                    const mergedUnderstood =
-                      localUnderstood === true || dbUnderstood === true
-                        ? true
-                        : typeof localUnderstood === 'boolean'
-                        ? localUnderstood
-                        : typeof dbUnderstood === 'boolean'
-                        ? dbUnderstood
-                        : undefined;
-                    nextBlocks[b] = {
-                      a: { count: Math.max(nextBlocks[b].a.count, Number(dbProg.blocks[b]?.a?.count) || 0) },
-                      b: { count: Math.max(nextBlocks[b].b.count, Number(dbProg.blocks[b]?.b?.count) || 0) },
-                      combined: { count: Math.max(nextBlocks[b].combined.count, Number(dbProg.blocks[b]?.combined?.count) || 0) },
-                      listen: { count: Math.max(nextBlocks[b].listen.count, Number(dbProg.blocks[b]?.listen?.count) || 0) },
-                      ...(typeof mergedUnderstood === 'boolean' ? { understood: mergedUnderstood } : {}),
-                    };
-                  }
-                }
+              nextPrepListen = Number(dbProg.prep_listen_count) || 0;
+              nextPrepTrans = Boolean(dbProg.prep_translation_done);
+              for (const b of [1, 2, 3, 4] as const) {
+                const dbB = dbProg.blocks?.[b];
+                const dbUnderstood = dbB?.understood;
+                nextBlocks[b] = {
+                  a: { count: Number(dbB?.a?.count) || 0 },
+                  b: { count: Number(dbB?.b?.count) || 0 },
+                  combined: { count: Number(dbB?.combined?.count) || 0 },
+                  listen: { count: Number(dbB?.listen?.count) || 0 },
+                  ...(typeof dbUnderstood === 'boolean' ? { understood: dbUnderstood } : {}),
+                };
               }
-              if (dbProg.meta_counts && typeof dbProg.meta_counts === 'object' && Object.keys(dbProg.meta_counts).length > 0) {
-                hasExplicitMeta = true;
-                Object.keys(nextMeta).forEach((k) => {
-                  nextMeta[k] = Math.max(nextMeta[k], Number(dbProg.meta_counts[k]) || 0);
-                });
+              hasExplicitMeta = true;
+              Object.keys(nextMeta).forEach((k) => {
+                nextMeta[k] = Number(dbProg.meta_counts?.[k]) || 0;
+              });
+            } else {
+              // Bila di database belum ada / sudah di-reset dari perangkat lain, bersihkan cache lokal perangkat ini
+              nextPrepListen = 0;
+              nextPrepTrans = false;
+              for (const b of [1, 2, 3, 4] as const) {
+                nextBlocks[b] = { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } };
               }
+              Object.keys(nextMeta).forEach((k) => {
+                nextMeta[k] = 0;
+              });
             }
+            // Sinkronkan localStorage perangkat ini dengan kondisi terbaru dari Database
+            try {
+              localStorage.setItem(
+                `tikrar_progress_p${page}`,
+                JSON.stringify({
+                  prepListenCount: nextPrepListen,
+                  prepTranslationDone: nextPrepTrans,
+                  blocks: nextBlocks,
+                  metaCounts: nextMeta,
+                })
+              );
+            } catch {}
           }
         } catch (e) {
           console.warn('Gagal memuat progres dari database:', e);
@@ -2365,13 +2373,11 @@ export function TikrarSystem({
               variant="outline"
               size="sm"
               onClick={() => setShowReciterDialog(true)}
-              className="h-9 flex-1 sm:flex-initial px-2 sm:px-3 text-[11px] sm:text-xs font-bold border-primary/20 text-primary rounded-xl whitespace-nowrap min-w-0"
-              title="Pilih Qari Murattal & Pengaturan Bunyi Counter"
+              className="h-9 flex-1 sm:flex-initial px-2 sm:px-3 text-[11px] sm:text-xs font-bold border-primary/20 text-primary rounded-xl whitespace-nowrap shrink-0"
+              title={`Pilih Qari Murattal (${RECITERS.find((r) => r.id === selectedReciterId)?.name || "Qari"})`}
             >
               <Mic2 className="w-3.5 h-3.5 mr-1 shrink-0 text-primary" />
-              <span className="truncate max-w-[115px] sm:max-w-[180px]">
-                {RECITERS.find((r) => r.id === selectedReciterId)?.name.replace(/^Dr\.\s*Syaikh\s+|^Syaikh\s+/i, 'Syaikh ') || 'Pilih Qari'}
-              </span>
+              <span>Pilih Qari</span>
               <ChevronDown className="w-3 h-3 ml-1 shrink-0 opacity-70" />
             </Button>
             {onOpenScheduleTab && (
