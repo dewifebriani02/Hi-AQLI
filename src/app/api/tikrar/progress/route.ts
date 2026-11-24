@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
 import { getJuzForPage, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
-import { canUndoStep, countTotalClicks, getStepMinCount, PASS_THRESHOLD } from '@/lib/tikrar-steps';
+import {
+  canUndoStep,
+  computeTikrarPageTotalProgress,
+  countTotalClicks,
+  getStepMinCount,
+  PASS_THRESHOLD,
+} from '@/lib/tikrar-steps';
 import {
   computeTotalCompletedSteps,
   isPagePracticeAllowed,
@@ -11,13 +17,17 @@ import {
   recordTikrarActivity,
 } from '@/lib/tikrar-server';
 
+const NO_STORE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate',
+};
+
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getAuthContext(req);
     if (!ctx.userId) {
       return NextResponse.json(
         { error: { message: 'Silakan login terlebih dahulu.' } },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -30,7 +40,7 @@ export async function GET(req: NextRequest) {
         `SELECT * FROM public.tikrar_user_progress WHERE user_id = $1 ORDER BY updated_at DESC, page_number ASC`,
         [ctx.userId]
       );
-      return NextResponse.json({ data: rows, error: null });
+      return NextResponse.json({ data: rows, error: null }, { headers: NO_STORE_HEADERS });
     }
 
     const { rows } = await pool.query(
@@ -38,12 +48,12 @@ export async function GET(req: NextRequest) {
       [ctx.userId, pageNumber]
     );
 
-    return NextResponse.json({ data: rows[0] || null, error: null });
+    return NextResponse.json({ data: rows[0] || null, error: null }, { headers: NO_STORE_HEADERS });
   } catch (err: any) {
     console.error('Error in GET /api/tikrar/progress:', err);
     return NextResponse.json(
       { error: { message: err?.message || 'Gagal memuat progres Tikrar.' } },
-      { status: 500 }
+      { status: 500, headers: NO_STORE_HEADERS }
     );
   }
 }
@@ -66,8 +76,6 @@ export async function POST(req: NextRequest) {
     const prepTranslationDone = Boolean(body.prep_translation_done);
     const blocks = typeof body.blocks === 'object' && body.blocks !== null ? body.blocks : {};
     const metaCounts = typeof body.meta_counts === 'object' && body.meta_counts !== null ? body.meta_counts : {};
-    const totalProgress = Math.max(0, Math.min(100, Math.floor(Number(body.total_progress) || 0)));
-    // Counter yang dikurangi thalibah (tombol -1): nilainya boleh turun, counter lain tetap monoton
     const undoKeys: string[] = Array.isArray(body.undo_keys)
       ? body.undo_keys.filter((k: unknown) => typeof k === 'string' && /^([1-4]\.(a|b|combined)|meta\.[1-4_]+)$/.test(k)).slice(0, 30)
       : [];
@@ -85,7 +93,6 @@ export async function POST(req: NextRequest) {
 
     await client.query('BEGIN');
 
-    // Ambil record yang sudah ada di database untuk digabungkan secara monotonik (mencegah reset oleh device lain)
     const { rows: existingProgressRows } = await client.query(
       `SELECT prep_listen_count, prep_translation_done, blocks, meta_counts, tuntas_blocks, total_progress
        FROM public.tikrar_user_progress
@@ -100,83 +107,91 @@ export async function POST(req: NextRequest) {
       ? await computeTotalCompletedSteps(client, ctx.userId, cleared, undefined, target)
       : 0;
 
-    let finalPrepListen = prepListenCount;
-    let finalPrepTrans = prepTranslationDone;
-    let finalBlocks: any = { ...blocks };
-    let finalMetaCounts: any = { ...metaCounts };
-    let finalTotalProgress = totalProgress;
+    const exBlocks = typeof existingRow?.blocks === 'object' && existingRow?.blocks !== null ? existingRow.blocks : {};
+    const exMeta = typeof existingRow?.meta_counts === 'object' && existingRow?.meta_counts !== null ? existingRow.meta_counts : {};
 
-    if (existingProgressRows.length > 0) {
-      const ex = existingProgressRows[0];
-      finalPrepListen = Math.max(Number(ex.prep_listen_count) || 0, prepListenCount);
-      finalPrepTrans = Boolean(ex.prep_translation_done) || prepTranslationDone;
-      finalTotalProgress = Math.max(Number(ex.total_progress) || 0, totalProgress);
+    // Simpan langsung angka terbaru dari perangkat yang sedang diklik oleh pengguna
+    const finalBlocks: Record<1 | 2 | 3 | 4, any> = {
+      1: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+      2: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+      3: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+      4: { a: { count: 0 }, b: { count: 0 }, combined: { count: 0 }, listen: { count: 0 } },
+    };
 
-      const exBlocks = typeof ex.blocks === 'object' && ex.blocks !== null ? ex.blocks : {};
-      finalBlocks = {};
-      for (const b of [1, 2, 3, 4] as const) {
-        const incomingUnderstood = blocks?.[b]?.understood;
-        const existingUnderstood = exBlocks?.[b]?.understood;
-        const finalUnderstood =
-          typeof incomingUnderstood === 'boolean'
-            ? incomingUnderstood
-            : typeof existingUnderstood === 'boolean'
-            ? existingUnderstood
-            : undefined;
-        finalBlocks[b] = {
-          a: { count: Math.max(Number(exBlocks?.[b]?.a?.count) || 0, Number(blocks?.[b]?.a?.count) || 0) },
-          b: { count: Math.max(Number(exBlocks?.[b]?.b?.count) || 0, Number(blocks?.[b]?.b?.count) || 0) },
-          combined: { count: Math.max(Number(exBlocks?.[b]?.combined?.count) || 0, Number(blocks?.[b]?.combined?.count) || 0) },
-          // Hitungan simak audio per blok (0..5), monoton
-          listen: {
-            count: Math.min(5, Math.max(Number(exBlocks?.[b]?.listen?.count) || 0, Number(blocks?.[b]?.listen?.count) || 0)),
-          },
-          ...(typeof finalUnderstood === 'boolean' ? { understood: finalUnderstood } : {}),
-        };
-      }
-
-      const exMeta = typeof ex.meta_counts === 'object' && ex.meta_counts !== null ? ex.meta_counts : {};
-      finalMetaCounts = {};
-      const allMetaKeys = new Set([...Object.keys(exMeta), ...Object.keys(metaCounts)]);
-      allMetaKeys.forEach((k) => {
-        finalMetaCounts[k] = Math.max(Number(exMeta[k]) || 0, Number(metaCounts[k]) || 0);
-      });
+    for (const b of [1, 2, 3, 4] as const) {
+      const incomingUnderstood = blocks?.[b]?.understood;
+      const existingUnderstood = exBlocks?.[b]?.understood;
+      const finalUnderstood =
+        typeof incomingUnderstood === 'boolean'
+          ? incomingUnderstood
+          : typeof existingUnderstood === 'boolean'
+          ? existingUnderstood
+          : undefined;
+      finalBlocks[b] = {
+        a: { count: Math.max(0, Math.floor(Number(blocks?.[b]?.a?.count) || 0)) },
+        b: { count: Math.max(0, Math.floor(Number(blocks?.[b]?.b?.count) || 0)) },
+        combined: { count: Math.max(0, Math.floor(Number(blocks?.[b]?.combined?.count) || 0)) },
+        listen: {
+          count: Math.min(5, Math.max(0, Math.floor(Number(blocks?.[b]?.listen?.count) || 0))),
+        },
+        ...(typeof finalUnderstood === 'boolean' ? { understood: finalUnderstood } : {}),
+      };
     }
 
-    // Terapkan pengurangan (-1) hanya bila langkah berikutnya belum dimulai
-    const undoneCombinedBlocks: number[] = [];
+    const finalMetaCounts: Record<string, number> = {
+      '1_2': 0,
+      '2_3': 0,
+      '1_2_3': 0,
+      '3_4': 0,
+      '2_3_4': 0,
+      '1_2_3_4': 0,
+    };
+    const allMetaKeys = new Set([...Object.keys(finalMetaCounts), ...Object.keys(exMeta), ...Object.keys(metaCounts)]);
+    allMetaKeys.forEach((k) => {
+      finalMetaCounts[k] = Math.max(0, Math.floor(Number(metaCounts?.[k]) || 0));
+    });
+
+    const finalPrepListen = Math.max(prepListenCount, finalBlocks[1].listen.count);
+    const finalPrepTrans = prepTranslationDone;
+
+    // Terapkan batas minimum pengurangan (-1) hanya untuk counter yang langkah sesudahnya sudah berjalan
     for (const key of undoKeys) {
       const current = { blocks: finalBlocks, meta_counts: finalMetaCounts };
       if (!canUndoStep(key, current)) continue;
       const minFloor = getStepMinCount(key, current);
       if (key.startsWith('meta.')) {
         const k = key.slice(5);
-        const wanted = Math.max(minFloor, Math.floor(Number(metaCounts?.[k]) || 0));
-        if (wanted < (Number(finalMetaCounts[k]) || 0)) finalMetaCounts[k] = wanted;
+        finalMetaCounts[k] = Math.max(minFloor, Math.floor(Number(metaCounts?.[k]) || 0));
       } else {
-        const [b, part] = key.split('.');
+        const [bStr, part] = key.split('.');
+        const b = Number(bStr) as 1 | 2 | 3 | 4;
         const wanted = Math.max(minFloor, Math.floor(Number(blocks?.[b]?.[part]?.count) || 0));
-        const now = Number(finalBlocks?.[b]?.[part]?.count) || 0;
-        if (wanted < now) {
-          finalBlocks[b] = { ...(finalBlocks[b] || {}), [part]: { count: wanted } };
-          if (part === 'combined' && now >= PASS_THRESHOLD && wanted < PASS_THRESHOLD) undoneCombinedBlocks.push(Number(b));
-        }
+        finalBlocks[b] = { ...(finalBlocks[b] || {}), [part]: { count: wanted } };
       }
     }
 
     // Identifikasi blok-blok yang tuntas (bagian 1, bagian 2, dan gabung blok >= 40)
     const tuntasBlocks: number[] = [];
+    const undoneCombinedBlocks: number[] = [];
     for (const b of [1, 2, 3, 4] as const) {
-      if (
+      const isNowTuntas =
         Number(finalBlocks?.[b]?.a?.count) >= PASS_THRESHOLD &&
         Number(finalBlocks?.[b]?.b?.count) >= PASS_THRESHOLD &&
-        Number(finalBlocks?.[b]?.combined?.count) >= PASS_THRESHOLD
-      ) {
+        Number(finalBlocks?.[b]?.combined?.count) >= PASS_THRESHOLD;
+      const wasTuntas =
+        Number(exBlocks?.[b]?.a?.count) >= PASS_THRESHOLD &&
+        Number(exBlocks?.[b]?.b?.count) >= PASS_THRESHOLD &&
+        Number(exBlocks?.[b]?.combined?.count) >= PASS_THRESHOLD;
+      if (isNowTuntas) {
         tuntasBlocks.push(b);
+      } else if (wasTuntas) {
+        undoneCombinedBlocks.push(b);
       }
     }
 
-    // 1. Simpan progres counter ke database (public.tikrar_user_progress) agar murajaah & coba juz tetap tersimpan
+    const finalTotalProgress = Math.round(computeTikrarPageTotalProgress(finalBlocks, finalMetaCounts));
+
+    // 1. Simpan progres counter ke database (public.tikrar_user_progress)
     const { rows: progressRows } = await client.query(
       `INSERT INTO public.tikrar_user_progress (
          user_id, page_number, juz, prep_listen_count, prep_translation_done,
@@ -207,7 +222,7 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    // Blok yang batal tuntas karena -1: keluarkan dari laporan blok tuntas halaman ini
+    // Blok yang batal tuntas: keluarkan dari laporan blok tuntas & kembalikan status jadwal ke pending
     if (undoneCombinedBlocks.length > 0) {
       await client.query(
         `UPDATE public.tikrar_daily_logs
@@ -225,6 +240,14 @@ export async function POST(req: NextRequest) {
         `DELETE FROM public.tikrar_daily_logs
          WHERE user_id = $1 AND page_number = $2 AND jsonb_array_length(blocks_completed) = 0`,
         [ctx.userId, pageNumber]
+      );
+      await client.query(
+        `UPDATE public.tikrar_user_schedules
+         SET status = 'pending',
+             completed_at = NULL,
+             updated_at = now()
+         WHERE user_id = $1 AND page_number = $2 AND block_number = ANY($3::int[]) AND status = 'completed'`,
+        [ctx.userId, pageNumber, undoneCombinedBlocks]
       );
     }
 
@@ -259,7 +282,12 @@ export async function POST(req: NextRequest) {
 
       // 2. Blok yang BARU tuntas pada penyimpanan ini direkam ke public.tikrar_daily_logs (Laporan Blok Tuntas)
       const newlyTuntasBlocks = tuntasBlocks.filter(
-        (b) => !(Number(existingRow?.blocks?.[b]?.combined?.count) >= 40)
+        (b) =>
+          !(
+            Number(existingRow?.blocks?.[b]?.a?.count) >= PASS_THRESHOLD &&
+            Number(existingRow?.blocks?.[b]?.b?.count) >= PASS_THRESHOLD &&
+            Number(existingRow?.blocks?.[b]?.combined?.count) >= PASS_THRESHOLD
+          )
       );
       if (newlyTuntasBlocks.length > 0) {
         const logDateKey = toDateKeyWIB();

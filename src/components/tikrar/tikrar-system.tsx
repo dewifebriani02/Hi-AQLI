@@ -901,6 +901,20 @@ export function TikrarSystem({
 
   const isHydratedRef = useRef(false);
   const skipNextDbSyncRef = useRef(false);
+  const [userSaveTick, setUserSaveTick] = useState(0);
+  const lastSyncedTickRef = useRef(0);
+  const dirtyPageRef = useRef<number | null>(null);
+  const markUserProgressDirty = useCallback(() => {
+    dirtyPageRef.current = page;
+    setUserSaveTick((t) => t + 1);
+  }, [page]);
+  const updateBlocksByUser = useCallback(
+    (updater: any) => {
+      setBlocks(updater);
+      markUserProgressDirty();
+    },
+    [markUserProgressDirty]
+  );
   const [soundOn, setSoundOn] = useState(true);
   useEffect(() => setSoundOn(isTikrarSoundEnabled()), []);
   const [showTajwid, setShowTajwid] = useState(true);
@@ -996,7 +1010,7 @@ export function TikrarSystem({
       // 2. Ambil dari Database jika user sudah login (Database adalah sumber kebenaran utama antar perangkat HP & Laptop)
       if (user?.id) {
         try {
-          const res = await authFetch(`/api/tikrar/progress?page=${page}`);
+          const res = await authFetch(`/api/tikrar/progress?page=${page}`, { cache: 'no-store' });
           if (res.ok) {
             const json = await res.json();
             const dbProg = json.data;
@@ -1098,10 +1112,22 @@ export function TikrarSystem({
       }
     }
 
+    dirtyPageRef.current = null;
     loadProgress();
+
+    const handleVisibilityOrFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (dirtyPageRef.current !== null) return;
+      loadProgress();
+      onDataChanged?.();
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
 
     return () => {
       isCancelled = true;
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
   }, [page, isSelectedPageCleared, user?.id, refreshSignal]);
 
@@ -1122,16 +1148,18 @@ export function TikrarSystem({
     return Math.min(100, (totalDone / totalWeight) * 100);
   }, [prepListenCount, prepTranslationDone, blocks, metaCounts]);
 
-  // Simpan progres ke localStorage dan database setiap user klik angka setiap tahapan
+  // Simpan progres ke localStorage dan database HANYA saat user aktif menekan counter / simak / paham
   useEffect(() => {
     isHydratedRef.current = false;
+    dirtyPageRef.current = null;
   }, [page]);
 
   useEffect(() => {
-    if (loading || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
+    if (userSaveTick <= lastSyncedTickRef.current || dirtyPageRef.current !== page) return;
 
-    // 1. Simpan ke localStorage instan
-    const timerLocal = setTimeout(() => {
+    // 1. Simpan ke localStorage instan saat user klik
+    try {
       const existing = localStorage.getItem(`tikrar_progress_p${page}`);
       const parsed = existing ? JSON.parse(existing) : {};
       localStorage.setItem(
@@ -1144,15 +1172,20 @@ export function TikrarSystem({
           metaCounts,
         })
       );
-    }, 200);
+    } catch {}
 
-    // 2. Simpan ke database jika sudah melewati inisialisasi awal
+    // 2. Simpan ke database hanya dari aksi user
     let timerDb: NodeJS.Timeout | null = null;
-    if (user?.id && isHydratedRef.current && !pageLockReason) {
+    if (user?.id && !pageLockReason) {
       if (skipNextDbSyncRef.current) {
         skipNextDbSyncRef.current = false;
+        lastSyncedTickRef.current = userSaveTick;
+        dirtyPageRef.current = null;
       } else {
+      const tickToSync = userSaveTick;
       timerDb = setTimeout(async () => {
+        lastSyncedTickRef.current = tickToSync;
+        if (dirtyPageRef.current === page) dirtyPageRef.current = null;
         const undoKeys = Array.from(pendingUndoKeysRef.current);
         pendingUndoKeysRef.current.clear();
         try {
@@ -1216,10 +1249,9 @@ export function TikrarSystem({
     }
 
     return () => {
-      clearTimeout(timerLocal);
       if (timerDb) clearTimeout(timerDb);
     };
-  }, [prepListenCount, prepTranslationDone, blocks, metaCounts, page, juz, loading, user?.id, totalProgress, pageLockReason]);
+  }, [userSaveTick, prepListenCount, prepTranslationDone, blocks, metaCounts, page, juz, user?.id, totalProgress, pageLockReason]);
 
   const blockVerses = useMemo<Record<1 | 2 | 3 | 4, Verse[]>>(() => {
     return splitPageInto4Blocks(page, verses, customPageConfig);
@@ -1390,6 +1422,7 @@ export function TikrarSystem({
         understood,
       },
     }));
+    markUserProgressDirty();
     if (understood) {
       setSimakPromptedBlocks((prev) => ({ ...prev, [block]: false }));
       playTikrarTap();
@@ -1413,6 +1446,7 @@ export function TikrarSystem({
           listen: { count: Math.min(PREP_LISTEN_THRESHOLD, (p[block]?.listen?.count || 0) + 1) },
         },
       }));
+      markUserProgressDirty();
       const next = loop + 1;
       if (next < PREP_LISTEN_THRESHOLD) {
         playBlockVerse(block, 0, next);
@@ -1611,6 +1645,8 @@ export function TikrarSystem({
       stopBlockAudio(false);
       pendingUndoKeysRef.current.clear();
       skipNextDbSyncRef.current = true;
+      dirtyPageRef.current = null;
+      lastSyncedTickRef.current = userSaveTick;
       playTikrarUndo();
 
       if (targetReset.scope === 'juz') {
@@ -1778,6 +1814,7 @@ export function TikrarSystem({
         [key]: Math.max(minFloor, (p[key] || 0) + delta),
       };
     });
+    markUserProgressDirty();
 
     // Auto-advance / smooth scroll ke step berikutnya saat tuntas meta repetisi
     if (delta > 0 && currentCount < threshold && nextCount >= threshold) {
@@ -2756,7 +2793,7 @@ export function TikrarSystem({
               isSavedInDb={completedBlocksAllTime.has(1)}
               isScheduledToday={scheduledBlockSetOnPage.has(1)}
               isLocked={false}
-              onIncrement={setBlocks}
+              onIncrement={updateBlocksByUser}
               fontSize={fontSize}
               letter="A"
               isExamStageOpen={isExamStageOpen}
@@ -2806,7 +2843,7 @@ export function TikrarSystem({
               isSavedInDb={completedBlocksAllTime.has(2)}
               isScheduledToday={scheduledBlockSetOnPage.has(2)}
               isLocked={!isTuntasTM(1)}
-              onIncrement={setBlocks}
+              onIncrement={updateBlocksByUser}
               fontSize={fontSize}
               letter="B"
               isExamStageOpen={isExamStageOpen}
@@ -2878,7 +2915,7 @@ export function TikrarSystem({
             isSavedInDb={completedBlocksAllTime.has(3)}
             isScheduledToday={scheduledBlockSetOnPage.has(3)}
             isLocked={!isMetaTuntas('1_2')}
-            onIncrement={setBlocks}
+            onIncrement={updateBlocksByUser}
             fontSize={fontSize}
             letter="C"
             isExamStageOpen={isExamStageOpen}
@@ -2970,7 +3007,7 @@ export function TikrarSystem({
             isSavedInDb={completedBlocksAllTime.has(4)}
             isScheduledToday={scheduledBlockSetOnPage.has(4)}
             isLocked={!isMetaTuntas('1_2_3')}
-            onIncrement={setBlocks}
+            onIncrement={updateBlocksByUser}
             fontSize={fontSize}
             letter="D"
             isExamStageOpen={isExamStageOpen}

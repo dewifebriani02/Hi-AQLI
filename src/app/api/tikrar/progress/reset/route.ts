@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
-import { getJuzForPage, getJuzPageRange } from '@/lib/tikrar-schedule-generator';
+import { getJuzForPage, getJuzPageRange, toDateKeyWIB } from '@/lib/tikrar-schedule-generator';
 import {
   computeTikrarPageTotalProgress,
   createEmptyTikrarBlocks,
   createEmptyTikrarMetaCounts,
   PASS_THRESHOLD,
 } from '@/lib/tikrar-steps';
+import {
+  computeTotalCompletedSteps,
+  loadActiveTarget,
+  loadClearedPages,
+} from '@/lib/tikrar-server';
 
 type ResetScope = 'juz' | 'page' | 'block' | 'counter';
 
@@ -81,6 +86,37 @@ async function clearDailyLogsAndScheduleForBlocks(
          updated_at = now()
      WHERE user_id = $1 AND page_number = $2 AND block_number = ANY($3::int[]) AND status = 'completed'`,
     [userId, pageNumber, blockNumbers]
+  );
+}
+
+async function syncTodayActivityOnReset(client: any, userId: string) {
+  const target = await loadActiveTarget(client, userId);
+  if (!target) return;
+  const { cleared } = await loadClearedPages(client, userId);
+  const stepsNow = await computeTotalCompletedSteps(client, userId, cleared, undefined, target);
+  const todayKey = toDateKeyWIB();
+  const dailyQuota = target.schedule.dailyQuota || 1;
+  const { rows: actRows } = await client.query(
+    `SELECT id, clicks, steps_start, steps_now, target_met
+     FROM public.tikrar_daily_activity
+     WHERE user_id = $1 AND activity_date = $2::date
+     FOR UPDATE`,
+    [userId, todayKey]
+  );
+  if (actRows.length === 0) return;
+  const act = actRows[0];
+  const stepsStart = Math.min(Number(act.steps_start) || 0, stepsNow);
+  const stepsToday = Math.max(0, stepsNow - stepsStart);
+  const targetMet = (Number(act.clicks) || 0) > 0 && stepsToday >= dailyQuota;
+  await client.query(
+    `UPDATE public.tikrar_daily_activity
+     SET steps_start = $2,
+         steps_now = $3,
+         daily_quota = $4,
+         target_met = $5,
+         updated_at = now()
+     WHERE id = $1`,
+    [act.id, stepsStart, stepsNow, dailyQuota, targetMet]
   );
 }
 
@@ -159,6 +195,8 @@ export async function POST(req: NextRequest) {
         [ctx.userId, rawJuz, startPage, endPage]
       );
 
+      await syncTodayActivityOnReset(client, ctx.userId);
+
       await client.query('COMMIT');
       return NextResponse.json({
         data: { scope: 'juz', juz: rawJuz, startPage, endPage, progress: null },
@@ -214,6 +252,8 @@ export async function POST(req: NextRequest) {
          WHERE user_id = $1 AND page_number = $2 AND status = 'completed'`,
         [ctx.userId, pageNumber]
       );
+
+      await syncTodayActivityOnReset(client, ctx.userId);
 
       await client.query('COMMIT');
       return NextResponse.json({
@@ -289,6 +329,7 @@ export async function POST(req: NextRequest) {
       );
 
       await clearDailyLogsAndScheduleForBlocks(client, ctx.userId, pageNumber, [block]);
+      await syncTodayActivityOnReset(client, ctx.userId);
 
       await client.query('COMMIT');
       return NextResponse.json({
@@ -362,6 +403,7 @@ export async function POST(req: NextRequest) {
     if (clearedBlock !== null) {
       await clearDailyLogsAndScheduleForBlocks(client, ctx.userId, pageNumber, [clearedBlock]);
     }
+    await syncTodayActivityOnReset(client, ctx.userId);
 
     await client.query('COMMIT');
     return NextResponse.json({
