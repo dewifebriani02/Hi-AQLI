@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
@@ -2028,13 +2029,15 @@ export function TikrarSystem({
                 <button
                   type="button"
                   onClick={() => setShowReciterDialog(true)}
-                  title="Pilih Qari Murattal"
-                  className="inline-flex items-center gap-1 rounded-full border border-[#D4AF37]/60 bg-white/15 hover:bg-white/25 px-2.5 py-0.5 text-[10px] font-black text-white transition-colors"
+                  title="Ganti Pilihan Qari Murattal"
+                  className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#D4AF37] bg-white hover:bg-[#FDFBF7] px-3 py-1 text-[11px] font-black text-primary shadow-sm transition-all active:scale-95 cursor-pointer"
                 >
-                  <Mic2 className="w-3 h-3 text-[#D4AF37] shrink-0" />
-                  <span className="max-w-[145px] sm:max-w-[200px] truncate">
+                  <Mic2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider shrink-0">Qari:</span>
+                  <span className=" truncate max-w-[175px] sm:max-w-[240px]">
                     {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
                   </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-primary shrink-0" />
                 </button>
                 {isSelectedPageCleared && (
                   <Badge className="bg-amber-400 text-black hover:bg-amber-400 text-[10px] font-black">
