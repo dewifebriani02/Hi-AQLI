@@ -645,6 +645,15 @@ export default function DashboardPage() {
   }, [userData, ngajiRegs]);
 
   const [activePromoTab, setActivePromoTab] = useState<'mufradat' | 'tikrar'>('mufradat');
+  const [isPromoPaused, setIsPromoPaused] = useState(false);
+
+  useEffect(() => {
+    if (isPromoPaused) return;
+    const timer = setInterval(() => {
+      setActivePromoTab((prev) => (prev === 'mufradat' ? 'tikrar' : 'mufradat'));
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [isPromoPaused]);
 
   // ONBOARDING CHECKLIST LOGIC
 
@@ -850,9 +859,15 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* 1. POSTER PROMO SWITCHER: HI MUFRADAT <-> HI TIKRAR 40X */}
+      {/* 1. POSTER PROMO AUTO-SLIDER: HI MUFRADAT <-> HI TIKRAR 40X (MAROON & GOLD THEME) */}
       {(!user || !isRegistered) && (
-        <div className="mx-1 mt-2 mb-2 space-y-2.5">
+        <div
+          className="mx-1 mt-2 mb-2 space-y-2.5"
+          onMouseEnter={() => setIsPromoPaused(true)}
+          onMouseLeave={() => setIsPromoPaused(false)}
+          onTouchStart={() => setIsPromoPaused(true)}
+          onTouchEnd={() => setIsPromoPaused(false)}
+        >
           {/* Tab Switcher */}
           <div className="grid grid-cols-2 gap-1.5 bg-slate-200/80 p-1 rounded-2xl border border-slate-200">
             <button
@@ -874,95 +889,108 @@ export default function DashboardPage() {
               className={cn(
                 "flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-black tracking-wide transition-all",
                 activePromoTab === 'tikrar'
-                  ? "bg-white text-emerald-900 shadow-sm"
-                  : "text-slate-600 hover:text-emerald-900"
+                  ? "bg-white text-[#800000] shadow-sm"
+                  : "text-slate-600 hover:text-[#800000]"
               )}
             >
-              <Award className="w-3.5 h-3.5 text-emerald-600" />
+              <Award className="w-3.5 h-3.5 text-[#800000]" />
               <span>Hi Tikrar 40x</span>
             </button>
           </div>
 
-          {activePromoTab === 'mufradat' ? (
-            <Link href={user ? "/study-circles/registration?id=mufradat-premium" : "/register"}>
-              <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] to-[#500000] shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:shadow-[#800000]/20 border border-[#D4AF37]/30">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 blur-3xl -mr-20 -mt-20 rounded-full animate-pulse" />
-                <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-                  <div className="flex-1 text-center sm:text-left">
-                    <Badge className="bg-amber-400 text-[#800000] mb-4 font-black tracking-widest uppercase py-1 px-3 animate-bounce">
-                      PROGRAM GRATIS!
-                    </Badge>
-                    <h2 className="text-3xl sm:text-4xl font-black text-white font-headline leading-tight mb-3">
-                      Level Up Hafalan<br />
-                      <span className="text-amber-400">Hi Mufradat</span>
-                    </h2>
-                    <p className="text-slate-100 text-sm font-medium leading-relaxed mb-6 opacity-90 max-w-md">
-                      Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik bersama Admin AQLI.
-                    </p>
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
-                      <div className="flex items-center gap-2">
-                        <SparklesIcon className="w-4 h-4 text-amber-400" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-wider">Ajak Teman Belajar Bareng</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-wider">100% Gratis • Semua Juz Terbuka!</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0 w-full sm:w-auto">
-                    <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-6 py-3 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-all">
-                      DAFTAR HI MUFRADAT <ArrowRight className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ) : (
-            <Link href={user ? "/study-circles/registration?id=tikrar-premium" : "/register"}>
-              <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 shadow-2xl transition-all duration-500 hover:scale-[1.01] hover:shadow-emerald-900/20 border border-[#D4AF37]/40">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/10 blur-3xl -mr-20 -mt-20 rounded-full animate-pulse" />
-                <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-                  <div className="flex-1 text-center sm:text-left">
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-4">
-                      <Badge className="bg-emerald-400 text-emerald-950 font-black tracking-widest uppercase py-1 px-3">
-                        METODE ITQAN 40X • GRATIS!
+          {/* Sliding Track */}
+          <div className="overflow-hidden rounded-3xl">
+            <div
+              className="flex transition-transform duration-700 ease-in-out"
+              style={{ transform: activePromoTab === 'mufradat' ? "translateX(0%)" : "translateX(-100%)" }}
+            >
+              {/* Slide 1: Hi Mufradat */}
+              <Link
+                href={user ? "/study-circles/registration?id=mufradat-premium" : "/register"}
+                className="w-full shrink-0 block"
+              >
+                <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] to-[#500000] shadow-2xl transition-all duration-500 border border-[#D4AF37]/30 h-full">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 blur-3xl -mr-20 -mt-20 rounded-full animate-pulse" />
+                  <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+                    <div className="flex-1 text-center sm:text-left">
+                      <Badge className="bg-amber-400 text-[#800000] mb-4 font-black tracking-widest uppercase py-1 px-3 animate-bounce">
+                        PROGRAM GRATIS!
                       </Badge>
-                      <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full text-[10px] font-extrabold text-white">
-                        <span className="w-2 h-2 rounded-xs bg-emerald-400 inline-block" />
-                        <span className="w-2 h-2 rounded-xs bg-amber-400 inline-block" />
-                        <span className="w-2 h-2 rounded-xs bg-sky-400 inline-block" />
-                        <span className="w-2 h-2 rounded-xs bg-rose-400 inline-block" />
-                        4 Blok &amp; Tajwid Warna
-                      </span>
-                    </div>
-                    <h2 className="text-3xl sm:text-4xl font-black text-white font-headline leading-tight mb-3">
-                      Mutqin Hafalan<br />
-                      <span className="text-amber-400">Hi Tikrar 40x</span>
-                    </h2>
-                    <p className="text-slate-100 text-sm font-medium leading-relaxed mb-6 opacity-90 max-w-md">
-                      Hafalan kuat &amp; terstruktur dengan Mushaf 4 Blok Warna Syaamil, Tajwid Warna, audio simak 5x, counter repetisi 40x otomatis, hingga simulasi &amp; setoran ujian halaman.
-                    </p>
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
-                      <div className="flex items-center gap-2">
-                        <SparklesIcon className="w-4 h-4 text-amber-400" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-wider">Counter 4 Blok &amp; Tajwid Warna</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-wider">100% Gratis • Semua 30 Juz!</span>
+                      <h2 className="text-3xl sm:text-4xl font-black text-white font-headline leading-tight mb-3">
+                        Level Up Hafalan<br />
+                        <span className="text-amber-400">Hi Mufradat</span>
+                      </h2>
+                      <p className="text-slate-100 text-sm font-medium leading-relaxed mb-6 opacity-90 max-w-md">
+                        Bukan sekadar setoran, tapi menguasai setiap kata! Gabung sekarang dan dapatkan sistem mentoring harian yang asyik bersama Admin AQLI.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+                        <div className="flex items-center gap-2">
+                          <SparklesIcon className="w-4 h-4 text-amber-400" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-wider">Ajak Teman Belajar Bareng</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-amber-400" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-wider">100% Gratis • Semua Juz Terbuka!</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex-shrink-0 w-full sm:w-auto">
-                    <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-emerald-950 font-black px-6 py-3 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-all">
-                      MULAI HI TIKRAR <ArrowRight className="w-4 h-4" />
+                    <div className="flex-shrink-0 w-full sm:w-auto">
+                      <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-6 py-3 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-all">
+                        DAFTAR HI MUFRADAT <ArrowRight className="w-4 h-4" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          )}
+              </Link>
+
+              {/* Slide 2: Hi Tikrar 40x (Maroon & Gold Theme — No Green) */}
+              <Link
+                href={user ? "/study-circles/registration?id=tikrar-premium" : "/register"}
+                className="w-full shrink-0 block"
+              >
+                <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] via-[#600000] to-[#3b0000] shadow-2xl transition-all duration-500 border border-[#D4AF37]/40 h-full">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 blur-3xl -mr-20 -mt-20 rounded-full animate-pulse" />
+                  <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+                    <div className="flex-1 text-center sm:text-left">
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-4">
+                        <Badge className="bg-amber-400 text-[#800000] font-black tracking-widest uppercase py-1 px-3 animate-bounce">
+                          METODE ITQAN 40X • GRATIS!
+                        </Badge>
+                        <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full text-[10px] font-extrabold text-amber-300">
+                          <span className="w-2 h-2 rounded-xs bg-amber-400 inline-block" />
+                          <span className="w-2 h-2 rounded-xs bg-sky-400 inline-block" />
+                          <span className="w-2 h-2 rounded-xs bg-rose-400 inline-block" />
+                          4 Blok &amp; Tajwid Warna
+                        </span>
+                      </div>
+                      <h2 className="text-3xl sm:text-4xl font-black text-white font-headline leading-tight mb-3">
+                        Mutqin Hafalan<br />
+                        <span className="text-amber-400">Hi Tikrar 40x</span>
+                      </h2>
+                      <p className="text-slate-100 text-sm font-medium leading-relaxed mb-6 opacity-90 max-w-md">
+                        Hafalan kuat &amp; terstruktur dengan Mushaf 4 Blok Warna Syaamil, Tajwid Warna, audio simak 5x, counter repetisi 40x otomatis, hingga simulasi &amp; setoran ujian halaman.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+                        <div className="flex items-center gap-2">
+                          <SparklesIcon className="w-4 h-4 text-amber-400" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-wider">Counter 4 Blok &amp; Tajwid Warna</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-amber-400" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-wider">100% Gratis • Semua 30 Juz!</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 w-full sm:w-auto">
+                      <div className="flex items-center justify-center gap-2 bg-[#D4AF37] text-[#800000] font-black px-6 py-3 rounded-xl text-xs shadow-lg group-hover:scale-105 transition-all">
+                        MULAI HI TIKRAR <ArrowRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </div>
 
           {/* Indicator Dots */}
           <div className="flex items-center justify-center gap-1.5 pt-0.5">
@@ -971,7 +999,7 @@ export default function DashboardPage() {
               aria-label="Poster Hi Mufradat"
               onClick={() => setActivePromoTab('mufradat')}
               className={cn(
-                "h-1.5 rounded-full transition-all",
+                "h-1.5 rounded-full transition-all duration-300",
                 activePromoTab === 'mufradat' ? "w-6 bg-[#800000]" : "w-1.5 bg-slate-300"
               )}
             />
@@ -980,8 +1008,8 @@ export default function DashboardPage() {
               aria-label="Poster Hi Tikrar"
               onClick={() => setActivePromoTab('tikrar')}
               className={cn(
-                "h-1.5 rounded-full transition-all",
-                activePromoTab === 'tikrar' ? "w-6 bg-emerald-800" : "w-1.5 bg-slate-300"
+                "h-1.5 rounded-full transition-all duration-300",
+                activePromoTab === 'tikrar' ? "w-6 bg-[#800000]" : "w-1.5 bg-slate-300"
               )}
             />
           </div>
