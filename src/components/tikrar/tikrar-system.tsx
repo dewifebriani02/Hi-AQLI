@@ -2293,7 +2293,7 @@ export function TikrarSystem({
           </Button>
         </div>
 
-        {/* Baris 2: Aksi Cepat (1 Baris Sejajar: Tampilkan Ayat, Tajwid, Bunyi, Reset) */}
+        {/* Baris 2: Aksi Cepat (1 Baris Sejajar: Tampilkan Ayat, Tajwid, Bunyi) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between lg:justify-end gap-1.5 sm:gap-2 w-full lg:w-auto shrink-0 min-w-0">
           {activeTarget && (juz !== activeTarget.juz || page !== recommendedPage) && (
             <Button
@@ -2376,58 +2376,7 @@ export function TikrarSystem({
                 <Settings2 className="w-3.5 h-3.5 mr-1.5" /> Atur Target
               </Button>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isResetting}
-                  className="h-9 px-2 sm:px-2.5 text-[11px] sm:text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 rounded-xl shrink-0 whitespace-nowrap"
-                  title="Reset counter hafalan"
-                >
-                  {isResetting ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin shrink-0" />
-                  ) : (
-                    <RotateCcw className="w-3.5 h-3.5 mr-1 shrink-0" />
-                  )}
-                  <span>Reset</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-60 rounded-xl p-1.5">
-                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-wider text-stone-500 px-2 py-1">
-                  Opsi Reset Counter
-                </DropdownMenuLabel>
-                <DropdownMenuItem
-                  disabled={Boolean(pageLockReason)}
-                  onClick={() =>
-                    setResetConfirm({
-                      scope: 'page',
-                      title: `Reset Counter Halaman ${page}?`,
-                      description: `Semua counter (Simak, TM 1–4, dan gabungan antar blok) pada Halaman ${page} akan dikembalikan ke 0. Nilai ujian & riwayat tasmi' tetap aman.`,
-                    })
-                  }
-                  className="rounded-lg text-xs font-bold text-stone-800 cursor-pointer gap-2 py-2"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Reset Halaman Ini (Hal. {page})</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() =>
-                    setResetConfirm({
-                      scope: 'juz',
-                      title: `Reset Counter Juz ${juz}?`,
-                      description: `Seluruh counter pengulangan dan catatan progres harian pada Juz ${juz} (Hal. ${juzPageRange.startPage}–${juzPageRange.endPage}) akan dikembalikan ke 0. Juz lain, status lulus ujian & tasmi' tetap terjaga.`,
-                    })
-                  }
-                  className="rounded-lg text-xs font-bold text-rose-700 focus:text-rose-800 focus:bg-rose-50 cursor-pointer gap-2 py-2"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Reset Juz Ini (Juz {juz})</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+
           </div>
         </div>
       </div>
