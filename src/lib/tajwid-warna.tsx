@@ -255,7 +255,7 @@ const LEGEND_STORAGE_KEY = 'aqli_tikrar_tajwid_legend_open';
 const LEGEND_SYNC_EVENT = 'aqli-tajwid-legend-sync';
 
 /**
- * Komponen baris legenda warna hukum tajwid yang ringkas, responsif & bisa di-hide/unhide.
+ * Komponen baris legenda warna hukum tajwid yang ringkas, responsif & bisa di-hide/unhide tanpa ada teks terpotong.
  */
 export function TajwidLegendBar({ className }: { className?: string }) {
   const [isOpen, setIsOpen] = useState<boolean>(() => {
@@ -300,15 +300,15 @@ export function TajwidLegendBar({ className }: { className?: string }) {
         type="button"
         onClick={toggleOpen}
         aria-expanded={isOpen}
-        className="w-full flex items-center justify-between gap-2 text-left group touch-manipulation"
+        className="w-full flex flex-wrap items-center justify-between gap-2 text-left group touch-manipulation"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <Palette className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="text-[10px] font-black uppercase tracking-wider text-primary truncate">
+          <span className="text-[10px] font-black uppercase tracking-wider text-primary whitespace-nowrap">
             Panduan Warna Tajwid
           </span>
           {!isOpen && (
-            <span className="inline-flex items-center gap-1 shrink-0">
+            <span className="hidden sm:inline-flex items-center gap-1 shrink-0 ml-1">
               {TAJWID_LEGEND_ITEMS.slice(0, 6).map((item) => (
                 <span
                   key={item.key}
@@ -319,8 +319,8 @@ export function TajwidLegendBar({ className }: { className?: string }) {
             </span>
           )}
         </div>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-100 group-hover:bg-primary/10 text-[9.5px] font-bold text-stone-700 group-hover:text-primary transition-colors shrink-0">
-          <span>{isOpen ? 'Sembunyikan' : 'Lihat Panduan'}</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-100 group-hover:bg-primary/10 text-[9.5px] font-bold text-stone-700 group-hover:text-primary transition-colors shrink-0 ml-auto">
+          <span>{isOpen ? 'Tutup' : 'Lihat'}</span>
           {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </span>
       </button>

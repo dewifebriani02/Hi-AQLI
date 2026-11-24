@@ -917,6 +917,22 @@ export function TikrarSystem({
   );
   const [soundOn, setSoundOn] = useState(true);
   useEffect(() => setSoundOn(isTikrarSoundEnabled()), []);
+  const [showMethodGuide, setShowMethodGuide] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("aqli_tikrar_method_guide_open");
+      if (saved === "1" || saved === "true") setShowMethodGuide(true);
+    } catch {}
+  }, []);
+  const toggleMethodGuide = useCallback(() => {
+    setShowMethodGuide((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("aqli_tikrar_method_guide_open", next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
   const [showTajwid, setShowTajwid] = useState(true);
   useEffect(() => {
     try {
@@ -2707,19 +2723,45 @@ export function TikrarSystem({
         ) : (
         /* Alur Kunci Berurutan: Blok A..D & Sub-Repetisi Gabungan (Opsi B) */
         <div className="flex flex-col gap-8 mt-8">
-          <div className="bg-primary text-white p-4 rounded-2xl border-2 border-[#D4AF37] flex items-start gap-3 shadow-lg">
-            <Info className="w-5 h-5 shrink-0 mt-0.5 text-[#D4AF37]" />
-            <div className="text-[11px] leading-relaxed font-bold">
-              <span className="uppercase tracking-wider text-[#D4AF37] block mb-0.5">
-                Metode Itqan HI Tikrar (Otomatis Tersimpan)
+          <div className="bg-primary text-white rounded-2xl border-2 border-[#D4AF37] shadow-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={toggleMethodGuide}
+              aria-expanded={showMethodGuide}
+              className="w-full px-3.5 py-3 flex items-center justify-between gap-2 text-left hover:bg-white/5 transition-colors touch-manipulation"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Info className="w-4 h-4 shrink-0 text-[#D4AF37]" />
+                <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-[#D4AF37] leading-snug">
+                  Panduan Metode Itqan HI Tikrar (Otomatis Tersimpan)
+                </span>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/15 text-[10px] font-black text-white shrink-0">
+                <span>{showMethodGuide ? "Tutup" : "Lihat"}</span>
+                <ChevronDown className={cn("w-3 h-3 transition-transform", showMethodGuide && "rotate-180")} />
               </span>
-              Setiap blok <strong>disimak 5x dulu</strong> (audio per blok + arti per kata &amp; kalimat), lalu dibagi menjadi 2 bagian teks berwarna:{' '}
-              <strong>Bagian 1 (Maroon) min. 40x</strong> → <strong>Bagian 2 (Hitam) min. 40x</strong>{' '}
-              → <strong>Gabung Blok min. 40x</strong>, lalu dilanjutkan{' '}
-              <strong>Sub-Repetisi Gabungan Antar Blok (2 blok min. 10x, 3–4 blok min. 5x)</strong> (seluruhnya boleh lebih sampai berapa saja) secara berurutan. Setiap klik
-              hitungan repetisi <strong>otomatis tersimpan ke sistem</strong> &amp; langsung
-              memperbarui keaktifan harian serta heatmap grup!
-            </div>
+            </button>
+            {showMethodGuide && (
+              <div className="px-4 pb-3.5 pt-2 border-t border-white/15 text-[11px] leading-relaxed font-medium">
+                <ol className="list-decimal pl-4 space-y-1.5 marker:text-[#D4AF37] marker:font-black">
+                  <li>
+                    <strong className="text-[#D4AF37]">Simak Audio 5x &amp; Pahami Makna:</strong> Putar audio per blok 5x sambil menyimak arti per kata &amp; terjemahannya, lalu klik konfirmasi <strong>Sudah Paham</strong> untuk membuka counter.
+                  </li>
+                  <li>
+                    <strong className="text-[#D4AF37]">Hafalkan 2 Sub-Bagian Blok (Min. 40x):</strong> Ulangi <strong>Bagian 1 (Maroon) min. 40x</strong> → lanjutkan <strong>Bagian 2 (Hitam) min. 40x</strong>.
+                  </li>
+                  <li>
+                    <strong className="text-[#D4AF37]">Gabung 1 Blok Utuh (Min. 40x):</strong> Setelah kedua bagian tuntas, ulangi <strong>Gabung Blok min. 40x</strong> hingga blok berstatus Tuntas.
+                  </li>
+                  <li>
+                    <strong className="text-[#D4AF37]">Gabungan Antar Blok Berurutan:</strong> Lanjutkan <strong>Gabung 2 Blok (min. 10x)</strong> serta <strong>Gabung 3–4 Blok (min. 5x)</strong> untuk mengikat hafalan satu halaman utuh.
+                  </li>
+                  <li>
+                    <strong className="text-[#D4AF37]">Tersimpan Otomatis:</strong> Setiap klik counter (boleh lebih dari batas minimum) langsung tersimpan otomatis &amp; memperbarui keaktifan harian serta heatmap grup.
+                  </li>
+                </ol>
+              </div>
+            )}
           </div>
 
           {(isExamStageOpen || !globalShowVerses) && (
@@ -4079,16 +4121,16 @@ function MaqtaCard({
         isLocked && 'opacity-50 grayscale select-none'
       )}
     >
-      <div className={cn("py-2.5 px-4 border-b flex justify-between items-center gap-2 shrink-0", theme.softHeaderBg)}>
-        <div className="flex items-center gap-2 min-w-0">
+      <div className={cn("py-2.5 px-3.5 sm:px-4 border-b flex flex-wrap justify-between items-center gap-x-2 gap-y-1.5 shrink-0", theme.softHeaderBg)}>
+        <div className="flex items-center flex-wrap gap-1.5 min-w-0">
           <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 border-none shrink-0", theme.badgeClass)}>
             {theme.badgeText}
           </Badge>
-          <span className="text-[10px] font-black uppercase tracking-wider opacity-80 truncate">
+          <span className="text-[10px] font-black uppercase tracking-wider opacity-85 leading-snug">
             Hal. {page} {rangeLabel ? `• ${rangeLabel}` : ''} {isLocked && '• TERKUNCI'}
           </span>
         </div>
-        <div className="flex items-center flex-wrap justify-end gap-1.5 shrink-0">
+        <div className="flex items-center flex-wrap justify-end gap-1.5 shrink-0 ml-auto">
           {(['a', 'b', 'combined'] as const).some((part) => stepInfoFor?.(part)?.isTarget) && (
             <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37] font-black text-[8px] tracking-widest h-4 gap-0.5">
               <Star className="w-2.5 h-2.5 fill-current" /> TARGET HARI INI
@@ -4813,7 +4855,7 @@ function CounterBox({ id: customId, label, count, isLocked, onInc, color, thresh
         stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2'
       )}
     >
-      <span className="text-[10px] font-black uppercase opacity-70 tracking-wider truncate w-full text-center leading-none px-6">
+      <span className="text-[9.5px] sm:text-[10px] font-black uppercase opacity-80 tracking-wide w-full text-center leading-tight px-5 break-words">
         {label}
       </span>
       <div className="flex items-baseline gap-1 leading-none">
