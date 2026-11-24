@@ -49,14 +49,14 @@ export async function POST(req: NextRequest) {
   const client = await pool.connect();
   try {
     const { rows: halaqahRows } = await client.query(
-      `SELECT id, title, program_type, quota FROM public.halaqahs WHERE id = $1 LIMIT 1`,
+      `SELECT id, title, program_type, quota, is_premium, base_price FROM public.halaqahs WHERE id = $1 LIMIT 1`,
       [halaqahId]
     );
     const halaqah = halaqahRows[0];
     if (!halaqah) return fail('Program tidak ditemukan.', 404);
 
     const programKey = programKeyFromType(halaqah.program_type);
-    if (!isProgramFree(programKey)) {
+    if (!isProgramFree(programKey, halaqah)) {
       return fail('Program ini berbayar. Silakan gunakan alur pembayaran.', 409);
     }
 

@@ -1,12 +1,11 @@
 /**
  * Program pricing switch.
  *
- * Saat ini SEMUA program Hi AQLI gratis: pendaftaran langsung aktif, tanpa infaq wajib,
- * voucher, biaya pendaftaran, maupun tagihan bulanan, dan semua juz terbuka.
+ * Semua program Hi AQLI gratis secara default (pendaftaran langsung aktif,
+ * tanpa infaq wajib, voucher, biaya pendaftaran, maupun tagihan bulanan, dan semua juz terbuka).
  *
- * TODO: ganti dengan pengaturan per program dari halaman admin "Pengaturan Program"
- * (tabel program_settings). Alur berbayar yang sudah divalidasi di server ada di
- * branch `wip/payment-validation`.
+ * Khusus Hi Ngaji (`hi_ngaji`), status gratis/berbayar ditentukan per kelas oleh Admin
+ * di halaman `/admin/classes` melalui kolom `is_premium` dan `base_price` pada tabel `halaqahs`.
  */
 export type ProgramKey = 'mufradat' | 'tikrar' | 'ngaji' | 'halaqah';
 
@@ -17,13 +16,20 @@ const FREE_PROGRAMS: Record<ProgramKey, boolean> = {
   halaqah: true,
 };
 
-export function isProgramFree(program: ProgramKey): boolean {
+export function isProgramFree(
+  program: ProgramKey,
+  halaqah?: { is_premium?: boolean | null; isPremium?: boolean | null; base_price?: number | null; basePrice?: number | null } | null
+): boolean {
+  if (program === 'ngaji' && halaqah) {
+    const isPaidClass = Boolean(halaqah.is_premium ?? halaqah.isPremium);
+    return !isPaidClass;
+  }
   return FREE_PROGRAMS[program];
 }
 
 export function programKeyFromType(programType?: string | null): ProgramKey {
   if (programType === 'hi_mufradat') return 'mufradat';
-  if (programType === 'tikrar_daily') return 'tikrar';
+  if (programType === 'tikrar_daily' || programType === 'hi_tikrar') return 'tikrar';
   if (programType === 'hi_ngaji') return 'ngaji';
   return 'halaqah';
 }

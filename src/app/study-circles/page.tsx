@@ -15,10 +15,10 @@ const studyCircles = [
     id: "tikrar-j30-b1",
     title: "Hi Tikrar (Tikrar Daily)",
     instructor: "Tim Asatizah AQLI",
-    description: "Program hafalan terstruktur dengan metode Tikrar 40x. Infaq pendaftaran sudah termasuk bimbingan & ujian.",
+    description: "Program hafalan terstruktur dengan metode Tikrar 40x. Gratis, sudah termasuk bimbingan & ujian.",
     schedule: "Setiap Hari (Mandiri)",
     level: "All Levels",
-    isPremium: true,
+    isPremium: false,
     tag: "PENDAFTARAN DIBUKA"
   },
   {
@@ -28,7 +28,7 @@ const studyCircles = [
     description: "Pahami kosakata Al-Qur'an dengan bimbingan intensif & monitoring harian. Cukup 1 halaman per pekan untuk konsistensi tingkat tinggi.",
     schedule: "Senin - Jumat (Fleksibel)",
     level: "Semua Level",
-    isPremium: true,
+    isPremium: false,
     tag: "OPEN ENROLLMENT"
   },
   {

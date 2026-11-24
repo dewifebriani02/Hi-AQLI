@@ -857,7 +857,7 @@ export default function DashboardPage() {
               <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
                 <div className="flex-1 text-center sm:text-left">
                   <Badge className="bg-amber-400 text-[#800000] mb-4 font-black tracking-widest uppercase py-1 px-3 animate-bounce">
-                    PROMO TERBATAS!
+                    PROGRAM GRATIS!
                   </Badge>
                   <h2 className="text-3xl sm:text-4xl font-black text-white font-headline leading-tight mb-3">
                     Level Up Hafalan<br />
@@ -873,7 +873,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-wider">Hanya 20rb per bulan!</span>
+                      <span className="text-[10px] font-black text-white uppercase tracking-wider">100% Gratis • Semua Juz Terbuka!</span>
                     </div>
                   </div>
                 </div>

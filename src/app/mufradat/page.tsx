@@ -464,20 +464,7 @@ function MufradatPageContent() {
           activeTab === 'rank' ? "hidden" : "block"
         )}>
           {user && (
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full lg:flex lg:flex-row lg:gap-2 lg:w-auto lg:items-end">
-              <Button asChild variant="outline" className="min-h-[3.5rem] h-auto sm:h-12 py-2 sm:py-0 px-1.5 sm:px-5 rounded-2xl border-2 border-[#800000]/10 hover:bg-[#800000]/5 hover:border-[#800000]/20 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 group transition-all bg-white shadow-sm flex-1 min-w-0">
-                <Link href="/mufradat/billing" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3 min-w-0 w-full sm:w-auto">
-                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors shrink-0">
-                    <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="flex flex-col items-center sm:items-start leading-none gap-0.5 sm:gap-1 min-w-0 max-w-full">
-                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground truncate max-w-full">
-                      {access.daysRemaining !== undefined ? `SISA ${access.daysRemaining} HARI` : 'LANGGANAN'}
-                    </span>
-                    <span className="text-[10px] sm:text-xs font-bold text-slate-800 uppercase truncate max-w-full">Status</span>
-                  </div>
-                </Link>
-              </Button>
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2 w-full lg:flex lg:flex-row lg:gap-2 lg:w-auto lg:items-end">
 
               {/* TARGET PEKANAN */}
               <div className={cn(

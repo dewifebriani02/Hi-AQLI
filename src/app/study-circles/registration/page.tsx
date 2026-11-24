@@ -291,12 +291,11 @@ function RegistrationForm() {
   const isNgaji = (circle?.program_type || circle?.programType) === 'hi_ngaji' || programParam === 'hi_ngaji';
 
   const programKey = isMufradat ? 'mufradat' : isTikrar ? 'tikrar' : isNgaji ? 'ngaji' : programKeyFromType(circle?.program_type || circle?.programType);
-  const isFree = isProgramFree(programKey);
+  const isFree = isProgramFree(programKey, circle);
 
   const isPremiumProgram = useMemo(() => {
-    if (isFree) return false;
-    return circle?.is_premium === true || isMufradat || isTikrar;
-  }, [isFree, circle?.is_premium, isMufradat, isTikrar]);
+    return !isFree;
+  }, [isFree]);
 
   // Minimum Infaq Calculation
   const minInfaq = useMemo(() => {
@@ -323,7 +322,7 @@ function RegistrationForm() {
     return sameProgramRegs.length === 0;
   }, [user, registrationsHistory, circle, isMufradat, isTikrar]);
 
-  const registrationFee = (!isFree && isFirstRegistration) ? 10000 : 0;
+  const registrationFee = 0;
   const referralDiscount = 0;
 
   const totalCalculated = useMemo(() => {
@@ -895,7 +894,7 @@ function RegistrationForm() {
                       <>
                         {(programParam ? filteredHalaqahs : (allHalaqahs || [])).map(h => (
                           <SelectItem key={h.id} value={h.id} className="font-bold py-3 text-xs">
-                            {h.title} {h.is_premium ? '(Premium)' : '(Gratis)'}
+                            {h.title} {!isProgramFree(programKeyFromType(h.program_type), h) ? '(Berbayar)' : '(Gratis)'}
                           </SelectItem>
                         ))}
                         {(!programParam && !allHalaqahs?.length) && (
