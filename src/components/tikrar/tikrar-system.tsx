@@ -2026,19 +2026,6 @@ export function TikrarSystem({
                 >
                   Juz {juz} • {scheduledLettersText}
                 </Badge>
-                <button
-                  type="button"
-                  onClick={() => setShowReciterDialog(true)}
-                  title="Ganti Pilihan Qari Murattal"
-                  className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#D4AF37] bg-white hover:bg-[#FDFBF7] px-3 py-1 text-[11px] font-black text-primary shadow-sm transition-all active:scale-95 cursor-pointer"
-                >
-                  <Mic2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider shrink-0">Qari:</span>
-                  <span className=" truncate max-w-[175px] sm:max-w-[240px]">
-                    {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-primary shrink-0" />
-                </button>
                 {isSelectedPageCleared && (
                   <Badge className="bg-amber-400 text-black hover:bg-amber-400 text-[10px] font-black">
                     ★ Halaman Lulus Setoran
@@ -2132,6 +2119,27 @@ export function TikrarSystem({
             <DialogDescription className="text-xs text-muted-foreground">
               Pilih qari untuk audio simak per blok.
             </DialogDescription>
+            <div className="flex items-center justify-between pt-2 mt-1 border-t border-stone-100">
+              <span className="text-xs font-bold text-stone-700">Efek Bunyi Klik Counter</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const next = !soundOn;
+                  setTikrarSoundEnabled(next);
+                  setSoundOn(next);
+                  if (next) playTikrarTap();
+                }}
+                className={cn(
+                  "h-7 px-2.5 text-[11px] font-bold rounded-lg",
+                  soundOn ? "bg-emerald-700 text-white border-emerald-700 hover:bg-emerald-800 hover:text-white" : "text-stone-600"
+                )}
+              >
+                {soundOn ? <Volume2 className="w-3.5 h-3.5 mr-1" /> : <VolumeX className="w-3.5 h-3.5 mr-1" />}
+                Bunyi {soundOn ? "On" : "Off"}
+              </Button>
+            </div>
           </DialogHeader>
           <div className="grid gap-2 p-4 overflow-y-auto flex-1">
             {RECITERS.filter((r) => r.provider !== 'mp3quran').map((r) => {
@@ -2356,17 +2364,15 @@ export function TikrarSystem({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => {
-                const next = !soundOn;
-                setTikrarSoundEnabled(next);
-                setSoundOn(next);
-                if (next) playTikrarTap();
-              }}
-              className="h-9 flex-1 sm:flex-initial px-2 sm:px-3 text-[11px] sm:text-xs font-bold border-primary/20 text-primary rounded-xl whitespace-nowrap"
-              title={soundOn ? 'Matikan bunyi counter' : 'Nyalakan bunyi counter'}
+              onClick={() => setShowReciterDialog(true)}
+              className="h-9 flex-1 sm:flex-initial px-2 sm:px-3 text-[11px] sm:text-xs font-bold border-primary/20 text-primary rounded-xl whitespace-nowrap min-w-0"
+              title="Pilih Qari Murattal & Pengaturan Bunyi Counter"
             >
-              {soundOn ? <Volume2 className="w-3.5 h-3.5 mr-1 shrink-0" /> : <VolumeX className="w-3.5 h-3.5 mr-1 shrink-0" />}
-              <span>Bunyi {soundOn ? 'On' : 'Off'}</span>
+              <Mic2 className="w-3.5 h-3.5 mr-1 shrink-0 text-primary" />
+              <span className="truncate max-w-[115px] sm:max-w-[180px]">
+                {RECITERS.find((r) => r.id === selectedReciterId)?.name.replace(/^Dr\.\s*Syaikh\s+|^Syaikh\s+/i, 'Syaikh ') || 'Pilih Qari'}
+              </span>
+              <ChevronDown className="w-3 h-3 ml-1 shrink-0 opacity-70" />
             </Button>
             {onOpenScheduleTab && (
               <Button
