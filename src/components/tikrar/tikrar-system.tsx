@@ -2112,8 +2112,8 @@ export function TikrarSystem({
 
       {/* Bar Navigasi Juz, Halaman & Audio */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 sm:gap-3 bg-white p-2.5 sm:p-4 rounded-2xl border shadow-sm sm:sticky sm:top-20 z-20 backdrop-blur-md border-primary/10">
-        {/* Baris 1: Kontrol Halaman Terkunci 1 Baris (Juz, <, Hal, >) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 w-full lg:w-auto flex-nowrap min-w-0">
+        {/* Baris 1: Kontrol Halaman Terkunci 1 Baris (Juz, <, Hal, >, Murattal Syaikh) */}
+        <div className="flex items-center gap-1 sm:gap-2 w-full lg:w-auto flex-nowrap min-w-0">
           <select
             aria-label="Pilih Juz"
             value={juz}
@@ -2127,11 +2127,11 @@ export function TikrarSystem({
                 setPage(JUZ_PAGES[j - 1] || 1);
               }
             }}
-            className="h-10 rounded-xl border-2 border-primary/20 bg-white px-2 sm:px-2.5 text-xs sm:text-sm font-black text-primary shrink-0 w-[78px] sm:w-auto"
+            className="h-10 rounded-xl border-2 border-primary/20 bg-white px-1.5 sm:px-2.5 text-xs sm:text-sm font-black text-primary shrink-0 w-[68px] sm:w-auto"
           >
             {JUZ_PAGES.map((_, i) => (
               <option key={i + 1} value={i + 1}>
-                Juz {i + 1}
+                {activeTarget && activeTarget.juz === i + 1 ? '🎯 ' : ''}Juz {i + 1}
               </option>
             ))}
           </select>
@@ -2141,9 +2141,9 @@ export function TikrarSystem({
             size="icon"
             onClick={() => setPage((p) => Math.max(juzPageRange.startPage, p - 1))}
             disabled={loading || page <= juzPageRange.startPage}
-            className="rounded-xl h-10 w-9 sm:w-10 shrink-0 border-primary/20 hover:bg-primary/5"
+            className="rounded-xl h-10 w-8 sm:w-10 shrink-0 border-primary/20 hover:bg-primary/5"
           >
-            <ChevronLeft className="h-5 w-5 text-primary" />
+            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </Button>
 
           <select
@@ -2151,7 +2151,8 @@ export function TikrarSystem({
             value={page}
             disabled={loading}
             onChange={(e) => setPage(Number(e.target.value))}
-            className="h-10 rounded-xl border-2 border-primary/20 bg-stone-50 px-2 sm:px-2.5 text-xs sm:text-sm font-black text-primary flex-1 min-w-0 truncate"
+            title={page === recommendedPage ? `Hal. ${page} (Halaman Aktif)` : `Hal. ${page}`}
+            className="h-10 rounded-xl border-2 border-primary/20 bg-stone-50 px-1.5 sm:px-2.5 text-xs sm:text-sm font-black text-primary flex-1 min-w-0 truncate"
           >
             {Array.from({ length: juzPageRange.endPage - juzPageRange.startPage + 1 }, (_, idx) => {
               const pNum = juzPageRange.startPage + idx;
@@ -2171,20 +2172,19 @@ export function TikrarSystem({
                 !pCleared &&
                 !isPriorPage &&
                 pNum > (activeTarget?.unlockedPage || 0);
+              const statusSymbol =
+                pNum === recommendedPage
+                  ? '🎯 '
+                  : pCleared
+                  ? '★ '
+                  : isPriorPage || pMemorized
+                  ? '✓ '
+                  : pLocked
+                  ? '🔒 '
+                  : '';
               return (
                 <option key={pNum} value={pNum}>
-                  {pCleared ? '★ ' : isPriorPage || pMemorized ? '✓ ' : pLocked ? '🔒 ' : ''}Hal. {pNum}
-                  {pNum === recommendedPage
-                    ? ' (Halaman Aktif)'
-                    : pCleared
-                    ? ' (Lulus Ujian)'
-                    : isPriorPage
-                    ? ' (Hafalan Awal)'
-                    : pMemorized
-                    ? ' (Sudah Dihafal)'
-                    : pLocked
-                    ? ' (Terkunci)'
-                    : ''}
+                  {statusSymbol}Hal. {pNum}
                 </option>
               );
             })}
@@ -2195,13 +2195,125 @@ export function TikrarSystem({
             size="icon"
             onClick={() => setPage((p) => Math.min(juzPageRange.endPage, p + 1))}
             disabled={loading || page >= juzPageRange.endPage}
-            className="rounded-xl h-10 w-9 sm:w-10 shrink-0 border-primary/20 hover:bg-primary/5"
+            className="rounded-xl h-10 w-8 sm:w-10 shrink-0 border-primary/20 hover:bg-primary/5"
           >
-            <ChevronRight className="h-5 w-5 text-primary" />
+            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </Button>
+
+          <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl h-10 gap-1 sm:gap-1.5 px-2 sm:px-3 font-bold border-2 border-primary/20 text-primary min-w-0 shrink-0"
+              >
+                <Mic2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="max-w-[78px] sm:max-w-[130px] truncate text-[11px] sm:text-xs">
+                  {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
+                </span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md w-[calc(100%-2rem)] max-h-[85dvh] flex flex-col p-0 overflow-hidden rounded-2xl">
+              <DialogHeader className="p-5 pb-2 shrink-0 border-b border-stone-100">
+                <DialogTitle className="text-primary font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Pilih qari untuk audio simak per blok.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-2 p-4 overflow-y-auto flex-1">
+                {RECITERS.filter((r) => r.provider !== 'mp3quran').map((r) => {
+                  const isSelected = selectedReciterId === r.id;
+                  return (
+                    <Button
+                      key={r.id}
+                      variant={isSelected ? 'default' : 'outline'}
+                      onClick={() => {
+                        stopBlockAudio();
+                        setSelectedReciterId(r.id);
+                        localStorage.setItem('aqli_reciter_id', r.id.toString());
+                        setShowReciterDialog(false);
+                      }}
+                      className={cn(
+                        'justify-between items-center p-3 h-auto font-bold rounded-2xl text-left transition-all',
+                        isSelected
+                          ? 'bg-primary text-white hover:bg-[#6b0000] hover:text-white border-primary'
+                          : 'border-muted-foreground/20 hover:border-primary/30 hover:bg-primary/5'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            'w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
+                            isSelected
+                              ? 'bg-white text-primary'
+                              : 'bg-primary/10 text-primary'
+                          )}
+                        >
+                          {isSelected ? <Check className="w-4 h-4" /> : <Mic2 className="w-3.5 h-3.5" />}
+                        </div>
+                        <div>
+                          <div className="font-bold leading-tight text-sm">{r.name}</div>
+                          {r.provider === 'mp3quran' ? (
+                            <div
+                              className={cn(
+                                'text-[10px] font-normal mt-0.5',
+                                isSelected ? 'text-amber-200' : 'text-amber-800'
+                              )}
+                            >
+                              {r.description || "Streaming CDN Resmi MP3Quran"}
+                            </div>
+                          ) : r.provider === 'everyayah' ? (
+                            <div
+                              className={cn(
+                                'text-[10px] font-normal mt-0.5',
+                                isSelected ? 'text-white/80' : 'text-emerald-700'
+                              )}
+                            >
+                              {r.description || "Audio Per Ayat (EveryAyah • Sinkron Otomatis)"}
+                            </div>
+                          ) : (
+                            <div
+                              className={cn(
+                                'text-[10px] font-normal mt-0.5',
+                                isSelected ? 'text-white/80' : 'text-muted-foreground'
+                              )}
+                            >
+                              Audio Per Ayat (Quran.com)
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {r.provider === 'mp3quran' && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[9px] uppercase px-2 py-0.5 font-bold',
+                            isSelected ? 'border-white/40 text-white' : 'border-amber-500/50 text-amber-800'
+                          )}
+                        >
+                          CDN Resmi
+                        </Badge>
+                      )}
+                      {r.provider === 'everyayah' && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[9px] uppercase px-2 py-0.5 font-bold',
+                            isSelected ? 'border-white/40 text-white' : 'border-emerald-500/50 text-emerald-800'
+                          )}
+                        >
+                          Sinkron
+                        </Badge>
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Baris 2 Audio & Quick Action */}
+        {/* Baris 2 Quick Action (Tampilkan Ayat, Tajwid, Bunyi, Reset) */}
         <div className="flex items-center justify-between lg:justify-end gap-1.5 sm:gap-2 w-full lg:w-auto shrink-0 flex-wrap min-w-0">
           {activeTarget && (juz !== activeTarget.juz || page !== recommendedPage) && (
             <Button
@@ -2218,129 +2330,18 @@ export function TikrarSystem({
             </Button>
           )}
 
-          <div className="flex items-center flex-nowrap sm:flex-wrap justify-end gap-1 sm:gap-2 ml-auto">
-            <Dialog open={showReciterDialog} onOpenChange={setShowReciterDialog}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl h-9 gap-1 sm:gap-1.5 px-2 sm:px-3 font-bold border-primary/20 text-primary min-w-0"
-                >
-                  <Mic2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                  <span className="max-w-[75px] sm:max-w-[130px] truncate text-[11px] sm:text-xs">
-                    {RECITERS.find((r) => r.id === selectedReciterId)?.name || 'Pilih Qari'}
-                  </span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md w-[calc(100%-2rem)] max-h-[85dvh] flex flex-col p-0 overflow-hidden rounded-2xl">
-                <DialogHeader className="p-5 pb-2 shrink-0 border-b border-stone-100">
-                  <DialogTitle className="text-primary font-black">Pilih Qari Al-Qur&apos;an</DialogTitle>
-                  <DialogDescription className="text-xs text-muted-foreground">
-                    Pilih qari untuk audio simak per blok.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-2 p-4 overflow-y-auto flex-1">
-                  {RECITERS.filter((r) => r.provider !== 'mp3quran').map((r) => {
-                    const isSelected = selectedReciterId === r.id;
-                    return (
-                      <Button
-                        key={r.id}
-                        variant={isSelected ? 'default' : 'outline'}
-                        onClick={() => {
-                          stopBlockAudio();
-                          setSelectedReciterId(r.id);
-                          localStorage.setItem('aqli_reciter_id', r.id.toString());
-                          setShowReciterDialog(false);
-                        }}
-                        className={cn(
-                          'justify-between items-center p-3 h-auto font-bold rounded-2xl text-left transition-all',
-                          isSelected
-                            ? 'bg-primary text-white hover:bg-[#6b0000] hover:text-white border-primary'
-                            : 'border-muted-foreground/20 hover:border-primary/30 hover:bg-primary/5'
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              'w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
-                              isSelected
-                                ? 'bg-white text-primary'
-                                : 'bg-primary/10 text-primary'
-                            )}
-                          >
-                            {isSelected ? <Check className="w-4 h-4" /> : <Mic2 className="w-3.5 h-3.5" />}
-                          </div>
-                          <div>
-                            <div className="font-bold leading-tight text-sm">{r.name}</div>
-                            {r.provider === 'mp3quran' ? (
-                              <div
-                                className={cn(
-                                  'text-[10px] font-normal mt-0.5',
-                                  isSelected ? 'text-amber-200' : 'text-amber-800'
-                                )}
-                              >
-                                {r.description || "Streaming CDN Resmi MP3Quran"}
-                              </div>
-                            ) : r.provider === 'everyayah' ? (
-                              <div
-                                className={cn(
-                                  'text-[10px] font-normal mt-0.5',
-                                  isSelected ? 'text-white/80' : 'text-emerald-700'
-                                )}
-                              >
-                                {r.description || "Audio Per Ayat (EveryAyah • Sinkron Otomatis)"}
-                              </div>
-                            ) : (
-                              <div
-                                className={cn(
-                                  'text-[10px] font-normal mt-0.5',
-                                  isSelected ? 'text-white/80' : 'text-muted-foreground'
-                                )}
-                              >
-                                Audio Per Ayat (Quran.com)
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        {r.provider === 'mp3quran' && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              'text-[9px] uppercase px-2 py-0.5 font-bold',
-                              isSelected ? 'border-white/40 text-white' : 'border-amber-500/50 text-amber-800'
-                            )}
-                          >
-                            CDN Resmi
-                          </Badge>
-                        )}
-                        {r.provider === 'everyayah' && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              'text-[9px] uppercase px-2 py-0.5 font-bold',
-                              isSelected ? 'border-white/40 text-white' : 'border-emerald-500/50 text-emerald-800'
-                            )}
-                          >
-                            Sinkron
-                          </Badge>
-                        )}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </DialogContent>
-            </Dialog>
+          <div className="flex items-center flex-wrap justify-end gap-1.5 sm:gap-2 ml-auto">
           {!isTilawahMode && (
           <Button
             type="button"
             variant={globalShowVerses ? 'outline' : 'default'}
-            size="icon"
+            size="sm"
             onClick={() => {
               setGlobalShowVerses((v) => !v);
               setExamRevealSeq((s) => s + 1);
             }}
             className={cn(
-              'h-9 w-9 shrink-0 rounded-xl',
+              'h-9 px-2.5 sm:px-3 text-[11px] sm:text-xs font-bold shrink-0 rounded-xl',
               globalShowVerses
                 ? 'border-primary/20 text-primary hover:bg-primary/5'
                 : 'bg-stone-900 hover:bg-stone-800 text-white border-stone-900'
@@ -2348,7 +2349,8 @@ export function TikrarSystem({
             aria-label={globalShowVerses ? 'Sembunyikan teks ayat' : 'Tampilkan teks ayat'}
             title={globalShowVerses ? 'Sembunyikan teks ayat saat counter' : 'Tampilkan kembali teks ayat'}
           >
-            {globalShowVerses ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {globalShowVerses ? <Eye className="w-3.5 h-3.5 mr-1" /> : <EyeOff className="w-3.5 h-3.5 mr-1" />}
+            Tampilkan Ayat
           </Button>
           )}
           <Button
@@ -4109,20 +4111,20 @@ function MaqtaCard({
               Simak audio blok ini 5x dulu untuk membuka counter.
             </p>
           )}
-          {(listenCount > 0 || state?.understood !== undefined) && !isLocked && canReset && onResetCounter && (
-            <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+            <StepTag info={listenStepInfo} className="justify-start" />
+            {(listenCount > 0 || state?.understood !== undefined) && !isLocked && canReset && onResetCounter && (
               <button
                 type="button"
                 onClick={() => onResetCounter(`${id}.listen`, `Simak TM ${id} (Blok ${letter})`)}
                 title={`Reset hitungan Simak TM ${id} ke 0`}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-stone-200 bg-stone-50 hover:bg-rose-50 hover:border-rose-200 text-[10px] font-bold text-stone-600 hover:text-rose-700 transition-colors"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-stone-200 bg-stone-50 hover:bg-rose-50 hover:border-rose-200 text-[10px] font-bold text-stone-600 hover:text-rose-700 transition-colors ml-auto"
               >
                 <RotateCcw className="w-2.5 h-2.5" />
                 Reset Simak ({listenCount}/5)
               </button>
-            </div>
-          )}
-          <StepTag info={listenStepInfo} className="justify-center" />
+            )}
+          </div>
 
           {!isLocked && !isPlaying && (
             simakPrompted ||
@@ -4475,33 +4477,35 @@ function MaqtaCard({
             )}
           </LongPressCounterButton>
           </div>
-          {(canUndo?.('combined') || (state.combined.count > 0 && canReset && !isLocked && onResetCounter)) && (
-            <div className="flex items-center justify-center gap-1.5">
-              {canUndo?.('combined') && (
-                <button
-                  type="button"
-                  onClick={() => addSubCount('combined', -1)}
-                  title="Kurangi 1 (kelebihan pencet)"
-                  aria-label="Kurangi 1"
-                  className="h-7 px-3 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
-                >
-                  −1
-                </button>
-              )}
-              {state.combined.count > 0 && canReset && !isLocked && onResetCounter && (
-                <button
-                  type="button"
-                  onClick={() => onResetCounter(`${id}.combined`, `Gabung TM ${id} (Blok ${letter})`)}
-                  title={`Reset counter Gabung TM ${id} ke 0`}
-                  className="h-7 px-2.5 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
-                >
-                  <RotateCcw className="w-2.5 h-2.5" />
-                  Reset Counter
-                </button>
-              )}
-            </div>
-          )}
-          <StepTag info={stepInfoFor?.('combined')} className="justify-center" />
+          <div className="flex flex-wrap items-center justify-between gap-1.5">
+            <StepTag info={stepInfoFor?.('combined')} className="justify-start" />
+            {(canUndo?.('combined') || (state.combined.count > 0 && canReset && !isLocked && onResetCounter)) && (
+              <div className="flex items-center gap-1.5 ml-auto">
+                {canUndo?.('combined') && (
+                  <button
+                    type="button"
+                    onClick={() => addSubCount('combined', -1)}
+                    title="Kurangi 1 (kelebihan pencet)"
+                    aria-label="Kurangi 1"
+                    className="h-6 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
+                  >
+                    −1
+                  </button>
+                )}
+                {state.combined.count > 0 && canReset && !isLocked && onResetCounter && (
+                  <button
+                    type="button"
+                    onClick={() => onResetCounter(`${id}.combined`, `Gabung TM ${id} (Blok ${letter})`)}
+                    title={`Reset counter Gabung TM ${id} ke 0`}
+                    className="h-6 px-2 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
+                  >
+                    <RotateCcw className="w-2.5 h-2.5" />
+                    Reset
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -4785,33 +4789,35 @@ function CounterBox({ id: customId, label, count, isLocked, onInc, color, thresh
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
     </LongPressCounterButton>
     </div>
-    {(canUndo || (count > 0 && canReset && onReset)) && (
-      <div className="flex items-center justify-center gap-1.5 flex-wrap">
-        {canUndo && (
-          <button
-            type="button"
-            onClick={() => onInc(-1)}
-            title="Kurangi 1 (kelebihan pencet)"
-            aria-label="Kurangi 1"
-            className="h-7 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
-          >
-            −1
-          </button>
-        )}
-        {count > 0 && canReset && onReset && (
-          <button
-            type="button"
-            onClick={onReset}
-            title={`Reset counter ${label} ke 0`}
-            className="h-7 px-2 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
-          >
-            <RotateCcw className="w-2.5 h-2.5" />
-            Reset
-          </button>
-        )}
-      </div>
-    )}
-    <StepTag info={stepInfo} className="justify-center" />
+    <div className="flex flex-wrap items-center justify-between gap-1">
+      <StepTag info={stepInfo} className="justify-start" />
+      {(canUndo || (count > 0 && canReset && onReset)) && (
+        <div className="flex items-center gap-1 ml-auto">
+          {canUndo && (
+            <button
+              type="button"
+              onClick={() => onInc(-1)}
+              title="Kurangi 1 (kelebihan pencet)"
+              aria-label="Kurangi 1"
+              className="h-6 px-2 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
+            >
+              −1
+            </button>
+          )}
+          {count > 0 && canReset && onReset && (
+            <button
+              type="button"
+              onClick={onReset}
+              title={`Reset counter ${label} ke 0`}
+              className="h-6 px-2 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
+            >
+              <RotateCcw className="w-2.5 h-2.5" />
+              Reset
+            </button>
+          )}
+        </div>
+      )}
+    </div>
     </div>
   );
 }
