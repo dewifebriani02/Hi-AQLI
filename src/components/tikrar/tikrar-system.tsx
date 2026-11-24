@@ -30,6 +30,7 @@ import {
   MessageSquare,
   Mic2,
   Minus,
+  Palette,
   Pause,
   Play,
   Plus,
@@ -86,6 +87,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { QURAN_CHAPTERS } from '@/lib/quran-data';
 import { SURAH_START_PAGES } from '@/lib/quran-mapping';
+import { renderTajwidWord, TajwidLegendBar } from '@/lib/tajwid-warna';
 import {
   BLOCK_LETTERS,
   computeMaxUnlockedPageInJuz,
@@ -211,6 +213,7 @@ const PREP_LISTEN_THRESHOLD = 5;
 
 interface Word {
   text_uthmani: string;
+  text_uthmani_tajweed?: string;
   translation?: {
     text: string;
   };
@@ -220,6 +223,7 @@ interface Verse {
   id: number;
   verse_key: string;
   text_uthmani: string;
+  text_uthmani_tajweed?: string;
   words: Word[];
   translations?: { text: string }[];
 }
@@ -859,7 +863,7 @@ export function TikrarSystem({
       try {
         const [versesRes, blocksRes] = await Promise.all([
           fetch(
-            `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33`
+            `https://api.quran.com/api/v4/verses/by_page/${page}?language=id&fields=text_uthmani,text_uthmani_tajweed&words=true&word_fields=text_uthmani,text_uthmani_tajweed&word_translation_language=id&translations=33`
           ),
           fetch(`/api/tikrar/blocks?page=${page}`).catch(() => null),
         ]);
@@ -898,6 +902,26 @@ export function TikrarSystem({
   const skipNextDbSyncRef = useRef(false);
   const [soundOn, setSoundOn] = useState(true);
   useEffect(() => setSoundOn(isTikrarSoundEnabled()), []);
+  const [showTajwid, setShowTajwid] = useState(true);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('aqli_tikrar_tajwid');
+      if (saved === '0' || saved === 'false') setShowTajwid(false);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+  const toggleTajwid = useCallback(() => {
+    setShowTajwid((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('aqli_tikrar_tajwid', next ? '1' : '0');
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  }, []);
   const lockToastShownRef = useRef(false);
   const pendingUndoKeysRef = useRef<Set<string>>(new Set());
   // Klik hari ini dari respons simpan terakhir (lebih baru daripada ringkasan sampai ringkasan dimuat ulang)
@@ -2331,6 +2355,22 @@ export function TikrarSystem({
             type="button"
             variant="outline"
             size="sm"
+            onClick={toggleTajwid}
+            className={cn(
+              'h-9 px-2 sm:px-3 text-[11px] sm:text-xs font-bold shrink-0',
+              showTajwid
+                ? 'bg-emerald-700 hover:bg-emerald-800 text-white hover:text-white border-emerald-700'
+                : 'border-primary/20 text-primary'
+            )}
+            title={showTajwid ? 'Nonaktifkan warna tajwid' : 'Aktifkan warna tajwid'}
+          >
+            <Palette className="w-3.5 h-3.5 mr-1" />
+            Tajwid {showTajwid ? 'On' : 'Off'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={() => {
               const next = !soundOn;
               setTikrarSoundEnabled(next);
@@ -2666,6 +2706,8 @@ export function TikrarSystem({
             <TilawahMushafCard
               page={page}
               juz={juz}
+              showTajwid={showTajwid}
+              onToggleTajwid={toggleTajwid}
               surahName={getSurahNameForPage(page)}
               verses={verses}
               loading={loading}
@@ -2776,6 +2818,8 @@ export function TikrarSystem({
               isExamStageOpen={isExamStageOpen}
               globalShowVerses={globalShowVerses}
               examRevealSeq={examRevealSeq}
+              showTajwid={showTajwid}
+              onToggleTajwid={toggleTajwid}
               canReset={!pageLockReason}
               onResetBlock={() =>
                 setResetConfirm({
@@ -2824,6 +2868,8 @@ export function TikrarSystem({
               isExamStageOpen={isExamStageOpen}
               globalShowVerses={globalShowVerses}
               examRevealSeq={examRevealSeq}
+              showTajwid={showTajwid}
+              onToggleTajwid={toggleTajwid}
               canReset={!pageLockReason}
               onResetBlock={() =>
                 setResetConfirm({
@@ -2894,6 +2940,8 @@ export function TikrarSystem({
             isExamStageOpen={isExamStageOpen}
             globalShowVerses={globalShowVerses}
             examRevealSeq={examRevealSeq}
+            showTajwid={showTajwid}
+            onToggleTajwid={toggleTajwid}
             canReset={!pageLockReason}
             onResetBlock={() =>
               setResetConfirm({
@@ -2984,6 +3032,8 @@ export function TikrarSystem({
             isExamStageOpen={isExamStageOpen}
             globalShowVerses={globalShowVerses}
             examRevealSeq={examRevealSeq}
+            showTajwid={showTajwid}
+            onToggleTajwid={toggleTajwid}
             canReset={!pageLockReason}
             onResetBlock={() =>
               setResetConfirm({
@@ -3393,6 +3443,8 @@ function TilawahMushafCard({
   onPlayFromVerse,
   totalProgress,
   onOpenTrialCounter,
+  showTajwid = true,
+  onToggleTajwid,
 }: {
   page: number;
   juz: number;
@@ -3406,6 +3458,8 @@ function TilawahMushafCard({
   onPlayFromVerse: (idx: number) => void;
   totalProgress: number;
   onOpenTrialCounter: () => void;
+  showTajwid?: boolean;
+  onToggleTajwid?: () => void;
 }) {
   const [showPerKata, setShowPerKata] = useState(false);
   const [showTranslation, setShowTranslation] = useState(true);
@@ -3498,7 +3552,20 @@ function TilawahMushafCard({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={onToggleTajwid}
+              className={cn(
+                'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-black border transition-colors touch-manipulation',
+                showTajwid
+                  ? 'bg-emerald-700 text-white border-emerald-700'
+                  : 'bg-white text-primary border-primary/25 hover:bg-primary/5'
+              )}
+            >
+              <Palette className="w-3.5 h-3.5" />
+              Tajwid
+            </button>
             <button
               type="button"
               onClick={() => setShowPerKata((v) => !v)}
@@ -3527,6 +3594,8 @@ function TilawahMushafCard({
             </button>
           </div>
         </div>
+
+        {showTajwid && <TajwidLegendBar />}
 
         {loading || verses.length === 0 ? (
           <div className="py-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -3590,7 +3659,7 @@ function TilawahMushafCard({
                                 )}
                               >
                                 <span style={{ fontSize: `${fontSize}px`, lineHeight: 1.55 }} className="font-arabic text-stone-950">
-                                  {w.text_uthmani}
+                                  {renderTajwidWord(w, showTajwid)}
                                 </span>
                                 <span
                                   dir="ltr"
@@ -3627,7 +3696,7 @@ function TilawahMushafCard({
                                 pinnedWord === wid && 'bg-[#D4AF37]/30'
                               )}
                             >
-                              {w.text_uthmani}
+                              {renderTajwidWord(w, showTajwid)}
                             </span>
                           </TooltipTrigger>
                           <TooltipPortal>
@@ -3704,6 +3773,8 @@ function MaqtaCard({
   isExamStageOpen = false,
   globalShowVerses = false,
   examRevealSeq = 0,
+  showTajwid = true,
+  onToggleTajwid,
   canReset = true,
   onResetBlock,
   onResetCounter,
@@ -3883,7 +3954,7 @@ function MaqtaCard({
                   style={{ fontSize: `${fontSize}px`, lineHeight: 1.55 }}
                   className={cn('font-arabic', colorClass)}
                 >
-                  {token.data.text_uthmani}
+                  {renderTajwidWord(token.data, showTajwid)}
                 </span>
                 <span
                   dir="ltr"
@@ -3923,7 +3994,7 @@ function MaqtaCard({
                 pinnedWord === wid && 'bg-[#D4AF37]/30'
               )}
             >
-              {token.data.text_uthmani}
+              {renderTajwidWord(token.data, showTajwid)}
             </span>
           </TooltipTrigger>
           <TooltipPortal>
@@ -4183,12 +4254,25 @@ function MaqtaCard({
             </div>
           ) : (
             <>
-          {/* Kontrol tampilan Per Kata & Terjemahan di dalam kotak atas */}
-          <div className="flex items-center justify-between gap-1.5 flex-nowrap">
-            <span className="text-[10px] font-bold text-stone-600 truncate min-w-0">
+          {/* Kontrol tampilan Tajwid, Per Kata & Terjemahan di dalam kotak atas */}
+          <div className="flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
+            <span className="text-[10px] font-bold text-stone-600 truncate min-w-0 hidden sm:inline">
               Ketuk kata untuk arti
             </span>
-            <div className="flex items-center gap-1 shrink-0 flex-nowrap">
+            <div className="flex items-center gap-1 shrink-0 flex-nowrap ml-auto">
+              <button
+                type="button"
+                onClick={onToggleTajwid}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
+                  showTajwid
+                    ? 'bg-emerald-700 text-white border-emerald-700'
+                    : 'bg-white/80 text-primary border-primary/20 hover:bg-white'
+                )}
+              >
+                <Palette className="w-3 h-3 shrink-0" />
+                Tajwid
+              </button>
               <button
                 type="button"
                 onClick={() => setShowPerKata((v) => !v)}
@@ -4228,7 +4312,12 @@ function MaqtaCard({
           </div>
 
           {/* Sub-blok 1 (TM x-1) */}
-          <div className="bg-white/40 rounded-xl p-3 border border-white/60 border-r-4 border-r-[#B91C1C] shadow-sm space-y-2">
+          <div
+            className={cn(
+              'rounded-xl p-3 border border-white/60 border-r-4 border-r-[#B91C1C] shadow-sm space-y-2 transition-colors',
+              showTajwid ? 'bg-white/95' : 'bg-white/40'
+            )}
+          >
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#B91C1C] text-white text-[10px] font-black tracking-wide">
                 TM {id}-1 ({letter}-1)
@@ -4244,14 +4333,19 @@ function MaqtaCard({
               </div>
             ) : (
               <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
-                {tokensA.map((t) => renderToken(t, 'text-[#991B1B]'))}
+                {tokensA.map((t) => renderToken(t, showTajwid ? 'text-stone-950' : 'text-[#991B1B]'))}
               </div>
             )}
           </div>
 
           {/* Sub-blok 2 (TM x-2) */}
           {tokensB.length > 0 && (
-            <div className="bg-white/25 rounded-xl p-3 border border-white/50 border-r-4 border-r-stone-900 shadow-sm space-y-2">
+            <div
+              className={cn(
+                'rounded-xl p-3 border border-white/50 border-r-4 border-r-stone-900 shadow-sm space-y-2 transition-colors',
+                showTajwid ? 'bg-white/90' : 'bg-white/25'
+              )}
+            >
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-900 text-white text-[10px] font-black tracking-wide">
                   TM {id}-2 ({letter}-2)
@@ -4265,6 +4359,8 @@ function MaqtaCard({
               </div>
             </div>
           )}
+
+          {showTajwid && <TajwidLegendBar />}
 
           {/* Terjemahan kalimat terintegrasi di dalam kotak atas (tanpa mengulang teks Arab) */}
           {(playingVerse || showTranslation) && (

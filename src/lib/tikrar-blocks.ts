@@ -17,6 +17,7 @@ export interface VerseWordLike {
   position?: number;
   char_type_name?: string;
   text_uthmani?: string;
+  text_uthmani_tajweed?: string;
   line_number?: number;
   page_number?: number;
   translation?: { text?: string };
@@ -28,6 +29,7 @@ export interface TikrarVerseLike {
   verse_number?: number;
   verse_key: string;
   text_uthmani?: string;
+  text_uthmani_tajweed?: string;
   words?: VerseWordLike[] | any[];
   translations?: { text: string }[];
   [key: string]: any;
