@@ -4103,16 +4103,73 @@ function MaqtaCard({
               TUNTAS
             </Badge>
           ) : null}
-          {hasBlockActivity && !isLocked && canReset && onResetBlock && (
-            <button
-              type="button"
-              onClick={onResetBlock}
-              title={`Reset seluruh counter Blok ${letter} (TM ${id})`}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-rose-300/80 bg-white/95 text-[10px] font-black text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shrink-0"
-            >
-              <RotateCcw className="w-2.5 h-2.5" />
-              <span>Reset Blok</span>
-            </button>
+          {hasBlockActivity && !isLocked && canReset && (onResetBlock || onResetCounter) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  title={`Pilihan reset counter Blok ${letter} (TM ${id})`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-stone-300/90 bg-white/95 text-[10px] font-bold text-stone-700 hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 active:scale-95 transition-all shrink-0"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  <span>Reset</span>
+                  <ChevronDown className="w-2.5 h-2.5 opacity-70" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5">
+                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-wider text-stone-500 px-2 py-1">
+                  Reset Counter Blok {letter} (TM {id})
+                </DropdownMenuLabel>
+                {(listenCount > 0 || state?.understood !== undefined) && onResetCounter && (
+                  <DropdownMenuItem
+                    onClick={() => onResetCounter(`${id}.listen`, `Simak TM ${id} (Blok ${letter})`)}
+                    className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
+                  >
+                    <span>Reset Simak TM {id}</span>
+                    <span className="text-[10px] font-black text-stone-500">{listenCount}/5</span>
+                  </DropdownMenuItem>
+                )}
+                {state.a.count > 0 && onResetCounter && (
+                  <DropdownMenuItem
+                    onClick={() => onResetCounter(`${id}.a`, `TM ${id}-1 (Blok ${letter}-1)`)}
+                    className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
+                  >
+                    <span>Reset TM {id}-1 ({letter}-1)</span>
+                    <span className="text-[10px] font-black text-stone-500">{state.a.count}/{PASS_THRESHOLD}</span>
+                  </DropdownMenuItem>
+                )}
+                {state.b.count > 0 && onResetCounter && (
+                  <DropdownMenuItem
+                    onClick={() => onResetCounter(`${id}.b`, `TM ${id}-2 (Blok ${letter}-2)`)}
+                    className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
+                  >
+                    <span>Reset TM {id}-2 ({letter}-2)</span>
+                    <span className="text-[10px] font-black text-stone-500">{state.b.count}/{PASS_THRESHOLD}</span>
+                  </DropdownMenuItem>
+                )}
+                {state.combined.count > 0 && onResetCounter && (
+                  <DropdownMenuItem
+                    onClick={() => onResetCounter(`${id}.combined`, `Gabung TM ${id} (Blok ${letter})`)}
+                    className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
+                  >
+                    <span>Reset Gabung TM {id}</span>
+                    <span className="text-[10px] font-black text-stone-500">{state.combined.count}/{PASS_THRESHOLD}</span>
+                  </DropdownMenuItem>
+                )}
+                {onResetBlock && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={onResetBlock}
+                      className="text-xs font-black text-rose-700 focus:text-rose-800 focus:bg-rose-50 rounded-lg cursor-pointer gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset Seluruh Blok {letter}</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>
@@ -4156,20 +4213,11 @@ function MaqtaCard({
               Simak audio blok ini 5x dulu untuk membuka counter.
             </p>
           )}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-            <StepTag info={listenStepInfo} className="justify-start" />
-            {(listenCount > 0 || state?.understood !== undefined) && !isLocked && canReset && onResetCounter && (
-              <button
-                type="button"
-                onClick={() => onResetCounter(`${id}.listen`, `Simak TM ${id} (Blok ${letter})`)}
-                title={`Reset hitungan Simak TM ${id} ke 0`}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-stone-200 bg-stone-50 hover:bg-rose-50 hover:border-rose-200 text-[10px] font-bold text-stone-600 hover:text-rose-700 transition-colors ml-auto"
-              >
-                <RotateCcw className="w-2.5 h-2.5" />
-                Reset Simak ({listenCount}/5)
-              </button>
-            )}
-          </div>
+          {listenStepInfo && (
+            <div className="flex items-center justify-between gap-2 pt-0.5">
+              <StepTag info={listenStepInfo} className="justify-start" />
+            </div>
+          )}
 
           {!isLocked && !isPlaying && (
             simakPrompted ||
@@ -4485,33 +4533,18 @@ function MaqtaCard({
             )}
           </LongPressCounterButton>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-1.5">
             <StepTag info={stepInfoFor?.('combined')} className="justify-start" />
-            {(canUndo?.('combined') || (state.combined.count > 0 && canReset && !isLocked && onResetCounter)) && (
-              <div className="flex items-center gap-1.5 ml-auto">
-                {canUndo?.('combined') && (
-                  <button
-                    type="button"
-                    onClick={() => addSubCount('combined', -1)}
-                    title="Kurangi 1 (kelebihan pencet)"
-                    aria-label="Kurangi 1"
-                    className="h-6 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
-                  >
-                    −1
-                  </button>
-                )}
-                {state.combined.count > 0 && canReset && !isLocked && onResetCounter && (
-                  <button
-                    type="button"
-                    onClick={() => onResetCounter(`${id}.combined`, `Gabung TM ${id} (Blok ${letter})`)}
-                    title={`Reset counter Gabung TM ${id} ke 0`}
-                    className="h-6 px-2 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
-                  >
-                    <RotateCcw className="w-2.5 h-2.5" />
-                    Reset
-                  </button>
-                )}
-              </div>
+            {canUndo?.('combined') && (
+              <button
+                type="button"
+                onClick={() => addSubCount('combined', -1)}
+                title="Kurangi 1 (kelebihan pencet)"
+                aria-label="Kurangi 1"
+                className="h-6 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation ml-auto shrink-0"
+              >
+                −1
+              </button>
             )}
           </div>
         </div>
@@ -4564,16 +4597,27 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
-        <div className="text-right flex flex-col items-end mr-1">
-          <span className="text-base font-black text-black uppercase">
+        <div className="text-right flex flex-col items-end mr-1 gap-1">
+          <span className="text-base font-black text-black uppercase leading-none">
             {count} / {threshold}
           </span>
-          <div className="w-16 h-1.5 bg-muted rounded-full mt-1 overflow-hidden">
+          <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-[#D4AF37] transition-all"
               style={{ width: `${Math.min(100, (count / threshold) * 100)}%` }}
             />
           </div>
+          {count > 0 && !isLocked && canReset && onReset && (
+            <button
+              type="button"
+              onClick={onReset}
+              title={`Reset counter ${label} ke 0`}
+              className="inline-flex items-center gap-1 text-[9.5px] font-bold text-stone-500 hover:text-rose-700 transition-colors pt-0.5"
+            >
+              <RotateCcw className="w-2.5 h-2.5" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
         <div className="flex-1 sm:flex-none sm:w-40 flex flex-col gap-1.5">
           <div className="relative">
@@ -4599,33 +4643,20 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
               )}
             </LongPressCounterButton>
           </div>
-          {(canUndo || (count > 0 && canReset && onReset)) && (
-            <div className="flex items-center justify-center gap-1.5">
-              {canUndo && (
-                <button
-                  type="button"
-                  onClick={() => onIncrement(-1)}
-                  title="Kurangi 1 (kelebihan pencet)"
-                  aria-label="Kurangi 1"
-                  className="h-7 px-3 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
-                >
-                  −1
-                </button>
-              )}
-              {count > 0 && canReset && onReset && (
-                <button
-                  type="button"
-                  onClick={onReset}
-                  title={`Reset counter ${label} ke 0`}
-                  className="h-7 px-2.5 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
-                >
-                  <RotateCcw className="w-2.5 h-2.5" />
-                  Reset Counter
-                </button>
-              )}
-            </div>
-          )}
-          <StepTag info={stepInfo} className="justify-center" />
+          <div className="flex items-center justify-between gap-1.5">
+            <StepTag info={stepInfo} className="justify-start" />
+            {canUndo && (
+              <button
+                type="button"
+                onClick={() => onIncrement(-1)}
+                title="Kurangi 1 (kelebihan pencet)"
+                aria-label="Kurangi 1"
+                className="h-6 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation ml-auto shrink-0"
+              >
+                −1
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -4797,33 +4828,18 @@ function CounterBox({ id: customId, label, count, isLocked, onInc, color, thresh
       {isDone && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-current" />}
     </LongPressCounterButton>
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-1">
-      <StepTag info={stepInfo} className="justify-start" />
-      {(canUndo || (count > 0 && canReset && onReset)) && (
-        <div className="flex items-center gap-1 ml-auto">
-          {canUndo && (
-            <button
-              type="button"
-              onClick={() => onInc(-1)}
-              title="Kurangi 1 (kelebihan pencet)"
-              aria-label="Kurangi 1"
-              className="h-6 px-2 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation"
-            >
-              −1
-            </button>
-          )}
-          {count > 0 && canReset && onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              title={`Reset counter ${label} ke 0`}
-              className="h-6 px-2 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation"
-            >
-              <RotateCcw className="w-2.5 h-2.5" />
-              Reset
-            </button>
-          )}
-        </div>
+    <div className="flex items-center justify-between gap-1 min-h-[18px]">
+      <StepTag info={stepInfo} className="justify-start min-w-0" />
+      {canUndo && (
+        <button
+          type="button"
+          onClick={() => onInc(-1)}
+          title="Kurangi 1 (kelebihan pencet)"
+          aria-label="Kurangi 1"
+          className="h-6 px-2 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation ml-auto shrink-0"
+        >
+          −1
+        </button>
       )}
     </div>
     </div>
