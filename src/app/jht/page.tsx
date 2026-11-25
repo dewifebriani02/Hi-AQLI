@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   BookOpen,
   RotateCcw,
@@ -21,6 +22,11 @@ import {
   CalendarClock,
   RefreshCw,
   UserPlus,
+  Plus,
+  X,
+  QrCode,
+  LogIn,
+  UserCheck,
 } from "lucide-react";
 
 type TabKey =
@@ -30,25 +36,396 @@ type TabKey =
   | "halaqah"
   | "partner_alumni"
   | "admin_bph";
-type HalaqahFilter = "thalibat" | "thullab";
+type HalaqahFilter = "thalibat" | "thullab" | "alumni";
 type PartnerGenderFilter = "thalibat" | "thullab" | "alumni";
 
-export default function JhtPreviewPage() {
+export default function JhtFullAppPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("ziyadah");
-  const [tikrarCount, setTikrarCount] = useState<number>(14);
-  const [selectedTasmiJuz, setSelectedTasmiJuz] = useState<string>("5 Juz");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isAdminOrMusyrif, setIsAdminOrMusyrif] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Profile & Core State
+  const [profile, setProfile] = useState<any>({
+    full_name: "Aisyah Humaira",
+    gender: "thalibah",
+    prodi: "Akuntansi Syariah",
+    angkatan: 2024,
+    status_keanggotaan: "aktif",
+    halaqah_name: "Halaqah Thalibat Al-Fath",
+    musyrif_name: "Ustadzah Nabila, Lc.",
+    total_juz_hafal: 13,
+    current_ziyadah_juz: 8,
+    current_ziyadah_page: 142,
+    current_ziyadah_surah: "QS. Al-An'am (6) : Ayat 111 – 118",
+    current_tikrar_count: 14,
+    peer_simak_partner: "Fatimah Az-Zahra",
+    exam_mode_active: false,
+    streak_days: 19,
+    tasmi_target_category: "5 Juz",
+    tasmi_target_range: "Juz 1 – 5",
+    tasmi_readiness_pct: 85,
+    tasmi_registered: false,
+  });
+
+  // Collections from DB
+  const [ziyadahLogs, setZiyadahLogs] = useState<any[]>([]);
+  const [juzHealth, setJuzHealth] = useState<any[]>([]);
+  const [murajaahLogs, setMurajaahLogs] = useState<any[]>([]);
+  const [halaqahMembers, setHalaqahMembers] = useState<any[]>([]);
+  const [partnerPosts, setPartnerPosts] = useState<any[]>([]);
+
+  // UI Interactive States
   const [halaqahFilter, setHalaqahFilter] = useState<HalaqahFilter>("thalibat");
   const [partnerFilter, setPartnerFilter] =
     useState<PartnerGenderFilter>("thalibat");
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [examModeActive, setExamModeActive] = useState<boolean>(false);
-  const [invitedPartners, setInvitedPartners] = useState<Record<string, boolean>>({});
-  const [graduatedBatch, setGraduatedBatch] = useState<boolean>(false);
-  const [assignedOprec, setAssignedOprec] = useState<boolean>(false);
+  const [invitedPartners, setInvitedPartners] = useState<Record<string, boolean>>(
+    {}
+  );
   const [rolledSemester, setRolledSemester] = useState<boolean>(false);
+  const [baidCompletedToday, setBaidCompletedToday] = useState<boolean>(false);
 
+  // Forms & Modals
+  const [showZiyadahForm, setShowZiyadahForm] = useState<boolean>(false);
+  const [ziyadahPageInput, setZiyadahPageInput] = useState<number>(142);
+  const [ziyadahSurahInput, setZiyadahSurahInput] = useState<string>(
+    "QS. Al-An'am (6) : Ayat 111 – 118"
+  );
+  const [ziyadahPeerInput, setZiyadahPeerInput] = useState<string>(
+    "Fatimah Az-Zahra"
+  );
+  const [ziyadahNotesInput, setZiyadahNotesInput] = useState<string>("");
+
+  const [showPartnerForm, setShowPartnerForm] = useState<boolean>(false);
+  const [newPartnerLoc, setNewPartnerLoc] = useState<string>(
+    "Musholla Akhwat Kampus Utama"
+  );
+  const [newPartnerSlot, setNewPartnerSlot] = useState<string>(
+    "Hari ini, 12.30 – 13.30 WIB (Jeda Kuliah)"
+  );
+  const [newPartnerTarget, setNewPartnerTarget] = useState<string>(
+    "Simak Muraja'ah Juz 5 (1/2 Juz)"
+  );
+
+  const [showOprecForm, setShowOprecForm] = useState<boolean>(false);
+  const [newMemberName, setNewMemberName] = useState<string>("");
+  const [newMemberGender, setNewMemberGender] = useState<"thalibah" | "thalib">(
+    "thalibah"
+  );
+  const [newMemberProdi, setNewMemberProdi] = useState<string>(
+    "Ekonomi Syariah"
+  );
+  const [newMemberAngkatan, setNewMemberAngkatan] = useState<number>(2026);
+  const [newMemberJuz, setNewMemberJuz] = useState<number>(5);
+
+  const [showSkpiModal, setShowSkpiModal] = useState<boolean>(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((prev) => (prev === msg ? null : prev));
+    }, 3200);
+  };
+
+  const fetchJhtData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/jht", { cache: "no-store" });
+      const json = await res.json();
+      if (json?.data) {
+        setIsLoggedIn(Boolean(json.data.isLoggedIn));
+        setIsAdminOrMusyrif(Boolean(json.data.isAdminOrMusyrif));
+        if (json.data.profile) {
+          setProfile(json.data.profile);
+          setZiyadahPageInput(json.data.profile.current_ziyadah_page || 142);
+          setZiyadahSurahInput(
+            json.data.profile.current_ziyadah_surah ||
+              "QS. Al-An'am (6) : Ayat 111 – 118"
+          );
+        }
+        if (Array.isArray(json.data.ziyadahLogs))
+          setZiyadahLogs(json.data.ziyadahLogs);
+        if (Array.isArray(json.data.juzHealth))
+          setJuzHealth(json.data.juzHealth);
+        if (Array.isArray(json.data.murajaahLogs))
+          setMurajaahLogs(json.data.murajaahLogs);
+        if (Array.isArray(json.data.halaqahMembers))
+          setHalaqahMembers(json.data.halaqahMembers);
+        if (Array.isArray(json.data.partnerPosts))
+          setPartnerPosts(json.data.partnerPosts);
+      }
+    } catch (err) {
+      console.error("Failed to load JHT data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchJhtData();
+  }, [fetchJhtData]);
+
+  const tikrarCount = Number(profile.current_tikrar_count) || 0;
   const tikrarTarget = 20;
   const tikrarPct = Math.min(100, Math.round((tikrarCount / tikrarTarget) * 100));
+
+  const handleUpdateTikrar = async (nextCount: number) => {
+    setProfile((prev: any) => ({ ...prev, current_tikrar_count: nextCount }));
+    try {
+      await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_tikrar",
+          tikrar_count: nextCount,
+        }),
+      });
+    } catch {}
+  };
+
+  const handleToggleExamMode = async () => {
+    const nextVal = !profile.exam_mode_active;
+    setProfile((prev: any) => ({ ...prev, exam_mode_active: nextVal }));
+    showToast(
+      nextVal
+        ? "🎓 Mode UTS/UAS Diaktifkan: Streak dijaga & target dialihkan ke Muraja'ah ringan."
+        : "✅ Mode Normal Aktif Kembali: Target Ziyadah harian dilanjutkan."
+    );
+    try {
+      await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "toggle_exam_mode",
+          exam_mode_active: nextVal,
+        }),
+      });
+    } catch {}
+  };
+
+  const handleSubmitZiyadah = async (
+    method: "mandiri" | "voice_note" | "tatap_muka"
+  ) => {
+    try {
+      const res = await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "submit_ziyadah",
+          page_number: ziyadahPageInput,
+          juz: profile.current_ziyadah_juz,
+          surah_ayah: ziyadahSurahInput,
+          tikrar_count: tikrarCount,
+          submission_method: method,
+          peer_simak_by: ziyadahPeerInput,
+          notes: ziyadahNotesInput,
+        }),
+      });
+      const json = await res.json();
+      if (json?.data?.log) {
+        setZiyadahLogs((prev) => [json.data.log, ...prev]);
+      }
+      if (json?.data?.profile) {
+        setProfile(json.data.profile);
+        setZiyadahPageInput(json.data.profile.current_ziyadah_page);
+      }
+      setShowZiyadahForm(false);
+      setZiyadahNotesInput("");
+      showToast(
+        method === "voice_note"
+          ? "🎙️ Setoran Voice Note berhasil dikirim ke Musyrif/Musyrifah!"
+          : "✅ Pengajuan Setoran Ziyadah berhasil tercatat di database!"
+      );
+    } catch {
+      showToast("Gagal menyimpan setoran ziyadah.");
+    }
+  };
+
+  const handleCompleteMurajaah = async (
+    juzNum: number,
+    tipe: "qarib" | "baid",
+    targetRange: string
+  ) => {
+    if (tipe === "baid" && juzNum === 5) {
+      setBaidCompletedToday(true);
+    }
+    try {
+      const res = await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "complete_murajaah",
+          juz: juzNum,
+          tipe,
+          target_range: targetRange,
+        }),
+      });
+      const json = await res.json();
+      if (json?.data?.juzHealth) {
+        setJuzHealth(json.data.juzHealth);
+      }
+      if (json?.data?.murajaahLog) {
+        setMurajaahLogs((prev) => [json.data.murajaahLog, ...prev]);
+      }
+      showToast(
+        `✅ Muraja'ah Juz ${juzNum} tercatat selesai! Status Peta Kesehatan diperbarui ke Mutqin.`
+      );
+    } catch {
+      showToast("Gagal memperbarui muraja'ah.");
+    }
+  };
+
+  const handleSelectTasmiCategory = async (category: string) => {
+    const rangeMap: Record<string, string> = {
+      "1 Juz": "Juz 30",
+      "3 Juz": "Juz 1 – 3",
+      "5 Juz": "Juz 1 – 5",
+      "10 Juz": "Juz 1 – 10",
+      "15 Juz": "Juz 1 – 15",
+      "20 Juz": "Juz 1 – 20",
+      "30 Juz": "Juz 1 – 30 (Khatam)",
+    };
+    const nextRange = rangeMap[category] || "Juz 1 – 5";
+    setProfile((prev: any) => ({
+      ...prev,
+      tasmi_target_category: category,
+      tasmi_target_range: nextRange,
+    }));
+    try {
+      await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_tasmi_target",
+          tasmi_target_category: category,
+          tasmi_target_range: nextRange,
+        }),
+      });
+      showToast(`🎯 Target Tasmi' diubah ke ${category} (${nextRange}).`);
+    } catch {}
+  };
+
+  const handleRegisterTasmiExam = async () => {
+    setProfile((prev: any) => ({
+      ...prev,
+      tasmi_registered: true,
+      tasmi_readiness_pct: Math.max(prev.tasmi_readiness_pct || 85, 92),
+    }));
+    try {
+      await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_tasmi_target",
+          tasmi_target_category: profile.tasmi_target_category,
+          tasmi_target_range: profile.tasmi_target_range,
+          tasmi_registered: true,
+        }),
+      });
+      showToast(
+        "🎉 Pendaftaran Sidang Tasmi' berhasil diajukan ke Koordinator Penguji JHT!"
+      );
+    } catch {}
+  };
+
+  const handleCreatePartnerPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create_partner_post",
+          gender_category: partnerFilter,
+          campus_location: newPartnerLoc,
+          free_time_slot: newPartnerSlot,
+          target_simak: newPartnerTarget,
+        }),
+      });
+      const json = await res.json();
+      if (json?.data?.post) {
+        setPartnerPosts((prev) => [json.data.post, ...prev]);
+      }
+      setShowPartnerForm(false);
+      showToast("🤝 Jadwal Cari Partner Simak berhasil dipublikasikan!");
+    } catch {
+      showToast("Gagal membuat pengumuman partner simak.");
+    }
+  };
+
+  const handleAddOprecMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemberName.trim()) return;
+    try {
+      const res = await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "admin_add_member",
+          full_name: newMemberName.trim(),
+          gender: newMemberGender,
+          prodi: newMemberProdi,
+          angkatan: newMemberAngkatan,
+          total_juz_hafal: newMemberJuz,
+        }),
+      });
+      const json = await res.json();
+      if (Array.isArray(json?.data?.halaqahMembers)) {
+        setHalaqahMembers(json.data.halaqahMembers);
+      }
+      setNewMemberName("");
+      setShowOprecForm(false);
+      showToast(
+        `✅ ${
+          newMemberGender === "thalib" ? "Thalib" : "Thalibah"
+        } baru berhasil ditambahkan & di-assign ke Halaqah!`
+      );
+    } catch {
+      showToast("Gagal menambahkan anggota baru.");
+    }
+  };
+
+  const handleGraduateBatch = async () => {
+    try {
+      const res = await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "admin_graduate_batch",
+          angkatan: 2022,
+        }),
+      });
+      const json = await res.json();
+      if (Array.isArray(json?.data?.halaqahMembers)) {
+        setHalaqahMembers(json.data.halaqahMembers);
+      }
+      showToast(
+        "🎓 Angkatan <= 2022 resmi dipindahkan ke Komunitas Huffazh Alumni Tazkia!"
+      );
+    } catch {
+      showToast("Gagal memproses graduasi alumni.");
+    }
+  };
+
+  const handleVerifyZiyadah = async (logId: number) => {
+    try {
+      const res = await fetch("/api/jht", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "admin_verify_ziyadah",
+          log_id: logId,
+          predikat: "Mumtaz (Lulus)",
+        }),
+      });
+      const json = await res.json();
+      if (Array.isArray(json?.data?.ziyadahLogs)) {
+        setZiyadahLogs(json.data.ziyadahLogs);
+      }
+      showToast("✅ Setoran Ziyadah disahkan dengan predikat Mumtaz (Lulus)!");
+    } catch {}
+  };
 
   const handleCopyShareLink = async () => {
     const shareUrl =
@@ -67,59 +444,102 @@ export default function JhtPreviewPage() {
 
   const toggleInvitePartner = (id: string) => {
     setInvitedPartners((prev) => ({ ...prev, [id]: !prev[id] }));
+    showToast("📨 Ajakan simak bareng telah dikirim ke rekan!");
   };
-
-  const juzHealthList = [
-    { juz: 1, status: "mutqin", label: "2h lalu" },
-    { juz: 2, status: "mutqin", label: "3h lalu" },
-    { juz: 3, status: "mutqin", label: "4h lalu" },
-    { juz: 4, status: "mutqin", label: "1h lalu" },
-    { juz: 5, status: "warning", label: "9h lalu" },
-    { juz: 6, status: "warning", label: "11h lalu" },
-    { juz: 7, status: "urgent", label: "16h lalu" },
-    { juz: 8, status: "progress", label: "Ziyadah" },
-    { juz: 26, status: "mutqin", label: "5h lalu" },
-    { juz: 27, status: "mutqin", label: "6h lalu" },
-    { juz: 28, status: "mutqin", label: "4h lalu" },
-    { juz: 29, status: "mutqin", label: "2h lalu" },
-    { juz: 30, status: "mutqin", label: "1h lalu" },
-  ];
 
   const getJuzInfo = (juzNum: number) => {
-    const found = juzHealthList.find((j) => j.juz === juzNum);
-    return found || { juz: juzNum, status: "empty", label: "-" };
+    const found = juzHealth.find((j) => Number(j.juz) === juzNum);
+    if (!found || found.status === "empty") {
+      return { juz: juzNum, status: "empty", label: "-", putaran: 0 };
+    }
+    if (found.status === "progress") {
+      return {
+        juz: juzNum,
+        status: "progress",
+        label: "Ziyadah",
+        putaran: found.putaran_count || 1,
+      };
+    }
+    let daysAgo = 1;
+    if (found.last_murajaah_at) {
+      const diffMs = Date.now() - new Date(found.last_murajaah_at).getTime();
+      daysAgo = Math.max(0, Math.floor(diffMs / 86400000));
+    }
+    return {
+      juz: juzNum,
+      status: found.status,
+      label: daysAgo === 0 ? "Hari ini" : `${daysAgo}h lalu`,
+      putaran: found.putaran_count || 1,
+    };
   };
+
+  const filteredHalaqahMembers = halaqahMembers.filter((m) => {
+    if (halaqahFilter === "alumni") return m.status_keanggotaan === "alumni";
+    if (halaqahFilter === "thullab")
+      return m.gender === "thalib" && m.status_keanggotaan !== "alumni";
+    return m.gender === "thalibah" && m.status_keanggotaan !== "alumni";
+  });
+
+  const filteredPartnerPosts = partnerPosts.filter(
+    (p) => p.gender_category === partnerFilter
+  );
 
   return (
     <div className="min-h-screen bg-[#F4F7FB] text-[#0F1E3C] pb-16 font-sans">
-      {/* Top Preview Banner for Stakeholders */}
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-50 max-w-sm bg-[#0F1E3C] text-white border border-[#8CC63F] px-4 py-3 rounded-2xl shadow-2xl text-xs font-extrabold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3">
+          <Sparkles className="w-4 h-4 text-[#8CC63F] shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Top Navigation Bar */}
       <div className="bg-[#0F1E3C] text-white border-b border-white/10 px-4 py-2.5">
         <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#8CC63F] text-[#0F1E3C] uppercase tracking-wider">
-              <Sparkles className="w-3 h-3" /> Preview UI Interaktif
+              <Sparkles className="w-3 h-3" /> Aplikasi Aktif
             </span>
             <span className="text-xs text-slate-200 font-medium">
-              Jami&apos;atul Huffazh Tazkia • Mutaba&apos;ah Mahasiswa &amp; Alumni
+              Jami&apos;atul Huffazh Tazkia • Sistem Mutaba&apos;ah Digital
             </span>
           </div>
-          <button
-            type="button"
-            onClick={handleCopyShareLink}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer border border-white/15"
-          >
-            {copiedLink ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-[#8CC63F]" />
-                <span>Link Tersalin!</span>
-              </>
+
+          <div className="flex items-center gap-2">
+            {isLoggedIn ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#8CC63F]/20 border border-[#8CC63F]/40 text-[#B8F06D] text-xs font-bold">
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>{profile.full_name}</span>
+              </span>
             ) : (
-              <>
-                <Share2 className="w-3.5 h-3.5 text-[#8CC63F]" />
-                <span>Salin Link Preview</span>
-              </>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15"
+              >
+                <LogIn className="w-3.5 h-3.5 text-[#8CC63F]" />
+                <span>Login Akun</span>
+              </Link>
             )}
-          </button>
+
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer border border-white/15"
+            >
+              {copiedLink ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#8CC63F]" />
+                  <span>Link Tersalin!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-[#8CC63F]" />
+                  <span>Bagikan Link</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -138,29 +558,24 @@ export default function JhtPreviewPage() {
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  {/* Spire */}
                   <path
                     d="M50 12V20"
                     stroke="#1B367C"
                     strokeWidth="3"
                     strokeLinecap="round"
                   />
-                  {/* Left Dome Arch (Navy) */}
                   <path
                     d="M32 54C32 35 42 22 50 20C44 25 39 37 39 54H32Z"
                     fill="#1B367C"
                   />
-                  {/* Right Dome Arch (Lime Green) */}
                   <path
                     d="M68 54C68 35 58 22 50 20C56 25 61 37 61 54H68Z"
-                  fill="#8CC63F"
+                    fill="#8CC63F"
                   />
-                  {/* Mushaf Pages (Lime Green) */}
                   <path
                     d="M20 62C30 58 42 60 50 67C58 60 70 58 80 62L77 56C67 53 57 55 50 62C43 55 33 53 23 56L20 62Z"
                     fill="#8CC63F"
                   />
-                  {/* Mushaf Base Cover (Navy) */}
                   <path
                     d="M15 72C28 66 41 68 47 74C48.5 76 51.5 76 53 74C59 68 72 66 85 72L82 66C70 61 58 63 50 70C42 63 30 61 18 66L15 72Z"
                     fill="#1B367C"
@@ -176,9 +591,13 @@ export default function JhtPreviewPage() {
                   Mutaba&apos;ah Tahfizh Al-Qur&apos;an
                 </h1>
                 <p className="text-xs text-slate-200/90 mt-0.5">
-                  Thalibah: <strong className="text-white">Aisyah Humaira</strong> (Akuntansi Syariah &apos;24) •{" "}
-                  Halaqah Thalibat Al-Fath •{" "}
-                  <strong className="text-[#B8F06D]">13 Juz Hafal</strong>
+                  {profile.gender === "thalib" ? "Thalib" : "Thalibah"}:{" "}
+                  <strong className="text-white">{profile.full_name}</strong> (
+                  {profile.prodi} &apos;{String(profile.angkatan).slice(-2)}) •{" "}
+                  {profile.halaqah_name} •{" "}
+                  <strong className="text-[#B8F06D]">
+                    {profile.total_juz_hafal} Juz Hafal
+                  </strong>
                 </p>
               </div>
             </div>
@@ -186,27 +605,28 @@ export default function JhtPreviewPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setExamModeActive((v) => !v)}
+                onClick={handleToggleExamMode}
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border transition-all cursor-pointer ${
-                  examModeActive
+                  profile.exam_mode_active
                     ? "bg-amber-400 text-[#0F1E3C] border-amber-300 shadow-sm"
                     : "bg-white/10 text-slate-200 border-white/15 hover:bg-white/15"
                 }`}
               >
                 <CalendarClock className="w-3.5 h-3.5" />
                 <span>
-                  {examModeActive
+                  {profile.exam_mode_active
                     ? "Mode UTS/UAS Aktif (Streak Freeze)"
                     : "Aktifkan Mode UTS/UAS"}
                 </span>
               </button>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-bold">
-                <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> 19 Hari Istiqamah
+                <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />{" "}
+                {profile.streak_days} Hari Istiqamah
               </span>
             </div>
           </div>
 
-          {examModeActive && (
+          {profile.exam_mode_active && (
             <div className="relative z-10 mt-3 rounded-2xl bg-amber-400/15 border border-amber-300/40 px-3.5 py-2.5 text-xs text-amber-100 flex items-center justify-between gap-2">
               <span>
                 🎓 <strong>Mode Ujian Kampus (UTS/UAS/KKN) Aktif:</strong> Target Ziyadah harian di-pause sementara dan dialihkan ke Muraja&apos;ah ringan agar nilai akademik &amp; hafalan sama-sama terjaga tanpa memutus streak.
@@ -229,10 +649,10 @@ export default function JhtPreviewPage() {
                 1. Sesi Ziyadah
               </div>
               <div className="text-sm sm:text-base font-extrabold text-[#B8F06D] mt-0.5">
-                Hal. 142
+                Hal. {profile.current_ziyadah_page}
               </div>
               <div className="text-[11px] text-slate-200/85 truncate">
-                QS. Al-An&apos;am: 111–118
+                {profile.current_ziyadah_surah}
               </div>
             </button>
 
@@ -249,10 +669,10 @@ export default function JhtPreviewPage() {
                 2. Sesi Muraja&apos;ah
               </div>
               <div className="text-sm sm:text-base font-extrabold text-white mt-0.5">
-                2 / 2 Sesi
+                {baidCompletedToday ? "2 / 2 Sesi" : "1 / 2 Sesi"}
               </div>
               <div className="text-[11px] text-slate-200/85 truncate">
-                Qarib Juz 7 • Ba&apos;id Juz 2
+                Qarib Juz 7 • Ba&apos;id Juz 5
               </div>
             </button>
 
@@ -269,16 +689,17 @@ export default function JhtPreviewPage() {
                 3. Target Tasmi&apos;
               </div>
               <div className="text-sm sm:text-base font-extrabold text-amber-300 mt-0.5">
-                5 Juz (85%)
+                {profile.tasmi_target_category} ({profile.tasmi_readiness_pct}%)
               </div>
               <div className="text-[11px] text-slate-200/85 truncate">
-                Juz 1–5 • H-9 Ujian
+                {profile.tasmi_target_range} •{" "}
+                {profile.tasmi_registered ? "Terdaftar Ujian" : "H-9 Ujian"}
               </div>
             </button>
           </div>
         </div>
 
-        {/* Navigation Segmented Tabs (6 Tabs: 3 Core + Halaqah + Partner & Alumni + Panel Admin BPH) */}
+        {/* Navigation Segmented Tabs (6 Tabs) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 bg-white p-1.5 rounded-2xl border border-[#DCE5F2] shadow-xs">
           <button
             type="button"
@@ -366,19 +787,84 @@ export default function JhtPreviewPage() {
               <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                 <div>
                   <span className="text-[11px] font-extrabold text-[#1B367C] uppercase tracking-wider">
-                    SETORAN ZIYADAH HARI INI • JUZ 8
+                    SETORAN ZIYADAH HARI INI • JUZ {profile.current_ziyadah_juz}
                   </span>
                   <h2 className="text-base sm:text-lg font-extrabold text-[#0F1E3C] mt-0.5">
-                    QS. Al-An&apos;am (6) : Ayat 111 – 118
+                    {profile.current_ziyadah_surah}
                   </h2>
                   <p className="text-xs text-[#5A6B8C]">
-                    Mushaf Madinah Halaman 142 • Target Harian: 1 Halaman (15 Baris)
+                    Mushaf Madinah Halaman {profile.current_ziyadah_page} •
+                    Musyrif/Musyrifah: {profile.musyrif_name}
                   </p>
                 </div>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#EAF3FF] text-[#1B367C]">
-                  Tahap Tikrar Mandiri
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowZiyadahForm((v) => !v)}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#EAF3FF] hover:bg-[#dbeafe] text-[#1B367C] cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Ubah Halaman / Catatan Setoran</span>
+                </button>
               </div>
+
+              {showZiyadahForm && (
+                <div className="mb-4 p-3.5 rounded-2xl bg-[#F4F7FB] border border-[#DCE5F2] space-y-2.5 text-xs">
+                  <div className="font-extrabold text-[#1B367C]">
+                    Form Input Target &amp; Catatan Setoran Ziyadah
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#5A6B8C] mb-1">
+                        Halaman Mushaf (1-604)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={604}
+                        value={ziyadahPageInput}
+                        onChange={(e) =>
+                          setZiyadahPageInput(Number(e.target.value) || 1)
+                        }
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#5A6B8C] mb-1">
+                        Surah &amp; Rentang Ayat
+                      </label>
+                      <input
+                        type="text"
+                        value={ziyadahSurahInput}
+                        onChange={(e) => setZiyadahSurahInput(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#5A6B8C] mb-1">
+                        Partner Simak Sebaya
+                      </label>
+                      <input
+                        type="text"
+                        value={ziyadahPeerInput}
+                        onChange={(e) => setZiyadahPeerInput(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#5A6B8C] mb-1">
+                      Catatan Setoran / Kendala Ayat (Opsional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Sudah lancar 15 baris, mohon koreksi tajwid ayat 114..."
+                      value={ziyadahNotesInput}
+                      onChange={(e) => setZiyadahNotesInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Mushaf Preview Box */}
               <div className="rounded-2xl bg-[#FAFDF6] border border-[#D9EBB8] p-4 mb-4 text-right">
@@ -390,17 +876,18 @@ export default function JhtPreviewPage() {
                 </p>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#5A6B8C] font-semibold mt-2 pt-2 border-t border-[#E4F0CE]">
                   <span>
-                    ✓ Validasi Peer-Simak: Sudah disimak oleh Fatimah Az-Zahra (Thalibah)
+                    ✓ Validasi Peer-Simak: Sudah disimak oleh{" "}
+                    <strong>{ziyadahPeerInput}</strong>
                   </span>
-                  <span>Hal. 142 • Blok Penuh</span>
+                  <span>Hal. {profile.current_ziyadah_page} • Blok Penuh</span>
                 </div>
               </div>
 
-              {/* Interactive Tikrar Counter */}
+              {/* Interactive Tikrar Counter (Persisted to DB) */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-[#F4F7FB] rounded-2xl p-3.5 border border-[#DCE5F2]">
                 <div>
                   <div className="text-[11px] font-extrabold text-[#5A6B8C] uppercase">
-                    COUNTER TIKRAR ZIYADAH (WAJIB MIN. 20x)
+                    COUNTER TIKRAR ZIYADAH (WAJIB MIN. 20x • TERSIMPAN OTOMATIS)
                   </div>
                   <div className="text-2xl font-black text-[#1B367C] mt-0.5">
                     {tikrarCount} / {tikrarTarget}{" "}
@@ -419,14 +906,14 @@ export default function JhtPreviewPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setTikrarCount(0)}
+                    onClick={() => handleUpdateTikrar(0)}
                     className="px-3 py-2.5 rounded-xl border border-[#DCE5F2] bg-white text-xs font-extrabold text-[#5A6B8C] hover:bg-slate-50 cursor-pointer"
                   >
                     Reset
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTikrarCount((c) => c + 1)}
+                    onClick={() => handleUpdateTikrar(tikrarCount + 1)}
                     className="px-5 py-2.5 rounded-xl bg-[#1B367C] hover:bg-[#13285E] text-white text-sm font-extrabold shadow-md active:scale-95 transition-all cursor-pointer"
                   >
                     +1 Tikrar
@@ -434,10 +921,11 @@ export default function JhtPreviewPage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons (Connected to /api/jht) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
                 <button
                   type="button"
+                  onClick={() => handleSubmitZiyadah("voice_note")}
                   className="py-3 px-4 rounded-xl border border-[#DCE5F2] bg-white hover:bg-slate-50 text-[#1B367C] text-xs font-extrabold cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Mic className="w-4 h-4" />
@@ -445,6 +933,7 @@ export default function JhtPreviewPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleSubmitZiyadah("tatap_muka")}
                   className="py-3 px-4 rounded-xl bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200] text-xs font-extrabold shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -453,50 +942,70 @@ export default function JhtPreviewPage() {
               </div>
             </div>
 
-            {/* Riwayat Setoran Ziyadah */}
+            {/* Riwayat Setoran Ziyadah (Live Database Rows) */}
             <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#DCE5F2] shadow-xs">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h3 className="text-sm font-extrabold text-[#0F1E3C]">
-                    Riwayat Setoran Ziyadah Pekan Ini
+                    Riwayat Setoran Ziyadah ({ziyadahLogs.length} Catatan)
                   </h3>
                   <p className="text-xs text-[#5A6B8C]">
-                    Target Pekanan: 5 Halaman • Tercapai: 4 Halaman (80%)
+                    Data tersimpan di database JHT • Musyrif dapat langsung mengesahkan predikat
                   </p>
                 </div>
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-[#EAF7D8] text-[#3B630A]">
-                  Jayyid Jiddan
+                  Live Database
                 </span>
               </div>
 
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                  <div>
-                    <div className="font-extrabold text-[#0F1E3C]">
-                      Hal. 141 • QS. Al-An&apos;am: 102–110
-                    </div>
-                    <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                      Disimak Ustadzah Nabila • Kelancaran: 96% • Tajwid: Mumtaz
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF7D8] text-[#3B630A]">
-                    Mumtaz (Lulus)
-                  </span>
-                </div>
+                {ziyadahLogs.map((log) => {
+                  const isPending =
+                    log.predikat === "Menunggu Simak Musyrif" ||
+                    log.predikat === "Voice Note Terkirim";
+                  return (
+                    <div
+                      key={log.id}
+                      className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
+                    >
+                      <div>
+                        <div className="font-extrabold text-[#0F1E3C]">
+                          Hal. {log.page_number} • {log.surah_ayah}{" "}
+                          <span className="text-[#5A6B8C] font-semibold">
+                            ({log.tikrar_count}x Tikrar)
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-[#5A6B8C] mt-0.5">
+                          Peer-Simak: {log.peer_simak_by || "-"} •{" "}
+                          {log.notes || "Setoran tercatat"}
+                        </div>
+                      </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                  <div>
-                    <div className="font-extrabold text-[#0F1E3C]">
-                      Hal. 140 • QS. Al-An&apos;am: 95–101
+                      <div className="flex items-center gap-2">
+                        {isPending && (
+                          <button
+                            type="button"
+                            onClick={() => handleVerifyZiyadah(log.id)}
+                            className="px-2.5 py-1 rounded-lg bg-[#1B367C] text-white text-[10px] font-extrabold hover:bg-[#13285E] cursor-pointer"
+                          >
+                            Sahkan Mumtaz
+                          </button>
+                        )}
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                            log.predikat?.includes("Mumtaz")
+                              ? "bg-[#EAF7D8] text-[#3B630A]"
+                              : isPending
+                              ? "bg-[#FEF3C7] text-[#92400E]"
+                              : "bg-[#EAF3FF] text-[#1B367C]"
+                          }`}
+                        >
+                          {log.predikat}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                      Disimak Ustadzah Nabila • Catatan: Perhatikan mad lazim ayat 99
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF3FF] text-[#1B367C]">
-                    Jayyid Jiddan
-                  </span>
-                </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -516,7 +1025,7 @@ export default function JhtPreviewPage() {
                   </h2>
                 </div>
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-[#EAF7D8] text-[#3B630A]">
-                  1 / 2 Selesai
+                  {baidCompletedToday ? "2 / 2 Selesai" : "1 / 2 Selesai"}
                 </span>
               </div>
 
@@ -537,9 +1046,19 @@ export default function JhtPreviewPage() {
                   <p className="text-xs text-[#5A6B8C] mt-0.5">
                     Pengikat hafalan baru 5–7 halaman terakhir sebelum tambah ziyadah.
                   </p>
-                  <div className="mt-2.5 text-[11px] font-bold text-[#3B630A]">
-                    Disetor ba&apos;da Shubuh • Lancar tanpa teguran
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCompleteMurajaah(
+                        7,
+                        "qarib",
+                        "Juz 7 • Hal. 135 – 141 (Muraja'ah Qarib)"
+                      )
+                    }
+                    className="mt-2.5 w-full py-2 rounded-xl bg-[#EAF7D8] hover:bg-[#d8f0b8] text-[#2F5206] text-xs font-extrabold cursor-pointer"
+                  >
+                    + Catat Ulang Putaran Qarib Juz 7
+                  </button>
                 </div>
 
                 {/* Murajaah Ba'id */}
@@ -549,7 +1068,7 @@ export default function JhtPreviewPage() {
                       MURAJA&apos;AH BA&apos;ID (LAMA)
                     </span>
                     <span className="text-[11px] font-extrabold text-[#B45309]">
-                      Menunggu Setor
+                      {baidCompletedToday ? "✓ Selesai" : "Menunggu Setor"}
                     </span>
                   </div>
                   <div className="text-sm font-extrabold text-[#0F1E3C] mt-2">
@@ -560,27 +1079,40 @@ export default function JhtPreviewPage() {
                   </p>
                   <button
                     type="button"
-                    className="mt-2.5 w-full py-2 rounded-xl bg-[#1B367C] hover:bg-[#13285E] text-white text-xs font-extrabold cursor-pointer"
+                    onClick={() =>
+                      handleCompleteMurajaah(
+                        5,
+                        "baid",
+                        "Juz 5 (An-Nisa') • 1/2 Juz Kedua"
+                      )
+                    }
+                    className={`mt-2.5 w-full py-2 rounded-xl text-xs font-extrabold cursor-pointer ${
+                      baidCompletedToday
+                        ? "bg-[#EAF7D8] text-[#3B630A]"
+                        : "bg-[#1B367C] hover:bg-[#13285E] text-white"
+                    }`}
                   >
-                    Tandai Selesai Muraja&apos;ah Ba&apos;id
+                    {baidCompletedToday
+                      ? "✓ Tercatat Mutqin Hari Ini"
+                      : "Tandai Selesai Muraja'ah Ba'id"}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Peta Kesehatan Hafalan 30 Juz */}
+            {/* Peta Kesehatan Hafalan 30 Juz (Clickable to log murajaah!) */}
             <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#DCE5F2] shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div>
                   <h3 className="text-sm font-extrabold text-[#0F1E3C]">
-                    Peta Kesehatan Hafalan 30 Juz (Aktif Seumur Hidup hingga Alumni)
+                    Peta Kesehatan Hafalan 30 Juz (Klik Kotak Juz untuk Catat Muraja&apos;ah)
                   </h3>
                   <p className="text-xs text-[#5A6B8C]">
-                    Otomatis mengingatkan juz yang belum dimuraja&apos;ah &gt; 7 hari
+                    Klik salah satu Juz di bawah untuk langsung memperbarui statusnya menjadi Mutqin (Hijau)
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-[#FEE2E2] text-[#991B1B]">
-                  Juz 7 Perlu Segera Dimuraja&apos;ah
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-[#EAF3FF] text-[#1B367C]">
+                  Interaktif • 30 Juz
                 </span>
               </div>
 
@@ -603,30 +1135,39 @@ export default function JhtPreviewPage() {
                 {Array.from({ length: 30 }, (_, i) => i + 1).map((juzNum) => {
                   const info = getJuzInfo(juzNum);
                   let boxClass =
-                    "bg-[#F1F5F9] border-[#E2E8F0] text-[#94A3B8]";
+                    "bg-[#F1F5F9] border-[#E2E8F0] text-[#94A3B8] hover:border-[#1B367C]";
                   if (info.status === "mutqin") {
                     boxClass =
-                      "bg-[#EAF7D8] border-[#B6E080] text-[#2F5206]";
+                      "bg-[#EAF7D8] border-[#B6E080] text-[#2F5206] hover:bg-[#dff2c4]";
                   } else if (info.status === "warning") {
                     boxClass =
-                      "bg-[#FEF3C7] border-[#FCD34D] text-[#92400E]";
+                      "bg-[#FEF3C7] border-[#FCD34D] text-[#92400E] hover:bg-[#fde68a]";
                   } else if (info.status === "urgent") {
                     boxClass =
-                      "bg-[#FEE2E2] border-[#FCA5A5] text-[#991B1B]";
+                      "bg-[#FEE2E2] border-[#FCA5A5] text-[#991B1B] hover:bg-[#fecaca]";
                   } else if (info.status === "progress") {
                     boxClass = "bg-[#1B367C] border-[#1B367C] text-white";
                   }
 
                   return (
-                    <div
+                    <button
                       key={juzNum}
-                      className={`rounded-xl p-2 text-center border ${boxClass}`}
+                      type="button"
+                      onClick={() =>
+                        handleCompleteMurajaah(
+                          juzNum,
+                          "baid",
+                          `Juz ${juzNum} • Muraja'ah Mandiri`
+                        )
+                      }
+                      className={`rounded-xl p-2 text-center border transition-all cursor-pointer active:scale-95 ${boxClass}`}
+                      title={`Klik untuk catat selesai muraja'ah Juz ${juzNum}`}
                     >
                       <div className="text-xs font-extrabold">Juz {juzNum}</div>
                       <div className="text-[9px] font-semibold opacity-85 mt-0.5">
                         {info.label}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -644,14 +1185,24 @@ export default function JhtPreviewPage() {
                     TARGET &amp; KESIAPAN UJIAN TASMI&apos; SEKALI DUDUK
                   </span>
                   <h2 className="text-base sm:text-lg font-extrabold text-[#0F1E3C] mt-0.5">
-                    Target Aktif: Tasmi&apos; {selectedTasmiJuz} (Juz 1 – 5)
+                    Target Aktif: Tasmi&apos; {profile.tasmi_target_category} (
+                    {profile.tasmi_target_range})
                   </h2>
                   <p className="text-xs text-[#5A6B8C]">
-                    Jadwal Tasmi&apos;: Sabtu, 4 Desember 2026 • Penguji: Ustadzah Hafizhah, Lc.
+                    Jadwal Tasmi&apos;: Sabtu, 4 Desember 2026 • Penguji:{" "}
+                    {profile.tasmi_examiner || "Ustadzah Hafizhah, Lc."}
                   </p>
                 </div>
-                <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#FEF3C7] text-[#92400E]">
-                  H-9 Menuju Tasmi&apos;
+                <span
+                  className={`px-3 py-1 rounded-full text-[11px] font-extrabold ${
+                    profile.tasmi_registered
+                      ? "bg-[#EAF7D8] text-[#3B630A]"
+                      : "bg-[#FEF3C7] text-[#92400E]"
+                  }`}
+                >
+                  {profile.tasmi_registered
+                    ? "✓ Terdaftar Sidang Tasmi'"
+                    : "H-9 Menuju Tasmi'"}
                 </span>
               </div>
 
@@ -669,9 +1220,9 @@ export default function JhtPreviewPage() {
                   <button
                     key={kat}
                     type="button"
-                    onClick={() => setSelectedTasmiJuz(kat)}
+                    onClick={() => handleSelectTasmiCategory(kat)}
                     className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all cursor-pointer ${
-                      selectedTasmiJuz === kat
+                      profile.tasmi_target_category === kat
                         ? "bg-[#1B367C] text-white border-[#1B367C]"
                         : "bg-[#F1F5F9] text-[#475569] border-[#DCE5F2] hover:bg-slate-200/70"
                     }`}
@@ -688,19 +1239,19 @@ export default function JhtPreviewPage() {
                     Indikator Kesiapan Tasmi&apos; (Syarat Minimal 3x Putaran Muraja&apos;ah)
                   </span>
                   <span className="text-base font-black text-[#3B630A]">
-                    85% Siap
+                    {profile.tasmi_readiness_pct}% Siap
                   </span>
                 </div>
                 <div className="w-full h-2.5 bg-white/80 rounded-full overflow-hidden my-2">
                   <div
-                    className="h-full bg-gradient-to-r from-[#1B367C] to-[#8CC63F]"
-                    style={{ width: "85%" }}
+                    className="h-full bg-gradient-to-r from-[#1B367C] to-[#8CC63F] transition-all"
+                    style={{ width: `${profile.tasmi_readiness_pct}%` }}
                   />
                 </div>
                 <div className="flex flex-wrap items-center justify-between text-[11px] text-[#334155] font-medium gap-1">
                   <span>✓ Juz 1–4 sudah 3x putaran muraja&apos;ah lancar</span>
                   <span className="font-bold text-[#92400E]">
-                    • Juz 5 kurang 1x putaran simak rekan
+                    • Klik Juz 5 di tab Muraja&apos;ah untuk menggenapkan putaran
                   </span>
                 </div>
               </div>
@@ -710,10 +1261,11 @@ export default function JhtPreviewPage() {
                 <div className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
                   <div>
                     <div className="font-extrabold text-[#0F1E3C]">
-                      1. Lulus Setoran Ziyadah Seluruh Halaman (Juz 1 – 5)
+                      1. Lulus Setoran Ziyadah Seluruh Halaman (
+                      {profile.tasmi_target_range})
                     </div>
                     <div className="text-[11px] text-[#5A6B8C]">
-                      100 / 100 Halaman telah disahkan Musyrif/Musyrifah
+                      Telah disahkan oleh {profile.musyrif_name}
                     </div>
                   </div>
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF7D8] text-[#3B630A]">
@@ -741,7 +1293,7 @@ export default function JhtPreviewPage() {
                       3. E-Transkrip &amp; Sertifikat Tasmi&apos; QR-Verified (SKPI Kampus)
                     </div>
                     <div className="text-[11px] text-[#5A6B8C]">
-                      Terbit otomatis setelah lulus ujian untuk lampiran SKPI &amp; Beasiswa Tazkia
+                      Terbit otomatis untuk lampiran SKPI Wisuda &amp; Beasiswa Tahfizh Tazkia
                     </div>
                   </div>
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF3FF] text-[#1B367C]">
@@ -753,16 +1305,24 @@ export default function JhtPreviewPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
                 <button
                   type="button"
+                  onClick={() => setShowSkpiModal(true)}
                   className="py-3 px-4 rounded-xl border border-[#DCE5F2] bg-white hover:bg-slate-50 text-[#1B367C] text-xs font-extrabold cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <FileBadge className="w-4 h-4" />
-                  <span>Preview E-Transkrip Tahfizh (SKPI)</span>
+                  <span>Buka E-Transkrip Tahfizh (SKPI)</span>
                 </button>
                 <button
                   type="button"
-                  className="py-3 px-4 rounded-xl bg-[#1B367C] hover:bg-[#13285E] text-white text-xs font-extrabold shadow-sm cursor-pointer"
+                  onClick={handleRegisterTasmiExam}
+                  className={`py-3 px-4 rounded-xl text-xs font-extrabold shadow-sm cursor-pointer ${
+                    profile.tasmi_registered
+                      ? "bg-[#EAF7D8] text-[#3B630A]"
+                      : "bg-[#1B367C] hover:bg-[#13285E] text-white"
+                  }`}
                 >
-                  Ajukan Pendaftaran Jadwal Sidang Tasmi&apos;
+                  {profile.tasmi_registered
+                    ? "✓ Terdaftar di Jadwal Sidang Tasmi'"
+                    : "Ajukan Pendaftaran Jadwal Sidang Tasmi'"}
                 </button>
               </div>
             </div>
@@ -779,15 +1339,15 @@ export default function JhtPreviewPage() {
                     MONITORING MUSYRIF &amp; MUSYRIFAH JHT
                   </span>
                   <h2 className="text-base sm:text-lg font-extrabold text-[#0F1E3C]">
-                    Rekap Halaqah Thullab &amp; Thalibat
+                    Rekap Halaqah Thullab &amp; Thalibat ({filteredHalaqahMembers.length} Anggota)
                   </h2>
                   <p className="text-xs text-[#5A6B8C]">
-                    Gunakan istilah <strong>Thalib / Thalibah</strong> untuk perorangan &amp;{" "}
+                    Istilah <strong>Thalib / Thalibah</strong> untuk perorangan &amp;{" "}
                     <strong>Thullab / Thalibat</strong> untuk kelompok halaqah.
                   </p>
                 </div>
 
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     onClick={() => setHalaqahFilter("thalibat")}
@@ -810,116 +1370,68 @@ export default function JhtPreviewPage() {
                   >
                     Halaqah Thullab (Ikhwan)
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setHalaqahFilter("alumni")}
+                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
+                      halaqahFilter === "alumni"
+                        ? "bg-[#1B367C] text-white border-[#1B367C]"
+                        : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
+                    }`}
+                  >
+                    Komunitas Alumni
+                  </button>
                 </div>
               </div>
 
-              {halaqahFilter === "thalibat" ? (
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                    <div>
-                      <div className="font-extrabold text-[#0F1E3C]">
-                        1. Aisyah Humaira{" "}
-                        <span className="text-[#1B367C]">
-                          (Thalibah • Akuntansi Syariah &apos;24 • 13 Juz)
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                        Ziyadah: Hal. 142 (Proses) • Muraja&apos;ah: Juz 7 &amp; Juz 5 • Target Tasmi&apos; 5 Juz
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF7D8] text-[#3B630A]">
-                      Aktif • 19h
-                    </span>
+              <div className="space-y-2.5 text-xs">
+                {filteredHalaqahMembers.length === 0 ? (
+                  <div className="p-6 text-center rounded-2xl bg-[#F8FAFD] border border-[#E5ECF6] text-[#5A6B8C]">
+                    Belum ada anggota pada kategori ini. Admin BPH dapat meluluskan angkatan senior ke Alumni atau menambah anggota Oprec baru di Tab 6.
                   </div>
-
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                    <div>
-                      <div className="font-extrabold text-[#0F1E3C]">
-                        2. Fatimah Az-Zahra{" "}
-                        <span className="text-[#1B367C]">
-                          (Thalibah • Ekonomi Syariah &apos;23 • 18 Juz)
-                        </span>
+                ) : (
+                  filteredHalaqahMembers.map((m, idx) => (
+                    <div
+                      key={m.user_id}
+                      className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
+                    >
+                      <div>
+                        <div className="font-extrabold text-[#0F1E3C]">
+                          {idx + 1}. {m.full_name}{" "}
+                          <span className="text-[#1B367C]">
+                            (
+                            {m.status_keanggotaan === "alumni"
+                              ? "Alumni JHT"
+                              : m.gender === "thalib"
+                              ? "Thalib"
+                              : "Thalibah"}{" "}
+                            • {m.prodi} &apos;{String(m.angkatan).slice(-2)} •{" "}
+                            {m.total_juz_hafal} Juz)
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-[#5A6B8C] mt-0.5">
+                          {m.halaqah_name} • Ziyadah: Hal.{" "}
+                          {m.current_ziyadah_page} • Target Tasmi&apos;{" "}
+                          {m.tasmi_target_category}
+                        </div>
                       </div>
-                      <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                        Ziyadah: Hal. 285 (Lulus Mumtaz) • Muraja&apos;ah: Juz 14 • Target Tasmi&apos; 10 Juz
-                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                          m.status_keanggotaan === "alumni"
+                            ? "bg-[#EAF3FF] text-[#1B367C]"
+                            : m.streak_days >= 10
+                            ? "bg-[#EAF7D8] text-[#3B630A]"
+                            : "bg-[#FEF3C7] text-[#92400E]"
+                        }`}
+                      >
+                        {m.status_keanggotaan === "alumni"
+                          ? "Alumni Lifetime"
+                          : `Aktif • ${m.streak_days}h`}
+                      </span>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF3FF] text-[#1B367C]">
-                      Siap Tasmi&apos;
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                    <div>
-                      <div className="font-extrabold text-[#0F1E3C]">
-                        3. Khadijah Qonitah{" "}
-                        <span className="text-[#1B367C]">
-                          (Thalibah • Bisnis Digital &apos;25 • 7 Juz)
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                        Belum setor ziyadah 2 hari • Muraja&apos;ah Juz 3 tertunda
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#FEE2E2] text-[#991B1B]">
-                      Perlu Follow-up
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                    <div>
-                      <div className="font-extrabold text-[#0F1E3C]">
-                        1. Muhammad Al-Fatih{" "}
-                        <span className="text-[#1B367C]">
-                          (Thalib • Ekonomi Syariah &apos;23 • 16 Juz)
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                        Ziyadah: Hal. 252 (Lulus Mumtaz) • Muraja&apos;ah: Juz 11 &amp; Juz 4 • Target Tasmi&apos; 10 Juz
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF7D8] text-[#3B630A]">
-                      Aktif • 24h
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                    <div>
-                      <div className="font-extrabold text-[#0F1E3C]">
-                        2. Zaid bin Tsabit{" "}
-                        <span className="text-[#1B367C]">
-                          (Thalib • Muamalah &apos;22 • 25 Juz)
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                        Ziyadah: Hal. 442 (Proses) • Muraja&apos;ah: Juz 20 • Target Tasmi&apos; 20 Juz
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF3FF] text-[#1B367C]">
-                      Siap Tasmi&apos;
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                    <div>
-                      <div className="font-extrabold text-[#0F1E3C]">
-                        3. Abdullah Azzam{" "}
-                        <span className="text-[#1B367C]">
-                          (Thalib • Akuntansi Syariah &apos;25 • 9 Juz)
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                        Ziyadah: Hal. 164 (Jayyid Jiddan) • Muraja&apos;ah Juz 6 selesai
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF7D8] text-[#3B630A]">
-                      Aktif • 12h
-                    </span>
-                  </div>
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -938,249 +1450,166 @@ export default function JhtPreviewPage() {
                     Bursa Partner Simak (&ldquo;Cari Pasangan Setoran&rdquo;)
                   </h2>
                   <p className="text-xs text-[#5A6B8C]">
-                    Temukan rekan Thalib/Thalibah yang sedang jam kosong kuliah untuk saling menyimak sebelum setor ke Musyrif.
+                    Temukan rekan Thalib/Thalibah yang sedang jam kosong kuliah untuk saling menyimak.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setPartnerFilter("thalibat")}
-                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
-                      partnerFilter === "thalibat"
-                        ? "bg-[#1B367C] text-white border-[#1B367C]"
-                        : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
-                    }`}
-                  >
-                    Thalibat (Akhwat)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPartnerFilter("thullab")}
-                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
-                      partnerFilter === "thullab"
-                        ? "bg-[#1B367C] text-white border-[#1B367C]"
-                        : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
-                    }`}
-                  >
-                    Thullab (Ikhwan)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPartnerFilter("alumni")}
-                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
-                      partnerFilter === "alumni"
-                        ? "bg-[#1B367C] text-white border-[#1B367C]"
-                        : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
-                    }`}
-                  >
-                    Jaringan Alumni
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPartnerForm((v) => !v)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200] text-xs font-extrabold cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Posting Jadwal Kosong Saya</span>
+                </button>
               </div>
 
-              {partnerFilter === "thalibat" && (
-                <div className="space-y-2.5 text-xs">
-                  {[
-                    {
-                      id: "p1",
-                      name: "Fatimah Az-Zahra",
-                      meta: "Thalibah • Akuntansi Syariah '24 • 18 Juz",
-                      loc: "Musholla Akhwat Kampus Utama",
-                      time: "Hari ini, 12.30 – 13.30 WIB (Jeda Kuliah)",
-                      target: "Target Simak: Muraja'ah Juz 5 (1/2 Juz Kedua)",
-                    },
-                    {
-                      id: "p2",
-                      name: "Nabila Khairunnisa",
-                      meta: "Thalibah • Ekonomi Syariah '23 • 15 Juz",
-                      loc: "Asrama Thalibat / Online GMeet",
-                      time: "Ba'da Ashar, 16.00 – 17.00 WIB",
-                      target: "Target Simak: Simulasi Pra-Tasmi' Juz 1–3",
-                    },
-                    {
-                      id: "p3",
-                      name: "Maryam Qonitah",
-                      meta: "Thalibah • Bisnis Digital '25 • 6 Juz",
-                      loc: "Perpustakaan Tazkia Lt. 2 (Area Akhwat)",
-                      time: "Besok, 10.00 – 11.00 WIB",
-                      target: "Target Simak: Ziyadah QS. Al-An'am Hal. 142",
-                    },
-                  ].map((item) => {
-                    const isInvited = !!invitedPartners[item.id];
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
-                      >
-                        <div className="space-y-1">
-                          <div className="font-extrabold text-[#0F1E3C]">
-                            {item.name}{" "}
-                            <span className="text-[#1B367C]">({item.meta})</span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#5A6B8C]">
-                            <span className="inline-flex items-center gap-1 font-semibold text-[#0F1E3C]">
-                              <MapPin className="w-3.5 h-3.5 text-[#1B367C]" />
-                              {item.loc}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-[#4E7A14]" />
-                              {item.time}
-                            </span>
-                          </div>
-                          <div className="text-[11px] font-bold text-[#3B630A]">
-                            {item.target}
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => toggleInvitePartner(item.id)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                            isInvited
-                              ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
-                              : "bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200]"
-                          }`}
-                        >
-                          {isInvited
-                            ? "✓ Ajakan Terkirim"
-                            : "Ajak Simak Bareng"}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+              {showPartnerForm && (
+                <form
+                  onSubmit={handleCreatePartnerPost}
+                  className="mb-4 p-3.5 rounded-2xl bg-[#F4F7FB] border border-[#DCE5F2] space-y-2.5 text-xs"
+                >
+                  <div className="font-extrabold text-[#1B367C]">
+                    Posting Ajakan Simak Bareng di Kampus / Online
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#5A6B8C] mb-1">
+                        Lokasi Kampus / Online
+                      </label>
+                      <input
+                        type="text"
+                        value={newPartnerLoc}
+                        onChange={(e) => setNewPartnerLoc(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-semibold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#5A6B8C] mb-1">
+                        Jam Kosong Kuliah
+                      </label>
+                      <input
+                        type="text"
+                        value={newPartnerSlot}
+                        onChange={(e) => setNewPartnerSlot(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-semibold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#5A6B8C] mb-1">
+                        Target Juz / Halaman Simak
+                      </label>
+                      <input
+                        type="text"
+                        value={newPartnerTarget}
+                        onChange={(e) => setNewPartnerTarget(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPartnerForm(false)}
+                      className="px-3 py-1.5 rounded-xl border border-[#DCE5F2] bg-white text-xs font-bold"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 rounded-xl bg-[#1B367C] text-white text-xs font-extrabold cursor-pointer"
+                    >
+                      Publikasikan
+                    </button>
+                  </div>
+                </form>
               )}
 
-              {partnerFilter === "thullab" && (
-                <div className="space-y-2.5 text-xs">
-                  {[
-                    {
-                      id: "m1",
-                      name: "Muhammad Al-Fatih",
-                      meta: "Thalib • Ekonomi Syariah '23 • 16 Juz",
-                      loc: "Masjid Al-Birr Kampus Tazkia (Selasar Utama)",
-                      time: "Ba'da Dzuhur, 12.15 – 13.15 WIB",
-                      target: "Target Simak: Muraja'ah Juz 11 (1 Juz Penuh)",
-                    },
-                    {
-                      id: "m2",
-                      name: "Zaid bin Tsabit",
-                      meta: "Thalib • Hukum Ekonomi Syariah '22 • 25 Juz",
-                      loc: "Masjid Kampus / Online Voice Call",
-                      time: "Ba'da Maghrib, 18.30 – 19.30 WIB",
-                      target: "Target Simak: Persiapan Tasmi' 20 Juz (Juz 15–16)",
-                    },
-                  ].map((item) => {
-                    const isInvited = !!invitedPartners[item.id];
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
-                      >
-                        <div className="space-y-1">
-                          <div className="font-extrabold text-[#0F1E3C]">
-                            {item.name}{" "}
-                            <span className="text-[#1B367C]">({item.meta})</span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#5A6B8C]">
-                            <span className="inline-flex items-center gap-1 font-semibold text-[#0F1E3C]">
-                              <MapPin className="w-3.5 h-3.5 text-[#1B367C]" />
-                              {item.loc}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-[#4E7A14]" />
-                              {item.time}
-                            </span>
-                          </div>
-                          <div className="text-[11px] font-bold text-[#3B630A]">
-                            {item.target}
-                          </div>
+              <div className="flex flex-wrap gap-1.5 mb-3.5">
+                <button
+                  type="button"
+                  onClick={() => setPartnerFilter("thalibat")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
+                    partnerFilter === "thalibat"
+                      ? "bg-[#1B367C] text-white border-[#1B367C]"
+                      : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
+                  }`}
+                >
+                  Thalibat (Akhwat)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPartnerFilter("thullab")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
+                    partnerFilter === "thullab"
+                      ? "bg-[#1B367C] text-white border-[#1B367C]"
+                      : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
+                  }`}
+                >
+                  Thullab (Ikhwan)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPartnerFilter("alumni")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
+                    partnerFilter === "alumni"
+                      ? "bg-[#1B367C] text-white border-[#1B367C]"
+                      : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
+                  }`}
+                >
+                  Jaringan Alumni
+                </button>
+              </div>
+
+              <div className="space-y-2.5 text-xs">
+                {filteredPartnerPosts.map((item) => {
+                  const key = String(item.id);
+                  const isInvited = !!invitedPartners[key];
+                  return (
+                    <div
+                      key={key}
+                      className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
+                    >
+                      <div className="space-y-1">
+                        <div className="font-extrabold text-[#0F1E3C]">
+                          {item.user_name}{" "}
+                          <span className="text-[#1B367C]">
+                            ({item.meta_info})
+                          </span>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => toggleInvitePartner(item.id)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                            isInvited
-                              ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
-                              : "bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200]"
-                          }`}
-                        >
-                          {isInvited
-                            ? "✓ Ajakan Terkirim"
-                            : "Ajak Simak Bareng"}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {partnerFilter === "alumni" && (
-                <div className="space-y-2.5 text-xs">
-                  {[
-                    {
-                      id: "a1",
-                      name: "Ustadzah Shafiyyah, S.E.",
-                      meta: "Alumni JHT Angkatan 2020 • 30 Juz Mutqin",
-                      loc: "Online via Zoom / WhatsApp Call",
-                      time: "Sabtu & Ahad Pagi, 06.00 – 07.30 WIB",
-                      target: "Bersedia Menyimak Adik Tingkat (Pra-Tasmi' & Partner Alumni)",
-                    },
-                    {
-                      id: "a2",
-                      name: "Akhdan Al-Ghifari, S.Ak.",
-                      meta: "Alumni JHT Angkatan 2021 • 20 Juz",
-                      loc: "Online GMeet (Sela Jam Kerja / Malam)",
-                      time: "Senin & Kamis, 20.00 – 21.00 WIB",
-                      target: "Cari Partner Simak Sesama Alumni Thullab (Juz 1–10)",
-                    },
-                  ].map((item) => {
-                    const isInvited = !!invitedPartners[item.id];
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
-                      >
-                        <div className="space-y-1">
-                          <div className="font-extrabold text-[#0F1E3C]">
-                            {item.name}{" "}
-                            <span className="text-[#1B367C]">({item.meta})</span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#5A6B8C]">
-                            <span className="inline-flex items-center gap-1 font-semibold text-[#0F1E3C]">
-                              <MapPin className="w-3.5 h-3.5 text-[#1B367C]" />
-                              {item.loc}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-[#4E7A14]" />
-                              {item.time}
-                            </span>
-                          </div>
-                          <div className="text-[11px] font-bold text-[#3B630A]">
-                            {item.target}
-                          </div>
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#5A6B8C]">
+                          <span className="inline-flex items-center gap-1 font-semibold text-[#0F1E3C]">
+                            <MapPin className="w-3.5 h-3.5 text-[#1B367C]" />
+                            {item.campus_location}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-[#4E7A14]" />
+                            {item.free_time_slot}
+                          </span>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => toggleInvitePartner(item.id)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                            isInvited
-                              ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
-                              : "bg-[#1B367C] hover:bg-[#13285E] text-white"
-                          }`}
-                        >
-                          {isInvited
-                            ? "✓ Jadwal Terkirim"
-                            : "Jadwalkan Simak"}
-                        </button>
+                        <div className="text-[11px] font-bold text-[#3B630A]">
+                          {item.target_simak}
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+
+                      <button
+                        type="button"
+                        onClick={() => toggleInvitePartner(key)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                          isInvited
+                            ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
+                            : "bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200]"
+                        }`}
+                      >
+                        {isInvited ? "✓ Ajakan Terkirim" : "Ajak Simak Bareng"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Mode Alumni Seumur Hidup */}
@@ -1246,10 +1675,10 @@ export default function JhtPreviewPage() {
                 MANAJEMEN SIKLUS ORGANISASI MAHASISWA
               </span>
               <h2 className="text-base sm:text-lg font-extrabold text-[#0F1E3C] mt-0.5">
-                Bagaimana Admin BPH Mengelola Anggota yang Keluar-Masuk Tiap Tahun?
+                Panel Admin BPH &amp; Kadiv Kaderisasi JHT
               </h2>
               <p className="text-xs text-[#5A6B8C] mb-3.5">
-                Dirancang khusus untuk dinamika pergantian semester, Open Recruitment Maba, hingga wisuda di kampus Tazkia.
+                Kelola Open Recruitment Maba, Rolling Halaqah tiap semester, hingga Graduasi Massal ke Mode Alumni.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
@@ -1261,7 +1690,7 @@ export default function JhtPreviewPage() {
                     Import &amp; Placement
                   </div>
                   <p className="text-[11px] text-[#5A6B8C] mt-1">
-                    Maba daftar via link/CSV NIM, input nilai placement test, lalu auto-assign ke Halaqah.
+                    Tambah anggota baru hasil Oprec &amp; otomatis masuk ke Halaqah Thullab/Thalibat.
                   </p>
                 </div>
 
@@ -1303,40 +1732,79 @@ export default function JhtPreviewPage() {
               </div>
             </div>
 
-            {/* Simulasi Aksi Massal Admin BPH */}
+            {/* Aksi Nyata Admin BPH (Connected to Database) */}
             <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#DCE5F2] shadow-xs">
               <h3 className="text-sm font-extrabold text-[#0F1E3C] mb-1">
-                Simulasi Aksi Cepat Admin BPH (Coba Klik Tombol di Bawah)
+                Aksi Cepat Admin BPH (Terhubung ke Database JHT)
               </h3>
               <p className="text-xs text-[#5A6B8C] mb-3.5">
-                Semua aksi tahunan dilakukan dalam hitungan detik tanpa perlu input ulang satu per satu.
+                Perubahan di bawah langsung memperbarui daftar anggota di Tab 4 (Halaqah Thullab/Thalibat &amp; Komunitas Alumni).
               </p>
 
               <div className="space-y-2.5 text-xs">
-                {/* Action 1: Oprec */}
-                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
-                  <div>
-                    <div className="font-extrabold text-[#0F1E3C] flex items-center gap-1.5">
-                      <UserPlus className="w-4 h-4 text-[#1B367C]" />
-                      <span>Oprec Angkatan Baru 2026 (78 Pendaftar Lulus Seleksi)</span>
+                {/* Action 1: Tambah Anggota Oprec */}
+                <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-extrabold text-[#0F1E3C] flex items-center gap-1.5">
+                        <UserPlus className="w-4 h-4 text-[#1B367C]" />
+                        <span>
+                          1. Tambah &amp; Auto-Assign Anggota Baru (Oprec Mahasiswa Baru)
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#5A6B8C] mt-0.5">
+                        Input hasil Placement Test Thalib/Thalibah baru dan langsung masukkan ke Halaqah
+                      </div>
                     </div>
-                    <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                      38 Thullab (Ikhwan) &amp; 40 Thalibat (Akhwat) • Siap dibagi rata ke 8 Halaqah sesuai level juz
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowOprecForm((v) => !v)}
+                      className="px-3.5 py-2 rounded-xl bg-[#1B367C] hover:bg-[#13285E] text-white text-xs font-extrabold cursor-pointer"
+                    >
+                      {showOprecForm ? "Tutup Form" : "+ Tambah Anggota Oprec"}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setAssignedOprec((v) => !v)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                      assignedOprec
-                        ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
-                        : "bg-[#1B367C] hover:bg-[#13285E] text-white"
-                    }`}
-                  >
-                    {assignedOprec
-                      ? "✓ 8 Halaqah Terbentuk Otomatis"
-                      : "Auto-Assign Halaqah"}
-                  </button>
+
+                  {showOprecForm && (
+                    <form
+                      onSubmit={handleAddOprecMember}
+                      className="mt-3 pt-3 border-t border-[#DCE5F2] grid grid-cols-1 sm:grid-cols-5 gap-2"
+                    >
+                      <input
+                        type="text"
+                        placeholder="Nama Lengkap..."
+                        value={newMemberName}
+                        onChange={(e) => setNewMemberName(e.target.value)}
+                        className="px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-semibold sm:col-span-2"
+                        required
+                      />
+                      <select
+                        value={newMemberGender}
+                        onChange={(e) =>
+                          setNewMemberGender(
+                            e.target.value as "thalibah" | "thalib"
+                          )
+                        }
+                        className="px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-semibold"
+                      >
+                        <option value="thalibah">Thalibah (Akhwat)</option>
+                        <option value="thalib">Thalib (Ikhwan)</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Prodi..."
+                        value={newMemberProdi}
+                        onChange={(e) => setNewMemberProdi(e.target.value)}
+                        className="px-3 py-2 rounded-xl border border-[#DCE5F2] bg-white font-semibold"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-2 rounded-xl bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200] font-extrabold cursor-pointer"
+                      >
+                        Simpan ke DB
+                      </button>
+                    </form>
+                  )}
                 </div>
 
                 {/* Action 2: Rolling Semester */}
@@ -1344,7 +1812,9 @@ export default function JhtPreviewPage() {
                   <div>
                     <div className="font-extrabold text-[#0F1E3C] flex items-center gap-1.5">
                       <RefreshCw className="w-4 h-4 text-[#1B367C]" />
-                      <span>Rolling Semester Baru (Ganjil → Genap 2026/2027)</span>
+                      <span>
+                        2. Rolling Semester Baru (Ganjil → Genap 2026/2027)
+                      </span>
                     </div>
                     <div className="text-[11px] text-[#5A6B8C] mt-0.5">
                       Sesuaikan ulang jadwal halaqah dengan KRS terbaru tanpa kehilangan progres 30 Juz mahasiswa
@@ -1352,7 +1822,12 @@ export default function JhtPreviewPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setRolledSemester((v) => !v)}
+                    onClick={() => {
+                      setRolledSemester(true);
+                      showToast(
+                        "✅ Rolling Semester Baru berhasil! Seluruh progres 30 Juz mahasiswa tetap terjaga."
+                      );
+                    }}
                     className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                       rolledSemester
                         ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
@@ -1365,29 +1840,25 @@ export default function JhtPreviewPage() {
                   </button>
                 </div>
 
-                {/* Action 3: Graduasi Alumni */}
+                {/* Action 3: Graduasi Alumni (Updates DB!) */}
                 <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
                   <div>
                     <div className="font-extrabold text-[#0F1E3C] flex items-center gap-1.5">
                       <GraduationCap className="w-4 h-4 text-[#4E7A14]" />
-                      <span>Wisuda Angkatan 2022 (Semester 8 • 42 Mahasiswa)</span>
+                      <span>
+                        3. Wisuda Angkatan Senior (&le; 2022) ke Mode Alumni Seumur Hidup
+                      </span>
                     </div>
                     <div className="text-[11px] text-[#5A6B8C] mt-0.5">
-                      Pindahkan massal dari Halaqah Mahasiswa Aktif ke Komunitas Alumni JHT (Akun tetap aktif selamanya)
+                      Memindahkan anggota angkatan &le; 2022 dari Halaqah Aktif ke tab Komunitas Alumni di database
                     </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setGraduatedBatch((v) => !v)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                      graduatedBatch
-                        ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
-                        : "bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200]"
-                    }`}
+                    onClick={handleGraduateBatch}
+                    className="px-3.5 py-2 rounded-xl bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200] text-xs font-extrabold transition-all cursor-pointer"
                   >
-                    {graduatedBatch
-                      ? "✓ 42 Mahasiswa Dipindah ke Alumni"
-                      : "Luluskan Massal ke Alumni"}
+                    Luluskan Massal ke Alumni
                   </button>
                 </div>
               </div>
@@ -1395,6 +1866,87 @@ export default function JhtPreviewPage() {
           </div>
         )}
       </div>
+
+      {/* Modal E-Transkrip Tahfizh & SKPI Kampus */}
+      {showSkpiModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 border border-[#DCE5F2] shadow-2xl space-y-4">
+            <div className="flex items-start justify-between gap-2 border-b border-[#E5ECF6] pb-3">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#EAF7D8] text-[#3B630A]">
+                  Dokumen Resmi QR-Verified • SKPI Kampus
+                </span>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#1B367C] mt-1">
+                  E-Transkrip Mutaba&apos;ah &amp; Syahadah Tasmi&apos; JHT
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSkpiModal(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] p-4 space-y-2.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#5A6B8C]">Nama Lengkap:</span>
+                <strong className="text-[#0F1E3C]">{profile.full_name}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5A6B8C]">Program Studi / Angkatan:</span>
+                <strong className="text-[#0F1E3C]">
+                  {profile.prodi} ({profile.angkatan})
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5A6B8C]">Halaqah &amp; Pembimbing:</span>
+                <strong className="text-[#0F1E3C]">
+                  {profile.halaqah_name} ({profile.musyrif_name})
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5A6B8C]">Total Capaian Hafalan:</span>
+                <strong className="text-[#3B630A]">
+                  {profile.total_juz_hafal} Juz (Mutqin)
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5A6B8C]">Capaian Tasmi&apos; Sekali Duduk:</span>
+                <strong className="text-[#1B367C]">
+                  Tasmi&apos; {profile.tasmi_target_category} ({profile.tasmi_target_range})
+                </strong>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#FAFDF6] border border-[#D9EBB8]">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-[#1B367C] text-white flex items-center justify-center shrink-0">
+                  <QrCode className="w-6 h-6" />
+                </div>
+                <div className="text-[11px]">
+                  <div className="font-extrabold text-[#0F1E3C]">
+                    Terverifikasi Digital oleh Jami&apos;atul Huffazh Tazkia
+                  </div>
+                  <div className="text-[#5A6B8C]">
+                    Berlaku untuk lampiran SKPI Wisuda &amp; Beasiswa Tahfizh
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.print();
+                }}
+                className="px-3.5 py-2 rounded-xl bg-[#1B367C] text-white text-xs font-extrabold hover:bg-[#13285E] cursor-pointer shrink-0"
+              >
+                Cetak / PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
