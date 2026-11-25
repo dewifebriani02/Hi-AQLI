@@ -12,12 +12,27 @@ import {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function formatMemberInitials(fullName: string): string {
+  const cleaned = String(fullName || '').trim();
+  if (!cleaned) return 'T. H.';
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  const initials = parts
+    .slice(0, 3)
+    .map((p) => {
+      const ch = p.replace(/[^A-Za-z0-9\u00C0-\u024F]/g, '').charAt(0).toUpperCase();
+      return ch ? `${ch}.` : '';
+    })
+    .filter(Boolean);
+  return initials.length > 0 ? initials.join(' ') : 'T. H.';
+}
+
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getAuthContext(req);
     if (!ctx.userId) {
       return NextResponse.json({ error: { message: 'Silakan login terlebih dahulu.' } }, { status: 401 });
     }
+    const canSeeFullName = Boolean(ctx.isAdmin || ctx.isSuperAdmin || ctx.isMusyrifah);
 
     const searchParams = new URL(req.url).searchParams;
     const halaqah = searchParams.get('halaqah') || 'all';
@@ -188,7 +203,7 @@ export async function GET(req: NextRequest) {
         return {
           id: m.id,
           isMe: m.id === ctx.userId,
-          name: m.name,
+          name: canSeeFullName ? m.name : formatMemberInitials(m.name),
           halaqahId: m.tikrar_halaqah_id || null,
           points: Number(m.points) || 0,
           targetDays: Number(m.active_days) || 5,
@@ -206,7 +221,16 @@ export async function GET(req: NextRequest) {
       });
 
     return NextResponse.json({
-      data: { todayKey, month, currentMonth, fromKey, toKey, dateKeys, members: rows },
+      data: {
+        todayKey,
+        month,
+        currentMonth,
+        fromKey,
+        toKey,
+        dateKeys,
+        isAdminView: canSeeFullName,
+        members: rows,
+      },
       error: null,
     });
   } catch (err: any) {

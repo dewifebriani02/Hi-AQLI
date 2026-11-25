@@ -11,6 +11,20 @@ import { loadActiveTarget, loadClearedPages } from '@/lib/tikrar-server';
 
 const FALLBACK_ADMIN_WA = '628567712914';
 
+function formatMemberInitials(fullName: string): string {
+  const cleaned = String(fullName || '').trim();
+  if (!cleaned) return 'T. H.';
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  const initials = parts
+    .slice(0, 3)
+    .map((p) => {
+      const ch = p.replace(/[^A-Za-z0-9\u00C0-\u024F]/g, '').charAt(0).toUpperCase();
+      return ch ? `${ch}.` : '';
+    })
+    .filter(Boolean);
+  return initials.length > 0 ? initials.join(' ') : 'T. H.';
+}
+
 function getSurahNameForPage(page: number): string {
   let surahId = 1;
   Object.entries(SURAH_START_PAGES).forEach(([id, start]) => {
@@ -25,7 +39,7 @@ function formatBlocksHuman(range: string): string {
   return '1/2 Halaman (Blok A & B)';
 }
 
-async function fetchPendingQueue(currentUserId: string) {
+async function fetchPendingQueue(currentUserId: string, canSeeFullName = false) {
   const { rows } = await pool.query(
     `SELECT s.id, s.user_id, s.user_name, s.halaqah_id, s.juz, s.page_number,
             s.blocks_range, s.status, s.notes, s.submitted_at, s.created_at,
@@ -45,7 +59,7 @@ async function fetchPendingQueue(currentUserId: string) {
       queueNumber: idx + 1,
       userId: r.user_id,
       isMe: r.user_id === currentUserId,
-      name: r.display_name,
+      name: canSeeFullName ? r.display_name : formatMemberInitials(r.display_name),
       juz: Number(r.juz) || getJuzForPage(pageNumber),
       pageNumber,
       surahName: getSurahNameForPage(pageNumber),
@@ -98,9 +112,10 @@ export async function GET(req: NextRequest) {
     if (!ctx.userId) {
       return NextResponse.json({ error: { message: 'Silakan login terlebih dahulu.' } }, { status: 401 });
     }
+    const canSeeFullName = Boolean(ctx.isAdmin || ctx.isSuperAdmin || ctx.isMusyrifah);
 
     const [queue, { rows: myRows }] = await Promise.all([
-      fetchPendingQueue(ctx.userId),
+      fetchPendingQueue(ctx.userId, canSeeFullName),
       pool.query(
         `SELECT s.*
          FROM public.tikrar_submissions s
@@ -134,6 +149,7 @@ export async function POST(req: NextRequest) {
     if (!ctx.userId) {
       return NextResponse.json({ error: { message: 'Silakan login terlebih dahulu.' } }, { status: 401 });
     }
+    const canSeeFullName = Boolean(ctx.isAdmin || ctx.isSuperAdmin || ctx.isMusyrifah);
 
     const body = await req.json().catch(() => ({}));
     const pageNumber = Math.floor(Number(body.page_number) || 0);
@@ -294,7 +310,7 @@ export async function POST(req: NextRequest) {
       await client.query('COMMIT');
     }
 
-    const queue = await fetchPendingQueue(ctx.userId);
+    const queue = await fetchPendingQueue(ctx.userId, canSeeFullName);
     const queueEntry = queue.find((q) => q.id === submission?.id);
     const queuePosition = queueEntry?.queueNumber || null;
     const totalPending = queue.length;

@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
@@ -13,9 +15,14 @@ import {
 import { useCollection, useUser } from '@/db';
 import { authFetch } from '@/db/client';
 import { cn } from '@/lib/utils';
-import { getDayOfWeekFromKey, parseDateKeyUTC } from '@/lib/tikrar-schedule-generator';
+import {
+  addCalendarDays,
+  getDayOfWeekFromKey,
+  parseDateKeyUTC,
+  toDateKeyWIB,
+} from '@/lib/tikrar-schedule-generator';
 import { HEATMAP_COLORS, type HeatmapLevel } from '@/lib/tikrar-steps';
-import { ChevronLeft, ChevronRight, Flame, Loader2, Star, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flame, Loader2, LogIn, ShieldCheck, Sparkles, Star, Users } from 'lucide-react';
 
 export interface TikrarGroupHeatmapProps {
   refreshSignal?: number;
@@ -49,6 +56,121 @@ const LEGEND: { level: HeatmapLevel; label: string }[] = [
   { level: 'tasmi', label: "Lulus setoran Tasmi'" },
 ];
 
+function buildMockGroupMembers(shownMonthKey: string, todayKey: string): MemberRow[] {
+  const [y, m] = shownMonthKey.split('-').map(Number);
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const fromKey = `${shownMonthKey}-01`;
+  const dateKeys: string[] = [];
+  for (let i = 0; i < daysInMonth; i++) {
+    dateKeys.push(addCalendarDays(fromKey, i));
+  }
+
+  const samples = [
+    {
+      id: 'mock-1',
+      isMe: true,
+      name: 'A. R. (Contoh)',
+      points: 840,
+      targetDays: 5,
+      weeklyMet: 4,
+      streak: 5,
+      today: { hasTarget: true, clicks: 82, stepsToday: 6, dailyQuota: 6, clicksTarget: 82, met: true },
+      pattern: (dayIdx: number, dow: number) =>
+        dow === 0
+          ? ('none' as HeatmapLevel)
+          : dayIdx % 9 === 4
+          ? ('tasmi' as HeatmapLevel)
+          : dayIdx % 4 === 1
+          ? ('active' as HeatmapLevel)
+          : ('met' as HeatmapLevel),
+    },
+    {
+      id: 'mock-2',
+      isMe: false,
+      name: 'S. M. (Contoh)',
+      points: 755,
+      targetDays: 6,
+      weeklyMet: 5,
+      streak: 4,
+      today: { hasTarget: true, clicks: 94, stepsToday: 6, dailyQuota: 6, clicksTarget: 94, met: true },
+      pattern: (dayIdx: number, dow: number) =>
+        dow === 0 || dow === 6
+          ? ('none' as HeatmapLevel)
+          : dayIdx % 11 === 6
+          ? ('tasmi' as HeatmapLevel)
+          : dayIdx % 3 === 0
+          ? ('met' as HeatmapLevel)
+          : ('active' as HeatmapLevel),
+    },
+    {
+      id: 'mock-3',
+      isMe: false,
+      name: 'N. H. (Contoh)',
+      points: 665,
+      targetDays: 5,
+      weeklyMet: 3,
+      streak: 2,
+      today: { hasTarget: true, clicks: 45, stepsToday: 3, dailyQuota: 6, clicksTarget: 120, met: false },
+      pattern: (dayIdx: number, dow: number) =>
+        dow === 0 || dow === 5
+          ? ('none' as HeatmapLevel)
+          : dayIdx % 5 === 0
+          ? ('met' as HeatmapLevel)
+          : dayIdx % 2 === 0
+          ? ('active' as HeatmapLevel)
+          : ('none' as HeatmapLevel),
+    },
+    {
+      id: 'mock-4',
+      isMe: false,
+      name: 'F. Z. (Contoh)',
+      points: 590,
+      targetDays: 5,
+      weeklyMet: 2,
+      streak: 1,
+      today: { hasTarget: true, clicks: 28, stepsToday: 2, dailyQuota: 5, clicksTarget: 110, met: false },
+      pattern: (dayIdx: number, dow: number) =>
+        dow === 0 || dow === 6
+          ? ('none' as HeatmapLevel)
+          : dayIdx % 4 === 2
+          ? ('met' as HeatmapLevel)
+          : dayIdx % 3 === 1
+          ? ('active' as HeatmapLevel)
+          : ('none' as HeatmapLevel),
+    },
+  ];
+
+  return samples.map((s, sIdx) => ({
+    id: s.id,
+    isMe: s.isMe,
+    name: s.name,
+    points: s.points,
+    targetDays: s.targetDays,
+    weeklyMet: s.weeklyMet,
+    streak: s.streak,
+    today: s.today,
+    days: dateKeys.map((d, idx) => {
+      const isFuture = d > todayKey;
+      const dow = getDayOfWeekFromKey(d);
+      const level: HeatmapLevel = isFuture
+        ? 'none'
+        : d === todayKey
+        ? s.today.met
+          ? 'met'
+          : s.today.clicks > 0
+          ? 'active'
+          : 'none'
+        : s.pattern(idx + 1, dow);
+      const clicks =
+        level === 'tasmi' ? 120 : level === 'met' ? 85 : level === 'active' ? 35 : 0;
+      const steps =
+        level === 'tasmi' ? 6 : level === 'met' ? 6 : level === 'active' ? 2 : 0;
+      const tasmi = level === 'tasmi' ? [`Hal. ${582 + sIdx}`] : null;
+      return { date: d, level, clicks, steps, tasmi };
+    }),
+  }));
+}
+
 export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProps) {
   const { user } = useUser();
 
@@ -62,6 +184,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [todayKey, setTodayKey] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdminView, setIsAdminView] = useState(false);
   // Bulan kalender yang ditampilkan (YYYY-MM); kosong = bulan berjalan
   const [month, setMonth] = useState<string>('');
   const [currentMonth, setCurrentMonth] = useState<string>('');
@@ -80,6 +203,13 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
 
   const load = useCallback(async () => {
     if (!user?.id) {
+      const tk = toDateKeyWIB();
+      const cm = tk.slice(0, 7);
+      const targetMonth = month && month <= cm ? month : cm;
+      setTodayKey(tk);
+      setCurrentMonth(cm);
+      setIsAdminView(false);
+      setMembers(buildMockGroupMembers(targetMonth, tk));
       setIsLoading(false);
       return;
     }
@@ -93,6 +223,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
         setMembers(json.data?.members || []);
         setTodayKey(json.data?.todayKey || '');
         setCurrentMonth(json.data?.currentMonth || '');
+        setIsAdminView(Boolean(json.data?.isAdminView));
       }
     } catch (e) {
       console.warn('Gagal memuat keaktifan grup:', e);
@@ -105,19 +236,58 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
     load();
   }, [load, refreshSignal]);
 
+  const isGuestMockup = !user?.id;
+
   return (
     <Card className="border border-stone-200 bg-white shadow-sm rounded-2xl overflow-hidden">
       <CardContent className="p-5 sm:p-6 space-y-5">
+        {isGuestMockup && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50/90 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Badge className="bg-amber-700 text-white hover:bg-amber-700 text-[10px] font-black shrink-0">
+                <Sparkles className="w-3 h-3 mr-1" /> CONTOH REKAP GRUP
+              </Badge>
+              <span className="text-xs font-bold text-amber-950">
+                Data di bawah ini hanya simulasi contoh tampilan. Masuk akun untuk melihat progres grup asli.
+              </span>
+            </div>
+            <Button
+              asChild
+              size="sm"
+              className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-black shrink-0"
+            >
+              <Link href="/login">
+                <LogIn className="w-3.5 h-3.5 mr-1.5" /> Masuk Akun
+              </Link>
+            </Button>
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Users className="w-5 h-5 text-primary" />
               <h3 className="text-base sm:text-lg font-black text-stone-900">
-                Pantau Progres Anggota Grup
+                {isGuestMockup ? 'Contoh Pantau Progres Anggota Grup' : 'Pantau Progres Anggota Grup'}
               </h3>
+              {!isGuestMockup && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-[10px] font-bold',
+                    isAdminView
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      : 'border-stone-200 bg-stone-50 text-stone-600'
+                  )}
+                >
+                  <ShieldCheck className="w-3 h-3 mr-1" />
+                  {isAdminView ? 'Mode Admin (Nama Lengkap)' : 'Privasi: Nama Inisial'}
+                </Badge>
+              )}
             </div>
             <p className="text-xs text-stone-500">
               Keaktifan hari ini diakui bila target langkah harian tercapai. Streak dihitung dari hari aktif terjadwal.
+              {!isGuestMockup && !isAdminView && ' Nama peserta ditampilkan dalam inisial (hanya Admin/Musyrifah yang melihat nama lengkap).'}
             </p>
           </div>
 
@@ -210,7 +380,7 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
                         </span>
                         {member.isMe && (
                           <Badge className="bg-primary text-white hover:bg-primary text-[9px] font-black h-4 px-1.5">
-                            Anda
+                            {isGuestMockup ? 'Simulasi Anda' : 'Anda'}
                           </Badge>
                         )}
                       </div>

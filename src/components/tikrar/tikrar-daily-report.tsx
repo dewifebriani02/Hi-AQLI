@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { QURAN_CHAPTERS } from '@/lib/quran-data';
 import { SURAH_START_PAGES } from '@/lib/quran-mapping';
 import {
+  addCalendarDays,
   BLOCK_LETTERS,
   computeMaxUnlockedPageInJuz,
   computeTikrarStreakAndWeekly,
@@ -56,6 +57,7 @@ import {
   Flame,
   Loader2,
   Lock,
+  LogIn,
   MessageCircle,
   PlayCircle,
   RotateCcw,
@@ -102,6 +104,7 @@ export function TikrarDailyReport({
 }: TikrarDailyReportProps) {
   const target = summary?.target || null;
   const { user } = useUser();
+  const isGuestMockup = !user?.id;
   const { toast } = useToast();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetMode, setResetMode] = useState<'page' | 'juz'>('page');
@@ -171,7 +174,26 @@ export function TikrarDailyReport({
 
   const fetchTasmiQueue = useCallback(async () => {
     if (!user?.id) {
-      setTasmiQueue([]);
+      setTasmiQueue([
+        {
+          id: 'mock-q-1',
+          queueNumber: 1,
+          isMe: false,
+          name: 'S. M. (Contoh)',
+          juz: 30,
+          pageNumber: 583,
+          submittedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'mock-q-2',
+          queueNumber: 2,
+          isMe: true,
+          name: 'A. R. (Contoh)',
+          juz: 30,
+          pageNumber: 582,
+          submittedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        },
+      ]);
       return;
     }
     try {
@@ -458,6 +480,15 @@ export function TikrarDailyReport({
 
   // Aggregate progress across the active Juz
   const juzRecap = useMemo(() => {
+    if (isGuestMockup) {
+      return {
+        totalBlocksInJuz: totalPages * 4,
+        completedBlocksInJuz: 10,
+        clearedPagesCount: 2,
+        activePageBlocks: new Set<number>([1, 2]),
+      };
+    }
+
     const completedBlockKeys = new Set<string>();
     const activePageBlocks = new Set<number>();
 
@@ -500,10 +531,29 @@ export function TikrarDailyReport({
       clearedPagesCount,
       activePageBlocks,
     };
-  }, [userLogs, startPage, endPage, totalPages, recommendedPage, userSubmissions, passedExamPages, summary]);
+  }, [isGuestMockup, userLogs, startPage, endPage, totalPages, recommendedPage, userSubmissions, passedExamPages, summary]);
 
   // Analisis aktivitas sub-blok terkini dari tikrar_user_progress
   const activeStageInfo = useMemo(() => {
+    if (isGuestMockup) {
+      return {
+        pageNumber: recommendedPage,
+        juz: activeJuz,
+        stageName: 'TM 3-1 (Blok C-1 Maroon)',
+        subBlockLetter: 'TM 3-1',
+        badgeText: 'TM 3-1',
+        currentCount: 24,
+        targetCount: 40,
+        percent: 60,
+        totalProgress: 56,
+        tuntasCount: 2,
+        blocksObj: {
+          1: { a: { count: 40 }, b: { count: 40 }, combined: { count: 40 } },
+          2: { a: { count: 40 }, b: { count: 40 }, combined: { count: 40 } },
+          3: { a: { count: 24 }, b: { count: 0 }, combined: { count: 0 } },
+        },
+      };
+    }
     if (!allUserProgress || allUserProgress.length === 0) return null;
 
     const hasActivity = (p: any) => {
@@ -683,39 +733,112 @@ export function TikrarDailyReport({
       tuntasCount,
       blocksObj,
     };
-  }, [allUserProgress, recommendedPage, summary?.quizPassedPages]);
+  }, [isGuestMockup, activeJuz, allUserProgress, recommendedPage, startPage, endPage, summary?.quizPassedPages]);
 
   // Laporan Blok Tuntas: hanya blok pada rentang target terbaru
-  const recentLogs = useMemo(
-    () =>
-      (userLogs || [])
-        .filter((l: any) => {
-          const p = Number(l.page_number);
-          return l?.completed && p >= startPage && p <= endPage;
-        })
-        .slice(0, 6),
-    [userLogs, startPage, endPage]
-  );
+  const recentLogs = useMemo(() => {
+    if (isGuestMockup) {
+      return [
+        {
+          id: 'mock-log-1',
+          log_date: todayKey,
+          page_number: recommendedPage,
+          blocks_completed: [1, 2],
+          duration_minutes: 35,
+          completed: true,
+        },
+        {
+          id: 'mock-log-2',
+          log_date: addCalendarDays(todayKey, -1),
+          page_number: Math.max(startPage, recommendedPage - 1),
+          blocks_completed: [1, 2, 3, 4],
+          duration_minutes: 60,
+          completed: true,
+        },
+      ];
+    }
+    return (userLogs || [])
+      .filter((l: any) => {
+        const p = Number(l.page_number);
+        return l?.completed && p >= startPage && p <= endPage;
+      })
+      .slice(0, 6);
+  }, [isGuestMockup, todayKey, recommendedPage, userLogs, startPage, endPage]);
 
   const weeklyMet = useMemo(() => {
+    if (isGuestMockup) return 4;
     const dow = new Date(`${todayKey}T12:00:00Z`).getUTCDay();
     const monday = new Date(`${todayKey}T12:00:00Z`);
     monday.setUTCDate(monday.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
     const mondayKey = monday.toISOString().slice(0, 10);
     return (summary?.activity || []).filter((a) => a.targetMet && a.date >= mondayKey && a.date <= todayKey).length;
-  }, [summary?.activity, todayKey]);
-  const recentActivity = useMemo(() => (summary?.activity || []).slice(0, 5), [summary?.activity]);
-  const recentSubmissions = useMemo(() => (userSubmissions || []).slice(0, 5), [userSubmissions]);
+  }, [isGuestMockup, summary?.activity, todayKey]);
+
+  const recentActivity = useMemo(() => {
+    if (isGuestMockup) {
+      return [
+        { date: todayKey, clicks: 82, stepsToday: 6, targetMet: true },
+        { date: addCalendarDays(todayKey, -1), clicks: 94, stepsToday: 6, targetMet: true },
+      ];
+    }
+    return (summary?.activity || []).slice(0, 5);
+  }, [isGuestMockup, todayKey, summary?.activity]);
+
+  const recentSubmissions = useMemo(() => {
+    if (isGuestMockup) {
+      return [
+        {
+          id: 'mock-sub-1',
+          page_number: recommendedPage,
+          blocks_range: 'blok_1_4',
+          status: 'passed',
+          grade: 'mumtaz_murtafi',
+          musyrifah_name: 'Ustadzah Musyrifah HI AQLI (Contoh)',
+          feedback: 'Makharijul huruf dan kelancaran sangat baik, pertahankan murojaah setiap ba\'da shalat.',
+        },
+      ];
+    }
+    return (userSubmissions || []).slice(0, 5);
+  }, [isGuestMockup, recommendedPage, userSubmissions]);
+
+  const displayStepsToday = isGuestMockup ? 6 : summary?.today.stepsToday || 0;
+  const displayDailyQuota = isGuestMockup ? 6 : summary?.today.dailyQuota || 1;
+  const displayTargetMet = isGuestMockup ? true : Boolean(summary?.today.targetMet);
+  const displayTodayClicks = isGuestMockup ? 82 : summary?.today.clicks || 0;
+  const displayStreak = isGuestMockup ? 5 : summary?.streak ?? 0;
+  const displayPoints = isGuestMockup ? 840 : summary?.points ?? (Number(userData?.points) || 0);
 
   return (
     <Card className="border border-stone-200 bg-[#fdfbf7] shadow-md rounded-2xl overflow-hidden">
       <CardContent className="p-5 sm:p-6 space-y-6">
+        {isGuestMockup && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50/90 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Badge className="bg-amber-700 text-white hover:bg-amber-700 text-[10px] font-black shrink-0">
+                <Sparkles className="w-3 h-3 mr-1" /> CONTOH REKAP PRIBADI (SIMULASI)
+              </Badge>
+              <span className="text-xs font-bold text-amber-950">
+                Ini adalah contoh rekap progres &amp; riwayat setoran. Masuk akun untuk menyimpan dan memantau rekap hafalan Ukhti.
+              </span>
+            </div>
+            <Button
+              asChild
+              size="sm"
+              className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-black shrink-0"
+            >
+              <Link href="/login">
+                <LogIn className="w-3.5 h-3.5 mr-1.5" /> Masuk Akun
+              </Link>
+            </Button>
+          </div>
+        )}
+
         {/* Header Rekap Pribadi & Shortcut ke Mushaf */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b-2 border-primary pb-4">
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-black text-primary tracking-widest uppercase">
-                REKAP PROGRES PRIBADI • JUZ {activeJuz} • HAL. {startPage}–{endPage}
+                {isGuestMockup ? 'CONTOH REKAP PROGRES PRIBADI' : 'REKAP PROGRES PRIBADI'} • JUZ {activeJuz} • HAL. {startPage}–{endPage}
               </span>
               <Badge
                 variant="outline"
@@ -725,13 +848,19 @@ export function TikrarDailyReport({
               </Badge>
             </div>
             <h2 className="text-xl sm:text-2xl font-black font-headline text-primary">
-              Ringkasan Laporan &amp; Riwayat Setoran Tasmi&apos;
+              {isGuestMockup
+                ? "Contoh Ringkasan Laporan & Riwayat Setoran Tasmi'"
+                : "Ringkasan Laporan & Riwayat Setoran Tasmi'"}
             </h2>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-600">
               <span>
                 Halaqah:{' '}
                 <strong className="text-stone-900">
-                  {activeHalaqah ? activeHalaqah.title : 'Belum memilih sesi Live Zoom'}
+                  {activeHalaqah
+                    ? activeHalaqah.title
+                    : isGuestMockup
+                    ? 'Hi Tikrar (Contoh Sesi)'
+                    : 'Belum memilih sesi Live Zoom'}
                 </strong>
               </span>
               <span>•</span>
@@ -850,19 +979,19 @@ export function TikrarDailyReport({
             </span>
             <div className="flex items-baseline justify-between gap-2 mt-1">
               <span className="text-xl font-black text-stone-900">
-                {summary?.today.stepsToday || 0}/{summary?.today.dailyQuota || 1} Langkah
+                {displayStepsToday}/{displayDailyQuota} Langkah
               </span>
               <Badge
                 className={cn(
                   'text-[9px] font-black border-none',
-                  summary?.today.targetMet
+                  displayTargetMet
                     ? 'bg-emerald-100 text-emerald-800'
-                    : summary?.today.clicks
+                    : displayTodayClicks
                     ? 'bg-lime-100 text-lime-900'
                     : 'bg-stone-100 text-stone-600'
                 )}
               >
-                {summary?.today.targetMet ? 'Target Tercapai' : summary?.today.clicks ? 'Aktif' : 'Belum Aktif'}
+                {displayTargetMet ? 'Target Tercapai' : displayTodayClicks ? 'Aktif' : 'Belum Aktif'}
               </Badge>
             </div>
             <span className="text-[11px] font-bold text-stone-500">
@@ -877,11 +1006,11 @@ export function TikrarDailyReport({
             <div className="flex items-center justify-between gap-2 mt-1">
               <span className="inline-flex items-center gap-1 text-lg font-black text-orange-700">
                 <Flame className="w-4 h-4 fill-orange-500 text-orange-600" />
-                {summary?.streak ?? 0} Hari
+                {displayStreak} Hari
               </span>
               <span className="inline-flex items-center gap-1 text-xs font-black text-primary">
                 <Trophy className="w-3.5 h-3.5 text-[#D4AF37]" />
-                {summary?.points ?? (Number(userData?.points) || 0)} Poin
+                {displayPoints} Poin
               </span>
             </div>
           </div>
@@ -975,7 +1104,7 @@ export function TikrarDailyReport({
                 <CalendarDays className="w-4 h-4 text-primary" /> Riwayat Laporan Harian Terakhir
               </h3>
               <span className="text-[11px] font-bold text-stone-500">
-                {(userLogs || []).length} Laporan Tuntas
+                {isGuestMockup ? recentLogs.length : (userLogs || []).length} Laporan Tuntas
               </span>
             </div>
 
@@ -989,7 +1118,7 @@ export function TikrarDailyReport({
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
                     </span>
                     <span className="text-[10px] font-black uppercase tracking-wider text-primary">
-                      Aktivitas Sedang Berjalan (Real-Time)
+                      {isGuestMockup ? 'Contoh Aktivitas Sedang Berjalan' : 'Aktivitas Sedang Berjalan (Real-Time)'}
                     </span>
                   </div>
                   <Badge className="bg-primary text-white hover:bg-primary text-[10px] font-black px-2 py-0.5">
@@ -1029,7 +1158,7 @@ export function TikrarDailyReport({
                     />
                   </div>
                   <div className="flex justify-between items-center text-[10px] text-stone-500 font-medium">
-                    <span>Tersimpan di Cloud Database</span>
+                    <span>{isGuestMockup ? 'Contoh Simulasi Progres' : 'Tersimpan di Cloud Database'}</span>
                     <span>Total Progres Halaman: {activeStageInfo.totalProgress}%</span>
                   </div>
                 </div>
@@ -1117,7 +1246,7 @@ export function TikrarDailyReport({
                 <Award className="w-4 h-4 text-primary" /> Status Setoran Tasmi&apos; (Diisi Muallimah)
               </h3>
               <span className="text-[11px] font-bold text-stone-500">
-                {(userSubmissions || []).length} Setoran
+                {isGuestMockup ? recentSubmissions.length : (userSubmissions || []).length} Setoran
               </span>
             </div>
 
@@ -1146,7 +1275,7 @@ export function TikrarDailyReport({
                     >
                       <span className="truncate text-stone-900">
                         <strong className="text-primary">#{q.queueNumber}</strong> {q.name}
-                        {q.isMe ? ' (Anda)' : ''} • Juz {q.juz} Hal. {q.pageNumber}
+                        {q.isMe ? (isGuestMockup ? ' (Simulasi Anda)' : ' (Anda)') : ''} • Juz {q.juz} Hal. {q.pageNumber}
                       </span>
                       <span className="text-[10px] text-stone-500 shrink-0">
                         {new Date(q.submittedAt).toLocaleTimeString('id-ID', {
@@ -1295,7 +1424,7 @@ export function TikrarDailyReport({
                         {q.correct}/{q.total} benar
                         {q.part1Correct !== null && q.part1Correct !== undefined && q.part2Correct !== null && q.part2Correct !== undefined
                           ? ` (Hafalan ${q.part1Correct}/${q.part1Total ?? 30} • Kata ${q.part2Correct}/${q.part2Total ?? 30})`
-                          : ""} •{" "}
+                          : ''} •{' '}
                         {new Date(q.createdAt).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'short',
