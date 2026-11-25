@@ -254,17 +254,12 @@ function formatBlockRangeLabel(verses: Verse[], blockCfg?: BlockConfig | null): 
   const last = verses[verses.length - 1].verse_key;
   const [s1, a1] = first.split(':');
   const [s2, a2] = last.split(':');
-  const surah1 = QURAN_CHAPTERS.find((c) => c.id === Number(s1))?.name_simple || `QS ${s1}`;
   if (blockCfg?.sub_1 && blockCfg?.sub_2) {
     if (s1 === s2 && a1 === a2) {
-      return `${surah1}: ${a1} (Kata #${blockCfg.sub_1.start_word_index}–#${blockCfg.sub_2.end_word_index})`;
+      return `Ayat ${a1} (Kata #${blockCfg.sub_1.start_word_index}–#${blockCfg.sub_2.end_word_index})`;
     }
   }
-  if (s1 === s2) {
-    return a1 === a2 ? `${surah1}: ${a1}` : `${surah1}: ${a1}–${a2}`;
-  }
-  const surah2 = QURAN_CHAPTERS.find((c) => c.id === Number(s2))?.name_simple || `QS ${s2}`;
-  return `${surah1} ${a1} – ${surah2} ${a2}`;
+  return a1 === a2 ? `Ayat ${a1}` : `Ayat ${a1}–${a2}`;
 }
 
 const pageDataCache = new Map<number, { verses: Verse[]; customPageConfig: PageBlockConfig | null }>();
@@ -4151,16 +4146,16 @@ function MaqtaCard({
         isLocked && 'opacity-50 grayscale select-none'
       )}
     >
-      <div className={cn("py-2.5 px-3.5 sm:px-4 border-b flex flex-wrap justify-between items-center gap-x-2 gap-y-1.5 shrink-0", theme.softHeaderBg)}>
-        <div className="flex items-center flex-wrap gap-1.5 min-w-0">
-          <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 border-none shrink-0", theme.badgeClass)}>
+      <div className={cn("py-2.5 px-3 sm:px-4 border-b flex items-center justify-between gap-2 shrink-0 flex-nowrap", theme.softHeaderBg)}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border-none shrink-0", theme.badgeClass)}>
             {theme.badgeText}
           </Badge>
-          <span className="text-[10px] font-black uppercase tracking-wider opacity-85 leading-snug">
+          <span className="text-[10px] font-black uppercase tracking-wider opacity-85 leading-snug whitespace-nowrap">
             Hal. {page} {rangeLabel ? `• ${rangeLabel}` : ''} {isLocked && '• TERKUNCI'}
           </span>
         </div>
-        <div className="flex items-center flex-wrap justify-end gap-1.5 shrink-0 ml-auto">
+        <div className="flex items-center justify-end gap-1.5 shrink-0 ml-auto">
           {(['a', 'b', 'combined'] as const).some((part) => stepInfoFor?.(part)?.isTarget) && (
             <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37] font-black text-[8px] tracking-widest h-4 gap-0.5">
               <Star className="w-2.5 h-2.5 fill-current" /> TARGET HARI INI
