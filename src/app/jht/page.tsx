@@ -11,20 +11,41 @@ import {
   Share2,
   Check,
   Sparkles,
-  Calendar,
+  Handshake,
   ShieldCheck,
-  ChevronRight,
+  GraduationCap,
+  MapPin,
+  Clock,
+  Mic,
+  FileBadge,
+  CalendarClock,
+  RefreshCw,
+  UserPlus,
 } from "lucide-react";
 
-type TabKey = "ziyadah" | "murajaah" | "tasmi" | "halaqah";
+type TabKey =
+  | "ziyadah"
+  | "murajaah"
+  | "tasmi"
+  | "halaqah"
+  | "partner_alumni"
+  | "admin_bph";
 type HalaqahFilter = "thalibat" | "thullab";
+type PartnerGenderFilter = "thalibat" | "thullab" | "alumni";
 
 export default function JhtPreviewPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("ziyadah");
   const [tikrarCount, setTikrarCount] = useState<number>(14);
   const [selectedTasmiJuz, setSelectedTasmiJuz] = useState<string>("5 Juz");
   const [halaqahFilter, setHalaqahFilter] = useState<HalaqahFilter>("thalibat");
+  const [partnerFilter, setPartnerFilter] =
+    useState<PartnerGenderFilter>("thalibat");
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [examModeActive, setExamModeActive] = useState<boolean>(false);
+  const [invitedPartners, setInvitedPartners] = useState<Record<string, boolean>>({});
+  const [graduatedBatch, setGraduatedBatch] = useState<boolean>(false);
+  const [assignedOprec, setAssignedOprec] = useState<boolean>(false);
+  const [rolledSemester, setRolledSemester] = useState<boolean>(false);
 
   const tikrarTarget = 20;
   const tikrarPct = Math.min(100, Math.round((tikrarCount / tikrarTarget) * 100));
@@ -42,6 +63,10 @@ export default function JhtPreviewPage() {
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
     }
+  };
+
+  const toggleInvitePartner = (id: string) => {
+    setInvitedPartners((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const juzHealthList = [
@@ -75,7 +100,7 @@ export default function JhtPreviewPage() {
               <Sparkles className="w-3 h-3" /> Preview UI Interaktif
             </span>
             <span className="text-xs text-slate-200 font-medium">
-              Jami&apos;atul Huffazh Tazkia • Mutaba&apos;ah Digital
+              Jami&apos;atul Huffazh Tazkia • Mutaba&apos;ah Mahasiswa &amp; Alumni
             </span>
           </div>
           <button
@@ -114,7 +139,12 @@ export default function JhtPreviewPage() {
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   {/* Spire */}
-                  <path d="M50 12V20" stroke="#1B367C" strokeWidth="3" strokeLinecap="round" />
+                  <path
+                    d="M50 12V20"
+                    stroke="#1B367C"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
                   {/* Left Dome Arch (Navy) */}
                   <path
                     d="M32 54C32 35 42 22 50 20C44 25 39 37 39 54H32Z"
@@ -123,7 +153,7 @@ export default function JhtPreviewPage() {
                   {/* Right Dome Arch (Lime Green) */}
                   <path
                     d="M68 54C68 35 58 22 50 20C56 25 61 37 61 54H68Z"
-                    fill="#8CC63F"
+                  fill="#8CC63F"
                   />
                   {/* Mushaf Pages (Lime Green) */}
                   <path
@@ -146,18 +176,43 @@ export default function JhtPreviewPage() {
                   Mutaba&apos;ah Tahfizh Al-Qur&apos;an
                 </h1>
                 <p className="text-xs text-slate-200/90 mt-0.5">
-                  Thalibah: <strong className="text-white">Aisyah Humaira</strong> • Halaqah Thalibat Al-Fath •{" "}
+                  Thalibah: <strong className="text-white">Aisyah Humaira</strong> (Akuntansi Syariah &apos;24) •{" "}
+                  Halaqah Thalibat Al-Fath •{" "}
                   <strong className="text-[#B8F06D]">13 Juz Hafal</strong>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setExamModeActive((v) => !v)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border transition-all cursor-pointer ${
+                  examModeActive
+                    ? "bg-amber-400 text-[#0F1E3C] border-amber-300 shadow-sm"
+                    : "bg-white/10 text-slate-200 border-white/15 hover:bg-white/15"
+                }`}
+              >
+                <CalendarClock className="w-3.5 h-3.5" />
+                <span>
+                  {examModeActive
+                    ? "Mode UTS/UAS Aktif (Streak Freeze)"
+                    : "Aktifkan Mode UTS/UAS"}
+                </span>
+              </button>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-bold">
                 <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> 19 Hari Istiqamah
               </span>
             </div>
           </div>
+
+          {examModeActive && (
+            <div className="relative z-10 mt-3 rounded-2xl bg-amber-400/15 border border-amber-300/40 px-3.5 py-2.5 text-xs text-amber-100 flex items-center justify-between gap-2">
+              <span>
+                🎓 <strong>Mode Ujian Kampus (UTS/UAS/KKN) Aktif:</strong> Target Ziyadah harian di-pause sementara dan dialihkan ke Muraja&apos;ah ringan agar nilai akademik &amp; hafalan sama-sama terjaga tanpa memutus streak.
+              </span>
+            </div>
+          )}
 
           {/* 3 Core Feature Quick Summary */}
           <div className="relative z-10 grid grid-cols-3 gap-2 sm:gap-3 mt-4">
@@ -223,8 +278,8 @@ export default function JhtPreviewPage() {
           </div>
         </div>
 
-        {/* Navigation Segmented Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-white p-1.5 rounded-2xl border border-[#DCE5F2] shadow-xs">
+        {/* Navigation Segmented Tabs (6 Tabs: 3 Core + Halaqah + Partner & Alumni + Panel Admin BPH) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 bg-white p-1.5 rounded-2xl border border-[#DCE5F2] shadow-xs">
           <button
             type="button"
             onClick={() => setActiveTab("ziyadah")}
@@ -234,7 +289,7 @@ export default function JhtPreviewPage() {
                 : "text-[#5A6B8C] hover:bg-slate-50"
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
+            <BookOpen className="w-3.5 h-3.5 shrink-0" />
             <span>1. Sesi Ziyadah</span>
           </button>
 
@@ -247,7 +302,7 @@ export default function JhtPreviewPage() {
                 : "text-[#5A6B8C] hover:bg-slate-50"
             }`}
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
             <span>2. Sesi Muraja&apos;ah</span>
           </button>
 
@@ -260,7 +315,7 @@ export default function JhtPreviewPage() {
                 : "text-[#5A6B8C] hover:bg-slate-50"
             }`}
           >
-            <Award className="w-3.5 h-3.5" />
+            <Award className="w-3.5 h-3.5 shrink-0" />
             <span>3. Target Tasmi&apos;</span>
           </button>
 
@@ -273,8 +328,34 @@ export default function JhtPreviewPage() {
                 : "text-[#5A6B8C] hover:bg-slate-50"
             }`}
           >
-            <Users className="w-3.5 h-3.5" />
+            <Users className="w-3.5 h-3.5 shrink-0" />
             <span>4. Halaqah Thullab/Thalibat</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("partner_alumni")}
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              activeTab === "partner_alumni"
+                ? "bg-[#1B367C] text-white shadow-sm"
+                : "text-[#5A6B8C] hover:bg-slate-50"
+            }`}
+          >
+            <Handshake className="w-3.5 h-3.5 shrink-0" />
+            <span>5. Partner Simak &amp; Alumni</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("admin_bph")}
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              activeTab === "admin_bph"
+                ? "bg-[#1B367C] text-white shadow-sm"
+                : "text-[#5A6B8C] hover:bg-slate-50"
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+            <span>6. Panel Admin BPH</span>
           </button>
         </div>
 
@@ -307,8 +388,10 @@ export default function JhtPreviewPage() {
                 >
                   ۞ وَلَوْ أَنَّنَا نَزَّلْنَآ إِلَيْهِمُ ٱلْمَلَـٰٓئِكَةَ وَكَلَّمَهُمُ ٱلْمَوْتَىٰ وَحَشَرْنَا عَلَيْهِمْ كُلَّ شَىْءٍ قَبُلًا مَّا كَانُوا۟ لِيُؤْمِنُوٓا۟ إِلَّآ أَن يَشَآءَ ٱللَّهُ...
                 </p>
-                <div className="flex items-center justify-between text-[11px] text-[#5A6B8C] font-semibold mt-2 pt-2 border-t border-[#E4F0CE]">
-                  <span>Simak dengan Rekan (Thalib/Thalibah): Sudah 3x</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#5A6B8C] font-semibold mt-2 pt-2 border-t border-[#E4F0CE]">
+                  <span>
+                    ✓ Validasi Peer-Simak: Sudah disimak oleh Fatimah Az-Zahra (Thalibah)
+                  </span>
                   <span>Hal. 142 • Blok Penuh</span>
                 </div>
               </div>
@@ -355,16 +438,17 @@ export default function JhtPreviewPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
                 <button
                   type="button"
-                  className="py-3 px-4 rounded-xl border border-[#DCE5F2] bg-white hover:bg-slate-50 text-[#1B367C] text-xs font-extrabold cursor-pointer"
+                  className="py-3 px-4 rounded-xl border border-[#DCE5F2] bg-white hover:bg-slate-50 text-[#1B367C] text-xs font-extrabold cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Simpan Log Ziyadah Mandiri
+                  <Mic className="w-4 h-4" />
+                  <span>Kirim Voice Note Setoran (Jika Kuliah Bentrok)</span>
                 </button>
                 <button
                   type="button"
                   className="py-3 px-4 rounded-xl bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200] text-xs font-extrabold shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Ajukan Setoran ke Musyrif/Musyrifah</span>
+                  <span>Ajukan Setoran Tatap Muka ke Musyrif/Musyrifah</span>
                 </button>
               </div>
             </div>
@@ -489,7 +573,7 @@ export default function JhtPreviewPage() {
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div>
                   <h3 className="text-sm font-extrabold text-[#0F1E3C]">
-                    Peta Kesehatan Hafalan 30 Juz
+                    Peta Kesehatan Hafalan 30 Juz (Aktif Seumur Hidup hingga Alumni)
                   </h3>
                   <p className="text-xs text-[#5A6B8C]">
                     Otomatis mengingatkan juz yang belum dimuraja&apos;ah &gt; 7 hari
@@ -573,22 +657,28 @@ export default function JhtPreviewPage() {
 
               {/* Pilihan Kategori Tasmi */}
               <div className="flex flex-wrap gap-1.5 mb-4">
-                {["1 Juz", "3 Juz", "5 Juz", "10 Juz", "15 Juz", "20 Juz", "30 Juz"].map(
-                  (kat) => (
-                    <button
-                      key={kat}
-                      type="button"
-                      onClick={() => setSelectedTasmiJuz(kat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all cursor-pointer ${
-                        selectedTasmiJuz === kat
-                          ? "bg-[#1B367C] text-white border-[#1B367C]"
-                          : "bg-[#F1F5F9] text-[#475569] border-[#DCE5F2] hover:bg-slate-200/70"
-                      }`}
-                    >
-                      Tasmi&apos; {kat}
-                    </button>
-                  )
-                )}
+                {[
+                  "1 Juz",
+                  "3 Juz",
+                  "5 Juz",
+                  "10 Juz",
+                  "15 Juz",
+                  "20 Juz",
+                  "30 Juz",
+                ].map((kat) => (
+                  <button
+                    key={kat}
+                    type="button"
+                    onClick={() => setSelectedTasmiJuz(kat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all cursor-pointer ${
+                      selectedTasmiJuz === kat
+                        ? "bg-[#1B367C] text-white border-[#1B367C]"
+                        : "bg-[#F1F5F9] text-[#475569] border-[#DCE5F2] hover:bg-slate-200/70"
+                    }`}
+                  >
+                    Tasmi&apos; {kat}
+                  </button>
+                ))}
               </div>
 
               {/* Indikator Kesiapan Tasmi */}
@@ -648,24 +738,33 @@ export default function JhtPreviewPage() {
                 <div className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
                   <div>
                     <div className="font-extrabold text-[#0F1E3C]">
-                      3. Pra-Tasmi&apos; (Mock Test 1 Juz Acak bersama Musyrif/Musyrifah)
+                      3. E-Transkrip &amp; Sertifikat Tasmi&apos; QR-Verified (SKPI Kampus)
                     </div>
                     <div className="text-[11px] text-[#5A6B8C]">
-                      Dijadwalkan Rabu, 1 Desember 2026
+                      Terbit otomatis setelah lulus ujian untuk lampiran SKPI &amp; Beasiswa Tazkia
                     </div>
                   </div>
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EAF3FF] text-[#1B367C]">
-                    Terjadwal
+                    Siap Cetak
                   </span>
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="mt-4 w-full py-3 rounded-xl bg-[#1B367C] hover:bg-[#13285E] text-white text-xs font-extrabold shadow-sm cursor-pointer"
-              >
-                Ajukan Pendaftaran Jadwal Sidang Tasmi&apos;
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
+                <button
+                  type="button"
+                  className="py-3 px-4 rounded-xl border border-[#DCE5F2] bg-white hover:bg-slate-50 text-[#1B367C] text-xs font-extrabold cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <FileBadge className="w-4 h-4" />
+                  <span>Preview E-Transkrip Tahfizh (SKPI)</span>
+                </button>
+                <button
+                  type="button"
+                  className="py-3 px-4 rounded-xl bg-[#1B367C] hover:bg-[#13285E] text-white text-xs font-extrabold shadow-sm cursor-pointer"
+                >
+                  Ajukan Pendaftaran Jadwal Sidang Tasmi&apos;
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -720,7 +819,9 @@ export default function JhtPreviewPage() {
                     <div>
                       <div className="font-extrabold text-[#0F1E3C]">
                         1. Aisyah Humaira{" "}
-                        <span className="text-[#1B367C]">(Thalibah • 13 Juz)</span>
+                        <span className="text-[#1B367C]">
+                          (Thalibah • Akuntansi Syariah &apos;24 • 13 Juz)
+                        </span>
                       </div>
                       <div className="text-[11px] text-[#5A6B8C] mt-0.5">
                         Ziyadah: Hal. 142 (Proses) • Muraja&apos;ah: Juz 7 &amp; Juz 5 • Target Tasmi&apos; 5 Juz
@@ -735,7 +836,9 @@ export default function JhtPreviewPage() {
                     <div>
                       <div className="font-extrabold text-[#0F1E3C]">
                         2. Fatimah Az-Zahra{" "}
-                        <span className="text-[#1B367C]">(Thalibah • 18 Juz)</span>
+                        <span className="text-[#1B367C]">
+                          (Thalibah • Ekonomi Syariah &apos;23 • 18 Juz)
+                        </span>
                       </div>
                       <div className="text-[11px] text-[#5A6B8C] mt-0.5">
                         Ziyadah: Hal. 285 (Lulus Mumtaz) • Muraja&apos;ah: Juz 14 • Target Tasmi&apos; 10 Juz
@@ -750,7 +853,9 @@ export default function JhtPreviewPage() {
                     <div>
                       <div className="font-extrabold text-[#0F1E3C]">
                         3. Khadijah Qonitah{" "}
-                        <span className="text-[#1B367C]">(Thalibah • 7 Juz)</span>
+                        <span className="text-[#1B367C]">
+                          (Thalibah • Bisnis Digital &apos;25 • 7 Juz)
+                        </span>
                       </div>
                       <div className="text-[11px] text-[#5A6B8C] mt-0.5">
                         Belum setor ziyadah 2 hari • Muraja&apos;ah Juz 3 tertunda
@@ -767,7 +872,9 @@ export default function JhtPreviewPage() {
                     <div>
                       <div className="font-extrabold text-[#0F1E3C]">
                         1. Muhammad Al-Fatih{" "}
-                        <span className="text-[#1B367C]">(Thalib • 16 Juz)</span>
+                        <span className="text-[#1B367C]">
+                          (Thalib • Ekonomi Syariah &apos;23 • 16 Juz)
+                        </span>
                       </div>
                       <div className="text-[11px] text-[#5A6B8C] mt-0.5">
                         Ziyadah: Hal. 252 (Lulus Mumtaz) • Muraja&apos;ah: Juz 11 &amp; Juz 4 • Target Tasmi&apos; 10 Juz
@@ -782,7 +889,9 @@ export default function JhtPreviewPage() {
                     <div>
                       <div className="font-extrabold text-[#0F1E3C]">
                         2. Zaid bin Tsabit{" "}
-                        <span className="text-[#1B367C]">(Thalib • 25 Juz)</span>
+                        <span className="text-[#1B367C]">
+                          (Thalib • Muamalah &apos;22 • 25 Juz)
+                        </span>
                       </div>
                       <div className="text-[11px] text-[#5A6B8C] mt-0.5">
                         Ziyadah: Hal. 442 (Proses) • Muraja&apos;ah: Juz 20 • Target Tasmi&apos; 20 Juz
@@ -797,7 +906,9 @@ export default function JhtPreviewPage() {
                     <div>
                       <div className="font-extrabold text-[#0F1E3C]">
                         3. Abdullah Azzam{" "}
-                        <span className="text-[#1B367C]">(Thalib • 9 Juz)</span>
+                        <span className="text-[#1B367C]">
+                          (Thalib • Akuntansi Syariah &apos;25 • 9 Juz)
+                        </span>
                       </div>
                       <div className="text-[11px] text-[#5A6B8C] mt-0.5">
                         Ziyadah: Hal. 164 (Jayyid Jiddan) • Muraja&apos;ah Juz 6 selesai
@@ -809,6 +920,477 @@ export default function JhtPreviewPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: PARTNER SIMAK & ALUMNI */}
+        {activeTab === "partner_alumni" && (
+          <div className="space-y-3.5">
+            {/* Bursa Partner Simak */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#DCE5F2] shadow-xs">
+              <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+                <div>
+                  <span className="text-[11px] font-extrabold text-[#1B367C] uppercase tracking-wider">
+                    INTERAKSI ANTAR ANGGOTA • FILTER GENDER OTOMATIS
+                  </span>
+                  <h2 className="text-base sm:text-lg font-extrabold text-[#0F1E3C] mt-0.5">
+                    Bursa Partner Simak (&ldquo;Cari Pasangan Setoran&rdquo;)
+                  </h2>
+                  <p className="text-xs text-[#5A6B8C]">
+                    Temukan rekan Thalib/Thalibah yang sedang jam kosong kuliah untuk saling menyimak sebelum setor ke Musyrif.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPartnerFilter("thalibat")}
+                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
+                      partnerFilter === "thalibat"
+                        ? "bg-[#1B367C] text-white border-[#1B367C]"
+                        : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
+                    }`}
+                  >
+                    Thalibat (Akhwat)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPartnerFilter("thullab")}
+                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
+                      partnerFilter === "thullab"
+                        ? "bg-[#1B367C] text-white border-[#1B367C]"
+                        : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
+                    }`}
+                  >
+                    Thullab (Ikhwan)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPartnerFilter("alumni")}
+                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border cursor-pointer transition-all ${
+                      partnerFilter === "alumni"
+                        ? "bg-[#1B367C] text-white border-[#1B367C]"
+                        : "bg-slate-100 text-[#475569] border-[#DCE5F2]"
+                    }`}
+                  >
+                    Jaringan Alumni
+                  </button>
+                </div>
+              </div>
+
+              {partnerFilter === "thalibat" && (
+                <div className="space-y-2.5 text-xs">
+                  {[
+                    {
+                      id: "p1",
+                      name: "Fatimah Az-Zahra",
+                      meta: "Thalibah • Akuntansi Syariah '24 • 18 Juz",
+                      loc: "Musholla Akhwat Kampus Utama",
+                      time: "Hari ini, 12.30 – 13.30 WIB (Jeda Kuliah)",
+                      target: "Target Simak: Muraja'ah Juz 5 (1/2 Juz Kedua)",
+                    },
+                    {
+                      id: "p2",
+                      name: "Nabila Khairunnisa",
+                      meta: "Thalibah • Ekonomi Syariah '23 • 15 Juz",
+                      loc: "Asrama Thalibat / Online GMeet",
+                      time: "Ba'da Ashar, 16.00 – 17.00 WIB",
+                      target: "Target Simak: Simulasi Pra-Tasmi' Juz 1–3",
+                    },
+                    {
+                      id: "p3",
+                      name: "Maryam Qonitah",
+                      meta: "Thalibah • Bisnis Digital '25 • 6 Juz",
+                      loc: "Perpustakaan Tazkia Lt. 2 (Area Akhwat)",
+                      time: "Besok, 10.00 – 11.00 WIB",
+                      target: "Target Simak: Ziyadah QS. Al-An'am Hal. 142",
+                    },
+                  ].map((item) => {
+                    const isInvited = !!invitedPartners[item.id];
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
+                      >
+                        <div className="space-y-1">
+                          <div className="font-extrabold text-[#0F1E3C]">
+                            {item.name}{" "}
+                            <span className="text-[#1B367C]">({item.meta})</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#5A6B8C]">
+                            <span className="inline-flex items-center gap-1 font-semibold text-[#0F1E3C]">
+                              <MapPin className="w-3.5 h-3.5 text-[#1B367C]" />
+                              {item.loc}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-[#4E7A14]" />
+                              {item.time}
+                            </span>
+                          </div>
+                          <div className="text-[11px] font-bold text-[#3B630A]">
+                            {item.target}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleInvitePartner(item.id)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                            isInvited
+                              ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
+                              : "bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200]"
+                          }`}
+                        >
+                          {isInvited
+                            ? "✓ Ajakan Terkirim"
+                            : "Ajak Simak Bareng"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {partnerFilter === "thullab" && (
+                <div className="space-y-2.5 text-xs">
+                  {[
+                    {
+                      id: "m1",
+                      name: "Muhammad Al-Fatih",
+                      meta: "Thalib • Ekonomi Syariah '23 • 16 Juz",
+                      loc: "Masjid Al-Birr Kampus Tazkia (Selasar Utama)",
+                      time: "Ba'da Dzuhur, 12.15 – 13.15 WIB",
+                      target: "Target Simak: Muraja'ah Juz 11 (1 Juz Penuh)",
+                    },
+                    {
+                      id: "m2",
+                      name: "Zaid bin Tsabit",
+                      meta: "Thalib • Hukum Ekonomi Syariah '22 • 25 Juz",
+                      loc: "Masjid Kampus / Online Voice Call",
+                      time: "Ba'da Maghrib, 18.30 – 19.30 WIB",
+                      target: "Target Simak: Persiapan Tasmi' 20 Juz (Juz 15–16)",
+                    },
+                  ].map((item) => {
+                    const isInvited = !!invitedPartners[item.id];
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
+                      >
+                        <div className="space-y-1">
+                          <div className="font-extrabold text-[#0F1E3C]">
+                            {item.name}{" "}
+                            <span className="text-[#1B367C]">({item.meta})</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#5A6B8C]">
+                            <span className="inline-flex items-center gap-1 font-semibold text-[#0F1E3C]">
+                              <MapPin className="w-3.5 h-3.5 text-[#1B367C]" />
+                              {item.loc}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-[#4E7A14]" />
+                              {item.time}
+                            </span>
+                          </div>
+                          <div className="text-[11px] font-bold text-[#3B630A]">
+                            {item.target}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleInvitePartner(item.id)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                            isInvited
+                              ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
+                              : "bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200]"
+                          }`}
+                        >
+                          {isInvited
+                            ? "✓ Ajakan Terkirim"
+                            : "Ajak Simak Bareng"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {partnerFilter === "alumni" && (
+                <div className="space-y-2.5 text-xs">
+                  {[
+                    {
+                      id: "a1",
+                      name: "Ustadzah Shafiyyah, S.E.",
+                      meta: "Alumni JHT Angkatan 2020 • 30 Juz Mutqin",
+                      loc: "Online via Zoom / WhatsApp Call",
+                      time: "Sabtu & Ahad Pagi, 06.00 – 07.30 WIB",
+                      target: "Bersedia Menyimak Adik Tingkat (Pra-Tasmi' & Partner Alumni)",
+                    },
+                    {
+                      id: "a2",
+                      name: "Akhdan Al-Ghifari, S.Ak.",
+                      meta: "Alumni JHT Angkatan 2021 • 20 Juz",
+                      loc: "Online GMeet (Sela Jam Kerja / Malam)",
+                      time: "Senin & Kamis, 20.00 – 21.00 WIB",
+                      target: "Cari Partner Simak Sesama Alumni Thullab (Juz 1–10)",
+                    },
+                  ].map((item) => {
+                    const isInvited = !!invitedPartners[item.id];
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]"
+                      >
+                        <div className="space-y-1">
+                          <div className="font-extrabold text-[#0F1E3C]">
+                            {item.name}{" "}
+                            <span className="text-[#1B367C]">({item.meta})</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#5A6B8C]">
+                            <span className="inline-flex items-center gap-1 font-semibold text-[#0F1E3C]">
+                              <MapPin className="w-3.5 h-3.5 text-[#1B367C]" />
+                              {item.loc}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-[#4E7A14]" />
+                              {item.time}
+                            </span>
+                          </div>
+                          <div className="text-[11px] font-bold text-[#3B630A]">
+                            {item.target}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleInvitePartner(item.id)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                            isInvited
+                              ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
+                              : "bg-[#1B367C] hover:bg-[#13285E] text-white"
+                          }`}
+                        >
+                          {isInvited
+                            ? "✓ Jadwal Terkirim"
+                            : "Jadwalkan Simak"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Mode Alumni Seumur Hidup */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#DCE5F2] shadow-xs">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-[#1B367C]" />
+                <h3 className="text-sm sm:text-base font-extrabold text-[#0F1E3C]">
+                  Mode Alumni Seumur Hidup (Lifetime Huffazh Tazkia)
+                </h3>
+              </div>
+              <p className="text-xs text-[#5A6B8C] mb-3.5">
+                Saat mahasiswa lulus wisuda, akun tidak dihapus melainkan otomatis berpindah ke{" "}
+                <strong>Komunitas Alumni JHT</strong> agar hafalan tetap terjaga di dunia kerja.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
+                  <div className="font-extrabold text-[#1B367C]">
+                    1. Peta Kesehatan 30 Juz Abadi
+                  </div>
+                  <p className="text-[11px] text-[#5A6B8C] mt-1">
+                    Seluruh riwayat Ziyadah, Muraja&apos;ah, dan Sertifikat Tasmi&apos; selama kuliah tersimpan permanen.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
+                  <div className="font-extrabold text-[#1B367C]">
+                    2. Keluar dari Kuota Halaqah Kampus
+                  </div>
+                  <p className="text-[11px] text-[#5A6B8C] mt-1">
+                    Tidak membebani kuota Musyrif mahasiswa aktif, namun punya ruang halaqah daring khusus alumni.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
+                  <div className="font-extrabold text-[#1B367C]">
+                    3. Badge &ldquo;Musyrif / Penguji Tamu&rdquo;
+                  </div>
+                  <p className="text-[11px] text-[#5A6B8C] mt-1">
+                    Alumni yang mutqin 15–30 Juz dapat ikut menyimak adik-adik tingkat secara online saat pekan Tasmi&apos;.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
+                  <div className="font-extrabold text-[#1B367C]">
+                    4. Portofolio Syahadah QR-Verified
+                  </div>
+                  <p className="text-[11px] text-[#5A6B8C] mt-1">
+                    Link verifikasi resmi JHT Tazkia untuk dilampirkan di CV, studi lanjut, atau beasiswa pascasarjana.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: PANEL ADMIN BPH & KADERISASI */}
+        {activeTab === "admin_bph" && (
+          <div className="space-y-3.5">
+            {/* Alur Siklus 4 Tahap */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#DCE5F2] shadow-xs">
+              <span className="text-[11px] font-extrabold text-[#1B367C] uppercase tracking-wider">
+                MANAJEMEN SIKLUS ORGANISASI MAHASISWA
+              </span>
+              <h2 className="text-base sm:text-lg font-extrabold text-[#0F1E3C] mt-0.5">
+                Bagaimana Admin BPH Mengelola Anggota yang Keluar-Masuk Tiap Tahun?
+              </h2>
+              <p className="text-xs text-[#5A6B8C] mb-3.5">
+                Dirancang khusus untuk dinamika pergantian semester, Open Recruitment Maba, hingga wisuda di kampus Tazkia.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#E2EBF6]">
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#EAF3FF] text-[#1B367C] mb-1.5">
+                    1. OPREC MABA
+                  </span>
+                  <div className="font-extrabold text-[#0F1E3C]">
+                    Import &amp; Placement
+                  </div>
+                  <p className="text-[11px] text-[#5A6B8C] mt-1">
+                    Maba daftar via link/CSV NIM, input nilai placement test, lalu auto-assign ke Halaqah.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#E2EBF6]">
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#EAF3FF] text-[#1B367C] mb-1.5">
+                    2. TIAP SEMESTER
+                  </span>
+                  <div className="font-extrabold text-[#0F1E3C]">
+                    Rolling Halaqah
+                  </div>
+                  <p className="text-[11px] text-[#5A6B8C] mt-1">
+                    Pindah kelompok halaqah mengikuti jadwal KRS baru tanpa mereset riwayat juz sebelumnya.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#E2EBF6]">
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#EAF3FF] text-[#1B367C] mb-1.5">
+                    3. KADERISASI
+                  </span>
+                  <div className="font-extrabold text-[#0F1E3C]">
+                    Promosi Musyrif/BPH
+                  </div>
+                  <p className="text-[11px] text-[#5A6B8C] mt-1">
+                    Angkat Thalib/Thalibah senior menjadi Musyrif atau serah-terima jabatan BPH baru 1 klik.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#E2EBF6]">
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#EAF7D8] text-[#3B630A] mb-1.5">
+                    4. WISUDA
+                  </span>
+                  <div className="font-extrabold text-[#0F1E3C]">
+                    Graduasi ke Alumni
+                  </div>
+                  <p className="text-[11px] text-[#5A6B8C] mt-1">
+                    Luluskan angkatan akhir secara massal ke Mode Alumni tanpa menghapus akun mereka.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Simulasi Aksi Massal Admin BPH */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#DCE5F2] shadow-xs">
+              <h3 className="text-sm font-extrabold text-[#0F1E3C] mb-1">
+                Simulasi Aksi Cepat Admin BPH (Coba Klik Tombol di Bawah)
+              </h3>
+              <p className="text-xs text-[#5A6B8C] mb-3.5">
+                Semua aksi tahunan dilakukan dalam hitungan detik tanpa perlu input ulang satu per satu.
+              </p>
+
+              <div className="space-y-2.5 text-xs">
+                {/* Action 1: Oprec */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
+                  <div>
+                    <div className="font-extrabold text-[#0F1E3C] flex items-center gap-1.5">
+                      <UserPlus className="w-4 h-4 text-[#1B367C]" />
+                      <span>Oprec Angkatan Baru 2026 (78 Pendaftar Lulus Seleksi)</span>
+                    </div>
+                    <div className="text-[11px] text-[#5A6B8C] mt-0.5">
+                      38 Thullab (Ikhwan) &amp; 40 Thalibat (Akhwat) • Siap dibagi rata ke 8 Halaqah sesuai level juz
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAssignedOprec((v) => !v)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      assignedOprec
+                        ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
+                        : "bg-[#1B367C] hover:bg-[#13285E] text-white"
+                    }`}
+                  >
+                    {assignedOprec
+                      ? "✓ 8 Halaqah Terbentuk Otomatis"
+                      : "Auto-Assign Halaqah"}
+                  </button>
+                </div>
+
+                {/* Action 2: Rolling Semester */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
+                  <div>
+                    <div className="font-extrabold text-[#0F1E3C] flex items-center gap-1.5">
+                      <RefreshCw className="w-4 h-4 text-[#1B367C]" />
+                      <span>Rolling Semester Baru (Ganjil → Genap 2026/2027)</span>
+                    </div>
+                    <div className="text-[11px] text-[#5A6B8C] mt-0.5">
+                      Sesuaikan ulang jadwal halaqah dengan KRS terbaru tanpa kehilangan progres 30 Juz mahasiswa
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRolledSemester((v) => !v)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      rolledSemester
+                        ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
+                        : "bg-[#1B367C] hover:bg-[#13285E] text-white"
+                    }`}
+                  >
+                    {rolledSemester
+                      ? "✓ Semester Baru Aktif"
+                      : "Rolling Semester Baru"}
+                  </button>
+                </div>
+
+                {/* Action 3: Graduasi Alumni */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F8FAFD] border border-[#E5ECF6]">
+                  <div>
+                    <div className="font-extrabold text-[#0F1E3C] flex items-center gap-1.5">
+                      <GraduationCap className="w-4 h-4 text-[#4E7A14]" />
+                      <span>Wisuda Angkatan 2022 (Semester 8 • 42 Mahasiswa)</span>
+                    </div>
+                    <div className="text-[11px] text-[#5A6B8C] mt-0.5">
+                      Pindahkan massal dari Halaqah Mahasiswa Aktif ke Komunitas Alumni JHT (Akun tetap aktif selamanya)
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGraduatedBatch((v) => !v)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      graduatedBatch
+                        ? "bg-[#EAF7D8] text-[#3B630A] border border-[#B6E080]"
+                        : "bg-[#8CC63F] hover:bg-[#7cb532] text-[#0E2200]"
+                    }`}
+                  >
+                    {graduatedBatch
+                      ? "✓ 42 Mahasiswa Dipindah ke Alumni"
+                      : "Luluskan Massal ke Alumni"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
