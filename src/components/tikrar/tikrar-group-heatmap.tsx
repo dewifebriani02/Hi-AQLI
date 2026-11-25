@@ -242,24 +242,24 @@ export function TikrarGroupHeatmap({ refreshSignal = 0 }: TikrarGroupHeatmapProp
     <Card className="border border-stone-200 bg-white shadow-sm rounded-2xl overflow-hidden">
       <CardContent className="p-5 sm:p-6 space-y-5">
         {isGuestMockup && (
-          <div className="rounded-xl border border-amber-300 bg-amber-50/90 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="rounded-xl border border-amber-300 bg-amber-50/90 px-3.5 py-2.5 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
               <Badge className="bg-amber-700 text-white hover:bg-amber-700 text-[10px] font-black shrink-0">
                 <Sparkles className="w-3 h-3 mr-1" /> CONTOH REKAP GRUP
               </Badge>
-              <span className="text-xs font-bold text-amber-950">
-                Data di bawah ini hanya simulasi contoh tampilan. Masuk akun untuk melihat progres grup asli.
-              </span>
+              <Button
+                asChild
+                size="sm"
+                className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-black shrink-0"
+              >
+                <Link href="/login">
+                  <LogIn className="w-3.5 h-3.5 mr-1.5" /> Masuk Akun
+                </Link>
+              </Button>
             </div>
-            <Button
-              asChild
-              size="sm"
-              className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-black shrink-0"
-            >
-              <Link href="/login">
-                <LogIn className="w-3.5 h-3.5 mr-1.5" /> Masuk Akun
-              </Link>
-            </Button>
+            <p className="text-xs font-bold text-amber-950 leading-relaxed">
+              Data di bawah ini hanya simulasi contoh tampilan. Masuk akun untuk melihat progres grup asli.
+            </p>
           </div>
         )}
 
