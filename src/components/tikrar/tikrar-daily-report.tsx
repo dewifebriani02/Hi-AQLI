@@ -759,7 +759,7 @@ export function TikrarDailyReport({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline"
                 >
-                  <MessageCircle className="w-3.5 h-3.5" /> Grup WA
+                  <MessageCircle className="w-3.5 h-3.5" /> Grup WA Khusus Muslimah
                 </a>
               )}
             </div>
