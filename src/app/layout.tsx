@@ -30,6 +30,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { fontSize, increaseFontSize, decreaseFontSize } = useFontSize();
   const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname?.startsWith('/auth/');
   const isAdminRoute = pathname?.startsWith('/admin');
+  const isStandalonePreviewRoute = pathname?.startsWith('/jht');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -126,6 +127,15 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // We return null until mounted to avoid hydration white flicker.
   if (!mounted) {
     return null;
+  }
+
+  if (isStandalonePreviewRoute) {
+    return (
+      <>
+        {children}
+        <Toaster />
+      </>
+    );
   }
 
   // Blacklist Guard View
