@@ -672,6 +672,41 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 <strong>{activeDaysPerWeek} hari aktif per pekan</strong>.
               </p>
             </div>
+
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2.5 pt-2 border-t border-stone-200/80">
+              {target && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditing(false)}
+                  className="border-stone-300 text-stone-700 hover:bg-stone-100 font-bold text-xs h-11 px-5 rounded-xl w-full sm:w-auto"
+                >
+                  Batal
+                </Button>
+              )}
+              {isUserLoading ? (
+                <Button type="button" disabled className="font-bold text-xs h-11 px-6 rounded-xl w-full sm:w-auto">
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Memeriksa...
+                </Button>
+              ) : user ? (
+                <Button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={handleSave}
+                  className="bg-primary hover:bg-primary/90 text-white font-black text-xs sm:text-sm h-11 px-6 rounded-xl shadow-md w-full sm:w-auto"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-1.5 text-[#D4AF37]" /> Simpan &amp; Buka Mushaf
+                    </>
+                  )}
+                </Button>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
       )}
