@@ -3,7 +3,7 @@
 import { AiScholarClient } from "@/components/ai/ai-scholar-client";
 import { useUser } from "@/db";
 import { useUserPermissions } from "@/lib/permissions";
-import { Bot, Sparkles, ArrowLeft, ShieldAlert, BookOpen, MessageSquare } from "lucide-react";
+import { Sparkles, ArrowLeft, ShieldAlert, BookOpen, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,14 +50,14 @@ export default function AsistenAiPage() {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-400/20 border border-amber-300/30 text-amber-200 text-[10px] font-black uppercase tracking-widest">
-              <Sparkles className="w-3 h-3" /> Khusus Admin • Beta
+              <Sparkles className="w-3 h-3" /> Manhaj Salafus Shalih • Khusus Admin
             </div>
             <h1 className="text-2xl font-black font-headline tracking-tight flex items-center gap-2.5">
-              <Bot className="w-7 h-7 text-amber-300" />
+              <BookOpen className="w-7 h-7 text-amber-300" />
               Hi Asisten AQLI
             </h1>
             <p className="text-xs text-white/80 leading-relaxed max-w-xl">
-              Asisten Cendekiawan AI untuk diskusi Tafsir, Tadabbur Ayat, Mufradat, Nahwu &amp; I&apos;rab Al-Qur&apos;an, serta metodologi hafalan Tikrar.
+              Rujukan ilmiah Tafsir bil Ma&apos;tsur, Tadabbur Ayat, Mufradat, serta Nahwu &amp; I&apos;rab Al-Qur&apos;an berdasarkan penjelasan ulama Ahlus Sunnah wal Jama&apos;ah (Salafus Shalih).
             </p>
           </div>
           <Link href="/">
@@ -74,22 +74,22 @@ export default function AsistenAiPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/10 text-[10px] text-white/80 font-semibold">
           <div className="flex items-center gap-1.5">
             <BookOpen className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-            <span>Tafsir &amp; Tadabbur Ayat</span>
+            <span>Tafsir Ibnu Katsir &amp; As-Sa&apos;di</span>
           </div>
           <div className="flex items-center gap-1.5">
             <MessageSquare className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-            <span>Bedah Mufradat &amp; I&apos;rab</span>
+            <span>Atsar Sahabat &amp; Tabi&apos;in</span>
           </div>
           <div className="flex items-center gap-1.5 col-span-2 sm:col-span-1">
             <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-            <span>Tips Mutqin &amp; Muraja&apos;ah</span>
+            <span>Mufradat, Nahwu &amp; I&apos;rab</span>
           </div>
         </div>
       </div>
 
       {/* Chat Area */}
       <Card className="rounded-[2rem] border-slate-200/80 shadow-lg overflow-hidden bg-white">
-        <CardContent className="p-4 sm:p-6">
+        <CardContent className="p-3 sm:p-5">
           <AiScholarClient />
         </CardContent>
       </Card>
