@@ -540,36 +540,6 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               </div>
             </div>
 
-            {startPage > juzRange.startPage && (
-              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 sm:p-5 space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-black text-amber-950">
-                      Mulai dari Pertengahan Juz {selectedJuz} (Hal. {startPage})
-                    </h4>
-                    <p className="text-xs text-amber-900 leading-relaxed">
-                      Ukhti memulai hafalan dari Hal. {startPage}, melewati {startPage - juzRange.startPage} halaman awal Juz {selectedJuz} (Hal. {juzRange.startPage}–{startPage - 1}).
-                      Centang ini <strong>hanya mencatat bahwa halaman tersebut sudah pernah dihafal sebelumnya</strong> (belum dianggap lulus ujian halaman 60 soal maupun setoran tasmi&apos; di aplikasi).
-                    </p>
-                  </div>
-                </div>
-                <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-amber-200 cursor-pointer hover:bg-amber-100/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={markPriorPagesDone}
-                    onChange={(e) => setMarkPriorPagesDone(e.target.checked)}
-                    className="w-4 h-4 rounded text-primary accent-primary focus:ring-primary"
-                  />
-                  <span className="text-xs font-black text-stone-800">
-                    Catat Hal. {juzRange.startPage} s.d. Hal. {startPage - 1} sebagai sudah dihafal sebelumnya (belum ujian tulisan/pilihan ganda di aplikasi)
-                  </span>
-                </label>
-              </div>
-            )}
-
             <div className="space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <label className="text-xs font-black uppercase tracking-wider text-stone-700">
@@ -642,6 +612,36 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 })}
               </div>
             </div>
+
+            {startPage > juzRange.startPage && (
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 sm:p-5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black text-amber-950">
+                      Mulai dari Pertengahan Juz {selectedJuz} (Hal. {startPage})
+                    </h4>
+                    <p className="text-xs text-amber-900 leading-relaxed">
+                      Ukhti memulai hafalan dari Hal. {startPage}, melewati {startPage - juzRange.startPage} halaman awal Juz {selectedJuz} (Hal. {juzRange.startPage}–{startPage - 1}).
+                      Centang ini <strong>hanya mencatat bahwa halaman tersebut sudah pernah dihafal sebelumnya</strong> (belum dianggap lulus ujian halaman 60 soal maupun setoran tasmi&apos; di aplikasi).
+                    </p>
+                  </div>
+                </div>
+                <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-amber-200 cursor-pointer hover:bg-amber-100/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={markPriorPagesDone}
+                    onChange={(e) => setMarkPriorPagesDone(e.target.checked)}
+                    className="w-4 h-4 rounded text-primary accent-primary focus:ring-primary"
+                  />
+                  <span className="text-xs font-black text-stone-800">
+                    Catat Hal. {juzRange.startPage} s.d. Hal. {startPage - 1} sebagai sudah dihafal sebelumnya (belum ujian tulisan/pilihan ganda di aplikasi)
+                  </span>
+                </label>
+              </div>
+            )}
 
             <div className="bg-[#fdfbf7] border border-primary/20 rounded-xl p-4 text-xs text-stone-700 leading-relaxed space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
