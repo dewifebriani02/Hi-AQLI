@@ -6,7 +6,7 @@ import { analyzeVerse, type AnalyzeVerseInput, type AnalyzeVerseOutput } from "@
 import { z } from "zod";
 
 const scholarSchema = z.object({
-  question: z.string().min(10, "Please ask a more detailed question."),
+  question: z.string().min(3, "Silakan tuliskan pertanyaan yang lebih jelas."),
 });
 export type ScholarState = {
   answer?: string;
