@@ -107,6 +107,7 @@ import {
 import {
   canUndoStep,
   countCompletedSteps,
+  getActiveStep,
   createEmptyTikrarBlocks,
   createEmptyTikrarMetaCounts,
   getStepMinCount,
@@ -254,12 +255,17 @@ function formatBlockRangeLabel(verses: Verse[], blockCfg?: BlockConfig | null): 
   const last = verses[verses.length - 1].verse_key;
   const [s1, a1] = first.split(':');
   const [s2, a2] = last.split(':');
+  const surah1 = QURAN_CHAPTERS.find((c) => c.id === Number(s1))?.name_simple || `QS. ${s1}`;
   if (blockCfg?.sub_1 && blockCfg?.sub_2) {
     if (s1 === s2 && a1 === a2) {
-      return `Ayat ${a1} (Kata #${blockCfg.sub_1.start_word_index}–#${blockCfg.sub_2.end_word_index})`;
+      return `QS. ${surah1} • Ayat ${a1} (Kata #${blockCfg.sub_1.start_word_index}–#${blockCfg.sub_2.end_word_index})`;
     }
   }
-  return a1 === a2 ? `Ayat ${a1}` : `Ayat ${a1}–${a2}`;
+  if (s1 === s2) {
+    return a1 === a2 ? `QS. ${surah1} • Ayat ${a1}` : `QS. ${surah1} • Ayat ${a1}–${a2}`;
+  }
+  const surah2 = QURAN_CHAPTERS.find((c) => c.id === Number(s2))?.name_simple || `QS. ${s2}`;
+  return `QS. ${surah1}: ${a1} – ${surah2}: ${a2}`;
 }
 
 const pageDataCache = new Map<number, { verses: Verse[]; customPageConfig: PageBlockConfig | null }>();
@@ -1795,14 +1801,40 @@ export function TikrarSystem({
       setIsResetting(false);
     }
   };
+  const [metaAutoHideSignal, setMetaAutoHideSignal] = useState<{ blocks: number[]; seq: number }>({
+    blocks: [],
+    seq: 0,
+  });
+
+  const recordLastStep = useCallback(
+    (stepKey: string) => {
+      if (typeof window !== "undefined" && page >= 1 && page <= 604) {
+        try {
+          localStorage.setItem(`tikrar_last_step_p${page}`, stepKey);
+          localStorage.setItem("aqli_tikrar_last_step", stepKey);
+        } catch {}
+      }
+    },
+    [page]
+  );
+
   const adjustMeta = (key: string, delta: number) => {
     if (delta < 0) {
       if (!canUndoKey(`meta.${key}`)) return;
       markUndo(`meta.${key}`);
     }
+    recordLastStep(`meta.${key}`);
     const currentCount = metaCounts[key] || 0;
     const nextCount = currentCount + delta;
     const threshold = getMetaThreshold(key);
+
+    if (delta > 0 && currentCount < 21 && nextCount >= 21) {
+      const affectedBlocks = key
+        .split("_")
+        .map((n) => Number(n))
+        .filter((n) => n >= 1 && n <= 4);
+      setMetaAutoHideSignal((prev) => ({ blocks: affectedBlocks, seq: prev.seq + 1 }));
+    }
 
     if (delta > 0) {
       if (currentCount < threshold && nextCount >= threshold) playTikrarDone();
@@ -1979,12 +2011,46 @@ export function TikrarSystem({
     };
   };
 
-  const scrollToStep = (key: string) => {
+  const scrollToStep = useCallback((key: string) => {
     let el = document.getElementById(`step-${key}`);
     if (!el && key === '1.listen') el = document.getElementById('step-prep');
     if (!el && key === 'prep') el = document.getElementById('step-1.listen') || document.getElementById('step-prep');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-4', 'ring-[#D4AF37]', 'ring-offset-2', 'rounded-2xl');
+      setTimeout(() => {
+        el?.classList.remove('ring-4', 'ring-[#D4AF37]', 'ring-offset-2', 'rounded-2xl');
+      }, 1800);
+    }
+  }, []);
+
+  const resolveResumeStepKey = useCallback((): string => {
+    if (typeof window !== 'undefined') {
+      const lastKey = localStorage.getItem(`tikrar_last_step_p${page}`);
+      if (lastKey) {
+        const stepDef = TIKRAR_STEPS.find((s) => s.key === lastKey);
+        if (stepDef) {
+          return lastKey;
+        }
+      }
+    }
+    const active = getActiveStep(localProgress, clearedPages.has(page));
+    if (active?.step?.key) return active.step.key;
+    if (todayTargets.length > 0 && todayTargets[0].page === page) return todayTargets[0].key;
+    return '1.a';
+  }, [page, localProgress, clearedPages, todayTargets]);
+
+  const lastScrolledTimestampRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!targetTimestamp || targetTimestamp === lastScrolledTimestampRef.current) return;
+    if (loading) return;
+    lastScrolledTimestampRef.current = targetTimestamp;
+    const timer = setTimeout(() => {
+      const resumeKey = resolveResumeStepKey();
+      scrollToStep(resumeKey);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [targetTimestamp, loading, page, resolveResumeStepKey, scrollToStep]);
 
   // Blocks that have reached TUNTAS (40x on A-1, A-2, and Gabung A)
   const tuntasBlockNumbers = useMemo(
@@ -2545,6 +2611,7 @@ export function TikrarSystem({
               onClick={() => {
                 stopAutoPlay();
                 setShowTrialCounter(true);
+                setTimeout(() => scrollToStep(resolveResumeStepKey()), 220);
               }}
               className="border-sky-300 bg-white text-sky-900 hover:bg-sky-100 font-black text-[11px] sm:text-xs h-8 px-2.5 sm:px-3 rounded-xl whitespace-nowrap w-full sm:w-auto"
             >
@@ -2710,10 +2777,10 @@ export function TikrarSystem({
             <Button
               type="button"
               size="sm"
-              onClick={() => (todayTargets[0].page === page ? scrollToStep(todayTargets[0].key) : navigateToPage(todayTargets[0].page))}
+              onClick={() => (todayTargets[0].page === page ? scrollToStep(resolveResumeStepKey()) : navigateToPage(todayTargets[0].page))}
               className="bg-primary hover:bg-primary/90 text-white font-black text-xs h-10 px-4 rounded-xl shrink-0"
             >
-              {todayTargets[0].page === page ? 'Ke Counter Target ↓' : `Buka Hal. ${todayTargets[0].page}`}
+              {todayTargets[0].page === page ? 'Ke Counter Terakhir ↓' : `Buka Hal. ${todayTargets[0].page}`}
             </Button>
           )}
         </div>
@@ -2836,6 +2903,8 @@ export function TikrarSystem({
           <div className="flex flex-col gap-6">
             <MaqtaCard
               id={1}
+              onRecordLastStep={(part: string) => recordLastStep('1.' + part)}
+              metaAutoHideSeq={metaAutoHideSignal.blocks.includes(1) ? metaAutoHideSignal.seq : 0}
               canUndo={(part: string) => canUndoKey('1.' + part)}
               getMinCount={(part: string) => getStepMinCount('1.' + part, localProgress)}
               stepInfoFor={(part: string) => stepInfo('1.' + part)}
@@ -2886,6 +2955,8 @@ export function TikrarSystem({
             />
             <MaqtaCard
               id={2}
+              onRecordLastStep={(part: string) => recordLastStep('2.' + part)}
+              metaAutoHideSeq={metaAutoHideSignal.blocks.includes(2) ? metaAutoHideSignal.seq : 0}
               canUndo={(part: string) => canUndoKey('2.' + part)}
               getMinCount={(part: string) => getStepMinCount('2.' + part, localProgress)}
               stepInfoFor={(part: string) => stepInfo('2.' + part)}
@@ -2958,6 +3029,8 @@ export function TikrarSystem({
 
           <MaqtaCard
             id={3}
+              onRecordLastStep={(part: string) => recordLastStep('3.' + part)}
+              metaAutoHideSeq={metaAutoHideSignal.blocks.includes(3) ? metaAutoHideSignal.seq : 0}
               canUndo={(part: string) => canUndoKey('3.' + part)}
               getMinCount={(part: string) => getStepMinCount('3.' + part, localProgress)}
               stepInfoFor={(part: string) => stepInfo('3.' + part)}
@@ -3050,6 +3123,8 @@ export function TikrarSystem({
 
           <MaqtaCard
             id={4}
+              onRecordLastStep={(part: string) => recordLastStep('4.' + part)}
+              metaAutoHideSeq={metaAutoHideSignal.blocks.includes(4) ? metaAutoHideSignal.seq : 0}
               canUndo={(part: string) => canUndoKey('4.' + part)}
               getMinCount={(part: string) => getStepMinCount('4.' + part, localProgress)}
               stepInfoFor={(part: string) => stepInfo('4.' + part)}
@@ -3826,6 +3901,8 @@ function MaqtaCard({
   canReset = true,
   onResetBlock,
   onResetCounter,
+  onRecordLastStep,
+  metaAutoHideSeq = 0,
 }: any) {
   // isCombinedDone computed after countersLocked & isCombinedLocked
   const isPlaying = Boolean(playback);
@@ -3850,9 +3927,30 @@ function MaqtaCard({
     }
   }, [state?.understood, page]);
   const [revealInExam, setRevealInExam] = useState(globalShowVerses);
+  const [subAHidden, setSubAHidden] = useState(() => (state?.a?.count || 0) >= 21);
+  const [subBHidden, setSubBHidden] = useState(() => (state?.b?.count || 0) >= 21);
   useEffect(() => {
     setRevealInExam(globalShowVerses);
+    if (globalShowVerses) {
+      setSubAHidden(false);
+      setSubBHidden(false);
+    }
   }, [globalShowVerses, examRevealSeq]);
+  useEffect(() => {
+    setSubAHidden((state?.a?.count || 0) >= 21);
+    setSubBHidden((state?.b?.count || 0) >= 21);
+  }, [page]);
+  useEffect(() => {
+    if ((state?.a?.count || 0) < 21) setSubAHidden(false);
+  }, [state?.a?.count]);
+  useEffect(() => {
+    if ((state?.b?.count || 0) < 21) setSubBHidden(false);
+  }, [state?.b?.count]);
+  useEffect(() => {
+    if (metaAutoHideSeq > 0) {
+      setRevealInExam(false);
+    }
+  }, [metaAutoHideSeq]);
   const isVerseHidden = !revealInExam;
   const closeWordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -3988,11 +4086,22 @@ function MaqtaCard({
 
   const addSubCount = (part: 'a' | 'b' | 'combined', delta: number) => {
     if (countersLocked) return;
+    onRecordLastStep?.(part);
     const currentCount = state?.[part]?.count || 0;
     const nextCount = currentCount + delta;
     if (delta > 0) {
       if (currentCount < PASS_THRESHOLD && nextCount >= PASS_THRESHOLD) playTikrarDone();
       else playTikrarTap();
+      // Auto-hide ayat saat counter masuk ke 21 (hitungan 21-40 tanpa melihat ayat)
+      if (currentCount < 21 && nextCount >= 21) {
+        if (part === 'a') setSubAHidden(true);
+        else if (part === 'b') setSubBHidden(true);
+        else if (part === 'combined') {
+          setSubAHidden(true);
+          setSubBHidden(true);
+          setRevealInExam(false);
+        }
+      }
     }
     if (delta < 0) {
       if (!canUndo?.(part)) return;
@@ -4162,8 +4271,12 @@ function MaqtaCard({
             </Badge>
           )}
           {!isLocked && isCombinedDone && isSavedInDb ? (
-            <Badge className="bg-emerald-400 text-black font-black text-[8px] tracking-widest h-4">
-              TERCATAT
+            <Badge
+              title="Tercatat di Database"
+              aria-label="Tercatat di Database"
+              className="bg-emerald-400 text-black font-black h-5 w-5 p-0 flex items-center justify-center rounded-full shrink-0"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
             </Badge>
           ) : !isLocked && isCombinedDone ? (
             <Badge className="bg-[#D4AF37] text-black font-black text-[8px] tracking-widest h-4">
@@ -4384,152 +4497,246 @@ function MaqtaCard({
 
         <div
           className={cn(
-            "p-3 sm:p-4 rounded-2xl border-2 flex-1 overflow-y-auto no-scrollbar space-y-3",
+            "relative p-3 sm:p-4 rounded-2xl border-2 flex-1 overflow-y-auto no-scrollbar",
             theme.verseBg
           )}
         >
-          {isVerseHidden ? (
-            <div className="flex flex-col items-center justify-center text-center py-8 px-4 gap-3 bg-white/60 rounded-xl border border-dashed border-primary/25">
+          {isVerseHidden && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 gap-3 bg-white/95 backdrop-blur-sm rounded-2xl">
               <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-primary/15">
                 <EyeOff className="w-5 h-5 text-primary" />
               </div>
               <div className="space-y-1 max-w-xs">
                 <p className="text-xs font-black text-primary">
-                  {isExamStageOpen ? 'Teks Ayat Disembunyikan (Siap Ujian)' : 'Teks Ayat Disembunyikan (Mode Counter)'}
+                  {isExamStageOpen
+                    ? 'Teks Ayat Disembunyikan (Siap Ujian)'
+                    : 'Hitungan 21–40: Teks Ayat Otomatis Tertutup'}
                 </p>
                 <p className="text-[11px] font-medium text-stone-700 leading-relaxed">
                   {isExamStageOpen
                     ? 'Tahap Ujian Halaman sudah terbuka. Tampilkan kembali teks ayat kapan saja jika ingin murajaah ulang.'
-                    : `Uji hafalan Blok ${letter} sambil menekan counter di bawah. Tampilkan kembali ayat kapan saja jika perlu mengintip.`}
+                    : `Lanjutkan hafalan Blok ${letter} tanpa melihat mushaf. Klik tombol di bawah jika perlu mengintip ayat.`}
                 </p>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setRevealInExam(true)}
+                onClick={() => {
+                  setRevealInExam(true);
+                  setSubAHidden(false);
+                  setSubBHidden(false);
+                }}
                 className="h-8 px-3.5 rounded-full bg-white hover:bg-primary hover:text-white border-primary/30 text-primary text-[11px] font-black transition-colors touch-manipulation"
               >
                 <Eye className="w-3.5 h-3.5 mr-1.5" />
                 {isExamStageOpen ? 'Tampilkan Ayat (Murajaah)' : 'Tampilkan Ayat'}
               </Button>
             </div>
-          ) : (
-            <>
-          {/* Kontrol tampilan Tajwid, Per Kata & Terjemahan di dalam kotak atas */}
-          <div className="flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
-            <span className="text-[10px] font-bold text-stone-600 truncate min-w-0 hidden sm:inline">
-              Ketuk kata untuk arti
-            </span>
-            <div className="flex items-center gap-1 shrink-0 flex-nowrap ml-auto">
-              <button
-                type="button"
-                onClick={onToggleTajwid}
-                className={cn(
-                  'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
-                  showTajwid
-                    ? 'bg-emerald-700 text-white border-emerald-700'
-                    : 'bg-white/80 text-primary border-primary/20 hover:bg-white'
-                )}
-              >
-                <Palette className="w-3 h-3 shrink-0" />
-                Tajwid
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPerKata((v) => !v)}
-                className={cn(
-                  'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
-                  showPerKata
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white/80 text-primary border-primary/20 hover:bg-white'
-                )}
-              >
-                <Languages className="w-3 h-3 shrink-0" />
-                Per Kata
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowTranslation((v) => !v)}
-                className={cn(
-                  'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
-                  showTranslation
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white/80 text-primary border-primary/20 hover:bg-white'
-                )}
-              >
-                <BookOpen className="w-3 h-3 shrink-0" />
-                Terjemah
-              </button>
-              <button
-                type="button"
-                onClick={() => setRevealInExam(false)}
-                aria-label="Sembunyikan teks ayat blok ini"
-                title="Sembunyikan teks ayat"
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border bg-stone-900 text-white border-stone-900 hover:bg-stone-800 transition-colors touch-manipulation whitespace-nowrap"
-              >
-                <EyeOff className="w-3 h-3 shrink-0" />
-                <span>Tutup Ayat</span>
-              </button>
-            </div>
-          </div>
+          )}
 
-          {/* Sub-blok 1 (TM x-1) */}
           <div
+            aria-hidden={isVerseHidden}
             className={cn(
-              'rounded-xl p-3 border border-white/60 border-r-4 border-r-[#B91C1C] shadow-sm space-y-2 transition-colors',
-              showTajwid ? 'bg-white/95' : 'bg-white/40'
+              "space-y-3",
+              isVerseHidden && "invisible pointer-events-none select-none"
             )}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#B91C1C] text-white text-[10px] font-black tracking-wide">
-                TM {id}-1 ({letter}-1)
+            {/* Kontrol tampilan Tajwid, Per Kata & Terjemahan di dalam kotak atas */}
+            <div className="flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
+              <span className="text-[10px] font-bold text-stone-600 truncate min-w-0 hidden sm:inline">
+                Ketuk kata untuk arti
               </span>
-              <span className="text-[11px] font-extrabold text-[#991B1B]">
-                {part1Range}
-              </span>
-            </div>
-            {verses.length === 0 ? (
-              <div className="min-h-[120px] flex flex-col justify-center gap-2 py-2 animate-pulse">
-                <div className="h-5 bg-primary/10 rounded-lg w-5/6 mx-auto" />
-                <div className="h-5 bg-primary/10 rounded-lg w-4/6 mx-auto" />
+              <div className="flex items-center gap-1 shrink-0 flex-nowrap ml-auto">
+                <button
+                  type="button"
+                  onClick={onToggleTajwid}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
+                    showTajwid
+                      ? 'bg-emerald-700 text-white border-emerald-700'
+                      : 'bg-white/80 text-primary border-primary/20 hover:bg-white'
+                  )}
+                >
+                  <Palette className="w-3 h-3 shrink-0" />
+                  Tajwid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPerKata((v) => !v)}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
+                    showPerKata
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white/80 text-primary border-primary/20 hover:bg-white'
+                  )}
+                >
+                  <Languages className="w-3 h-3 shrink-0" />
+                  Per Kata
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTranslation((v) => !v)}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border transition-colors touch-manipulation whitespace-nowrap',
+                    showTranslation
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white/80 text-primary border-primary/20 hover:bg-white'
+                  )}
+                >
+                  <BookOpen className="w-3 h-3 shrink-0" />
+                  Terjemah
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRevealInExam(false)}
+                  aria-label="Sembunyikan teks ayat blok ini"
+                  title="Sembunyikan teks ayat"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border bg-stone-900 text-white border-stone-900 hover:bg-stone-800 transition-colors touch-manipulation whitespace-nowrap"
+                >
+                  <EyeOff className="w-3 h-3 shrink-0" />
+                  <span>Tutup Ayat</span>
+                </button>
               </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
-                  {tokensA.map((t) => renderToken(t, showTajwid ? 'text-stone-950' : 'text-[#991B1B]'))}
-                </div>
-                {renderSubBlockTranslations(partAVerses, isPlayingInPartA)}
-              </>
-            )}
-          </div>
+            </div>
 
-          {/* Sub-blok 2 (TM x-2) */}
-          {tokensB.length > 0 && (
+            {/* Sub-blok 1 (TM x-1) */}
             <div
               className={cn(
-                'rounded-xl p-3 border border-white/50 border-r-4 border-r-stone-900 shadow-sm space-y-2 transition-colors',
-                showTajwid ? 'bg-white/90' : 'bg-white/25'
+                'rounded-xl p-3 border border-white/60 border-r-4 border-r-[#B91C1C] shadow-sm space-y-2 transition-colors',
+                showTajwid ? 'bg-white/95' : 'bg-white/40'
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-900 text-white text-[10px] font-black tracking-wide">
-                  TM {id}-2 ({letter}-2)
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#B91C1C] text-white text-[10px] font-black tracking-wide">
+                  TM {id}-1 ({letter}-1)
                 </span>
-                <span className="text-[11px] font-extrabold text-stone-800">
-                  {part2Range}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-extrabold text-[#991B1B]">
+                    {part1Range}
+                  </span>
+                  {verses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSubAHidden((v) => !v)}
+                      title={subAHidden ? "Tampilkan ayat bagian 1" : "Tutup ayat bagian 1"}
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black border transition-colors touch-manipulation",
+                        subAHidden
+                          ? "bg-[#B91C1C] text-white border-[#B91C1C]"
+                          : "bg-white text-stone-700 border-stone-300 hover:bg-stone-100"
+                      )}
+                    >
+                      {subAHidden ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5" />}
+                      <span>{subAHidden ? "Intip" : "Tutup"}</span>
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
-                {tokensB.map((t) => renderToken(t, 'text-stone-950'))}
-              </div>
-              {renderSubBlockTranslations(partBVerses, isPlayingInPartB)}
+              {verses.length === 0 ? (
+                <div className="min-h-[120px] flex flex-col justify-center gap-2 py-2 animate-pulse">
+                  <div className="h-5 bg-primary/10 rounded-lg w-5/6 mx-auto" />
+                  <div className="h-5 bg-primary/10 rounded-lg w-4/6 mx-auto" />
+                </div>
+              ) : (
+                <div className="relative">
+                  {subAHidden && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-2 gap-1.5 bg-stone-50/95 backdrop-blur-sm rounded-lg border border-dashed border-[#B91C1C]/40">
+                      <div className="flex items-center gap-1.5 text-[11px] font-black text-[#991B1B]">
+                        <EyeOff className="w-3.5 h-3.5 shrink-0" />
+                        <span>Hitungan 21–40: Hafalan Tanpa Melihat Ayat</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSubAHidden(false)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white hover:bg-[#B91C1C] hover:text-white border border-[#B91C1C]/30 text-[#991B1B] text-[10px] font-black shadow-sm transition-colors touch-manipulation"
+                      >
+                        <Eye className="w-3 h-3" /> Intip Ayat TM {id}-1
+                      </button>
+                    </div>
+                  )}
+                  <div
+                    aria-hidden={subAHidden}
+                    className={cn(
+                      "space-y-2",
+                      subAHidden && "invisible pointer-events-none select-none"
+                    )}
+                  >
+                    <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
+                      {tokensA.map((t) => renderToken(t, showTajwid ? 'text-stone-950' : 'text-[#991B1B]'))}
+                    </div>
+                    {renderSubBlockTranslations(partAVerses, isPlayingInPartA)}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
 
-          {showTajwid && <TajwidLegendBar />}
-            </>
-          )}
+            {/* Sub-blok 2 (TM x-2) */}
+            {tokensB.length > 0 && (
+              <div
+                className={cn(
+                  'rounded-xl p-3 border border-white/50 border-r-4 border-r-stone-900 shadow-sm space-y-2 transition-colors',
+                  showTajwid ? 'bg-white/90' : 'bg-white/25'
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-900 text-white text-[10px] font-black tracking-wide">
+                    TM {id}-2 ({letter}-2)
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-extrabold text-stone-800">
+                      {part2Range}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSubBHidden((v) => !v)}
+                      title={subBHidden ? "Tampilkan ayat bagian 2" : "Tutup ayat bagian 2"}
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black border transition-colors touch-manipulation",
+                        subBHidden
+                          ? "bg-stone-900 text-white border-stone-900"
+                          : "bg-white text-stone-700 border-stone-300 hover:bg-stone-100"
+                      )}
+                    >
+                      {subBHidden ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5" />}
+                      <span>{subBHidden ? "Intip" : "Tutup"}</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="relative">
+                  {subBHidden && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-2 gap-1.5 bg-stone-50/95 backdrop-blur-sm rounded-lg border border-dashed border-stone-900/40">
+                      <div className="flex items-center gap-1.5 text-[11px] font-black text-stone-900">
+                        <EyeOff className="w-3.5 h-3.5 shrink-0" />
+                        <span>Hitungan 21–40: Hafalan Tanpa Melihat Ayat</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSubBHidden(false)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white hover:bg-stone-900 hover:text-white border border-stone-900/30 text-stone-900 text-[10px] font-black shadow-sm transition-colors touch-manipulation"
+                      >
+                        <Eye className="w-3 h-3" /> Intip Ayat TM {id}-2
+                      </button>
+                    </div>
+                  )}
+                  <div
+                    aria-hidden={subBHidden}
+                    className={cn(
+                      "space-y-2",
+                      subBHidden && "invisible pointer-events-none select-none"
+                    )}
+                  >
+                    <div className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2" dir="rtl">
+                      {tokensB.map((t) => renderToken(t, 'text-stone-950'))}
+                    </div>
+                    {renderSubBlockTranslations(partBVerses, isPlayingInPartB)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showTajwid && <TajwidLegendBar />}
+          </div>
         </div>
 
         {!isLocked && needsComprehensionConfirm && (
@@ -4659,12 +4866,12 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
             {label}
           </span>
           <span className="text-[8px] font-bold text-muted-foreground">
-            WAJIB MIN. {threshold}x SEBELUM MEMBUKA TAHAP BERIKUTNYA
+            WAJIB MIN. {threshold}x SEBELUM MEMBUKA TAHAP BERIKUTNYA (ANJURAN {PASS_THRESHOLD}x)
           </span>
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
-        <div className="text-right flex flex-col items-end mr-1 gap-1">
+        <div className="text-right flex flex-col items-end mr-1 gap-1" title={`Syarat minimal membuka tahap berikutnya: ${threshold}x`}>
           <span className="text-base font-black text-black uppercase leading-none">
             {count} / {threshold}
           </span>
@@ -4674,54 +4881,62 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
               style={{ width: `${Math.min(100, (count / threshold) * 100)}%` }}
             />
           </div>
-          {count > 0 && !isLocked && canReset && onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              title={`Reset counter ${label} ke 0`}
-              className="inline-flex items-center gap-1 text-[9.5px] font-bold text-stone-500 hover:text-rose-700 transition-colors pt-0.5"
-            >
-              <RotateCcw className="w-2.5 h-2.5" />
-              <span>Reset</span>
-            </button>
-          )}
+          <span className="text-[8px] font-bold text-stone-500 uppercase tracking-wider leading-none">
+            Min. {threshold}x
+          </span>
         </div>
-        <div className="flex-1 sm:flex-none sm:w-40 flex flex-col gap-1.5">
+        <div className="flex-1 sm:flex-none sm:w-44 flex flex-col gap-1.5">
           <div className="relative">
             <LongPressCounterButton
               onStep={(delta) => onIncrement(delta)}
               disabled={isLocked}
               className={cn(
-                'h-16 w-full rounded-2xl p-0 font-black transition-all shadow-md touch-manipulation select-none active:scale-[0.95] flex flex-col items-center justify-center disabled:pointer-events-none disabled:opacity-50',
+                'h-16 w-full rounded-2xl p-0 font-black transition-all shadow-md touch-manipulation select-none active:scale-[0.95] flex flex-col items-center justify-center disabled:pointer-events-none disabled:opacity-50 relative',
                 !isLocked && stepInfo?.isTarget && 'ring-2 ring-[#D4AF37] ring-offset-2',
                 isDone
                   ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90 border-none'
                   : 'bg-primary text-white hover:bg-primary/90'
               )}
             >
-              <span className="flex items-center justify-center gap-1.5 text-xl leading-none">
-                {isDone && <Check className="w-5 h-5 stroke-[3]" />}
-                +1
+              <span className="flex items-baseline justify-center gap-1 text-xl leading-none">
+                {isDone && <Check className="w-4 h-4 stroke-[3] self-center mr-0.5" />}
+                <span>{count}</span>
+                <span className="text-xs font-bold opacity-75">/ {PASS_THRESHOLD}</span>
               </span>
               {!isLocked && (
-                <span className="text-[9px] font-bold opacity-80 leading-none mt-1 tracking-wide">
-                  Tahan +5
+                <span className="text-[9px] font-bold opacity-85 leading-none mt-1 tracking-wide uppercase">
+                  {isDone ? '+1 Lagi • Tahan +5' : 'Ketuk +1 • Tahan +5'}
                 </span>
               )}
             </LongPressCounterButton>
           </div>
-          <div className="flex items-center justify-between gap-1.5">
-            <StepTag info={stepInfo} className="justify-start" />
-            {canUndo && (
-              <button
-                type="button"
-                onClick={() => onIncrement(-1)}
-                title="Kurangi 1 (kelebihan pencet)"
-                aria-label="Kurangi 1"
-                className="h-6 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation ml-auto shrink-0"
-              >
-                −1
-              </button>
+          <div className="flex items-center justify-between gap-1.5 min-h-[24px]">
+            <StepTag info={stepInfo} className="justify-start min-w-0" />
+            {(canUndo || (count > 0 && !isLocked && canReset && onReset)) && (
+              <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                {canUndo && (
+                  <button
+                    type="button"
+                    onClick={() => onIncrement(-1)}
+                    title="Kurangi 1 (kelebihan pencet)"
+                    aria-label="Kurangi 1"
+                    className="h-6 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation shrink-0"
+                  >
+                    −1
+                  </button>
+                )}
+                {count > 0 && !isLocked && canReset && onReset && (
+                  <button
+                    type="button"
+                    onClick={onReset}
+                    title={`Reset counter ${label} ke 0`}
+                    className="h-6 px-2 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation shrink-0"
+                  >
+                    <RotateCcw className="w-2.5 h-2.5" />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
