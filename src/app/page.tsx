@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import Link from "next/link";
 import { useUser, db, authFetch } from "@/db";
+import { useUserPermissions } from "@/lib/permissions";
 import { toDateKeyWIB } from "@/lib/tikrar-schedule-generator";
 import {
   computeActivity7Days,
@@ -85,6 +86,8 @@ const MAJOR_CITIES = [
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const { data: userData, isLoading: isUserDocLoading } = useDoc(user?.id ? "users" : null, user?.id);
+  const { isAdmin, isSuperAdmin, isMusyrifah } = useUserPermissions(user?.id);
+  const isAdminUser = isAdmin || isSuperAdmin || isMusyrifah;
   const fullSalutation = userData?.salutation || "Ukhti";
   const callSign = getCallSign(fullSalutation);
   const [showSalutationForcer, setShowSalutationForcer] = useState(false);
@@ -1087,14 +1090,43 @@ export default function DashboardPage() {
             <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Sehat</span>
           </Link>
 
-          {/* AI (Locked for everyone but AI is always cool) */}
-          <div className="flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative">
-              <Bot className="w-7 h-7 text-slate-400" />
-              <Lock className="w-3 h-3 absolute bottom-2 right-2 text-slate-400" />
-            </div>
-            <span className="text-[10px] font-bold text-center tracking-tight text-slate-400 leading-tight">Hi Asisten AI</span>
-          </div>
+          {/* Admin-only: Hi Matan (Belajar Kitab & Kuis), Hi Irab, and Hi Asisten AQLI */}
+          {isAdminUser && (
+            <>
+              {/* Hi Matan */}
+              <Link href="/matan" className="flex flex-col items-center gap-2 group relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 relative">
+                  <Book className="w-7 h-7 text-white" />
+                  <span className="absolute -top-1.5 -right-1.5 bg-[#800000] text-white text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full shadow border border-white">
+                    Admin
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Matan</span>
+              </Link>
+
+              {/* Hi I'rab */}
+              <Link href="/irab" className="flex flex-col items-center gap-2 group relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 relative">
+                  <Search className="w-7 h-7 text-white" />
+                  <span className="absolute -top-1.5 -right-1.5 bg-[#800000] text-white text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full shadow border border-white">
+                    Admin
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi I&apos;rab</span>
+              </Link>
+
+              {/* Hi Asisten AQLI */}
+              <Link href="/asisten" className="flex flex-col items-center gap-2 group relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#800000] to-rose-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 relative">
+                  <Bot className="w-7 h-7 text-amber-300" />
+                  <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-[#800000] text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full shadow border border-white">
+                    Admin
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Asisten AQLI</span>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
