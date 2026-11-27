@@ -1224,89 +1224,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Riwayat Terkini Section - Visible for everyone (including guest demo) */}
-      {(user || !user) && (
-        <section className="px-1 mb-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold font-headline flex items-center gap-2 text-black">
-              <Clock className="w-5 h-5 text-[#800000]" /> {user ? "Riwayat Terkini" : "Simulasi Aktivitas"}
-            </h2>
-            {!user && (
-              <Badge variant="outline" className="text-[7px] font-black border-[#800000]/20 text-[#800000] bg-[#800000]/5 px-2">GUEST MODE</Badge>
-            )}
-          </div>
-          <div className="space-y-4">
-            {recentActivities.slice(historyPage * 5, (historyPage + 1) * 5).map((activity) => (
-              <div key={`${activity.type}-${activity.id}`} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-[#800000]/10 hover:bg-[#800000]/[0.02] transition-all group shadow-sm overflow-hidden">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shrink-0",
-                    activity.type === 'quiz' && activity.is_passed ? "bg-emerald-50 text-emerald-600" :
-                      activity.type === 'quiz' && !activity.is_passed ? "bg-rose-50 text-rose-600" :
-                        activity.type === 'donation' ? "bg-blue-50 text-blue-600" :
-                          activity.type === 'mutabaah' ? "bg-amber-50 text-amber-600" : "bg-primary/5 text-primary"
-                  )}>
-                    <activity.icon className="w-6 h-6" />
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5 min-w-0">
-                      <span className={cn(
-                        "text-[9px] font-black uppercase tracking-[0.15em] truncate",
-                        activity.type === 'quiz' && activity.is_passed ? "text-emerald-600" :
-                          activity.type === 'quiz' && !activity.is_passed ? "text-rose-600" :
-                            activity.type === 'donation' ? "text-blue-600" :
-                              "text-[#800000]"
-                      )}>
-                        {activity.status} • {activity.program}
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-800 truncate uppercase mt-0.5" title={activity.title}>
-                      {activity.title}
-                    </h4>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight opacity-70 truncate">
-                      {activity.subtitle}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0 ml-4">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none whitespace-nowrap">
-                    {activity.timestamp && !isNaN(new Date(activity.timestamp).getTime())
-                      ? new Date(activity.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-                      : '-'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {recentActivities.length > 5 && (
-            <div className="flex items-center justify-between mt-6 px-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
-                disabled={historyPage === 0}
-                className="text-[10px] font-black uppercase tracking-widest gap-1 hover:text-[#800000]"
-              >
-                <ChevronLeft className="w-3 h-3" /> SEBELUMNYA
-              </Button>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                Halaman {historyPage + 1} dari {Math.ceil(recentActivities.length / 5)}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setHistoryPage(p => Math.min(Math.ceil(recentActivities.length / 5) - 1, p + 1))}
-                disabled={(historyPage + 1) * 5 >= recentActivities.length}
-                className="text-[10px] font-black uppercase tracking-widest gap-1 hover:text-[#800000]"
-              >
-                LANJUT <ChevronRight className="w-3 h-3" />
-              </Button>
-            </div>
-          )}
-        </section>
-      )}
-
       {/* Footer: Community Links */}
       <div className="mt-8 mb-4 px-4 py-8 bg-[#800000]/5 rounded-[2.5rem] border border-[#800000]/10 flex flex-col items-center gap-6">
         <div className="text-center space-y-1">
@@ -1314,29 +1231,45 @@ export default function DashboardPage() {
           <h3 className="text-lg font-black text-slate-800 font-headline">Lebih Dekat Dengan Al-Qur'an</h3>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 w-full max-w-md px-1">
+        <div className="grid grid-cols-3 gap-2.5 w-full max-w-md px-1">
           <a
             href="https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq"
-            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-500/10"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-2xl py-3 px-2 flex flex-col items-center justify-center gap-1.5 transition-all hover:scale-105 shadow-md shadow-[#25D366]/20"
           >
-            <MessageSquare className="w-4 h-4 fill-white" />
-            <span className="text-[8px] font-black uppercase tracking-wider">Grup WA</span>
+            {/* Official WhatsApp Logo SVG */}
+            <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" aria-hidden="true">
+              <path d="M12.031 2c-5.516 0-9.969 4.453-9.969 9.969 0 1.758.459 3.474 1.332 4.988L2 22l5.182-1.359c1.464.799 3.111 1.221 4.849 1.221h.004c5.515 0 9.969-4.453 9.969-9.969 0-2.664-1.037-5.168-2.921-7.051C17.199 3.037 14.695 2 12.031 2zm5.823 14.281c-.246.693-1.432 1.326-1.995 1.411-.513.077-1.162.109-1.876-.118-.433-.138-.988-.321-1.7-.628-2.992-1.291-4.946-4.303-5.095-4.502-.149-.199-1.216-1.618-1.216-3.086 0-1.469.769-2.191 1.043-2.489.273-.299.596-.374.795-.374.199 0 .397.002.571.01.183.009.428-.07.67.511.248.597.844 2.065.919 2.214.074.149.124.324.025.523-.099.199-.149.323-.298.498-.149.174-.313.389-.447.523-.149.149-.304.311-.131.609.174.299.772 1.274 1.658 2.063 1.139 1.015 2.099 1.329 2.397 1.479.298.149.472.124.646-.075.174-.199.745-.871.944-1.169.199-.299.397-.249.67-.149.274.099 1.739.821 2.037.97.298.149.497.224.571.348.075.125.075.722-.171 1.415z" />
+            </svg>
+            <span className="text-[9px] font-black uppercase tracking-wider">Grup WA</span>
           </a>
 
           <a
             href="https://whatsapp.com/channel/0029Vb5sNGZ9mrGkJGzEh421"
-            className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-emerald-700/10"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-[#075E54] hover:bg-[#064e46] text-white rounded-2xl py-3 px-2 flex flex-col items-center justify-center gap-1.5 transition-all hover:scale-105 shadow-md shadow-[#075E54]/20"
           >
-            <ZapIcon className="w-4 h-4 fill-white" />
-            <span className="text-[8px] font-black uppercase tracking-wider">Channel WA</span>
+            {/* Official WhatsApp Channel Logo SVG (WhatsApp Badge + Broadcast Waves) */}
+            <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" aria-hidden="true">
+              <path d="M12.031 2c-5.516 0-9.969 4.453-9.969 9.969 0 1.758.459 3.474 1.332 4.988L2 22l5.182-1.359c1.464.799 3.111 1.221 4.849 1.221h.004c5.515 0 9.969-4.453 9.969-9.969 0-2.664-1.037-5.168-2.921-7.051C17.199 3.037 14.695 2 12.031 2zm4.324 12.893l-4.53-1.51v2.115c0 .414-.336.75-.75.75s-.75-.336-.75-.75v-2.615l-1.92-.64c-.483-.161-.809-.613-.809-1.122v-1.222c0-.509.326-.961.809-1.122l8.15-2.717c.486-.162.986.2 1.986.712v6.41c0 .512-.5.874-.986.711z" />
+              <path d="M17.5 8.5c.828 0 1.5 1.343 1.5 3s-.672 3-1.5 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <span className="text-[9px] font-black uppercase tracking-wider">Channel WA</span>
           </a>
 
           <a
-            href="tg://resolve?domain=rq_aqli"
-            className="bg-sky-500 hover:bg-sky-600 text-white rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 shadow-md shadow-sky-500/10"
+            href="https://t.me/rq_aqli"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-[#229ED9] hover:bg-[#1c8ec4] text-white rounded-2xl py-3 px-2 flex flex-col items-center justify-center gap-1.5 transition-all hover:scale-105 shadow-md shadow-[#229ED9]/20"
           >
-            <ExternalLink className="w-4 h-4" />
-            <span className="text-[8px] font-black uppercase tracking-wider">Telegram</span>
+            {/* Official Telegram Paper Plane Logo SVG */}
+            <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" aria-hidden="true">
+              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+            </svg>
+            <span className="text-[9px] font-black uppercase tracking-wider">Telegram</span>
           </a>
         </div>
 
