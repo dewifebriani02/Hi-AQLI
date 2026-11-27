@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { 
   ChevronLeft, 
   BookOpen, 
@@ -10,111 +10,39 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
+  ArrowLeft,
   Map as MapIcon,
   ChevronRight,
   Play,
   Pause,
   Timer,
   Trophy,
-  Loader2
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 import { useUser, db, useCollection, useDoc } from '@/db';
+import {
+  AJURUMIYAH_CHAPTERS,
+  getMatanChapterById,
+  getMatanChapterNavigation,
+  isMatanChapterCompleted,
+  MatanItem,
+  MatanQuiz,
+} from '@/lib/matan-data';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-interface MatanQuiz {
-  question: string;
-  options: string[];
-  correct: string;
-}
-
-interface MatanItem {
-  id?: string;
-  arabic?: string;
-  bait_arabic: string;
-  translation: string;
-  syarah_text: string;
-  audio_url?: string | null;
-  audio_start?: number;
-  audio_end?: number;
-  example_verse?: {
-    text: string;
-    surah: number;
-    ayat: number;
-  };
-  quizzes: MatanQuiz[];
-}
-
-const FALLBACK_KALAM_ITEMS: MatanItem[] = [
-  {
-    id: 'initial-kalam-1',
-    bait_arabic: '\u0627\u0644\u0643\u064e\u0644\u064e\u0627\u0645\u064f \u0647\u064f\u0648\u064e \u0627\u0644\u0644\u064e\u0651\u0641\u0652\u0638\u064f \u0627\u0644\u0645\u064f\u0631\u064e\u0643\u064e\u0651\u0628\u064f \u0627\u0644\u0645\u064f\u0641\u0650\u064a\u062f\u064f \u0628\u0650\u0627\u0644\u0648\u064e\u0636\u0652\u0639\u0650',
-    translation: 'Kalam adalah lafazh yang tersusun, memberikan faedah (makna sempurna), dan diucapkan dengan sengaja dalam bahasa Arab.',
-    syarah_text: `
-      <p class="mb-4">Dalam ilmu Nahwu, suatu ucapan baru disebut <strong>Al-Kalam</strong> apabila memenuhi <strong>4 syarat utama</strong>:</p>
-      <ul class="list-disc pl-6 space-y-2 mb-4">
-        <li><strong>Al-Lafzhu (\u0627\u0644\u0644\u064e\u0651\u0641\u0652\u0638\u064f):</strong> Suara yang mengandung sebagian huruf hijaiyah (bukan isyarat atau tulisan semata).</li>
-        <li><strong>Al-Murakkabu (\u0627\u0644\u0645\u064f\u0631\u064e\u0643\u064e\u0651\u0628\u064f):</strong> Tersusun dari minimal dua kata atau lebih (misalnya <em>Zaidun Qa'imun</em>).</li>
-        <li><strong>Al-Mufidu (\u0627\u0644\u0645\u064f\u0641\u0650\u064a\u062f\u064f):</strong> Memberikan pengertian yang sempurna sehingga pendengar tidak menunggu kelanjutan kalimat.</li>
-        <li><strong>Bil-Wadh'i (\u0628\u0650\u0627\u0644\u0648\u064e\u0636\u0652\u0639\u0650):</strong> Disengaja dan menggunakan kaidah bahasa Arab.</li>
-      </ul>
-      <p>Pembagian kata penyusun Kalam ada tiga: <strong>Isim</strong> (kata benda/sifat), <strong>Fi'il</strong> (kata kerja), dan <strong>Harf</strong> (kata tugas yang memiliki makna).</p>
-    `,
-    audio_url: null,
-    example_verse: {
-      text: '\u0671\u0644\u0652\u062d\u064e\u0645\u0652\u062f\u064f \u0644\u0650\u0644\u064e\u0651\u0647\u0650 \u0631\u064e\u0628\u0650\u0651 \u0671\u0644\u0652\u0639\u064e\u0640\u0670\u0644\u064e\u0645\u0650\u064a\u0646\u064e',
-      surah: 1,
-      ayat: 2,
-    },
-    quizzes: [
-      {
-        question: 'Berapa syarat suatu ucapan disebut Al-Kalam menurut Ibnu Ajurrum?',
-        options: ['2 Syarat', '3 Syarat', '4 Syarat', '5 Syarat'],
-        correct: '4 Syarat',
-      },
-      {
-        question: 'Apa makna syarat "Al-Murakkabu" (\u0627\u0644\u0645\u064f\u0631\u064e\u0643\u064e\u0651\u0628\u064f) pada definisi Kalam?',
-        options: [
-          'Tersusun dari dua kata atau lebih',
-          'Berupa isyarat tangan',
-          'Mengandung huruf hijaiyah saja',
-          'Diucapkan tanpa sengaja',
-        ],
-        correct: 'Tersusun dari dua kata atau lebih',
-      },
-      {
-        question: 'Apa arti dari syarat "Al-Mufidu" (\u0627\u0644\u0645\u064f\u0641\u0650\u064a\u062f\u064f)?',
-        options: [
-          'Memberi faedah makna yang sempurna',
-          'Bersuara keras',
-          'Menggunakan huruf jar',
-          'Berbentuk kata kerja lampau',
-        ],
-        correct: 'Memberi faedah makna yang sempurna',
-      },
-      {
-        question: 'Ada berapa pembagian kata (kalimah) penyusun Kalam dalam bahasa Arab?',
-        options: [
-          '2 (Isim dan Fi\'il)',
-          '3 (Isim, Fi\'il, dan Harf)',
-          '4 (Isim, Fi\'il, Harf, dan Dharaf)',
-          '5 Bagian',
-        ],
-        correct: '3 (Isim, Fi\'il, dan Harf)',
-      },
-    ],
-  },
-];
-
 export default function MatanChapterReader() {
   const params = useParams();
+  const router = useRouter();
   const { user } = useUser();
   const slug = params.slug as string;
   const chapterId = params.chapterId as string;
@@ -141,6 +69,7 @@ export default function MatanChapterReader() {
   }), [user?.id]);
 
   const { data: currentProgress, refresh: refreshProgress } = useCollection(user ? "matan_user_progress" : null, progressOptions);
+  const { data: userQuizAttempts, refresh: refreshUserAttempts } = useCollection(user ? "quiz_attempts" : null, progressOptions);
 
   const [activeItem, setActiveItem] = useState(0);
   const [showSyarah, setShowSyarah] = useState(false);
@@ -162,6 +91,29 @@ export default function MatanChapterReader() {
   const quizTimerRef = useRef<NodeJS.Timeout | null>(null);
   const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const fallbackChapter = useMemo(
+    () => getMatanChapterById(chapterId) || AJURUMIYAH_CHAPTERS[0],
+    [chapterId]
+  );
+
+  const { prev: prevChapter, next: nextChapter, totalChapters } = useMemo(
+    () => getMatanChapterNavigation(chapterId),
+    [chapterId]
+  );
+
+  // Reset state when chapter changes
+  useEffect(() => {
+    setActiveItem(0);
+    setShowSyarah(false);
+    setQuizStage('start');
+    setCurrentQuizIdx(0);
+    setScore(0);
+    setWrongAnswers([]);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setTimerActive(false);
+  }, [chapterId]);
+
   const effectiveItems: MatanItem[] = useMemo(() => {
     if (dbItems && dbItems.length > 0) {
       return dbItems.map((raw: any) => {
@@ -174,7 +126,7 @@ export default function MatanChapterReader() {
         `;
         const fallbackQuizzes: MatanQuiz[] = Array.isArray(raw.quizzes) && raw.quizzes.length > 0
           ? raw.quizzes
-          : FALLBACK_KALAM_ITEMS[0].quizzes;
+          : fallbackChapter.items[0].quizzes;
         return {
           ...raw,
           bait_arabic: arabicText,
@@ -184,13 +136,20 @@ export default function MatanChapterReader() {
         };
       });
     }
-    return FALLBACK_KALAM_ITEMS;
-  }, [dbItems]);
+    return fallbackChapter.items;
+  }, [dbItems, fallbackChapter]);
 
-  const item: MatanItem = effectiveItems[activeItem] || FALLBACK_KALAM_ITEMS[0];
+  const item: MatanItem = effectiveItems[activeItem] || fallbackChapter.items[0];
   const quizzes = Array.isArray(item.quizzes) ? item.quizzes : [];
-  const chapterTitle = chapterDoc?.title || 'Bab Al-Kalam';
-  const chapterStepLabel = chapterDoc?.chapter_number ?? (chapterDoc?.order_index !== undefined ? Number(chapterDoc.order_index) + 1 : 1);
+  const chapterTitle = chapterDoc?.title || fallbackChapter.title;
+  const chapterStepLabel =
+    chapterDoc?.chapter_number ??
+    (chapterDoc?.order_index !== undefined ? Number(chapterDoc.order_index) + 1 : fallbackChapter.chapter_number);
+
+  const isCurrentChapterCompleted = useMemo(
+    () => isMatanChapterCompleted(fallbackChapter, slug || 'ajurumiyah', currentProgress, userQuizAttempts),
+    [fallbackChapter, slug, currentProgress, userQuizAttempts]
+  );
 
   const quizId = `matan_${slug}_${item.id || chapterId}`;
   const leaderboardOptions = useMemo(() => ({
@@ -246,10 +205,16 @@ export default function MatanChapterReader() {
     return Array.from(bestByUser.values()).slice(0, 5);
   }, [quizAttempts, leaderboardUsers, quizzes.length, formatTime]);
 
-  const totalXp = currentProgress?.reduce(
-    (acc, p) => acc + (p.points_awarded ?? ((p.memorized || p.status_paham) ? 40 : 0)),
-    0
-  ) || 0;
+  const totalXp = useMemo(() => {
+    const progressXp = currentProgress?.reduce(
+      (acc: number, p: any) => acc + (p.points_awarded ?? ((p.memorized || p.status_paham) ? 40 : 0)),
+      0
+    ) || 0;
+    const matanQuizXp = (userQuizAttempts || [])
+      .filter((q: any) => String(q.quiz_id || '').startsWith('matan_'))
+      .reduce((acc: number, q: any) => acc + (Number(q.score) || 0) * 20, 0);
+    return Math.max(progressXp, matanQuizXp);
+  }, [currentProgress, userQuizAttempts]);
 
   // SFX Logic
   const playSfx = useCallback((type: 'correct' | 'incorrect' | 'perfect' | 'fail') => {
@@ -331,7 +296,7 @@ export default function MatanChapterReader() {
           return prevIdx;
         }
       });
-    }, 1500);
+    }, 1200);
   }, [currentQuizIdx, selectedAnswer, quizStage, quizzes, playSfx]);
 
   // Sprint Mode Timer
@@ -347,7 +312,8 @@ export default function MatanChapterReader() {
   // Play Result SFX (Perfect/Fail) & Save Progress
   useEffect(() => {
     if (quizStage === 'result' && quizzes.length > 0) {
-      if (score === quizzes.length) {
+      const isPassed = quizzes.length > 0 && score / quizzes.length >= 0.8;
+      if (isPassed) {
         playSfx('perfect');
       } else {
         playSfx('fail');
@@ -357,8 +323,6 @@ export default function MatanChapterReader() {
 
       const saveProgress = async () => {
         try {
-          const isPassed = score === quizzes.length;
-
           await db.from('quiz_attempts').insert({
             user_id: user.id,
             quiz_id: quizId,
@@ -387,9 +351,10 @@ export default function MatanChapterReader() {
                 updated_at: new Date().toISOString(),
               });
             }
-            refreshProgress();
           }
 
+          refreshProgress();
+          refreshUserAttempts();
           refreshLeaderboard();
         } catch (e) {
           console.error("Gagal menyimpan progress:", e);
@@ -398,7 +363,7 @@ export default function MatanChapterReader() {
 
       saveProgress();
     }
-  }, [quizStage, score, quizzes.length, playSfx, user, dbItems, activeItem, quizId, totalTime, refreshLeaderboard, refreshProgress, chapterDoc?.matan_id, isUuidChapter, chapterId, currentProgress]);
+  }, [quizStage, score, quizzes.length, playSfx, user, dbItems, activeItem, quizId, totalTime, refreshLeaderboard, refreshProgress, refreshUserAttempts, chapterDoc?.matan_id, isUuidChapter, chapterId, currentProgress]);
 
   const startQuiz = (mode: 'relax' | 'sprint') => {
     if (quizzes.length === 0) return;
@@ -450,52 +415,143 @@ export default function MatanChapterReader() {
   }
 
   const currentQuestion = quizzes[currentQuizIdx];
+  const isQuizPassed = quizzes.length > 0 && score / quizzes.length >= 0.8;
 
   return (
-    <div className="min-h-screen pb-40 selection:bg-[#800000]/10 font-body">
-      {/* Branded Header */}
+    <div className="min-h-screen pb-32 selection:bg-[#800000]/10 font-body">
+      {/* Branded Header with Prev/Next Chapter Navigation */}
       <div className="sticky top-16 sm:top-20 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-100 px-3 sm:px-4 py-3 sm:py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-           <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-              <Button asChild variant="ghost" size="icon" className="rounded-2xl text-slate-900 hover:bg-[#800000]/5 shrink-0">
-                 <Link href={`/matan/${slug}`}><ChevronLeft className="w-6 h-6 text-[#800000]" /></Link>
-              </Button>
-              <div className="flex flex-col min-w-0">
-                 <h2 className="text-base sm:text-xl font-black text-slate-900 leading-none uppercase tracking-tighter truncate">{chapterTitle}</h2>
-                 <p className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest mt-1">{slug} • Langkah {chapterStepLabel}</p>
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <Button asChild variant="ghost" size="icon" className="rounded-2xl text-slate-900 hover:bg-[#800000]/5 shrink-0">
+              <Link href={`/matan/${slug}`}><ChevronLeft className="w-6 h-6 text-[#800000]" /></Link>
+            </Button>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-lg font-black text-slate-900 leading-none uppercase tracking-tighter truncate">
+                  {chapterTitle}
+                </h2>
+                {isCurrentChapterCompleted && (
+                  <Badge className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0 h-4 gap-1 shrink-0">
+                    <CheckCircle2 className="w-2.5 h-2.5" /> TUNTAS
+                  </Badge>
+                )}
               </div>
-           </div>
-           
-           <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-[#800000]/5 px-4 py-2 rounded-2xl border border-[#800000]/10">
-                 <Zap className="w-4 h-4 text-[#D4AF37] fill-current" />
-                 <span className="text-sm font-black text-slate-900">{totalXp} XP</span>
-              </div>
-           </div>
+              <p className="text-[10px] font-bold text-[#800000] uppercase tracking-widest mt-1">
+                {slug} • Bab {chapterStepLabel} / {totalChapters}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 bg-[#800000]/5 px-3 py-1.5 rounded-xl border border-[#800000]/10 mr-1">
+              <Zap className="w-3.5 h-3.5 text-[#D4AF37] fill-current" />
+              <span className="text-xs font-black text-slate-900">{totalXp} XP</span>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={!prevChapter}
+              onClick={() => prevChapter && router.push(`/matan/${slug}/${prevChapter.id}`)}
+              title={prevChapter ? `Bab Sebelumnya: ${prevChapter.title}` : "Ini adalah Bab Pertama"}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={!nextChapter}
+              onClick={() => nextChapter && router.push(`/matan/${slug}/${nextChapter.id}`)}
+              title={nextChapter ? `Bab Selanjutnya: ${nextChapter.title}` : "Ini adalah Bab Terakhir"}
+            >
+              <ArrowRight className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-1 sm:px-4 py-6 sm:py-12 space-y-8 sm:space-y-12">
+      <div className="max-w-3xl mx-auto px-2 sm:px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        {/* Quick Chapter Selector Strip */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+          {AJURUMIYAH_CHAPTERS.map((chap) => {
+            const isCurr = chap.id === fallbackChapter.id;
+            const isDone = isMatanChapterCompleted(chap, slug || 'ajurumiyah', currentProgress, userQuizAttempts);
+            return (
+              <Link
+                key={chap.id}
+                href={`/matan/${slug}/${chap.id}`}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-1.5 border",
+                  isCurr
+                    ? "bg-[#800000] text-white border-[#800000] shadow-sm"
+                    : isDone
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                    : "bg-white text-slate-700 border-slate-200 hover:border-[#800000]/40"
+                )}
+              >
+                <span>Bab {chap.chapter_number}: {chap.title.replace(/^Bab\s+/i, '')}</span>
+                {isDone && <CheckCircle2 className={cn("w-3 h-3", isCurr ? "text-[#D4AF37]" : "text-emerald-600")} />}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Bait Selector (Only shown inline if chapter has > 1 bait, never floating over bottom nav) */}
+        {effectiveItems.length > 1 && (
+          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={activeItem <= 0}
+              onClick={() => {
+                setActiveItem(i => Math.max(0, i - 1));
+                setShowSyarah(false);
+                resetQuiz();
+              }}
+              className="text-xs font-bold gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" /> Bait Sebelumnya
+            </Button>
+            <span className="text-xs font-black text-[#800000] uppercase tracking-widest">
+              Bait {activeItem + 1} / {effectiveItems.length}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={activeItem >= effectiveItems.length - 1}
+              onClick={() => {
+                setActiveItem(i => Math.min(effectiveItems.length - 1, i + 1));
+                setShowSyarah(false);
+                resetQuiz();
+              }}
+              className="text-xs font-bold gap-1"
+            >
+              Bait Berikutnya <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
         {/* Bait Card */}
         <div className="relative">
-           <div className="relative bg-white rounded-[2rem] sm:rounded-[3rem] border border-slate-200 p-5 sm:p-8 md:p-14 shadow-2xl flex flex-col items-center text-center space-y-6 sm:space-y-10 overflow-hidden">
+           <div className="relative bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 p-5 sm:p-8 md:p-12 shadow-xl flex flex-col items-center text-center space-y-6 sm:space-y-8 overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none text-[#800000]">
                  <BookOpen className="w-64 h-64 rotate-12" />
               </div>
 
-              <div className="space-y-6 relative z-10 w-full">
-                 <div className="flex items-center justify-center gap-3 mb-10">
+              <div className="space-y-5 relative z-10 w-full">
+                 <div className="flex items-center justify-center gap-3 mb-4">
                     <div className="h-[2px] w-12 bg-[#800000]/10" />
                     <Sparkles className="w-5 h-5 text-[#D4AF37]" />
                     <div className="h-[2px] w-12 bg-[#800000]/10" />
                  </div>
 
-                 <h3 className="text-2xl sm:text-4xl md:text-6xl font-arabic leading-[1.8] text-slate-900 direction-rtl px-1 sm:px-4 font-headline" dir="rtl">
+                 <h3 className="text-2xl sm:text-4xl md:text-5xl font-arabic leading-[1.9] text-slate-900 direction-rtl px-1 sm:px-4 font-headline" dir="rtl">
                     {item.bait_arabic}
                  </h3>
                  
-                  <div className="pt-8 space-y-6">
-                    <p className="text-xl md:text-2xl font-medium text-slate-500 leading-relaxed italic max-w-2xl mx-auto normal-case">
+                  <div className="pt-4 space-y-5 border-t border-slate-100">
+                    <p className="text-base sm:text-xl font-medium text-slate-600 leading-relaxed italic max-w-2xl mx-auto normal-case">
                        &ldquo;{item.translation}&rdquo;
                     </p>
                     
@@ -526,8 +582,8 @@ export default function MatanChapterReader() {
               </div>
 
               {!showSyarah && (
-                <Button onClick={() => setShowSyarah(true)} className="h-16 px-10 rounded-2xl bg-[#800000] text-white font-black uppercase tracking-widest hover:bg-[#660000] shadow-xl shadow-[#800000]/20">
-                  Buka Syarah Bait <ArrowRight className="w-5 h-5 ml-2 text-[#D4AF37]" />
+                <Button onClick={() => setShowSyarah(true)} className="h-14 px-8 rounded-2xl bg-[#800000] text-white font-black uppercase tracking-widest hover:bg-[#660000] shadow-xl shadow-[#800000]/20">
+                  Buka Syarah &amp; Kuis Bab Ini <ArrowRight className="w-5 h-5 ml-2 text-[#D4AF37]" />
                 </Button>
               )}
            </div>
@@ -535,19 +591,22 @@ export default function MatanChapterReader() {
 
         {/* Syarah & Quiz */}
         {showSyarah && (
-          <div className="animate-in fade-in slide-in-from-bottom-10 duration-700 space-y-12">
-             <div className="bg-white border border-slate-200 rounded-[2rem] sm:rounded-[3rem] p-5 sm:p-8 md:p-14 shadow-xl">
-                <h4 className="flex items-center gap-3 text-xs font-black text-[#800000] uppercase tracking-widest mb-10">
-                   <Zap className="w-5 h-5 fill-current text-[#D4AF37]" /> Analisa Mendalam
+          <div className="animate-in fade-in slide-in-from-bottom-10 duration-500 space-y-8">
+             <div className="bg-white border border-slate-200 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-10 shadow-xl">
+                <h4 className="flex items-center gap-2.5 text-xs font-black text-[#800000] uppercase tracking-widest mb-6">
+                   <Zap className="w-5 h-5 fill-current text-[#D4AF37]" /> Syarah &amp; Penjelasan Kaidah
                 </h4>
-                <div className="text-slate-600 leading-relaxed text-lg font-medium normal-case" dangerouslySetInnerHTML={{ __html: item.syarah_text || '' }} />
+                <div className="text-slate-700 leading-relaxed text-base sm:text-lg font-medium normal-case" dangerouslySetInnerHTML={{ __html: item.syarah_text || '' }} />
                 
                 {/* Lab I'rab */}
                 {item.example_verse?.text && (
-                  <div className="mt-8 sm:mt-14 p-5 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-[#800000]/5 to-white border-2 border-[#800000]/10 text-center space-y-6 sm:space-y-8">
-                     <div className="text-4xl md:text-5xl font-arabic text-slate-900" dir="rtl">{item.example_verse.text}</div>
-                     <Button asChild className="h-14 px-10 rounded-2xl bg-[#800000] text-white font-black shadow-xl">
-                        <Link href={`/irab?surah=${item.example_verse.surah}&ayat=${item.example_verse.ayat}`}>Buka di Lab I&apos;rab <Sparkles className="w-4 h-4 ml-2 text-[#D4AF37]" /></Link>
+                  <div className="mt-8 p-5 sm:p-8 rounded-2xl bg-gradient-to-br from-[#800000]/5 to-white border-2 border-[#800000]/10 text-center space-y-5">
+                     <p className="text-[10px] font-black uppercase tracking-widest text-[#800000]">Contoh Penerapan dalam Al-Qur&apos;an</p>
+                     <div className="text-3xl sm:text-4xl font-arabic text-slate-900 leading-loose" dir="rtl">{item.example_verse.text}</div>
+                     <Button asChild className="h-12 px-8 rounded-2xl bg-[#800000] text-white font-black shadow-lg">
+                        <Link href={`/irab/${item.example_verse.surah}/${item.example_verse.ayat}`}>
+                          Buka Ayat Ini di Lab Hi I&apos;rab <Sparkles className="w-4 h-4 ml-2 text-[#D4AF37]" />
+                        </Link>
                      </Button>
                   </div>
                 )}
@@ -557,30 +616,32 @@ export default function MatanChapterReader() {
              {quizzes.length > 0 && (
                <div id="quiz-anchor" className="scroll-mt-32">
                   {quizStage === 'start' && (
-                    <Card className="bg-[#800000] border-4 border-[#D4AF37]/20 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-center space-y-6 sm:space-y-10 shadow-2xl relative overflow-hidden">
+                    <Card className="bg-[#800000] border-4 border-[#D4AF37]/20 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 text-center space-y-6 shadow-2xl relative overflow-hidden">
                       <div className="space-y-2">
-                         <h2 className="text-3xl font-black text-white italic">Cek Pemahaman</h2>
-                         <p className="text-amber-100/60 text-sm">Selesaikan tantangan ({quizzes.length} soal) untuk menguasai bab ini.</p>
+                         <h2 className="text-2xl sm:text-3xl font-black text-white italic">Uji Pemahaman {chapterTitle}</h2>
+                         <p className="text-amber-100/80 text-xs sm:text-sm">
+                           Selesaikan tantangan ({quizzes.length} soal, minimal lulus 80%) untuk membuka bab berikutnya.
+                         </p>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                         <button onClick={() => startQuiz('relax')} className="p-6 rounded-3xl bg-white/5 border border-white/10 hover:border-[#D4AF37] transition-all text-left">
+                         <button onClick={() => startQuiz('relax')} className="p-6 rounded-2xl bg-white/10 border border-white/15 hover:border-[#D4AF37] transition-all text-left">
                             <MapIcon className="w-8 h-8 text-[#D4AF37] mb-2" />
                             <div className="text-white font-black uppercase text-sm">Mode Santai</div>
-                            <div className="text-[10px] text-white/40 uppercase">Tanpa Waktu</div>
+                            <div className="text-[10px] text-white/60 uppercase">Tanpa Batas Waktu</div>
                          </button>
-                         <button onClick={() => startQuiz('sprint')} className="p-6 rounded-3xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all text-left">
+                         <button onClick={() => startQuiz('sprint')} className="p-6 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 hover:border-[#D4AF37] transition-all text-left">
                             <Timer className="w-8 h-8 text-[#D4AF37] mb-2" />
                             <div className="text-[#D4AF37] font-black uppercase text-sm">Flashcard Sprint</div>
-                            <div className="text-[10px] text-[#D4AF37]/40 uppercase">10 Detik / Soal</div>
+                            <div className="text-[10px] text-[#D4AF37]/70 uppercase">10 Detik / Soal</div>
                          </button>
                       </div>
                     </Card>
                   )}
 
                   {quizStage === 'playing' && currentQuestion && (
-                    <Card className="bg-white border-none rounded-[3rem] shadow-2xl overflow-hidden min-h-[500px]">
+                    <Card className="bg-white border-none rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden">
                        <div className="p-5 bg-slate-50 border-b border-slate-100 space-y-3">
-                          <div className="flex justify-between items-center px-4">
+                          <div className="flex justify-between items-center px-2">
                              <span className="text-[10px] font-black text-[#800000] uppercase tracking-widest">Soal {currentQuizIdx + 1} / {quizzes.length}</span>
                              <div className="flex items-center gap-2">
                                 <Timer className={cn("w-4 h-4", isSprintMode && timeLeft < 4 ? "text-rose-500 animate-pulse" : "text-slate-400")} />
@@ -589,19 +650,19 @@ export default function MatanChapterReader() {
                           </div>
                           <Progress value={((currentQuizIdx + 1) / quizzes.length) * 100} className="h-2 bg-[#800000]/5 [&>div]:bg-[#D4AF37]" />
                        </div>
-                       <div className="p-5 sm:p-10 flex flex-col items-center justify-center text-center space-y-6 sm:space-y-10">
-                          <h3 className="text-2xl font-black text-[#800000] uppercase leading-tight max-w-lg">{currentQuestion.question}</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+                       <div className="p-5 sm:p-10 flex flex-col items-center justify-center text-center space-y-6 sm:space-y-8">
+                          <h3 className="text-lg sm:text-2xl font-black text-[#800000] leading-snug max-w-xl">{currentQuestion.question}</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full max-w-2xl">
                              {currentQuestion.options.map((opt, i) => (
                                 <button
                                   key={i}
                                   disabled={!!selectedAnswer}
                                   onClick={() => handleAnswer(opt)}
                                   className={cn(
-                                    "p-6 rounded-2xl border-2 font-black text-sm flex justify-between items-center transition-all text-left gap-3",
+                                    "p-5 rounded-2xl border-2 font-bold text-sm flex justify-between items-center transition-all text-left gap-3",
                                     selectedAnswer === opt 
                                       ? (isCorrect ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-rose-50 border-rose-500 text-rose-700")
-                                      : (selectedAnswer && opt === currentQuestion.correct ? "bg-emerald-50/50 border-emerald-500/30 text-emerald-700" : "bg-white border-slate-100 text-slate-600 hover:border-[#D4AF37] hover:text-[#800000]")
+                                      : (selectedAnswer && opt === currentQuestion.correct ? "bg-emerald-50/50 border-emerald-500/30 text-emerald-700" : "bg-white border-slate-200 text-slate-700 hover:border-[#D4AF37] hover:text-[#800000]")
                                   )}
                                 >
                                    <span>{opt}</span>
@@ -614,36 +675,40 @@ export default function MatanChapterReader() {
                   )}
 
                   {quizStage === 'result' && (
-                    <div className="space-y-12 animate-in zoom-in duration-500">
-                      <Card className="bg-white border-none rounded-[3rem] shadow-2xl overflow-hidden">
-                        <div className={cn("p-12 text-center flex flex-col items-center gap-4 text-white", score === quizzes.length ? "bg-[#800000]" : "bg-slate-800")}>
-                           <Trophy className={cn("w-24 h-24 mb-2 text-[#D4AF37]", score === quizzes.length && "animate-bounce")} />
-                           <h2 className="text-3xl font-black italic uppercase">Hasil Tantangan</h2>
-                           <p className="text-xs font-bold opacity-60 uppercase tracking-widest">Skor: {score} / {quizzes.length} • Waktu: {formatTime(totalTime)}</p>
+                    <div className="space-y-8 animate-in zoom-in duration-300">
+                      <Card className="bg-white border-none rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden">
+                        <div className={cn("p-10 text-center flex flex-col items-center gap-3 text-white", isQuizPassed ? "bg-[#800000]" : "bg-slate-800")}>
+                           <Trophy className={cn("w-20 h-20 mb-1 text-[#D4AF37]", isQuizPassed && "animate-bounce")} />
+                           <h2 className="text-2xl sm:text-3xl font-black italic uppercase">
+                             {isQuizPassed ? "MasyaAllah, Bab Tuntas!" : "Belum Mencapai Target 80%"}
+                           </h2>
+                           <p className="text-xs font-bold opacity-80 uppercase tracking-widest">
+                             Skor: {score} / {quizzes.length} • Waktu: {formatTime(totalTime)}
+                           </p>
                         </div>
                         
-                        <CardContent className="p-5 sm:p-10 space-y-6 sm:space-y-8">
+                        <CardContent className="p-5 sm:p-8 space-y-6">
                            <div className="grid grid-cols-2 gap-4">
-                              <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 text-center">
+                              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Akurasi</div>
                                  <div className="text-2xl font-black text-[#800000]">{Math.round((score / quizzes.length) * 100)}%</div>
                               </div>
-                              <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 text-center">
+                              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">XP Diraih</div>
                                  <div className="text-2xl font-black text-[#D4AF37]">+{score * 20}</div>
                               </div>
                            </div>
 
                            {wrongAnswers.length > 0 && (
-                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-[#800000] uppercase tracking-widest border-l-4 border-[#800000] pl-3">Review Salah ({wrongAnswers.length})</h4>
-                                <div className="grid gap-3 max-h-48 overflow-y-auto pr-2">
+                             <div className="space-y-3">
+                                <h4 className="text-[10px] font-black text-[#800000] uppercase tracking-widest border-l-4 border-[#800000] pl-3">Review Jawaban ({wrongAnswers.length})</h4>
+                                <div className="grid gap-2.5 max-h-48 overflow-y-auto pr-2">
                                    {wrongAnswers.map((w, idx) => (
-                                     <div key={idx} className="p-4 bg-rose-50 border border-rose-100 rounded-2xl">
-                                        <p className="text-xs font-black text-slate-800 uppercase">{w.question}</p>
+                                     <div key={idx} className="p-3.5 bg-rose-50 border border-rose-100 rounded-xl">
+                                        <p className="text-xs font-bold text-slate-800">{w.question}</p>
                                         <div className="flex justify-between mt-1 text-[10px] font-bold">
-                                           <span className="text-rose-500">Anda: {w.userSelected === "__timeout__" ? "Waktu Habis" : w.userSelected}</span>
-                                           <span className="text-emerald-600">Jawaban: {w.correct}</span>
+                                           <span className="text-rose-600">Anda: {w.userSelected === "__timeout__" ? "Waktu Habis" : w.userSelected}</span>
+                                           <span className="text-emerald-700">Benar: {w.correct}</span>
                                         </div>
                                      </div>
                                    ))}
@@ -652,21 +717,36 @@ export default function MatanChapterReader() {
                            )}
 
                            <div className="flex flex-col gap-3">
-                              <Button onClick={resetQuiz} className="h-16 rounded-2xl bg-[#800000] text-white font-black shadow-xl">TANTANG LAGI</Button>
-                              <Button asChild variant="ghost" className="h-14 rounded-2xl font-bold text-slate-400"><Link href={`/matan/${slug}`}>KEMBALI KE PETA</Link></Button>
+                              {isQuizPassed && nextChapter && (
+                                <Button
+                                  asChild
+                                  className="h-14 rounded-2xl bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black shadow-xl uppercase tracking-wider text-xs sm:text-sm gap-2"
+                                >
+                                  <Link href={`/matan/${slug}/${nextChapter.id}`}>
+                                    LANJUT KE BAB {nextChapter.chapter_number}: {nextChapter.title.toUpperCase()}
+                                    <ArrowRight className="w-5 h-5" />
+                                  </Link>
+                                </Button>
+                              )}
+                              <Button onClick={resetQuiz} variant={isQuizPassed ? "outline" : "default"} className={cn("h-13 rounded-2xl font-black gap-2", !isQuizPassed && "bg-[#800000] text-white shadow-xl")}>
+                                <RefreshCw className="w-4 h-4" /> ULANGI KUIS BAB INI
+                              </Button>
+                              <Button asChild variant="ghost" className="h-12 rounded-2xl font-bold text-slate-500">
+                                <Link href={`/matan/${slug}`}>KEMBALI KE DAFTAR BAB</Link>
+                              </Button>
                            </div>
                         </CardContent>
                       </Card>
 
                       {/* PAPAN JUARA */}
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                          <h3 className="text-xs font-black text-[#800000] uppercase tracking-widest flex items-center gap-2 px-2">
                             <Trophy className="w-4 h-4 text-[#D4AF37] fill-current" /> Papan Juara Bab Ini
                          </h3>
-                         <Card className="border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-white/50 backdrop-blur-xl">
+                         <Card className="border-none shadow-xl rounded-2xl overflow-hidden bg-white">
                             <div className="divide-y divide-slate-100">
                                {leaderboardEntries.length > 0 ? leaderboardEntries.map((entry, idx) => (
-                                 <div key={entry.id} className="p-4 flex items-center justify-between hover:bg-white transition-colors">
+                                 <div key={entry.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                                     <div className="flex items-center gap-4">
                                        <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black", idx === 0 ? "bg-[#D4AF37] text-white" : "bg-slate-100 text-slate-400")}>{idx + 1}</div>
                                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
@@ -694,40 +774,6 @@ export default function MatanChapterReader() {
              )}
           </div>
         )}
-      </div>
-
-      {/* Floating Bottom Navigation (Bait Stepper) */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100vw-2rem)] flex items-center gap-1 sm:gap-3 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-full p-1.5 sm:p-2 shadow-2xl">
-         <Button
-           variant="ghost"
-           size="icon"
-           disabled={activeItem <= 0}
-           onClick={() => {
-             setActiveItem(i => Math.max(0, i - 1));
-             setShowSyarah(false);
-             resetQuiz();
-           }}
-           className="w-12 h-12 rounded-full text-slate-400 hover:text-[#800000] disabled:opacity-30"
-         >
-           <ChevronLeft className="w-7 h-7" />
-         </Button>
-         <div className="px-6 flex flex-col items-center">
-            <span className="text-[8px] font-black text-[#D4AF37] uppercase tracking-widest">{chapterTitle}</span>
-            <span className="text-xs font-black text-slate-900 border-b-2 border-[#800000]">BAIT {activeItem + 1} / {effectiveItems.length}</span>
-         </div>
-         <Button
-           variant="ghost"
-           size="icon"
-           disabled={activeItem >= effectiveItems.length - 1}
-           onClick={() => {
-             setActiveItem(i => Math.min(effectiveItems.length - 1, i + 1));
-             setShowSyarah(false);
-             resetQuiz();
-           }}
-           className="w-12 h-12 rounded-full text-slate-400 hover:text-[#800000] disabled:opacity-30"
-         >
-           <ChevronRight className="w-7 h-7" />
-         </Button>
       </div>
     </div>
   );

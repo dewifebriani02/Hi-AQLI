@@ -22,16 +22,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useUser, useCollection, useDoc } from '@/db';
-
-const DEFAULT_AJURUMIYAH_CHAPTERS = [
-  { id: 'initial', chapter_number: 1, title: 'Bab Al-Kalam', description: 'Definisi Kalam & 4 Syarat Utamanya (Lafazh, Murakkab, Mufid, Bil-Wadh\'i)' },
-  { id: 'bab-irab', chapter_number: 2, title: 'Bab Al-I\'rab', description: 'Perubahan Akhir Kata & Pembagian I\'rab (Rafa\', Nashab, Khafadh, Jazm)' },
-  { id: 'bab-alamat-irab', chapter_number: 3, title: 'Bab Ma\'rifat \'Alamatil I\'rab', description: 'Mengenal Tanda-Tanda I\'rab Ashliyah dan Far\'iyah' },
-  { id: 'bab-afal', chapter_number: 4, title: 'Bab Al-Af\'al', description: 'Pembagian Fi\'il (Madhi, Mudhari\', Amr) & Hukum I\'rabnya' },
-  { id: 'bab-marfuat', chapter_number: 5, title: 'Bab Marfu\'atul Asma\'', description: 'Tujuh Isim yang Berkedudukan Rafa\' (Fa\'il, Mubtada\', Khabar, dll.)' },
-  { id: 'bab-manshubat', chapter_number: 6, title: 'Bab Manshubatul Asma\'', description: 'Lima Belas Isim yang Berkedudukan Nashab (Maf\'ul Bih, Hal, Tamyiz, dll.)' },
-  { id: 'bab-makhfudhat', chapter_number: 7, title: 'Bab Makhfudhatul Asma\'', description: 'Isim-Isim yang Dikasrahkan/Dijarkan dengan Huruf Jar atau Idhafah' },
-];
+import {
+  AJURUMIYAH_CHAPTERS,
+  isMatanChapterCompleted,
+} from '@/lib/matan-data';
 
 export default function MatanDashboard() {
   const { user } = useUser();
@@ -48,14 +42,7 @@ export default function MatanDashboard() {
   }), [user?.id]);
 
   const { data: progress } = useCollection(user ? "matan_user_progress" : null, progressOptions);
-
-  const totalXp = progress?.reduce(
-    (acc, p) => acc + (p.points_awarded ?? ((p.memorized || p.status_paham) ? 40 : 0)),
-    0
-  ) || 0;
-
-  const completedBabCount = progress?.filter(p => p.memorized || p.status_paham)?.length || 0;
-  const currentRank = totalXp > 5000 ? 'Ustadz Nahwu' : totalXp > 1000 ? 'An-Nahwi' : 'Thalibul Ilmi';
+  const { data: quizAttempts } = useCollection(user ? "quiz_attempts" : null, progressOptions);
 
   const displayMatans = useMemo(() => {
     if (matans?.length) return matans;
@@ -66,7 +53,7 @@ export default function MatanDashboard() {
         author: 'Al-Imam Ibnu Ajurrum Ash-Shinhaji',
         level: "Mubtadi' (Dasar)",
         category: 'Nahwu',
-        total_chapters: 26,
+        total_chapters: AJURUMIYAH_CHAPTERS.length,
         slug: 'ajurumiyah',
         is_active: true,
         description: 'Kitab rujukan dasar ilmu Nahwu untuk memahami kaidah i\'rab, kedudukan kalimat Arab, dan struktur ayat Al-Qur\'an.'
@@ -103,8 +90,38 @@ export default function MatanDashboard() {
     if (allChapters?.length) {
       return [...allChapters].sort((a: any, b: any) => (a.chapter_number || 0) - (b.chapter_number || 0));
     }
-    return DEFAULT_AJURUMIYAH_CHAPTERS;
+    return AJURUMIYAH_CHAPTERS;
   }, [allChapters]);
+
+  const completedFlags = useMemo(() => {
+    return chaptersList.map((c: any) =>
+      isMatanChapterCompleted(c, primarySlug, progress, quizAttempts)
+    );
+  }, [chaptersList, primarySlug, progress, quizAttempts]);
+
+  const completedBabCount = completedFlags.filter(Boolean).length;
+
+  const totalXp = useMemo(() => {
+    const progressXp = progress?.reduce(
+      (acc: number, p: any) => acc + (p.points_awarded ?? ((p.memorized || p.status_paham) ? 40 : 0)),
+      0
+    ) || 0;
+    const matanQuizXp = (quizAttempts || [])
+      .filter((q: any) => String(q.quiz_id || '').startsWith('matan_'))
+      .reduce((acc: number, q: any) => acc + (Number(q.score) || 0) * 20, 0);
+    return Math.max(progressXp, matanQuizXp, completedBabCount * 80);
+  }, [progress, quizAttempts, completedBabCount]);
+
+  const currentRank = totalXp > 5000 ? 'Ustadz Nahwu' : totalXp > 1000 ? 'An-Nahwi' : 'Thalibul Ilmi';
+
+  // Find next chapter to study (first uncompleted unlocked chapter, or first chapter)
+  const nextStudyChapter = useMemo(() => {
+    const firstUncompletedIdx = completedFlags.findIndex((done) => !done);
+    if (firstUncompletedIdx >= 0) {
+      return chaptersList[firstUncompletedIdx];
+    }
+    return chaptersList[0];
+  }, [chaptersList, completedFlags]);
 
   if (isMatansLoading) {
     return (
@@ -159,7 +176,7 @@ export default function MatanDashboard() {
                 Bab Tuntas
               </p>
               <p className="text-sm sm:text-base font-black text-slate-900 truncate">
-                {completedBabCount} / {primaryMatan?.total_chapters || 26} Bab
+                {completedBabCount} / {chaptersList.length} Bab
               </p>
             </div>
           </CardContent>
@@ -226,8 +243,9 @@ export default function MatanDashboard() {
                   asChild
                   className="bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-xs h-11 px-5 rounded-xl shadow-md"
                 >
-                  <Link href={`/matan/${primarySlug}/initial`}>
-                    <Play className="w-4 h-4 mr-1.5 fill-current" /> Mulai Belajar &amp; Kuis
+                  <Link href={`/matan/${primarySlug}/${nextStudyChapter?.id || 'initial'}`}>
+                    <Play className="w-4 h-4 mr-1.5 fill-current" />
+                    {completedBabCount > 0 ? `Lanjut Bab ${nextStudyChapter?.chapter_number || 1}` : 'Mulai Belajar & Kuis'}
                   </Link>
                 </Button>
                 <Button
@@ -237,7 +255,7 @@ export default function MatanDashboard() {
                   className="text-white/85 hover:text-white hover:bg-white/10 text-[11px] font-bold h-8"
                 >
                   <Link href={`/matan/${primarySlug}`}>
-                    Lihat Peta 26 Bab <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    Lihat Peta {chaptersList.length} Bab <ChevronRight className="w-3.5 h-3.5 ml-1" />
                   </Link>
                 </Button>
               </div>
@@ -248,6 +266,7 @@ export default function MatanDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {displayMatans.map((matan: any) => {
               const isUnlocked = matan.is_active || matan.slug === 'ajurumiyah';
+              const babTotal = matan.slug === 'ajurumiyah' ? chaptersList.length : (matan.total_chapters || 26);
               return (
                 <Card
                   key={matan.id}
@@ -295,7 +314,7 @@ export default function MatanDashboard() {
                     <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
                         <ScrollText className="w-4 h-4 text-primary" />
-                        <span>{matan.total_chapters || 26} Bab</span>
+                        <span>{babTotal} Bab</span>
                       </div>
 
                       {isUnlocked ? (
@@ -340,16 +359,15 @@ export default function MatanDashboard() {
                   </p>
                 </div>
                 <Badge variant="outline" className="w-fit text-[10px] font-bold border-primary/20 text-primary">
-                  {completedBabCount} dari {primaryMatan?.total_chapters || 26} Bab Selesai
+                  {completedBabCount} dari {chaptersList.length} Bab Selesai
                 </Badge>
               </div>
 
               <div className="space-y-2.5">
                 {chaptersList.map((chapter: any, idx: number) => {
-                  const isCompleted = progress?.some(
-                    (p) => (p.memorized || p.status_paham) && (p.chapter_id === chapter.id || p.item_id === chapter.id)
-                  );
-                  const isUnlocked = idx === 0 || Boolean(chapter.id && allChapters?.length) || (progress?.length ?? 0) > 0;
+                  const isCompleted = completedFlags[idx];
+                  const isPrevCompleted = idx > 0 ? completedFlags[idx - 1] : true;
+                  const isUnlocked = idx === 0 || isCompleted || isPrevCompleted;
                   const targetHref = isUnlocked ? `/matan/${primarySlug}/${chapter.id}` : '#';
 
                   return (
@@ -407,7 +425,7 @@ export default function MatanDashboard() {
                             )}
                           >
                             <Link href={targetHref}>
-                              {isCompleted ? 'Muraja\'ah & Kuis' : 'Mulai Bab'}
+                              {isCompleted ? "Muraja'ah & Kuis" : 'Mulai Bab'}
                               <ChevronRight className="w-4 h-4 ml-1" />
                             </Link>
                           </Button>
@@ -446,7 +464,7 @@ export default function MatanDashboard() {
                   className="h-full bg-primary transition-all duration-500 rounded-full"
                   style={{
                     width: `${Math.min(
-                      Math.round((completedBabCount / (primaryMatan?.total_chapters || 26)) * 100),
+                      Math.round((completedBabCount / (chaptersList.length || 7)) * 100),
                       100
                     )}%`,
                   }}
@@ -455,7 +473,7 @@ export default function MatanDashboard() {
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                 <p className="text-xs text-slate-600">
-                  Status saat ini: <strong>{completedBabCount} Bab selesai</strong> • Peringkat{' '}
+                  Status saat ini: <strong>{completedBabCount} dari {chaptersList.length} Bab selesai</strong> • Peringkat{' '}
                   <strong className="text-primary">{currentRank}</strong>
                 </p>
                 <div className="flex items-center gap-2">
@@ -472,8 +490,8 @@ export default function MatanDashboard() {
                     size="sm"
                     className="bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold h-9"
                   >
-                    <Link href={`/matan/${primarySlug}/initial`}>
-                      Uji Kuis Bab 1 <ChevronRight className="w-4 h-4 ml-1" />
+                    <Link href={`/matan/${primarySlug}/${nextStudyChapter?.id || 'initial'}`}>
+                      {completedBabCount > 0 ? `Lanjut Bab ${nextStudyChapter?.chapter_number || 1}` : 'Uji Kuis Bab 1'} <ChevronRight className="w-4 h-4 ml-1" />
                     </Link>
                   </Button>
                 </div>

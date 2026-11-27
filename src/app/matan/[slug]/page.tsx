@@ -18,16 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useUser, useCollection } from '@/db';
-
-const DEFAULT_CHAPTERS = [
-  { id: 'initial', chapter_number: 1, title: 'Bab Al-Kalam', description: 'Definisi Kalam & 4 Syarat Utamanya dalam Ilmu Nahwu' },
-  { id: 'bab-irab', chapter_number: 2, title: 'Bab Al-I\'rab', description: 'Perubahan Akhir Kata & Pembagian I\'rab (Rafa\', Nashab, Khafadh, Jazm)' },
-  { id: 'bab-alamat-irab', chapter_number: 3, title: 'Bab Ma\'rifat \'Alamatil I\'rab', description: 'Mengenal Tanda-Tanda I\'rab Ashliyah dan Far\'iyah' },
-  { id: 'bab-afal', chapter_number: 4, title: 'Bab Al-Af\'al', description: 'Pembagian Fi\'il (Madhi, Mudhari\', Amr) & Hukum I\'rabnya' },
-  { id: 'bab-marfuat', chapter_number: 5, title: 'Bab Marfu\'atul Asma\'', description: 'Tujuh Isim yang Berkedudukan Rafa\' (Fa\'il, Mubtada\', Khabar, dll.)' },
-  { id: 'bab-manshubat', chapter_number: 6, title: 'Bab Manshubatul Asma\'', description: 'Lima Belas Isim yang Berkedudukan Nashab (Maf\'ul Bih, Hal, Tamyiz, dll.)' },
-  { id: 'bab-makhfudhat', chapter_number: 7, title: 'Bab Makhfudhatul Asma\'', description: 'Isim-Isim yang Dikasrahkan/Dijarkan dengan Huruf Jar atau Idhafah' },
-];
+import {
+  AJURUMIYAH_CHAPTERS,
+  isMatanChapterCompleted,
+} from '@/lib/matan-data';
 
 export default function MatanChapterMap() {
   const { slug } = useParams<{ slug: string }>();
@@ -56,13 +50,18 @@ export default function MatanChapterMap() {
   }), [user?.id]);
 
   const { data: progress } = useCollection(user ? "matan_user_progress" : null, progressOptions);
+  const { data: quizAttempts } = useCollection(user ? "quiz_attempts" : null, progressOptions);
 
   const matanTitle = currentMatan?.title || (slug === 'ajurumiyah' ? 'Matan Al-Ajurumiyah' : slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Matan');
-  const displayChapters = chapters?.length ? chapters : DEFAULT_CHAPTERS;
+  const displayChapters = chapters?.length ? chapters : AJURUMIYAH_CHAPTERS;
 
-  const completedCount = displayChapters.filter((c: any) =>
-    progress?.some(p => (p.memorized || p.status_paham) && (p.chapter_id === c.id || p.item_id === c.id))
-  ).length || 0;
+  const completedFlags = useMemo(() => {
+    return displayChapters.map((c: any) =>
+      isMatanChapterCompleted(c, slug || 'ajurumiyah', progress, quizAttempts)
+    );
+  }, [displayChapters, slug, progress, quizAttempts]);
+
+  const completedCount = completedFlags.filter(Boolean).length;
 
   if (isMatanLoading || (currentMatan?.id && isChaptersLoading)) {
     return (
@@ -108,7 +107,7 @@ export default function MatanChapterMap() {
                 Capaian Bab
               </p>
               <p className="text-base font-black text-slate-900">
-                {completedCount} / {currentMatan?.total_chapters || 26} Bab
+                {completedCount} / {displayChapters.length} Bab
               </p>
             </div>
           </CardContent>
@@ -132,10 +131,9 @@ export default function MatanChapterMap() {
 
           <div className="space-y-2.5">
             {displayChapters.map((chapter: any, idx: number) => {
-              const isCompleted = progress?.some(
-                p => (p.memorized || p.status_paham) && (p.chapter_id === chapter.id || p.item_id === chapter.id)
-              );
-              const isUnlocked = idx === 0 || Boolean(chapters?.length) || (progress?.length ?? 0) > 0;
+              const isCompleted = completedFlags[idx];
+              const isPrevCompleted = idx > 0 ? completedFlags[idx - 1] : true;
+              const isUnlocked = idx === 0 || isCompleted || isPrevCompleted;
 
               return (
                 <div
@@ -192,7 +190,7 @@ export default function MatanChapterMap() {
                         )}
                       >
                         <Link href={`/matan/${slug}/${chapter.id}`}>
-                          {isCompleted ? 'Muraja\'ah & Kuis' : 'Buka Materi & Kuis'}
+                          {isCompleted ? "Muraja'ah & Kuis" : 'Buka Materi & Kuis'}
                           <ChevronRight className="w-4 h-4 ml-1" />
                         </Link>
                       </Button>
