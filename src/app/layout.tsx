@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/common/bottom-nav';
 import { PWAInstallPrompt } from '@/components/common/pwa-install-prompt';
+import { GlobalReportWidget, ReportTriggerButton } from '@/components/common/report-issue-widget';
 import { AuthProvider, useUser, db, signOut, useDoc } from '@/db';
 import { useUserPermissions } from '@/lib/permissions';
 import { Trophy, Zap, ShieldAlert, LogOut, Smartphone, Minus, Plus } from 'lucide-react';
@@ -133,6 +134,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return (
       <>
         {children}
+        <GlobalReportWidget />
         <Toaster />
       </>
     );
@@ -190,7 +192,15 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 </Link>
               </div>
               
-              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                {/* Global Report Error Button — Available on every thalibah page */}
+                {!isAuthPage && (
+                  <ReportTriggerButton
+                    label="Laporkan"
+                    className="h-7 sm:h-8 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-black border-rose-200 bg-rose-50/60 hover:bg-rose-100/80 text-[#800000]"
+                  />
+                )}
+
                 {/* Global Font Size Stepper */}
                 <div 
                   className="flex items-center gap-0.5 sm:gap-1 bg-slate-50 border border-slate-200/90 shadow-xs rounded-full px-1.5 py-0.5" 
@@ -263,11 +273,23 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </header>
             <main className="p-3 sm:p-6 lg:p-8 flex-1 min-w-0">
               {children}
+              {!isAdminRoute && !isAuthPage && (
+                <div className="max-w-5xl mx-auto mt-10 pt-4 border-t border-slate-200/70 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left px-2">
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Menemukan kekeliruan harakat, terjemah, soal kuis, rujukan jawaban, atau kendala teknis di halaman ini?
+                  </p>
+                  <ReportTriggerButton
+                    label="Laporkan Kesalahan di Halaman Ini"
+                    className="h-8 px-3.5 shrink-0"
+                  />
+                </div>
+              )}
             </main>
           </div>
         </SidebarInset>
       </div>
       {showBottomNav && <BottomNav />}
+      <GlobalReportWidget />
       <Toaster />
       <PWAInstallPrompt 
         deferredPrompt={deferredPrompt} 
@@ -307,11 +329,11 @@ export default function RootLayout({
         <meta property="og:image" content="https://hiaqli.pro/app-splash.jpg" />
 
         {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://hiaqli.pro/" />
-        <meta name="twitter:title" content="Hi AQLI" />
-        <meta name="twitter:description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
-        <meta name="twitter:image" content="https://hiaqli.pro/app-splash.jpg" />
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://hiaqli.pro/" />
+        <meta property="twitter:title" content="Hi AQLI" />
+        <meta property="twitter:description" content="Berhijrah dengan Ilmu, Beramal dengan Itqan." />
+        <meta property="twitter:image" content="https://hiaqli.pro/app-splash.jpg" />
 
         <link rel="icon" href="/icon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

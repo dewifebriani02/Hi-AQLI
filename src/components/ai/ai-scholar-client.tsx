@@ -5,8 +5,9 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { askScholarQuestion, type ScholarState } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, LoaderCircle, Send, Sparkles, User, CheckCircle2 } from "lucide-react";
+import { BookOpen, LoaderCircle, Send, Sparkles, User, CheckCircle2, Flag } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { openGlobalReportModal } from "@/components/common/report-issue-widget";
 import { cn } from "@/lib/utils";
 
 type Message = {
@@ -40,7 +41,6 @@ function SubmitButton() {
  * Formats inline **bold** and *italic* cleanly without showing raw markdown asterisks.
  */
 function renderInlineText(text: string): React.ReactNode[] {
-  // Clean stray heading hashes if any
   const cleaned = text.replace(/^#{1,6}\s*/, "");
   const parts = cleaned.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
 
@@ -95,7 +95,7 @@ function FormattedScholarReply({ content }: { content: string }) {
       continue;
     }
 
-    // 1. Standalone Section Heading (e.g. "### **Judul**" or "**Penjelasan Tafsir Salaf**" or "**Kitab Rujukan:**")
+    // 1. Standalone Section Heading
     const headingMatch =
       line.match(/^#{1,4}\s+\*?\*?(.+?)\*?\*?:?$/) ||
       (line.startsWith("**") &&
@@ -277,53 +277,72 @@ export function AiScholarClient() {
           </div>
         )}
 
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={cn(
-              "flex items-start gap-2.5 px-2",
-              message.role === "user" ? "justify-end" : "justify-start"
-            )}
-          >
-            {message.role === "ai" && (
-              <div className="w-8 h-8 rounded-xl bg-[#800000] text-amber-300 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                <BookOpen className="w-4 h-4" />
-              </div>
-            )}
+        {messages.map((message, index) => {
+          const prevUserQuestion =
+            index > 0 && messages[index - 1]?.role === "user" ? messages[index - 1].content : "";
 
+          return (
             <div
+              key={index}
               className={cn(
-                "rounded-2xl shadow-sm",
-                message.role === "user"
-                  ? "max-w-[82%] bg-[#800000] text-white px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-tr-sm"
-                  : "w-full max-w-[92%] bg-white border border-slate-200/90 px-4 sm:px-5 py-4 rounded-tl-sm"
+                "flex items-start gap-2.5 px-2",
+                message.role === "user" ? "justify-end" : "justify-start"
               )}
             >
-              {message.role === "user" ? (
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3 text-amber-500" />
-                      Penjelasan Ilmiah • Manhaj Salaf
-                    </span>
-                    <span className="text-[9px] font-bold text-slate-400">
-                      Tafsir bil Ma&apos;tsur
-                    </span>
+              {message.role === "ai" && (
+                <div className="w-8 h-8 rounded-xl bg-[#800000] text-amber-300 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+              )}
+
+              <div
+                className={cn(
+                  "rounded-2xl shadow-sm",
+                  message.role === "user"
+                    ? "max-w-[82%] bg-[#800000] text-white px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-tr-sm"
+                    : "w-full max-w-[92%] bg-white border border-slate-200/90 px-4 sm:px-5 py-4 rounded-tl-sm"
+                )}
+              >
+                {message.role === "user" ? (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-amber-500" />
+                        Penjelasan Ilmiah • Manhaj Salaf
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openGlobalReportModal({
+                            moduleName: "Hi Asisten AQLI (Tanya Jawab Ilmiah)",
+                            category: "koreksi_rujukan_ai",
+                            contextTitle: prevUserQuestion
+                              ? `Pertanyaan: ${prevUserQuestion.slice(0, 90)}`
+                              : "Jawaban Hi Asisten AQLI",
+                            contextExcerpt: message.content.slice(0, 450),
+                          })
+                        }
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 hover:text-[#800000] bg-rose-50 hover:bg-rose-100 px-2.5 py-0.5 rounded-full border border-rose-200/70 transition-colors"
+                      >
+                        <Flag className="w-2.5 h-2.5" />
+                        Laporkan Jawaban
+                      </button>
+                    </div>
+                    <FormattedScholarReply content={message.content} />
                   </div>
-                  <FormattedScholarReply content={message.content} />
+                )}
+              </div>
+
+              {message.role === "user" && (
+                <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <User className="w-4 h-4" />
                 </div>
               )}
             </div>
-
-            {message.role === "user" && (
-              <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
-                <User className="w-4 h-4" />
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
         <div ref={bottomRef} />
       </div>
 

@@ -30,6 +30,7 @@ import {
   BookOpen,
   Users,
   MessageSquare,
+  Flag,
   type LucideIcon,
 } from "lucide-react";
 import dynamic from 'next/dynamic';
@@ -48,6 +49,7 @@ interface AdminMenuItem {
 
 const adminItems: AdminMenuItem[] = [
   { href: "/admin", label: "Dashboard Admin", icon: ShieldCheck, generalAdmin: true },
+  { href: "/admin/reports", label: "Laporan Kesalahan", icon: Flag, generalAdmin: true },
   { href: "/admin/groups", label: "Grup & Robot WA", icon: MessageSquare, generalAdmin: true },
   { href: "/admin/registrations", label: "Verifikasi Pendaftaran", icon: Lock },
   { href: "/admin/users", label: "Manajemen Users", icon: UserCog },
