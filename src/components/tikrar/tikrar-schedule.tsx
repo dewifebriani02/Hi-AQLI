@@ -36,8 +36,11 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  FileCheck2,
+  Layers,
   Loader2,
   Pencil,
+  Scale,
   Sparkles,
   Target,
 } from 'lucide-react';
@@ -52,6 +55,103 @@ export interface TikrarScheduleProps {
 
 function formatDate(dateKey: string, withYear = false, withDay = false) {
   return formatDateID(dateKey, { withDay, withYear, shortYear: !withYear });
+}
+
+function formatCoef(steps: number, total = STEPS_PER_PAGE): string {
+  return (steps / total).toFixed(2).replace('.', ',');
+}
+
+function formatPct(steps: number, total = STEPS_PER_PAGE): string {
+  return `${Math.round((steps / total) * 100)}%`;
+}
+
+/** 5 Tahapan Baku dalam 1 Halaman Mushaf (Total 23 Langkah = Koefisien 1,00 Halaman) */
+const PAGE_STAGE_BREAKDOWN = [
+  {
+    id: 'stage-a',
+    title: 'Tahap 1 • Blok A (TM 1)',
+    stepsCount: 4,
+    cumSteps: 4,
+    minClicks: 125,
+    idealClicks: 125,
+    stepRangeLabel: 'Langkah 1–4',
+    stepsDetail: 'Simak TM 1 (5x) → TM 1-1 (40x) → TM 1-2 (40x) → Gabung TM 1 (40x)',
+  },
+  {
+    id: 'stage-b',
+    title: 'Tahap 2 • Blok B (TM 2) + Gabung A–B',
+    stepsCount: 5,
+    cumSteps: 9,
+    minClicks: 135,
+    idealClicks: 165,
+    stepRangeLabel: 'Langkah 5–9',
+    stepsDetail: 'Simak TM 2 (5x) → TM 2-1 (40x) → TM 2-2 (40x) → Gabung TM 2 (40x) → Gabung TM 1–2 (min. 10x / ideal 40x)',
+  },
+  {
+    id: 'stage-c',
+    title: 'Tahap 3 • Blok C (TM 3) + Gabung B–C & A–C',
+    stepsCount: 6,
+    cumSteps: 15,
+    minClicks: 140,
+    idealClicks: 205,
+    stepRangeLabel: 'Langkah 10–15',
+    stepsDetail: 'Simak TM 3 (5x) → TM 3-1 (40x) → TM 3-2 (40x) → Gabung TM 3 (40x) → Gabung TM 2–3 (min. 10x) → Gabung TM 1–3 (min. 5x)',
+  },
+  {
+    id: 'stage-d',
+    title: 'Tahap 4 • Blok D (TM 4) + Gabung C–D, B–D & 1 Halaman Utuh',
+    stepsCount: 7,
+    cumSteps: 22,
+    minClicks: 145,
+    idealClicks: 245,
+    stepRangeLabel: 'Langkah 16–22',
+    stepsDetail: 'Simak TM 4 (5x) → TM 4-1 (40x) → TM 4-2 (40x) → Gabung TM 4 (40x) → Gabung TM 3–4 (min. 10x) → Gabung TM 2–4 (min. 5x) → Gabung 1 Hal TM 1–4 (min. 5x)',
+  },
+  {
+    id: 'stage-quiz',
+    title: 'Tahap 5 • Ujian Halaman 60 Soal (Gerbang Buka Halaman Berikutnya)',
+    stepsCount: 1,
+    cumSteps: 23,
+    minClicks: 0,
+    idealClicks: 0,
+    stepRangeLabel: 'Langkah 23',
+    stepsDetail: '30 Soal Sambung & Urutan Ayat + 30 Soal Terjemah Per Kata (Minimal Lulus Skor 80%)',
+  },
+] as const;
+
+/** Bangun simulasi pembagian hari aktif untuk menyelesaikan 1 Halaman Penuh (23 Langkah) sesuai kuota langkah harian */
+function buildSinglePageDaySimulation(dailyQuota: number) {
+  const quota = Math.max(1, Math.min(STEPS_PER_PAGE, Math.floor(dailyQuota || 1)));
+  const simDays: {
+    dayNo: number;
+    fromStepNo: number;
+    toStepNo: number;
+    stepsCount: number;
+    cumSteps: number;
+    minClicks: number;
+    steps: (typeof TIKRAR_STEPS)[number][];
+  }[] = [];
+
+  let cursor = 0;
+  let dayNo = 0;
+  while (cursor < STEPS_PER_PAGE) {
+    dayNo += 1;
+    const fromIdx = cursor;
+    const toIdx = Math.min(STEPS_PER_PAGE, cursor + quota);
+    const slice = TIKRAR_STEPS.slice(fromIdx, toIdx);
+    const minClicks = slice.reduce((acc, s) => acc + (s.kind === 'quiz' ? 0 : s.target), 0);
+    simDays.push({
+      dayNo,
+      fromStepNo: fromIdx + 1,
+      toStepNo: toIdx,
+      stepsCount: slice.length,
+      cumSteps: toIdx,
+      minClicks,
+      steps: slice,
+    });
+    cursor = toIdx;
+  }
+  return simDays;
 }
 
 export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }: TikrarScheduleProps) {
@@ -82,6 +182,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
   const [showIstiqomah, setShowIstiqomah] = useState(false);
   const recentChanges = summary?.targetChangesLast30Days || 0;
   const [markPriorPagesDone, setMarkPriorPagesDone] = useState(true);
+  const [showFull23StepsReference, setShowFull23StepsReference] = useState(false);
 
   useEffect(() => {
     setMarkPriorPagesDone(true);
@@ -215,6 +316,10 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
         : previewPerPageLabel,
     [target, previewPerPageLabel]
   );
+  const singlePageSimDays = useMemo(
+    () => buildSinglePageDaySimulation(preview.dailyQuota),
+    [preview.dailyQuota]
+  );
 
   return (
     <div className="space-y-8 pb-20">
@@ -320,6 +425,9 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                   Porsi: {targetPace?.dailyPortionLabel || `${target.dailyQuota} langkah`}
                 </p>
                 <p className="text-[10px] text-primary font-extrabold">
+                  ⚖️ Koefisien: {formatCoef(target.dailyQuota)} Hal/hari ({target.dailyQuota}/{STEPS_PER_PAGE} langkah)
+                </p>
+                <p className="text-[10px] text-stone-600 font-bold">
                   📄 {targetPerPageLabel}
                 </p>
                 <p className={cn('text-[11px] font-bold', summary?.today.targetMet ? 'text-emerald-700' : 'text-amber-700')}>
@@ -330,6 +438,9 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                 <p className="text-[10px] font-black uppercase text-stone-500">Progres Target</p>
                 <p className="text-sm font-black text-primary">
                   {target.completedSteps} / {target.totalSteps} Langkah
+                </p>
+                <p className="text-[10px] text-stone-600 font-bold">
+                  Setara {formatCoef(target.completedSteps)} / {formatCoef(target.totalSteps)} Halaman
                 </p>
                 <Progress value={(target.completedSteps / Math.max(1, target.totalSteps)) * 100} className="h-1.5" />
               </div>
@@ -352,7 +463,9 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                     ? 'Sesuai jadwal'
                     : `Tertinggal ${target.expectedStepsToday - target.completedSteps} langkah`}
                 </p>
-                <p className="text-[11px] text-stone-500">Seharusnya: {target.expectedStepsToday} langkah</p>
+                <p className="text-[11px] text-stone-500">
+                  Seharusnya: {target.expectedStepsToday} langkah ({formatCoef(target.expectedStepsToday)} hal)
+                </p>
               </div>
             </div>
 
@@ -540,13 +653,13 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <label className="text-xs font-black uppercase tracking-wider text-stone-700">
                   7. Pilihan Target Bulan (1 Juz per N Bulan) &amp; Estimasi Waktu per Halaman
                 </label>
                 <span className="text-[11px] text-stone-500 font-medium">
-                  Pilih porsi yang paling realistis untuk istiqomah
+                  Klik pilihan untuk melihat rincian tahapan, jumlah langkah &amp; koefisien halaman (akad awal)
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -561,53 +674,300 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
                   });
                   const isSel = durationMonths === opt.durationMonths;
                   const perPageEst = formatEstimatedTimePerPage(sched.dailyQuota, activeDaysPerWeek, STEPS_PER_PAGE);
+                  const cardSimDays = isSel ? singlePageSimDays : [];
                   return (
-                    <button
+                    <div
                       key={opt.durationMonths}
-                      type="button"
                       onClick={() => setDurationMonths(opt.durationMonths)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDurationMonths(opt.durationMonths);
+                        }
+                      }}
                       className={cn(
-                        "relative text-left rounded-2xl border-2 p-3.5 transition-all flex flex-col justify-between gap-2.5",
+                        'relative text-left rounded-2xl border-2 p-3.5 transition-all flex flex-col justify-between gap-2.5 cursor-pointer select-none',
                         isSel
-                          ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
-                          : "border-stone-200 hover:border-stone-300 bg-white"
+                          ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/25 sm:col-span-2 lg:col-span-3'
+                          : 'border-stone-200 hover:border-stone-300 bg-white'
                       )}
                     >
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <Badge
-                            className={cn(
-                              "text-[10px] font-black border-none px-2 py-0.5",
-                              opt.isRecommended
-                                ? "bg-primary text-[#D4AF37]"
-                                : isSel
-                                ? "bg-primary/15 text-primary"
-                                : "bg-stone-100 text-stone-600"
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge
+                              className={cn(
+                                'text-[10px] font-black border-none px-2 py-0.5',
+                                opt.isRecommended
+                                  ? 'bg-primary text-[#D4AF37]'
+                                  : isSel
+                                  ? 'bg-primary text-white'
+                                  : 'bg-stone-100 text-stone-600'
+                              )}
+                            >
+                              {opt.badge}
+                            </Badge>
+                            <span className="text-[11px] font-bold text-stone-500">
+                              {opt.monthlyPagesLabel}
+                            </span>
+                            {isSel && (
+                              <Badge className="bg-emerald-600 text-white border-none text-[10px] font-black px-2 py-0.5">
+                                ✓ Akad Dipilih
+                              </Badge>
                             )}
-                          >
-                            {opt.badge}
-                          </Badge>
-                          <span className="text-[11px] font-bold text-stone-500">
-                            {opt.monthlyPagesLabel}
-                          </span>
+                          </div>
+                          <p className="text-base font-black text-stone-900 pt-0.5">
+                            {opt.juzPaceLabel}
+                          </p>
+                          <p className="text-xs font-bold text-primary">
+                            {opt.dailyPortionLabel}
+                          </p>
                         </div>
-                        <p className="text-base font-black text-stone-900 pt-0.5">
-                          {opt.juzPaceLabel}
-                        </p>
-                        <p className="text-xs font-bold text-primary">
-                          {opt.dailyPortionLabel}
-                        </p>
+
+                        <div className="flex flex-col sm:items-end gap-1 shrink-0">
+                          <div className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-extrabold text-primary">
+                            📄 Estimasi: {perPageEst}
+                          </div>
+                          <div className="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1 text-[11px] font-extrabold text-amber-900">
+                            ⚖️ Koefisien: {formatCoef(sched.dailyQuota)} Hal/hari ({sched.dailyQuota}/{STEPS_PER_PAGE} langkah • {formatPct(sched.dailyQuota)})
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="rounded-lg bg-primary/5 border border-primary/10 px-2.5 py-1.5 text-[11px] font-extrabold text-primary">
-                        📄 Estimasi: {perPageEst}
-                      </div>
-
-                      <div className="pt-2 border-t border-stone-100 space-y-0.5 text-[11px] text-stone-500">
+                      <div className="pt-2 border-t border-stone-200/70 flex flex-wrap items-center justify-between gap-2 text-[11px] text-stone-600">
                         <p className="font-semibold text-stone-700">⏱️ {opt.estimatedTimePerDay}</p>
-                        <p>{sched.activeDays} hari aktif • {sched.dailyQuota} langkah/hari</p>
+                        <p className="font-bold text-stone-700">
+                          {sched.activeDays} hari aktif • {sched.dailyQuota} langkah/hari
+                        </p>
                       </div>
-                    </button>
+
+                      {/* PENJABARAN DETAIL AKAD KETIKA KARTU DIKLIK / DIPILIH */}
+                      {isSel && (
+                        <div
+                          className="mt-2 pt-3 border-t-2 border-primary/20 space-y-3.5 text-xs"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* Header Akad */}
+                          <div className="rounded-xl bg-white border border-primary/25 p-3 sm:p-3.5 space-y-2 shadow-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Scale className="w-4 h-4 text-primary shrink-0" />
+                                <h4 className="font-black text-xs sm:text-sm text-primary uppercase tracking-wide">
+                                  Rincian Akad Awal: Tahapan, Jumlah Langkah &amp; Koefisien Halaman
+                                </h4>
+                              </div>
+                              <Badge className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-black">
+                                1 Halaman Utuh = {STEPS_PER_PAGE} Langkah = 1,00 Halaman
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] sm:text-xs text-stone-600 leading-relaxed">
+                              Dalam metode Hi AQLI Tikrar, <strong>1 halaman mushaf (15 baris)</strong> terdiri dari{' '}
+                              <strong>4 Blok (TM 1 s.d. TM 4)</strong> yang dijabarkan menjadi{' '}
+                              <strong>{STEPS_PER_PAGE} langkah baku</strong> (koefisien <strong>1,00 halaman</strong>). Dengan
+                              memilih paket <strong>{opt.juzPaceLabel}</strong>, berikut komitmen (akad) porsi harian Ukhti:
+                            </p>
+
+                            {/* 4 Kotak Ringkasan Koefisien & Langkah */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                              <div className="rounded-xl bg-[#fdfbf7] border border-stone-200 p-2.5 space-y-0.5">
+                                <p className="text-[10px] font-black uppercase text-stone-500">Target Langkah / Hari</p>
+                                <p className="text-sm font-black text-primary">
+                                  {sched.dailyQuota} / {STEPS_PER_PAGE} Langkah
+                                </p>
+                                <p className="text-[10px] text-stone-600 font-semibold">
+                                  Wajib tuntas tiap hari aktif
+                                </p>
+                              </div>
+                              <div className="rounded-xl bg-[#fdfbf7] border border-stone-200 p-2.5 space-y-0.5">
+                                <p className="text-[10px] font-black uppercase text-stone-500">Koefisien Halaman / Hari</p>
+                                <p className="text-sm font-black text-amber-900">
+                                  {formatCoef(sched.dailyQuota)} Halaman
+                                </p>
+                                <p className="text-[10px] text-stone-600 font-semibold">
+                                  Setara {formatPct(sched.dailyQuota)} dari 1 halaman
+                                </p>
+                              </div>
+                              <div className="rounded-xl bg-[#fdfbf7] border border-stone-200 p-2.5 space-y-0.5">
+                                <p className="text-[10px] font-black uppercase text-stone-500">Tuntas 1 Halaman</p>
+                                <p className="text-sm font-black text-stone-900">
+                                  {cardSimDays.length} Hari Aktif
+                                </p>
+                                <p className="text-[10px] text-stone-600 font-semibold">
+                                  {perPageEst}
+                                </p>
+                              </div>
+                              <div className="rounded-xl bg-[#fdfbf7] border border-stone-200 p-2.5 space-y-0.5">
+                                <p className="text-[10px] font-black uppercase text-stone-500">Total Target ({totalPagesSelected} Hal)</p>
+                                <p className="text-sm font-black text-emerald-800">
+                                  {sched.totalSteps} Langkah
+                                </p>
+                                <p className="text-[10px] text-stone-600 font-semibold">
+                                  Koefisien {totalPagesSelected},00 Hal • {sched.activeDays} hari aktif
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bagian A: Simulasi Porsi Harian untuk Menyelesaikan 1 Halaman Penuh (23 Langkah) */}
+                          <div className="rounded-xl bg-white border border-stone-200 p-3 sm:p-3.5 space-y-2.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                              <div className="flex items-center gap-1.5">
+                                <Layers className="w-4 h-4 text-primary shrink-0" />
+                                <h5 className="font-black text-xs text-stone-900 uppercase tracking-wide">
+                                  A. Simulasi Tahapan Harian untuk Menuntaskan 1 Halaman ({STEPS_PER_PAGE} Langkah = 1,00 Hal)
+                                </h5>
+                              </div>
+                              <span className="text-[10px] font-bold text-stone-500">
+                                Contoh pada Hal. {startPage} ({cardSimDays.length} hari aktif per halaman)
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {cardSimDays.map((d) => (
+                                <div
+                                  key={d.dayNo}
+                                  className="rounded-xl border border-stone-200 bg-[#fdfbf7] p-2.5 space-y-1.5 flex flex-col justify-between"
+                                >
+                                  <div className="flex items-center justify-between gap-1.5 border-b border-stone-200/70 pb-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="px-2 py-0.5 rounded-md bg-primary text-white font-black text-[10px]">
+                                        Hari Aktif Ke-{d.dayNo}
+                                      </span>
+                                      <span className="text-[10px] font-extrabold text-stone-700">
+                                        Langkah {d.fromStepNo === d.toStepNo ? d.fromStepNo : `${d.fromStepNo}–${d.toStepNo}`} ({d.stepsCount} langkah)
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] font-black text-amber-900 bg-amber-100/80 border border-amber-300/70 px-1.5 py-0.5 rounded-md shrink-0">
+                                      +{formatCoef(d.stepsCount)} Hal ({formatPct(d.stepsCount)})
+                                    </span>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-1 py-0.5">
+                                    {d.steps.map((st) => (
+                                      <span
+                                        key={st.key}
+                                        className={cn(
+                                          'px-2 py-0.5 rounded-md text-[10px] font-bold border',
+                                          st.kind === 'quiz'
+                                            ? 'bg-amber-50 border-amber-300 text-amber-950'
+                                            : st.kind === 'meta'
+                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                                            : st.kind === 'prep' || st.kind === 'listen'
+                                            ? 'bg-sky-50 border-sky-200 text-sky-900'
+                                            : 'bg-white border-stone-200 text-stone-800'
+                                        )}
+                                      >
+                                        {st.index + 1}. {st.shortLabel}{' '}
+                                        {st.kind === 'quiz' ? '(60 soal)' : `(${st.target}x)`}
+                                      </span>
+                                    ))}
+                                  </div>
+
+                                  <div className="flex items-center justify-between text-[10px] text-stone-500 pt-1 border-t border-stone-100">
+                                    <span>
+                                      Min. klik counter: <strong className="text-stone-800">{d.minClicks} klik</strong>
+                                    </span>
+                                    <span>
+                                      Kumulatif:{' '}
+                                      <strong className="text-primary">
+                                        {d.cumSteps}/{STEPS_PER_PAGE} langkah ({formatCoef(d.cumSteps)} Hal • {formatPct(d.cumSteps)})
+                                      </strong>
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Bagian B: Penjabaran 5 Tahapan Baku & Bobot Koefisien dalam 1 Halaman */}
+                          <div className="rounded-xl bg-white border border-stone-200 p-3 sm:p-3.5 space-y-2.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                              <div className="flex items-center gap-1.5">
+                                <FileCheck2 className="w-4 h-4 text-primary shrink-0" />
+                                <h5 className="font-black text-xs text-stone-900 uppercase tracking-wide">
+                                  B. Penjabaran 5 Tahapan Baku dalam 1 Halaman &amp; Koefisiennya
+                                </h5>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setShowFull23StepsReference((v) => !v)}
+                                className="text-[11px] font-black text-primary hover:underline inline-flex items-center gap-1 self-start sm:self-auto"
+                              >
+                                {showFull23StepsReference ? (
+                                  <>
+                                    Sembunyikan Daftar 23 Langkah <ChevronUp className="w-3.5 h-3.5" />
+                                  </>
+                                ) : (
+                                  <>
+                                    Lihat Tabel Lengkap 23 Langkah <ChevronDown className="w-3.5 h-3.5" />
+                                  </>
+                                )}
+                              </button>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              {PAGE_STAGE_BREAKDOWN.map((stg) => (
+                                <div
+                                  key={stg.id}
+                                  className="rounded-xl border border-stone-200 bg-[#fdfbf7] px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5"
+                                >
+                                  <div className="space-y-0.5">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="font-black text-xs text-stone-900">{stg.title}</span>
+                                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-stone-200/80 text-stone-700">
+                                        {stg.stepRangeLabel}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-stone-600 leading-snug">{stg.stepsDetail}</p>
+                                  </div>
+                                  <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-stone-200/60">
+                                    <span className="text-[11px] font-black text-primary">
+                                      {stg.stepsCount} Langkah = {formatCoef(stg.stepsCount)} Hal ({formatPct(stg.stepsCount)})
+                                    </span>
+                                    <span className="text-[10px] font-bold text-stone-500">
+                                      Kumulatif: {stg.cumSteps}/{STEPS_PER_PAGE} ({formatCoef(stg.cumSteps)} Hal)
+                                      {stg.minClicks > 0 ? ` • Min. ${stg.minClicks} klik` : ' • Lulus ≥80%'}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Tabel Lengkap 23 Langkah (Opsional bila diklik) */}
+                            {showFull23StepsReference && (
+                              <div className="mt-2 pt-2.5 border-t border-stone-200 space-y-1.5">
+                                <p className="text-[11px] font-black text-stone-700">
+                                  Daftar Urutan 23 Langkah Baku per Halaman (Masing-Masing Langkah = 1/{STEPS_PER_PAGE} ≈ {formatCoef(1)} Halaman):
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                                  {TIKRAR_STEPS.map((st) => (
+                                    <div
+                                      key={st.key}
+                                      className="rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 flex items-center justify-between gap-2 text-[11px]"
+                                    >
+                                      <div className="truncate">
+                                        <span className="font-black text-primary mr-1">{st.index + 1}.</span>
+                                        <span className="font-bold text-stone-800">{st.label}</span>
+                                      </div>
+                                      <span className="text-[10px] font-extrabold text-stone-500 shrink-0">
+                                        {st.kind === 'quiz'
+                                          ? '60 soal'
+                                          : st.kind === 'meta'
+                                          ? `min. ${st.target}x / 40x`
+                                          : `${st.target}x`}{' '}
+                                        • {formatCoef(st.index + 1)} hal
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -646,7 +1006,7 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
             <div className="bg-[#fdfbf7] border border-primary/20 rounded-xl p-4 text-xs text-stone-700 leading-relaxed space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-black text-sm text-primary">
-                  Ringkasan Target: {paceMeta.juzPaceLabel} ({paceMeta.monthlyPagesLabel})
+                  Ringkasan Akad &amp; Target: {paceMeta.juzPaceLabel} ({paceMeta.monthlyPagesLabel})
                 </span>
                 {paceMeta.isRecommended && (
                   <Badge className="bg-primary text-[#D4AF37] border-none text-[10px] font-black">
@@ -657,14 +1017,19 @@ export function TikrarSchedule({ onScheduleSaved, onOpenMushafTarget, summary }:
               <p className="text-stone-700">
                 Estimasi waktu per halaman:{" "}
                 <strong className="text-primary">{previewPerPageLabel}</strong>. Total{" "}
-                <strong>{totalPagesSelected} halaman</strong> ({preview.totalSteps} langkah) diselesaikan dalam waktu{" "}
+                <strong>{totalPagesSelected} halaman</strong> ({preview.totalSteps} langkah = koefisien{" "}
+                <strong>{totalPagesSelected},00 halaman</strong>) diselesaikan dalam waktu{" "}
                 <strong>{preview.activeDays} hari aktif belajar</strong>{" "}
                 <span className="text-stone-500 font-medium">
                   ({Math.ceil(preview.activeDays / activeDaysPerWeek)} pekan / ~
                   {(preview.activeDays / (activeDaysPerWeek * 4)).toFixed(1)} bulan)
                 </span>
-                . Porsi harian: <strong className="text-stone-900">{paceMeta.dailyPortionLabel}</strong> (setara{" "}
-                <span className="text-primary font-bold">{preview.dailyQuota} langkah sistematis/hari</span>).
+                . Porsi harian: <strong className="text-stone-900">{paceMeta.dailyPortionLabel}</strong> — wajib menuntaskan{" "}
+                <span className="text-primary font-bold">{preview.dailyQuota} dari {STEPS_PER_PAGE} langkah/hari</span> (koefisien{" "}
+                <strong className="text-amber-900">
+                  {formatCoef(preview.dailyQuota)} halaman/hari
+                </strong>{" "}
+                atau <strong>{formatPct(preview.dailyQuota)} halaman</strong>).
               </p>
               <p className="text-[11px] text-stone-500">
                 📅 Periode estimasi: <strong>{formatDate(startDateKey, false, true)}</strong> s.d.{" "}
