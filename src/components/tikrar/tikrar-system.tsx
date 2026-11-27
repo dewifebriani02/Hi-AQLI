@@ -2041,6 +2041,7 @@ export function TikrarSystem({
   }, [page, localProgress, clearedPages, todayTargets]);
 
   const lastScrolledTimestampRef = useRef<number | undefined>(undefined);
+  const pendingScrollOnPageLoadRef = useRef(false);
   useEffect(() => {
     if (!targetTimestamp || targetTimestamp === lastScrolledTimestampRef.current) return;
     if (loading) return;
@@ -2051,6 +2052,16 @@ export function TikrarSystem({
     }, 280);
     return () => clearTimeout(timer);
   }, [targetTimestamp, loading, page, resolveResumeStepKey, scrollToStep]);
+
+  useEffect(() => {
+    if (!pendingScrollOnPageLoadRef.current || loading) return;
+    pendingScrollOnPageLoadRef.current = false;
+    const timer = setTimeout(() => {
+      const resumeKey = resolveResumeStepKey();
+      scrollToStep(resumeKey);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [page, loading, resolveResumeStepKey, scrollToStep]);
 
   // Blocks that have reached TUNTAS (40x on A-1, A-2, and Gabung A)
   const tuntasBlockNumbers = useMemo(
@@ -2735,16 +2746,35 @@ export function TikrarSystem({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {todayTargets.map((t) => (
-                    <button
-                      key={`${t.page}-${t.key}`}
-                      type="button"
-                      onClick={() => (t.page === page ? scrollToStep(t.key) : navigateToPage(t.page))}
-                      className="px-2.5 py-1 rounded-full bg-white border border-[#D4AF37] text-[11px] font-black text-stone-800 hover:bg-[#D4AF37]/20"
-                    >
-                      Hal. {t.page} • {t.label}
-                    </button>
-                  ))}
+                  {todayTargets.map((t) => {
+                    const isTargetPageLocked =
+                      Boolean(activeTarget) &&
+                      t.page > activeTarget!.unlockedPage &&
+                      !clearedPages.has(t.page) &&
+                      !priorMemorizedSet.has(t.page);
+                    return (
+                      <button
+                        key={`${t.page}-${t.key}`}
+                        type="button"
+                        onClick={() => {
+                          if (t.page === page) {
+                            scrollToStep(t.key);
+                          } else if (isTargetPageLocked) {
+                            if (page !== activeTarget!.unlockedPage) {
+                              navigateToPage(activeTarget!.unlockedPage);
+                            } else {
+                              scrollToStep(resolveResumeStepKey());
+                            }
+                          } else {
+                            navigateToPage(t.page);
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-full bg-white border border-[#D4AF37] text-[11px] font-black text-stone-800 hover:bg-[#D4AF37]/20"
+                      >
+                        Hal. {t.page} • {t.label}
+                      </button>
+                    );
+                  })}
                 </div>
                 {overdueTargets.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-rose-700">
@@ -2752,16 +2782,35 @@ export function TikrarSystem({
                     <span className="font-bold">
                       {overdueTargets.length} langkah terlewat dari jadwal sebelumnya:
                     </span>
-                    {overdueTargets.slice(0, 3).map((ot) => (
-                      <button
-                        key={`overdue-${ot.page}-${ot.key}`}
-                        type="button"
-                        onClick={() => (ot.page === page ? scrollToStep(ot.key) : navigateToPage(ot.page))}
-                        className="px-2 py-0.5 rounded-full bg-rose-100 border border-rose-300 text-[10px] font-black hover:bg-rose-200 text-rose-800"
-                      >
-                        Hal. {ot.page} • {ot.label}
-                      </button>
-                    ))}
+                    {overdueTargets.slice(0, 3).map((ot) => {
+                      const isOtLocked =
+                        Boolean(activeTarget) &&
+                        ot.page > activeTarget!.unlockedPage &&
+                        !clearedPages.has(ot.page) &&
+                        !priorMemorizedSet.has(ot.page);
+                      return (
+                        <button
+                          key={`overdue-${ot.page}-${ot.key}`}
+                          type="button"
+                          onClick={() => {
+                            if (ot.page === page) {
+                              scrollToStep(ot.key);
+                            } else if (isOtLocked) {
+                              if (page !== activeTarget!.unlockedPage) {
+                                navigateToPage(activeTarget!.unlockedPage);
+                              } else {
+                                scrollToStep(resolveResumeStepKey());
+                              }
+                            } else {
+                              navigateToPage(ot.page);
+                            }
+                          }}
+                          className="px-2 py-0.5 rounded-full bg-rose-100 border border-rose-300 text-[10px] font-black hover:bg-rose-200 text-rose-800"
+                        >
+                          Hal. {ot.page} • {ot.label}
+                        </button>
+                      );
+                    })}
                     {overdueTargets.length > 3 && (
                       <span className="text-[10px] text-rose-600 font-bold">+{overdueTargets.length - 3} lainnya</span>
                     )}
@@ -2773,16 +2822,36 @@ export function TikrarSystem({
               <p className="text-[11px] text-stone-600">Hari ini bukan hari aktif jadwal Ukhti, boleh mencicil langkah berikutnya.</p>
             )}
           </div>
-          {todayTargets.length > 0 && !summary.today.targetMet && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => (todayTargets[0].page === page ? scrollToStep(resolveResumeStepKey()) : navigateToPage(todayTargets[0].page))}
-              className="bg-primary hover:bg-primary/90 text-white font-black text-xs h-10 px-4 rounded-xl shrink-0"
-            >
-              {todayTargets[0].page === page ? 'Ke Counter Terakhir ↓' : `Buka Hal. ${todayTargets[0].page}`}
-            </Button>
-          )}
+          {(todayTargets.length > 0 || overdueTargets.length > 0) && !summary.today.targetMet && (() => {
+            const firstUnlockedTarget = [
+              ...overdueTargets,
+              ...todayTargets,
+            ].find(
+              (item) =>
+                item.page <= activeTarget.unlockedPage ||
+                clearedPages.has(item.page) ||
+                priorMemorizedSet.has(item.page)
+            );
+            const targetActionPage = firstUnlockedTarget?.page ?? activeTarget.unlockedPage;
+            const isAlreadyOnActionPage = targetActionPage === page;
+            return (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (isAlreadyOnActionPage) {
+                    scrollToStep(resolveResumeStepKey());
+                  } else {
+                    pendingScrollOnPageLoadRef.current = true;
+                    navigateToPage(targetActionPage);
+                  }
+                }}
+                className="bg-primary hover:bg-primary/90 text-white font-black text-xs h-10 px-4 rounded-xl shrink-0"
+              >
+                {isAlreadyOnActionPage ? 'Ke Counter Terakhir ↓' : `Lanjutkan Hal. ${targetActionPage}`}
+              </Button>
+            );
+          })()}
         </div>
       )}
 
@@ -4260,7 +4329,7 @@ function MaqtaCard({
           <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border-none shrink-0", theme.badgeClass)}>
             {theme.badgeText}
           </Badge>
-          <span className="text-[10px] font-black uppercase tracking-wider opacity-85 leading-snug whitespace-nowrap">
+          <span className="text-[10px] font-black uppercase tracking-wider opacity-85 leading-snug truncate min-w-0">
             Hal. {page} {rangeLabel ? `• ${rangeLabel}` : ''} {isLocked && '• TERKUNCI'}
           </span>
         </div>
