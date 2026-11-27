@@ -24,6 +24,7 @@ import {
   Sun,
   LayoutGrid,
   Bot,
+  Flag,
   HeartHandshake,
   Award,
   Activity,
@@ -1124,6 +1125,17 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Hi Asisten AQLI</span>
+              </Link>
+
+              {/* Daftar Laporan Kesalahan */}
+              <Link href="/admin/reports" className="flex flex-col items-center gap-2 group relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-600 to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 relative">
+                  <Flag className="w-7 h-7 text-white" />
+                  <span className="absolute -top-1.5 -right-1.5 bg-[#800000] text-white text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full shadow border border-white">
+                    Admin
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-center tracking-tight text-slate-700 leading-tight">Daftar Laporan</span>
               </Link>
             </>
           )}

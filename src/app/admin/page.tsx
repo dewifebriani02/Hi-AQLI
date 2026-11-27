@@ -15,6 +15,7 @@ import {
   HeartHandshake,
   MessageSquare,
   Repeat,
+  Flag,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ export default function AdminDashboard() {
     { label: "Pendaftaran Baru", value: pending?.length || 0, href: "/admin/registrations", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Infaq Menunggu", value: pendingDonations?.length || 0, href: "/admin/donations", icon: HeartHandshake, color: "text-[#800000]", bg: "bg-red-50" },
     { label: "Thalibah Terdaftar", value: users?.length || 0, href: "/admin/users", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Laporan & Koreksi", value: "Buka", href: "/admin/reports", icon: Flag, color: "text-rose-600", bg: "bg-rose-50" },
   ];
 
   return (
@@ -61,7 +63,7 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground">Kelola operasional, verifikasi setoran, dan pantau keaktifan peserta Sahabat AQLI Digital.</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map((s, i) => (
           <Link key={i} href={s.href} className="block group">
             <Card className="border border-slate-200/80 dark:border-white/10 shadow-sm hover:border-primary/40 hover:shadow-md transition-all rounded-2xl">

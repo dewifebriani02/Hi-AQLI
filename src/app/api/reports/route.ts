@@ -1,6 +1,10 @@
+import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
+import { whatsappService, normalizePhoneNumber } from '@/lib/services/whatsapp';
+
+const FALLBACK_ADMIN_WA = '628567712914';
 
 let tableInitialized = false;
 
@@ -27,6 +31,47 @@ async function ensureAppReportsTable() {
   await query(`CREATE INDEX IF NOT EXISTS idx_app_reports_status_created ON app_reports(status, created_at DESC)`);
   tableInitialized = true;
 }
+
+async function resolveAdminWaNumbers(): Promise<string[]> {
+  const numbers = new Set<string>();
+  const envRaw = process.env.ADMIN_WHATSAPP_NUMBER || '';
+  for (const part of envRaw.split(',')) {
+    const norm = normalizePhoneNumber(part.trim());
+    if (norm) numbers.add(norm);
+  }
+
+  try {
+    const { rows } = await query(
+      `SELECT DISTINCT COALESCE(NULLIF(TRIM(u.whatsapp), ''), NULLIF(TRIM(u.phone), '')) AS phone
+       FROM public.users u
+       WHERE u.id IN (
+         SELECT id FROM public.roles_admin
+         UNION
+         SELECT id FROM public.roles_superadmin
+       )`
+    );
+    for (const r of rows) {
+      const norm = normalizePhoneNumber(r.phone || '');
+      if (norm) numbers.add(norm);
+    }
+  } catch (err) {
+    console.warn('[REPORTS] Failed to resolve admin WA numbers:', err);
+  }
+
+  if (numbers.size === 0) {
+    numbers.add(FALLBACK_ADMIN_WA);
+  }
+  return Array.from(numbers);
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  koreksi_konten: 'Koreksi Ayat / Harakat / Terjemah / Materi',
+  koreksi_konten_arab: 'Koreksi Penulisan Arab / Harakat',
+  koreksi_rujukan_ai: 'Koreksi Jawaban / Rujukan Hi Asisten AQLI',
+  koreksi_kuis: 'Koreksi Soal / Kunci Jawaban Kuis',
+  kendala_teknis: 'Kendala Teknis / Tombol Error',
+  saran_fitur: 'Masukan & Saran Perbaikan',
+};
 
 export async function GET(req: Request) {
   try {
@@ -92,15 +137,21 @@ export async function POST(req: Request) {
 
     let userName = body.user_name ? String(body.user_name).trim().slice(0, 120) : null;
     let userEmail = body.user_email ? String(body.user_email).trim().slice(0, 150) : null;
+    let userPhone: string | null = null;
 
-    if (ctx.userId && (!userName || !userEmail)) {
-      const uRes = await query(`SELECT username, email FROM users WHERE id = $1 LIMIT 1`, [ctx.userId]);
+    if (ctx.userId) {
+      const uRes = await query(
+        `SELECT username, full_name, email, whatsapp, phone FROM users WHERE id = $1 LIMIT 1`,
+        [ctx.userId]
+      );
       if (uRes.rows[0]) {
-        userName = userName || uRes.rows[0].username || null;
+        userName = userName || uRes.rows[0].full_name || uRes.rows[0].username || null;
         userEmail = userEmail || uRes.rows[0].email || null;
+        userPhone = uRes.rows[0].whatsapp || uRes.rows[0].phone || null;
       }
     }
 
+    const reporterDisplay = userName || 'Thalibah / Pengunjung';
     const insertRes = await query(
       `INSERT INTO app_reports (
         user_id, user_name, user_email, module_name, page_path, category, context_title, context_excerpt, description
@@ -108,7 +159,7 @@ export async function POST(req: Request) {
       RETURNING *`,
       [
         ctx.userId || null,
-        userName || 'Thalibah / Pengunjung',
+        reporterDisplay,
         userEmail,
         moduleName,
         pagePath,
@@ -119,7 +170,69 @@ export async function POST(req: Request) {
       ]
     );
 
-    return NextResponse.json({ success: true, data: insertRes.rows[0] });
+    const createdReport = insertRes.rows[0];
+
+    // Send WhatsApp notification to Admin(s) automatically via WatZap / Fonnte gateway
+    const categoryLabel = CATEGORY_LABELS[category] || category;
+    const contactStr = userPhone ? ` (+${normalizePhoneNumber(userPhone)})` : userEmail ? ` (${userEmail})` : '';
+    const waAdminMessage =
+      `Assalamu'alaikum Admin HI AQLI 🌸\n\n` +
+      `Ada *Laporan / Koreksi Modul* baru dari Thalibah:\n` +
+      `👤 *Pelapor:* ${reporterDisplay}${contactStr}\n` +
+      `📦 *Modul:* ${moduleName}\n` +
+      `📍 *Bagian:* ${contextTitle || pagePath}\n` +
+      `🏷️ *Kategori:* ${categoryLabel}\n` +
+      `📝 *Detail:* ${description}\n` +
+      (contextExcerpt ? `💬 *Cuplikan:* "${contextExcerpt.slice(0, 220)}"\n` : '') +
+      `🔗 *Halaman:* https://hiaqli.pro${pagePath}\n\n` +
+      `Tinjau daftar laporan di Portal Admin:\n` +
+      `👉 https://hiaqli.pro/admin/reports`;
+
+    let whatsappSent = false;
+    try {
+      const adminNumbers = await resolveAdminWaNumbers();
+      const sendResults = await Promise.all(
+        adminNumbers.map(async (phone) => {
+          const sendRes = await whatsappService.sendTextMessage(phone, waAdminMessage);
+          try {
+            await query(
+              `INSERT INTO public.whatsapp_logs (id, user_id, recipient, message, status, type, metadata, created_at)
+               VALUES ($1, $2, $3, $4, $5, 'app_issue_report', $6, now())`,
+              [
+                crypto.randomUUID(),
+                ctx.userId || null,
+                phone,
+                waAdminMessage,
+                sendRes.success ? 'sent' : 'failed',
+                JSON.stringify({
+                  reportId: createdReport?.id,
+                  moduleName,
+                  pagePath,
+                  category,
+                  provider: sendRes.provider,
+                  error: sendRes.error || null,
+                }),
+              ]
+            );
+          } catch (logErr) {
+            console.warn('[REPORTS_WA_LOG_WARN]:', logErr);
+          }
+          return sendRes;
+        })
+      );
+      whatsappSent = sendResults.some((r) => r.success);
+    } catch (waErr) {
+      console.warn('[POST /api/reports] WhatsApp admin notify failed:', waErr);
+    }
+
+    const directWaUrl = `https://wa.me/${FALLBACK_ADMIN_WA}?text=${encodeURIComponent(waAdminMessage)}`;
+
+    return NextResponse.json({
+      success: true,
+      data: createdReport,
+      whatsappSent,
+      directWaUrl,
+    });
   } catch (err: any) {
     console.error('[POST /api/reports] Error:', err);
     return NextResponse.json(
