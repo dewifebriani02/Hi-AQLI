@@ -4329,7 +4329,10 @@ function MaqtaCard({
           <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border-none shrink-0", theme.badgeClass)}>
             {theme.badgeText}
           </Badge>
-          <span className="text-[10px] font-black uppercase tracking-wider opacity-85 leading-snug truncate min-w-0">
+          <span className="text-[10px] font-black uppercase tracking-wider opacity-85 leading-snug truncate min-w-0 sm:hidden">
+            {page} {rangeLabel ? `• ${rangeLabel.replace(/^QS\.\s*/i, "")}` : ''} {isLocked && '• TERKUNCI'}
+          </span>
+          <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider opacity-85 leading-snug truncate min-w-0">
             Hal. {page} {rangeLabel ? `• ${rangeLabel}` : ''} {isLocked && '• TERKUNCI'}
           </span>
         </div>
