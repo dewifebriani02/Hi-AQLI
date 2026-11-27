@@ -3,418 +3,488 @@
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft,
-  Sparkles,
   BookOpen,
   Zap,
   Layers,
   Info,
   Type,
   GraduationCap,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ListTree,
 } from 'lucide-react';
 import Link from "next/link";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useParams } from "next/navigation";
-
-// Data I'rab dengan penjelasan lengkap
-const JUZ_30_DATA: Record<string, any> = {
-  "1:1": {
-    surah: "Al-Fatihah",
-    surahId: "1",
-    ayat: 1,
-    translation: "Dengan nama Allah Yang Maha Pengasih lagi Maha Penyayang.",
-    words: [
-      {
-        word: "بِـ",
-        wordArab: "بِـ",
-        trans: "Bi",
-        meaning: "Dengan",
-        irab: "Harf Jar",
-        irabArab: "حَرْفُ الجَرِّ",
-        irabIndo: "Huruf Jarr",
-        irabExplanation: "Huruf jar yang menyebabkan isim atau makhrun bihi setelahnya berubah menjadi kasrah (majrur). Bi berarti 'dengan' atau 'nama'.",
-        shorof: "-",
-        function: "Jar",
-        color: "bg-blue-50 text-blue-700 border-blue-100"
-      },
-      {
-        word: "اسْمِ",
-        wordArab: "الاسْمُ",
-        trans: "Ismi",
-        meaning: "Nama",
-        irab: "Ism Majrur bi Harf al-Jar, wa huwa Mudhaf",
-        irabArab: "اِسْمٌ مَجْرُورٌ بِحَرْفِ الجَرِّ، وَهُوَ مُضَافٌ",
-        irabIndo: "Isim yang dijar oleh huruf jar, dan mudhaf",
-        irabExplanation: "Isim yang dijar oleh huruf jar 'bi', sehingga mendapat kasrah. Kemudian berfungsi sebagai mudhaf (kata yang disandarkan kepada kata lain/ mudhaf ilaih).",
-        shorof: "Root: s-m-w (س م و)",
-        function: "Majrur / Mudhaf",
-        color: "bg-amber-50 text-amber-700 border-amber-100"
-      },
-      {
-        word: "اللَّهِ",
-        wordArab: "اللَّهُ",
-        trans: "Allāh",
-        meaning: "Allah",
-        irab: "Lafdzul Jalaalah, Mudhaf Ilaih, Majrur",
-        irabArab: "لَفْظُ الجَلَالَةِ، مُضَافٌ إِلَيْهِ، مَجْرُورٌ",
-        irabIndo: "Lafdzul Jalaalah, mudhaf ilaih, majrur",
-        irabExplanation: "Lafdzul Jalaalah (kata Allah) berkedudukan sebagai mudhaf ilaih (kata yang disandari) yang menerima jar dari isim mudhaf sebelumnya, sehingga berakhiran kasrah.",
-        shorof: "Lafdzul Jalaalah",
-        function: "Mudhaf Ilaih",
-        color: "bg-red-50 text-red-700 border-red-100"
-      },
-      {
-        word: "الرَّحْمَٰنِ",
-        wordArab: "الرَّحْمَٰنُ",
-        trans: "Ar-Raḥmān",
-        meaning: "Maha Pengasih",
-        irab: "Na'at (Sifat) lil Jalaalah, Majrur",
-        irabArab: "نَعْتٌ لِلْجَلَالَةِ، مَجْرُورٌ",
-        irabIndo: "Na'at bagi Jalaalah, majrur",
-        irabExplanation: "Berfungsi sebagai na'at (kata sifat/keterangan) untuk lafdzul jalaalah yang mendapat jar, sehingga majrur (berakhiran kasrah).",
-        shorof: "Root: r-h-m (ر ح م)",
-        function: "Na'at",
-        color: "bg-green-50 text-green-700 border-green-100"
-      },
-      {
-        word: "الرَّحِيمِ",
-        wordArab: "الرَّحِيمُ",
-        trans: "Ar-Raḥīm",
-        meaning: "Maha Penyayang",
-        irab: "Na'at thaanin (Sifat kedua), Majrur",
-        irabArab: "نَعْتٌ ثَانٍ، مَجْرُورٌ",
-        irabIndo: "Na'at kedua, majrur",
-        irabExplanation: "Na'at kedua yang mengikuti na'at pertama, sama-sama mendapat jar karena mengikuti what yang dina'ti (ma'tuf). Berakhiran kasrah.",
-        shorof: "Root: r-h-m (ر ح م)",
-        function: "Na'at",
-        color: "bg-green-50 text-green-700 border-green-100"
-      }
-    ]
-  },
-  "114:1": {
-    surah: "An-Nas",
-    surahId: "114",
-    ayat: 1,
-    translation: "Katakanlah (Muhammad), 'Aku berlindung kepada Tuhan manusia,'",
-    words: [
-      {
-        word: "قُلْ",
-        wordArab: "قُلْ",
-        trans: "Qul",
-        meaning: "Katakanlah",
-        irab: "Fi'il Amr (Kata kerja perintah), mabni 'ala sukun",
-        irabArab: "فِعْلُ أَمْرٍ، مَبْنِيٌّ عَلَى السُّكُونِ",
-        irabIndo: "Fi'il amr, mabni atas sukun",
-        irabExplanation: "Fi'il amr yang dibina sukun pada akhir kata karena fi'il amr selalu mabni. Berfungsi sebagai kalam (predikat) yang marfu' dengan dhammah dhamirah.",
-        shorof: "Root: q-w-l (ق و ل)",
-        function: "Fi'il Amr",
-        color: "bg-purple-50 text-purple-700 border-purple-100"
-      },
-      {
-        word: "أَعُوذُ",
-        wordArab: "أَعُوذُ",
-        trans: "A'ūdhu",
-        meaning: "Aku berlindung",
-        irab: "Fi'il Mudhari' (Sedang/akan), Marfu' bid-dhammah",
-        irabArab: "فِعْلُ مُضَارِعٍ، مَرْفُوعٌ بِالضَّمَّةِ",
-        irabIndo: "Fi'il mudhari', marfu' dengan dhammah",
-        irabExplanation: "Fi'il mudhari' yang marfu' dengan dhammah dhomirah pada wawu. Berfungsi sebagai kalam (predikat) untuk fa'il (pelaku) yang tersembunyi (dhamir mustatir).",
-        shorof: "Root: 'awd (ع و ذ)",
-        function: "Fi'il Mudhari'",
-        color: "bg-indigo-50 text-indigo-700 border-indigo-100"
-      },
-      {
-        word: "بِـ",
-        wordArab: "بِـ",
-        trans: "Bi",
-        meaning: "Kepada / Dengan",
-        irab: "Harf Jar",
-        irabArab: "حَرْفُ الجَرِّ",
-        irabIndo: "Huruf Jar",
-        irabExplanation: "Huruf jar yang menyebabkan isim setelahnya berubah menjadi kasrah (majrur). Dalam konteks ini berarti 'kepada' karena ta'alluh dengan fi'il.",
-        shorof: "-",
-        function: "Jar",
-        color: "bg-blue-50 text-blue-700 border-blue-100"
-      },
-      {
-        word: "رَبِّ",
-        wordArab: "الرَّبُّ",
-        trans: "Rabbi",
-        meaning: "Tuhan",
-        irab: "Ism Majrur, wa huwa Mudhaf",
-        irabArab: "اِسْمٌ مَجْرُورٌ، وَهُوَ مُضَافٌ",
-        irabIndo: "Isim majrur, dan mudhaf",
-        irabExplanation: "Isim yang dijar oleh huruf jar 'bi', sehingga mendapat kasrah. Berfungsi sebagai mudhaf yang akan disandarkan kepada mudhaf ilaih.",
-        shorof: "Root: r-b-b (ر ب ب)",
-        function: "Majrur / Mudhaf",
-        color: "bg-amber-50 text-amber-700 border-amber-100"
-      },
-      {
-        word: "النَّاسِ",
-        wordArab: "النَّاسُ",
-        trans: "An-Nās",
-        meaning: "Manusia",
-        irab: "Mudhaf Ilaih, Majrur bil-kasrah",
-        irabArab: "مُضَافٌ إِلَيْهِ، مَجْرُورٌ بِالْكَسْرَةِ",
-        irabIndo: "Mudhaf ilaih, majrur dengan kasrah",
-        irabExplanation: "Mudhaf ilaih (kata yang disandari) yang menerima jar dari mudhaf sebelumnya. Berakhiran ya' nisbah yang dibaca kasrah.",
-        shorof: "Root: n-w-s (ن و س)",
-        function: "Mudhaf Ilaih",
-        color: "bg-red-50 text-red-700 border-red-100"
-      }
-    ]
-  },
-  "113:1": {
-    surah: "Al-Falaq",
-    surahId: "113",
-    ayat: 1,
-    translation: "Katakanlah (Muhammad), 'Aku berlindung kepada Tuhan yang menguasai subuh (fajar),'",
-    words: [
-      {
-        word: "قُلْ",
-        wordArab: "قُلْ",
-        trans: "Qul",
-        meaning: "Katakanlah",
-        irab: "Fi'il Amr",
-        irabArab: "فِعْلُ أَمْرٍ",
-        irabIndo: "Fi'il amr",
-        irabExplanation: "Fi'il amr mabni sukun, berfungsi sebagai kalam (predikat) untuk dhamir mustatir (pelaku yang tersembunyi: anta).",
-        shorof: "Root: q-w-l",
-        function: "Fi'il Amr",
-        color: "bg-purple-50 text-purple-700 border-purple-100"
-      },
-      {
-        word: "أَعُوذُ",
-        wordArab: "أَعُوذُ",
-        trans: "A'ūdhu",
-        meaning: "Aku berlindung",
-        irab: "Fi'il Mudhari'",
-        irabArab: "فِعْلُ مُضَارِعٍ",
-        irabIndo: "Fi'il mudhari'",
-        irabExplanation: "Fi'il mudhari' marfu' dengan dhammah, fa'ilnya tersembunyi (dhamir mustatir: ana).",
-        shorof: "Root: 'awd",
-        function: "Fi'il Mudhari'",
-        color: "bg-indigo-50 text-indigo-700 border-indigo-100"
-      },
-      {
-        word: "بِـ",
-        wordArab: "بِـ",
-        trans: "Bi",
-        meaning: "Kepada",
-        irab: "Harf Jar",
-        irabArab: "حَرْفُ الجَرِّ",
-        irabIndo: "Huruf Jar",
-        irabExplanation: "Huruf jar yang menjarkan isim setelahnya.",
-        shorof: "-",
-        function: "Jar",
-        color: "bg-blue-50 text-blue-700 border-blue-100"
-      },
-      {
-        word: "رَبِّ",
-        wordArab: "الرَّبُّ",
-        trans: "Rabbi",
-        meaning: "Tuhan",
-        irab: "Ism Majrur, wa huwa Mudhaf",
-        irabArab: "اِسْمٌ مَجْرُورٌ، وَهُوَ مُضَافٌ",
-        irabIndo: "Isim majrur, dan mudhaf",
-        irabExplanation: "Isim majrur karena menerima jar dari harf jar, sekaligus mudhaf yang disandarkan kepada mudhaf ilaih.",
-        shorof: "Root: r-b-b",
-        function: "Majrur / Mudhaf",
-        color: "bg-amber-50 text-amber-700 border-amber-100"
-      },
-      {
-        word: "الْفَلَقِ",
-        wordArab: "الْفَلَقُ",
-        trans: "Al-Falaq",
-        meaning: "Waktu Subuh",
-        irab: "Mudhaf Ilaih, Majrur",
-        irabArab: "مُضَافٌ إِلَيْهِ، مَجْرُورٌ",
-        irabIndo: "Mudhaf ilaih, majrur",
-        irabExplanation: "Mudhaf ilaih yang menerima jar dari mudhaf sebelumnya.",
-        shorof: "Root: f-l-q (ف ل ق)",
-        function: "Mudhaf Ilaih",
-        color: "bg-emerald-50 text-emerald-700 border-emerald-100"
-      }
-    ]
-  }
-};
+import { useParams, useRouter } from "next/navigation";
+import {
+  getIrabNavigation,
+  getIrabVersesBySurah,
+} from "@/lib/irab-data";
+import { useUser, useCollection } from "@/db";
 
 export default function IrabDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const surahId = params.surahId as string;
   const ayat = params.ayat as string;
-  const [selectedWord, setSelectedWord] = useState<number | null>(0);
+  const currentVerseNum = parseInt(ayat, 10) || 1;
+  const [selectedWord, setSelectedWord] = useState<number>(0);
 
-  const currentAyatKey = `${surahId}:${ayat}`;
-  const currentData = useMemo(() => JUZ_30_DATA[currentAyatKey], [currentAyatKey]);
+  const { user } = useUser();
+
+  const {
+    currentData,
+    surahVerses,
+    totalVersesInSurah,
+    prevInSurah,
+    nextInSurah,
+    prevGlobal,
+    nextGlobal,
+    nextSurah,
+  } = useMemo(() => getIrabNavigation(surahId, ayat), [surahId, ayat]);
+
+  // Reset selected word to 0 when verse changes
+  useEffect(() => {
+    setSelectedWord(0);
+  }, [surahId, ayat]);
+
+  // Fetch user's passed I'rab quizzes for this surah (same flow as Hi Mufradat)
+  const progressOptions = useMemo(() => ({
+    filters: [
+      { column: 'user_id', operator: '==', value: user?.id },
+      { column: 'surah_id', operator: '==', value: Number(surahId) }
+    ]
+  }), [user?.id, surahId]);
+
+  const { data: progress } = useCollection(user ? "quiz_attempts" : null, progressOptions);
+
+  const completedVerseNumbers = useMemo(() => {
+    const passed = new Set<number>();
+    if (!progress) return passed;
+    progress.forEach((p: any) => {
+      if (!p.quiz_id?.startsWith('irab_')) return;
+      const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
+      if (isPassed) {
+        const match = p.quiz_id.match(/irab_(\d+):(\d+)/);
+        const sNum = match ? parseInt(match[1], 10) : Number(p.surah_id);
+        const vNum = match ? parseInt(match[2], 10) : Number(p.verse_id);
+        if (sNum === Number(surahId) && vNum > 0) {
+          passed.add(vNum);
+        }
+      }
+    });
+    return passed;
+  }, [progress, surahId]);
+
+  const isCurrentVerseCompleted = completedVerseNumbers.has(currentVerseNum);
 
   if (!currentData) {
     return (
-      <div className="flex flex-col min-h-screen bg-orange-50/30 items-center justify-center">
-        <p className="text-muted-foreground">Data I'rab tidak ditemukan.</p>
+      <div className="flex flex-col min-h-[60vh] items-center justify-center gap-4 p-6 text-center">
+        <p className="text-muted-foreground font-bold">Data I&apos;rab untuk ayat ini belum tersedia.</p>
+        <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 text-white font-bold rounded-xl">
+          <Link href="/irab">Kembali ke Daftar Ayat Hi I&apos;rab</Link>
+        </Button>
       </div>
     );
   }
 
+  const activeWord = currentData.words[selectedWord] || currentData.words[0];
+
   return (
-    <div className="flex flex-col min-h-screen bg-orange-50/30 pb-24">
-      {/* Sticky Header */}
-      <div className="sticky top-16 sm:top-20 z-30 bg-white/95 backdrop-blur-md border-b border-orange-100 px-3 sm:px-4 py-3 sm:py-4">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="outline" size="sm" className="gap-1.5 text-[#800000] border-[#800000]/20 hover:bg-[#800000]/5 shrink-0">
-            <Link href="/irab">
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Kembali</span>
+    <div className="flex flex-col gap-6 sm:gap-8 max-w-4xl mx-auto pb-32">
+      {/* Sticky Top Header — Identical Flow to Hi Mufradat */}
+      <div className="flex items-center gap-2 sm:gap-4 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b px-2 sm:px-0">
+        <Button asChild variant="ghost" size="icon" className="text-[#800000] shrink-0 w-8 h-8 sm:w-10 sm:h-10">
+          <Link href={`/irab?surah=${surahId}`}>
+            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+          </Link>
+        </Button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm sm:text-lg font-black font-headline truncate sm:whitespace-normal leading-tight">
+              {currentData.surah} <span className="text-[#800000]/40 mx-1">:</span> ({currentData.ayat}/{totalVersesInSurah})
+            </h1>
+            {isCurrentVerseCompleted && (
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[9px] font-black px-1.5 py-0 h-4 gap-1 shrink-0">
+                <CheckCircle2 className="w-2.5 h-2.5" /> LULUS
+              </Badge>
+            )}
+          </div>
+          <p className="text-[8px] sm:text-[9px] uppercase tracking-tighter sm:tracking-widest text-[#800000] font-black truncate">
+            Hi I&apos;rab • Tadabbur &amp; Bedah Nahwu
+          </p>
+        </div>
+
+        {/* Quick Action Icons (Quiz + Prev Ayat + Next Ayat) just like Hi Mufradat */}
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="text-[#D4AF37] hover:bg-[#D4AF37]/10"
+            title="Mulai Kuis I'rab Ayat Ini"
+          >
+            <Link href={`/irab/${surahId}/${ayat}/quiz`}>
+              <GraduationCap className="h-5 w-5" />
             </Link>
           </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base sm:text-lg font-bold font-headline truncate text-[#800000]">{currentData.surah}: {currentData.ayat}</h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">Hi I'rab • Bedah Nahwu</p>
-          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!prevGlobal}
+            onClick={() => prevGlobal && router.push(`/irab/${prevGlobal.surahId}/${prevGlobal.ayat}`)}
+            title={prevGlobal ? `Ayat Sebelumnya (${prevGlobal.surah}: ${prevGlobal.ayat})` : "Ini adalah ayat pertama"}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!nextGlobal}
+            onClick={() => nextGlobal && router.push(`/irab/${nextGlobal.surahId}/${nextGlobal.ayat}`)}
+            title={nextGlobal ? `Ayat Selanjutnya (${nextGlobal.surah}: ${nextGlobal.ayat})` : "Ini adalah ayat terakhir"}
+          >
+            <ArrowRight className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
-      <div className="p-4 max-w-2xl mx-auto w-full space-y-6">
-        {/* Ayat Display Card */}
-        <Card className="border-none shadow-xl bg-white overflow-hidden relative border-b-4 border-[#800000] rounded-3xl">
-          <CardContent className="p-6 sm:p-8 text-center space-y-6">
-            <div className="flex flex-row-reverse flex-wrap justify-center gap-x-3 sm:gap-x-4 gap-y-4 sm:gap-y-6">
-              {currentData.words.map((item: any, idx: number) => (
-                <div
-                  key={idx}
-                  onClick={() => setSelectedWord(idx)}
-                  className={cn(
-                    "cursor-pointer transition-all duration-300 group relative",
-                    selectedWord === idx ? "scale-110" : "opacity-70 hover:opacity-100"
-                  )}
-                >
-                  <p className={cn(
-                    "text-3xl sm:text-4xl font-arabic leading-relaxed transition-colors",
-                    selectedWord === idx ? "text-[#800000]" : "text-slate-700"
-                  )}>
-                    {item.word}
-                  </p>
-                  <div className={cn(
-                    "h-1 w-full mt-1 rounded-full transition-all",
-                    selectedWord === idx ? "bg-[#D4AF37]" : "bg-transparent group-hover:bg-slate-200"
-                  )} />
-                </div>
-              ))}
-            </div>
+      {/* Quick Verse Selector Strip within the Current Surah */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-2 sm:px-0 -mt-2">
+        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground shrink-0 mr-1">
+          Pilih Ayat:
+        </span>
+        {surahVerses.map((v) => {
+          const isCurrent = v.ayat === currentVerseNum;
+          const isDone = completedVerseNumbers.has(v.ayat);
+          return (
+            <Link
+              key={v.key}
+              href={`/irab/${v.surahId}/${v.ayat}`}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-1.5 border",
+                isCurrent
+                  ? "bg-[#800000] text-white border-[#800000] shadow-sm"
+                  : isDone
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                  : "bg-white text-slate-700 border-slate-200 hover:border-[#800000]/40 hover:text-[#800000]"
+              )}
+            >
+              <span>Ayat {v.ayat}</span>
+              {isDone && <CheckCircle2 className={cn("w-3 h-3", isCurrent ? "text-[#D4AF37]" : "text-emerald-600")} />}
+            </Link>
+          );
+        })}
+      </div>
 
-            <div className="pt-4 border-t border-slate-100">
-               <p className="text-sm font-bold text-[#800000] mb-1 italic">
-                 "{currentData.translation}"
-               </p>
-               <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
-                 Pilih kata di atas untuk banting I'rab
-               </p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Ayat Display Card (Interactive Word-by-Word Mushaf View) */}
+      <Card className="border-none shadow-xl bg-white overflow-hidden relative border-b-4 border-[#800000] rounded-3xl mx-2 sm:mx-0">
+        <CardContent className="p-6 sm:p-8 text-center space-y-6">
+          <div className="flex flex-wrap justify-center gap-x-3 sm:gap-x-5 gap-y-4 sm:gap-y-6" dir="rtl">
+            {currentData.words.map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setSelectedWord(idx)}
+                className={cn(
+                  "cursor-pointer transition-all duration-200 group relative px-2.5 py-1.5 rounded-2xl border",
+                  selectedWord === idx
+                    ? "scale-105 bg-[#800000]/5 border-[#800000]/30 shadow-sm"
+                    : "border-transparent opacity-75 hover:opacity-100 hover:bg-slate-50"
+                )}
+              >
+                <p className={cn(
+                  "text-3xl sm:text-4xl font-arabic leading-relaxed transition-colors",
+                  selectedWord === idx ? "text-[#800000] font-bold" : "text-slate-700"
+                )}>
+                  {item.word}
+                </p>
+                <span className={cn(
+                  "block text-[10px] font-bold mt-0.5",
+                  selectedWord === idx ? "text-[#800000]" : "text-slate-400"
+                )} dir="ltr">
+                  {item.meaning}
+                </span>
+                <div className={cn(
+                  "h-1 w-full mt-1.5 rounded-full transition-all",
+                  selectedWord === idx ? "bg-[#D4AF37]" : "bg-transparent group-hover:bg-slate-200"
+                )} />
+              </button>
+            ))}
+          </div>
 
-        {/* Word Detail Section */}
-        {selectedWord !== null && currentData.words[selectedWord] && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-2 px-1">
+          <div className="pt-4 border-t border-slate-100">
+            <Badge variant="outline" className="mb-2 text-[#800000] border-[#800000]/20 text-[10px] font-bold uppercase">
+              Terjemahan Ayat
+            </Badge>
+            <p className="text-base sm:text-lg font-medium text-slate-700 mb-2 italic leading-relaxed">
+              &ldquo;{currentData.translation}&rdquo;
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
+              Ketuk salah satu kata di atas untuk melihat bedah I&apos;rab &amp; Shorof
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Word Deep Analysis Card */}
+      {activeWord && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 px-2 sm:px-0">
+          <div className="flex items-center justify-between gap-2 px-1">
+            <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-[#D4AF37] fill-current" />
-              <h3 className="text-[11px] font-black text-[#800000] uppercase tracking-[0.2em]">Analisis Kata (I'rab)</h3>
-              <div className="h-[1px] flex-1 bg-orange-100" />
+              <h3 className="text-[11px] font-black text-[#800000] uppercase tracking-[0.2em]">
+                Analisis Kata Ke-{selectedWord + 1} dari {currentData.words.length}
+              </h3>
             </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 text-[10px] font-black rounded-lg"
+                disabled={selectedWord <= 0}
+                onClick={() => setSelectedWord((w) => Math.max(0, w - 1))}
+              >
+                <ArrowLeft className="w-3 h-3 mr-1" /> Kata Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 text-[10px] font-black rounded-lg"
+                disabled={selectedWord >= currentData.words.length - 1}
+                onClick={() => setSelectedWord((w) => Math.min(currentData.words.length - 1, w + 1))}
+              >
+                Kata Berikutnya <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </div>
+          </div>
 
-            <Card className="border-none shadow-md bg-white rounded-2xl overflow-hidden">
-               <div className={cn("h-2 w-full", currentData.words[selectedWord].color.split(' ')[0])} />
-               <CardContent className="p-4 sm:p-6">
-                 {/* Header - RATA KANAN */}
-                 <div className="flex justify-between items-start mb-6 text-right" dir="rtl">
-                   <div className="text-right">
-                     <h4 className="text-3xl sm:text-4xl font-arabic text-black mb-1">{currentData.words[selectedWord].wordArab}</h4>
-                     <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">{currentData.words[selectedWord].trans}</p>
-                   </div>
-                   <Badge className={cn("px-3 py-1 text-[10px] font-black uppercase rounded-lg", currentData.words[selectedWord].color)}>
-                     {currentData.words[selectedWord].function}
-                   </Badge>
-                 </div>
+          <Card className="border-none shadow-md bg-white rounded-2xl overflow-hidden">
+            <div className={cn("h-2 w-full", activeWord.color.split(' ')[0])} />
+            <CardContent className="p-4 sm:p-6">
+              {/* Header - RATA KANAN */}
+              <div className="flex justify-between items-start mb-6 text-right" dir="rtl">
+                <div className="text-right">
+                  <h4 className="text-3xl sm:text-4xl font-arabic text-black mb-1">{activeWord.wordArab}</h4>
+                  <p className="text-xs font-black text-muted-foreground uppercase tracking-widest" dir="ltr">
+                    {activeWord.trans} • &ldquo;{activeWord.meaning}&rdquo;
+                  </p>
+                </div>
+                <Badge className={cn("px-3 py-1 text-[10px] font-black uppercase rounded-lg border", activeWord.color)} dir="ltr">
+                  {activeWord.function}
+                </Badge>
+              </div>
 
-                 <div className="grid grid-cols-1 gap-4">
-                   {/* Kedudukan I'rab - Urutan: Arab → Latin → Indonesia → Penjelasan (kiri) */}
-                   <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="p-2 rounded-xl bg-white text-[#800000] shadow-sm"><Layers className="w-5 h-5" /></div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                          <Info className="w-3 h-3" /> Kedudukan (I'rab)
-                        </p>
-                      </div>
-                      <div className="space-y-3">
-                        {/* Arab - RATA KANAN */}
-                        <div className="text-right border-b border-slate-200 pb-3" dir="rtl">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">بِاللُّغَةِ الْعَرَبِيَّةِ</p>
-                          <p className="text-lg sm:text-xl font-arabic font-bold text-[#800000] leading-relaxed">
-                            {currentData.words[selectedWord].irabArab}
-                          </p>
-                        </div>
-                        {/* Latin (Transliterasi) - RATA KANAN */}
-                        <div className="text-right border-b border-slate-200 pb-3" dir="rtl">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Latin</p>
-                          <p className="text-sm font-bold text-slate-800 leading-relaxed">
-                            {currentData.words[selectedWord].irab}
-                          </p>
-                        </div>
-                        {/* Indonesia (Terjemahan dari Arab) - RATA KANAN */}
-                        <div className="text-right border-b border-slate-200 pb-3" dir="rtl">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Bahasa Indonesia</p>
-                          <p className="text-sm font-bold text-slate-800 leading-relaxed">
-                            {currentData.words[selectedWord].irabIndo}
-                          </p>
-                        </div>
-                        {/* Penjelasan - RATA KIRI */}
-                        <div className="bg-white p-3 rounded-xl border border-orange-100 text-left">
-                          <p className="text-[9px] font-black text-orange-400 uppercase tracking-wider mb-1">Penjelasan</p>
-                          <p className="text-sm text-slate-700 leading-relaxed">
-                            {currentData.words[selectedWord].irabExplanation}
-                          </p>
-                        </div>
-                      </div>
-                   </div>
+              <div className="grid grid-cols-1 gap-4">
+                {/* Kedudukan I'rab */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-2 rounded-xl bg-white text-[#800000] shadow-sm">
+                      <Layers className="w-5 h-5" />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <Info className="w-3 h-3" /> Kedudukan (I&apos;rab)
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {/* Arab */}
+                    <div className="text-right border-b border-slate-200 pb-3" dir="rtl">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">بِاللُّغَةِ الْعَرَبِيَّةِ</p>
+                      <p className="text-lg sm:text-xl font-arabic font-bold text-[#800000] leading-relaxed">
+                        {activeWord.irabArab}
+                      </p>
+                    </div>
+                    {/* Latin */}
+                    <div className="text-left border-b border-slate-200 pb-3">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Transliterasi I&apos;rab</p>
+                      <p className="text-sm font-bold text-slate-800 leading-relaxed">
+                        {activeWord.irab}
+                      </p>
+                    </div>
+                    {/* Indonesia */}
+                    <div className="text-left border-b border-slate-200 pb-3">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Terjemah Kedudukan</p>
+                      <p className="text-sm font-bold text-slate-800 leading-relaxed">
+                        {activeWord.irabIndo}
+                      </p>
+                    </div>
+                    {/* Penjelasan */}
+                    <div className="bg-white p-3.5 rounded-xl border border-orange-100 text-left">
+                      <p className="text-[9px] font-black text-orange-600 uppercase tracking-wider mb-1">Penjelasan Nahwu</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        {activeWord.irabExplanation}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                     <div className="flex items-start gap-3 p-3 sm:p-4 rounded-xl bg-orange-50/50 border border-orange-100">
-                        <div className="p-2 rounded-lg bg-white text-orange-600 shadow-sm"><Type className="w-4 h-4" /></div>
-                        <div className="text-right">
-                          <p className="text-[9px] font-black text-orange-400 uppercase tracking-tighter mb-1">Akar (Shorof)</p>
-                          <p className="text-xs sm:text-sm font-bold text-orange-900">{currentData.words[selectedWord].shorof}</p>
-                        </div>
-                     </div>
-                     <div className="flex items-start gap-3 p-3 sm:p-4 rounded-xl bg-amber-50/50 border border-amber-100">
-                        <div className="p-2 rounded-lg bg-white text-amber-600 shadow-sm"><BookOpen className="w-4 h-4" /></div>
-                        <div className="text-right">
-                          <p className="text-[9px] font-black text-amber-400 uppercase tracking-tighter mb-1">Makna Indo</p>
-                          <p className="text-xs sm:text-sm font-bold text-amber-900">{currentData.words[selectedWord].meaning}</p>
-                        </div>
-                     </div>
-                   </div>
-                 </div>
-               </CardContent>
-            </Card>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl bg-orange-50/50 border border-orange-100">
+                    <div className="p-2 rounded-lg bg-white text-orange-600 shadow-sm shrink-0">
+                      <Type className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[9px] font-black text-orange-500 uppercase tracking-wider mb-1">Akar &amp; Wazan (Shorof)</p>
+                      <p className="text-xs sm:text-sm font-bold text-orange-950">{activeWord.shorof}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl bg-amber-50/50 border border-amber-100">
+                    <div className="p-2 rounded-lg bg-white text-amber-600 shadow-sm shrink-0">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[9px] font-black text-amber-600 uppercase tracking-wider mb-1">Makna Kata</p>
+                      <p className="text-xs sm:text-sm font-bold text-amber-950">{activeWord.meaning}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-            {/* Tombol ke Kuis - Halaman Terpisah */}
+      {/* Full Word List & Bottom Action Flow — Mirrors Hi Mufradat CardFooter */}
+      <Card className="border-[#800000]/10 shadow-sm overflow-hidden mx-2 sm:mx-0">
+        <CardHeader className="border-b bg-[#800000]/5 py-4 flex flex-row items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <CardTitle className="text-base flex items-center gap-2 font-headline">
+              <ListTree className="w-4 h-4 text-[#800000]" />
+              Ringkasan I&apos;rab Seluruh Kata ({currentData.words.length} Kata)
+            </CardTitle>
+            <p className="text-[11px] text-amber-900 font-medium leading-snug">
+              Ketuk baris kata di bawah untuk melihat detail penjelasan I&apos;rab di atas.
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y" dir="ltr">
+            {currentData.words.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => {
+                  setSelectedWord(idx);
+                  window.scrollTo({ top: 120, behavior: 'smooth' });
+                }}
+                className={cn(
+                  "p-4 flex items-center justify-between gap-4 hover:bg-muted/50 transition-all cursor-pointer select-none",
+                  selectedWord === idx && "bg-[#800000]/[0.04]"
+                )}
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <span className={cn(
+                    "text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 border",
+                    selectedWord === idx
+                      ? "bg-[#800000] text-white border-[#800000]"
+                      : "bg-muted text-muted-foreground border-border/50"
+                  )}>
+                    {idx + 1}
+                  </span>
+                  <div className="flex flex-col items-start gap-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-2xl font-arabic text-[#800000]" dir="rtl">
+                        {item.word}
+                      </span>
+                      <Badge className={cn("text-[9px] font-black uppercase px-2 py-0.5 border", item.color)}>
+                        {item.function}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground font-medium truncate max-w-full">
+                      {item.trans} — &ldquo;{item.meaning}&rdquo;
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right max-w-[45%] hidden sm:block">
+                  <p className="text-xs font-bold text-slate-700 line-clamp-1">{item.irabIndo}</p>
+                  <p className="text-[10px] text-muted-foreground font-arabic line-clamp-1" dir="rtl">{item.irabArab}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+
+        {/* Bottom Navigation & Quiz Buttons — Exact Hi Mufradat Pattern */}
+        <CardFooter className="pt-6 border-t bg-muted/10 p-4 flex flex-col gap-3">
+          {/* Primary Quiz CTA */}
+          <Button
+            asChild
+            className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black gap-2 py-6 h-14 text-base sm:text-lg rounded-xl shadow-lg border-b-4 border-[#800000]/20 uppercase tracking-wider"
+          >
+            <Link href={`/irab/${surahId}/${ayat}/quiz`}>
+              <GraduationCap className="w-5 h-5" />
+              {isCurrentVerseCompleted ? `ULANGI KUIS I'RAB AYAT ${currentData.ayat}` : `MULAI UJI PEMAHAMAN I'RAB`}
+            </Link>
+          </Button>
+
+          {/* Direct Next Verse Navigation (Tadabbur Next Ayat + Direct Next Quiz) just like Hi Mufradat */}
+          {nextInSurah ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full border-2 border-[#800000]/20 hover:bg-[#800000]/5 text-[#800000] font-black gap-2 py-6 h-14 text-sm sm:text-base rounded-xl transition-all uppercase tracking-wider"
+              >
+                <Link href={`/irab/${nextInSurah.surahId}/${nextInSurah.ayat}`}>
+                  BEDAH AYAT {nextInSurah.ayat}
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-black py-6 h-14 text-sm sm:text-base rounded-xl shadow-md transition-all uppercase tracking-wider gap-2"
+              >
+                <Link href={`/irab/${nextInSurah.surahId}/${nextInSurah.ayat}/quiz`}>
+                  <Zap className="w-4 h-4 fill-current text-[#D4AF37]" />
+                  LANGSUNG KUIS AYAT {nextInSurah.ayat}
+                </Link>
+              </Button>
+            </div>
+          ) : nextSurah && nextGlobal ? (
             <Button
               asChild
-              className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold gap-2 py-6 h-14 text-lg"
+              variant="outline"
+              className="w-full border-2 border-[#800000]/20 hover:bg-[#800000]/5 text-[#800000] font-black gap-2 py-6 h-14 text-sm sm:text-base rounded-xl transition-all uppercase tracking-wider"
             >
-              <Link href={`/irab/${surahId}/${ayat}/quiz`}>
-                <GraduationCap className="w-5 h-5" />
-                Uji Pemahaman I'rab
+              <Link href={`/irab/${nextGlobal.surahId}/${nextGlobal.ayat}`}>
+                LANJUT KE SURAH {nextSurah.name.toUpperCase()} (AYAT 1)
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </Button>
+          ) : null}
+
+          {/* Prev / Back to Surah List row */}
+          <div className="flex items-center justify-between w-full pt-1 gap-2">
+            {prevInSurah ? (
+              <Button asChild variant="ghost" size="sm" className="text-xs font-bold text-muted-foreground hover:text-[#800000] gap-1.5">
+                <Link href={`/irab/${prevInSurah.surahId}/${prevInSurah.ayat}`}>
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Ayat Sebelumnya ({prevInSurah.surah}: {prevInSurah.ayat})
+                </Link>
+              </Button>
+            ) : <span />}
+
+            <Button asChild variant="ghost" size="sm" className="text-xs font-bold text-muted-foreground hover:text-[#800000]">
+              <Link href={`/irab?surah=${surahId}`}>
+                Daftar Ayat {currentData.surah}
               </Link>
             </Button>
           </div>
-        )}
-      </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

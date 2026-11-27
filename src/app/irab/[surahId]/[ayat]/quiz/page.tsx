@@ -6,15 +6,16 @@ import { Button } from "@/components/ui/button";
 import {
   ChevronLeft,
   Loader2,
-  GraduationCap,
   CheckCircle2,
   XCircle,
   RefreshCw,
   Trophy,
   Timer,
   Star,
-  Clock,
   Zap,
+  ArrowRight,
+  ArrowLeft,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -23,100 +24,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/db";
-import { useCollection, authFetch } from "@/db";
+import { useUser, useCollection, authFetch } from "@/db";
 import { useToast } from "@/hooks/use-toast";
-
-// Data Kuis untuk setiap ayat
-const QUIZ_DATA: Record<string, any> = {
-  "1:1": {
-    questions: [
-      {
-        question: "Apa kedudukan i'rab dari kata 'بِـ' (Bi)?",
-        correct: "Harf Jar",
-        options: ["Fi'il Amr", "Harf Jar", "Ism Majrur", "Na'at"]
-      },
-      {
-        question: "Apa fungsi dari kata 'اللَّهِ' (Allah)?",
-        correct: "Mudhaf Ilaih",
-        options: ["Mudhaf", "Mudhaf Ilaih", "Na'at", "Fi'il"]
-      },
-      {
-        question: "Kata 'الرَّحْمَٰنِ' berkedudukan sebagai?",
-        correct: "Na'at",
-        options: ["Mudhaf", "Mudhaf Ilaih", "Na'at", "Fi'il Amr"]
-      },
-      {
-        question: "Apa kedudukan dari 'اسْمِ' (Ismi)?",
-        correct: "Majrur / Mudhaf",
-        options: ["Mudhaf Ilaih", "Na'at", "Fi'il Amr", "Majrur / Mudhaf"]
-      },
-      {
-        question: "Kedudukan 'الرَّحِيمِ' adalah?",
-        correct: "Na'at",
-        options: ["Harf Jar", "Mudhaf", "Na'at", "Fi'il Mudhari'"]
-      }
-    ]
-  },
-  "114:1": {
-    questions: [
-      {
-        question: "Apa kedudukan i'rab dari kata 'قُلْ' (Qul)?",
-        correct: "Fi'il Amr",
-        options: ["Fi'il Mudhari'", "Fi'il Amr", "Harf Jar", "Ism Majrur"]
-      },
-      {
-        question: "Kata 'أَعُوذُ' adalah fi'il apa?",
-        correct: "Fi'il Mudhari'",
-        options: ["Fi'il Madhi", "Fi'il Mudhari'", "Fi'il Amr", "Fi'il Muda'rif"]
-      },
-      {
-        question: "Apa fungsi dari kata 'رَبِّ' (Rabbi)?",
-        correct: "Majrur / Mudhaf",
-        options: ["Mudhaf Ilaih", "Na'at", "Majrur / Mudhaf", "Fi'il"]
-      },
-      {
-        question: "Huruf 'بِـ' dalam ayat ini berkedudukan sebagai?",
-        correct: "Harf Jar",
-        options: ["Harf Jar", "Fi'il Amr", "Na'at", "Mudhaf"]
-      },
-      {
-        question: "Kedudukan 'النَّاسِ' adalah?",
-        correct: "Mudhaf Ilaih",
-        options: ["Mudhaf", "Mudhaf Ilaih", "Na'at", "Fi'il Mudhari'"]
-      }
-    ]
-  },
-  "113:1": {
-    questions: [
-      {
-        question: "Huruf 'بِـ' dalam ayat ini berkedudukan sebagai?",
-        correct: "Harf Jar",
-        options: ["Harf Jar", "Fi'il Amr", "Na'at", "Mudhaf"]
-      },
-      {
-        question: "Kedudukan 'الْفَلَقِ' adalah?",
-        correct: "Mudhaf Ilaih",
-        options: ["Mudhaf", "Mudhaf Ilaih", "Na'at", "Fi'il Mudhari'"]
-      },
-      {
-        question: "Apa kedudukan dari 'أَعُوذُ'?",
-        correct: "Fi'il Mudhari'",
-        options: ["Fi'il Amr", "Fi'il Mudhari'", "Harf Jar", "Na'at"]
-      },
-      {
-        question: "Kata 'قُلْ' berkedudukan sebagai?",
-        correct: "Fi'il Amr",
-        options: ["Fi'il Mudhari'", "Fi'il Amr", "Ism Majrur", "Harf Jar"]
-      },
-      {
-        question: "Fungsi dari 'رَبِّ' adalah?",
-        correct: "Majrur / Mudhaf",
-        options: ["Mudhaf Ilaih", "Na'at", "Majrur / Mudhaf", "Fi'il"]
-      }
-    ]
-  }
-};
+import {
+  getIrabNavigation,
+  getIrabQuizQuestions,
+} from "@/lib/irab-data";
 
 export default function IrabQuizPage() {
   const params = useParams();
@@ -139,7 +52,20 @@ export default function IrabQuizPage() {
   const [totalTime, setTotalTime] = useState(0);
 
   const currentAyatKey = `${surahId}:${ayat}`;
-  const quizData = useMemo(() => QUIZ_DATA[currentAyatKey] || { questions: [] }, [currentAyatKey]);
+
+  const {
+    currentData,
+    totalVersesInSurah,
+    nextInSurah,
+    prevGlobal,
+    nextGlobal,
+    nextSurah,
+  } = useMemo(() => getIrabNavigation(surahId, ayat), [surahId, ayat]);
+
+  const questions = useMemo(
+    () => getIrabQuizQuestions(surahId, ayat),
+    [surahId, ayat]
+  );
 
   // Fetch leaderboard data
   const { data: allAttempts } = useCollection("quiz_attempts", {
@@ -207,11 +133,16 @@ export default function IrabQuizPage() {
 
   useEffect(() => {
     setLoading(false);
+    setScore(0);
+    setCurrentIdx(0);
+    setIsFinished(false);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setTotalTime(0);
   }, [currentAyatKey]);
 
   const saveProgress = useCallback(async (finalScore: number) => {
     if (!user) return;
-    const isPerfect = finalScore === quizData.questions.length;
 
     try {
       const response = await authFetch('/api/irab-quiz', {
@@ -223,7 +154,7 @@ export default function IrabQuizPage() {
           surah_id: surahId,
           ayat: ayat,
           score: finalScore,
-          total_questions: quizData.questions.length,
+          total_questions: questions.length,
           duration_seconds: totalTime,
         })
       });
@@ -243,7 +174,7 @@ export default function IrabQuizPage() {
         description: "Periksa koneksi internet Anda dan coba lagi.",
       });
     }
-  }, [user, surahId, ayat, quizData.questions.length, totalTime, currentAyatKey, toast]);
+  }, [user, surahId, ayat, questions.length, totalTime, currentAyatKey, toast]);
 
   const handleAnswer = useCallback((answer: string) => {
     if (selectedAnswer) return;
@@ -252,7 +183,7 @@ export default function IrabQuizPage() {
       (document.activeElement as HTMLElement)?.blur();
     }
 
-    const currentQ = quizData.questions[currentIdx];
+    const currentQ = questions[currentIdx];
     const isAnsCorrect = answer === currentQ.correct;
 
     setSelectedAnswer(answer);
@@ -268,21 +199,21 @@ export default function IrabQuizPage() {
     }
 
     setTimeout(() => {
-      if (currentIdx + 1 < quizData.questions.length) {
+      if (currentIdx + 1 < questions.length) {
         setSelectedAnswer(null);
         setIsCorrect(null);
         setCurrentIdx(prev => prev + 1);
       } else {
         setIsFinished(true);
-        if (nextScore === quizData.questions.length) {
+        if (nextScore === questions.length) {
           playSfx('perfect');
         } else {
           playSfx('fail');
         }
         saveProgress(nextScore);
       }
-    }, 1200);
-  }, [selectedAnswer, quizData.questions, currentIdx, score, playSfx, saveProgress]);
+    }, 1000);
+  }, [selectedAnswer, questions, currentIdx, score, playSfx, saveProgress]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -295,15 +226,15 @@ export default function IrabQuizPage() {
   }, [isFinished, loading, user]);
 
   useEffect(() => {
-    if (quizData.questions.length > 0 && currentIdx < quizData.questions.length) {
+    if (questions.length > 0 && currentIdx < questions.length) {
       setSelectedAnswer(null);
       setIsCorrect(null);
 
-      const currentQ = quizData.questions[currentIdx];
+      const currentQ = questions[currentIdx];
       const all = [...currentQ.options].sort(() => Math.random() - 0.5);
       setOptions(all);
     }
-  }, [quizData.questions, currentIdx]);
+  }, [questions, currentIdx]);
 
   const handleReset = () => {
     setScore(0);
@@ -325,95 +256,154 @@ export default function IrabQuizPage() {
     return (
       <div className="flex flex-col items-center py-32 gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#D4AF37]" />
-        <p className="text-muted-foreground font-medium">Menyiapkan Kuis I'rab...</p>
+        <p className="text-muted-foreground font-medium">Menyiapkan Kuis I&apos;rab...</p>
       </div>
     );
   }
 
   if (!user) return null;
 
-  if (error) {
+  if (error || !currentData || questions.length === 0) {
     return (
       <div className="p-12 text-center flex flex-col items-center gap-4">
         <Alert variant="destructive">
-          <AlertTitle>Gagal</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>Kuis Belum Tersedia</AlertTitle>
+          <AlertDescription>{error || "Soal kuis untuk ayat ini tidak ditemukan."}</AlertDescription>
         </Alert>
-        <Button asChild variant="outline"><Link href={`/irab/${surahId}/${ayat}`}>Kembali</Link></Button>
+        <Button asChild variant="outline"><Link href="/irab">Kembali ke Hi I&apos;rab</Link></Button>
       </div>
     );
   }
 
   if (isFinished) {
-    const isPerfect = score === quizData.questions.length;
-    const percentage = Math.round((score / quizData.questions.length) * 100);
+    const isPerfect = score === questions.length;
+    const percentage = Math.round((score / questions.length) * 100);
 
     return (
-      <div className="max-w-md mx-auto py-10 flex flex-col gap-10 pb-32 px-4 sm:px-0">
-        <Card className="text-center border-[#D4AF37]/20 shadow-xl overflow-hidden">
+      <div className="max-w-md mx-auto py-8 flex flex-col gap-8 pb-32 px-4 sm:px-0">
+        <Card className="text-center border-none shadow-2xl overflow-hidden rounded-3xl bg-white">
           <div className={cn(
-            "p-8 flex flex-col items-center gap-4 text-white transition-colors duration-500",
-            isPerfect ? "bg-[#D4AF37]" : "bg-rose-900"
+            "p-10 flex flex-col items-center gap-4 text-white relative overflow-hidden",
+            isPerfect ? "bg-gradient-to-br from-amber-400 to-orange-500" : "bg-rose-900"
           )}>
-            <Trophy className={cn("w-16 h-16", isPerfect && "animate-bounce")} />
-            <h2 className="text-2xl font-bold font-headline">
-              {isPerfect ? "Sempurna!" : "Belum Sempurna"}
-            </h2>
-            {isPerfect && <Badge className="bg-white text-black font-black">+10 POIN</Badge>}
-          </div>
-          <CardContent className="pt-8 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="text-4xl font-bold">{percentage}%</div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skor</p>
+            {isPerfect && (
+              <div className="absolute top-4 right-4 animate-pulse">
+                <Badge className="bg-white text-orange-600 font-black border-none">+10 POIN</Badge>
               </div>
-              <div className="space-y-1">
-                <div className="text-4xl font-bold">{formatTime(totalTime)}</div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Waktu</p>
+            )}
+            <Trophy className={cn("w-16 h-16", isPerfect && "animate-bounce")} />
+            <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">
+              {isPerfect ? "MasyaAllah Sempurna!" : "Belum Sempurna"}
+            </h2>
+            <p className="text-xs font-bold opacity-90 uppercase tracking-widest">
+              {currentData.surah} Ayat {currentData.ayat} • Skor {score}/{questions.length}
+            </p>
+          </div>
+          <CardContent className="p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-2xl">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Waktu</p>
+                <p className="text-xl font-bold">{formatTime(totalTime)}</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-2xl">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Akurasi</p>
+                <p className="text-xl font-bold">{percentage}%</p>
               </div>
             </div>
 
             <div className="bg-muted/30 p-4 rounded-xl space-y-3">
-              <p className="text-sm font-medium">Percobaan ke-{attempts}</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Percobaan ke-{attempts}</p>
               {!isPerfect ? (
                 <Alert className="bg-rose-50 border-rose-200 text-rose-800 text-left">
                   <RefreshCw className="h-4 w-4 text-rose-800" />
                   <AlertTitle className="text-xs font-bold uppercase">Target Harus 100%</AlertTitle>
-                  <AlertDescription className="text-[10px]">
-                    Silakan ulangi kuis hingga Anda benar-benar memahami i'rab ayat ini.
+                  <AlertDescription className="text-[11px]">
+                    Silakan ulangi kuis atau pelajari kembali analisis ayat ini hingga seluruh kedudukan I&apos;rab terjawab tepat.
                   </AlertDescription>
                 </Alert>
               ) : (
                 <Alert className="bg-emerald-50 border-emerald-200 text-emerald-800 text-left">
                   <CheckCircle2 className="h-4 w-4 text-emerald-800" />
-                  <AlertTitle className="text-xs font-bold uppercase">Berhasil!</AlertTitle>
-                  <AlertDescription className="text-[10px]">
-                    Masyallah! Anda telah menguasai i'rab ayat ini. Teruslah ber-Itqan!
+                  <AlertTitle className="text-xs font-bold uppercase">Lulus 100%!</AlertTitle>
+                  <AlertDescription className="text-[11px]">
+                    Alhamdulillah, Anda telah menguasai kedudukan I&apos;rab pada {currentData.surah} Ayat {currentData.ayat}.
                   </AlertDescription>
                 </Alert>
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-3 p-6">
+
+          {/* Direct Next Verse Navigation — Exact Hi Mufradat Completion Flow */}
+          <CardFooter className="flex flex-col gap-3 p-6 border-t bg-slate-50/50">
             {isPerfect ? (
               <div className="flex flex-col gap-3 w-full">
+                {nextInSurah ? (
+                  <>
+                    <Button
+                      asChild
+                      className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black py-7 rounded-2xl shadow-xl uppercase tracking-[0.1em] text-xs gap-2 border-b-4 border-black/10 transition-all active:translate-y-1 active:border-b-0"
+                    >
+                      <Link href={`/irab/${nextInSurah.surahId}/${nextInSurah.ayat}/quiz`}>
+                        <Zap className="w-4 h-4 fill-current" /> LANGSUNG KUIS AYAT {nextInSurah.ayat}
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="w-full border-2 border-[#800000]/20 text-[#800000] font-black py-7 rounded-2xl uppercase tracking-widest text-xs gap-2 hover:bg-[#800000]/5 transition-all"
+                    >
+                      <Link href={`/irab/${nextInSurah.surahId}/${nextInSurah.ayat}`}>
+                        BEDAH I&apos;RAB AYAT {nextInSurah.ayat} <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </Button>
+                  </>
+                ) : nextSurah && nextGlobal ? (
+                  <Button
+                    asChild
+                    className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black py-7 rounded-2xl shadow-xl uppercase tracking-wider text-xs gap-2"
+                  >
+                    <Link href={`/irab/${nextGlobal.surahId}/${nextGlobal.ayat}`}>
+                      LANJUT KE SURAH {nextSurah.name.toUpperCase()} (AYAT 1) <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <div className="w-full p-4 bg-emerald-50 rounded-2xl text-center border border-emerald-100 mb-1">
+                    <p className="text-xs font-bold text-emerald-800 uppercase tracking-widest">Maa Syaa Allah!</p>
+                    <p className="text-[11px] text-emerald-600 font-medium">Anda telah menyelesaikan seluruh ayat pada surah ini.</p>
+                  </div>
+                )}
+
                 <Button
-                  className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-bold h-14"
-                  onClick={() => router.push(`/irab/${surahId}/${ayat}`)}
+                  asChild
+                  variant="outline"
+                  className="w-full border-2 border-slate-200 font-bold py-6 rounded-2xl hover:bg-white bg-white text-slate-600"
                 >
-                  Kembali ke Analisis
+                  <Link href={`/irab/${surahId}/${ayat}`}>
+                    <BookOpen className="w-4 h-4 mr-2" /> KEMBALI KE ANALISIS AYAT {currentData.ayat}
+                  </Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full border-2 border-black hover:bg-black/5 text-black font-bold h-12">
-                  <Link href="/irab">DAFTAR AYAT</Link>
+                <Button asChild variant="ghost" className="w-full text-slate-500 font-bold text-xs uppercase tracking-widest">
+                  <Link href={`/irab?surah=${surahId}`}>KEMBALI KE DAFTAR AYAT</Link>
                 </Button>
               </div>
             ) : (
-              <Button
-                className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-bold h-12 gap-2 shadow-lg"
-                onClick={handleReset}
-              >
-                <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
-              </Button>
+              <div className="flex flex-col gap-3 w-full">
+                <Button
+                  className="w-full bg-[#D4AF37] hover:bg-[#B8860B] text-black font-black py-7 rounded-2xl gap-2 shadow-xl uppercase tracking-widest text-xs"
+                  onClick={handleReset}
+                >
+                  <RefreshCw className="w-4 h-4" /> ULANGI KUIS SEKARANG
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full border-2 border-[#800000]/20 text-[#800000] font-black py-6 rounded-2xl uppercase tracking-widest text-xs gap-2"
+                >
+                  <Link href={`/irab/${surahId}/${ayat}`}>
+                    <BookOpen className="w-4 h-4" /> PELAJARI ULANG I&apos;RAB AYAT {currentData.ayat}
+                  </Link>
+                </Button>
+              </div>
             )}
           </CardFooter>
         </Card>
@@ -464,7 +454,7 @@ export default function IrabQuizPage() {
                     {idx === 0 && <Star className="w-3 h-3 fill-current text-[#D4AF37] shrink-0" />}
                   </div>
                 )) : (
-                  <div className="py-8 text-center text-muted-foreground italic text-xs">Belum ada pejuang I'rab di ayat ini.</div>
+                  <div className="py-8 text-center text-muted-foreground italic text-xs">Belum ada pejuang I&apos;rab di ayat ini.</div>
                 )}
               </div>
             </CardContent>
@@ -476,27 +466,61 @@ export default function IrabQuizPage() {
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6 px-4 sm:px-0 pb-32">
-      <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" size="icon">
+      {/* Sticky Header with Prev / Next Ayat Navigation */}
+      <div className="flex items-center gap-3 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 border-b">
+        <Button asChild variant="ghost" size="icon" className="text-[#800000] shrink-0">
           <Link href={`/irab/${surahId}/${ayat}`}><ChevronLeft className="h-6 w-6" /></Link>
         </Button>
-        <div className="flex-1">
-          <h1 className="text-lg font-bold font-headline">Kuis I'rab</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-sm sm:text-lg font-black font-headline truncate">
+            Kuis I&apos;rab • {currentData.surah} ({currentData.ayat}/{totalVersesInSurah})
+          </h1>
           <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <span className="text-[#800000]">Soal {currentIdx + 1}/{questions.length}</span>
+            <span>•</span>
             <span className="text-[#D4AF37]">Percobaan {attempts}</span>
             <span>•</span>
             <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {formatTime(totalTime)}</span>
           </div>
         </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!prevGlobal}
+            onClick={() => prevGlobal && router.push(`/irab/${prevGlobal.surahId}/${prevGlobal.ayat}/quiz`)}
+            title={prevGlobal ? `Kuis Ayat Sebelumnya (${prevGlobal.surah}: ${prevGlobal.ayat})` : "Ayat Pertama"}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!nextGlobal}
+            onClick={() => nextGlobal && router.push(`/irab/${nextGlobal.surahId}/${nextGlobal.ayat}/quiz`)}
+            title={nextGlobal ? `Kuis Ayat Selanjutnya (${nextGlobal.surah}: ${nextGlobal.ayat})` : "Ayat Terakhir"}
+          >
+            <ArrowRight className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
-      <Progress value={((currentIdx + 1) / quizData.questions.length) * 100} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
+      <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-2 bg-muted [&>div]:bg-[#D4AF37]" />
 
       <Card className="border-[#D4AF37]/10 shadow-2xl overflow-hidden rounded-2xl">
-        <CardContent className="p-6 sm:p-8 text-center bg-muted/10 pt-10 pb-10">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-6">Pilih Jawaban yang Tepat:</div>
-          <div className="text-2xl sm:text-3xl font-bold text-[#B8860B] mb-2 leading-relaxed">
-            {quizData.questions[currentIdx]?.question}
+        <CardContent className="p-6 sm:p-8 text-center bg-muted/10 pt-8 pb-8 space-y-4">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Pilih Kedudukan I&apos;rab yang Tepat:
+          </div>
+          {questions[currentIdx]?.wordArab && (
+            <div className="inline-block px-6 py-3 rounded-2xl bg-[#800000]/5 border border-[#800000]/15">
+              <span className="text-4xl sm:text-5xl font-arabic text-[#800000]" dir="rtl">
+                {questions[currentIdx].wordArab}
+              </span>
+            </div>
+          )}
+          <div className="text-lg sm:text-xl font-bold text-slate-800 leading-relaxed">
+            {questions[currentIdx]?.question}
           </div>
         </CardContent>
         <CardContent className="p-4 sm:p-6 grid grid-cols-1 gap-3 sm:gap-4">
@@ -508,7 +532,7 @@ export default function IrabQuizPage() {
                 "h-auto py-4 sm:py-5 text-base sm:text-lg font-bold transition-all border-2 bg-white ring-0 focus:ring-0 focus-visible:ring-0 outline-none shadow-sm rounded-xl",
                 selectedAnswer === option && isCorrect === true && "bg-green-100 border-green-500 text-green-700",
                 selectedAnswer === option && isCorrect === false && "bg-red-100 border-red-500 text-red-700",
-                selectedAnswer && option === quizData.questions[currentIdx]?.correct && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
+                selectedAnswer && option === questions[currentIdx]?.correct && isCorrect === false && "bg-green-100 border-green-500 text-green-700",
                 !selectedAnswer && "hover:border-[#D4AF37] hover:text-[#B8860B]"
               )}
               onClick={() => handleAnswer(option)}
@@ -518,7 +542,7 @@ export default function IrabQuizPage() {
                 <span className="truncate">{option}</span>
                 {selectedAnswer === option && isCorrect === true && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
                 {selectedAnswer === option && isCorrect === false && <XCircle className="w-5 h-5 text-red-600 shrink-0" />}
-                {selectedAnswer && option === quizData.questions[currentIdx]?.correct && isCorrect === false && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
+                {selectedAnswer && option === questions[currentIdx]?.correct && isCorrect === false && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
               </div>
             </Button>
           ))}
@@ -526,7 +550,7 @@ export default function IrabQuizPage() {
       </Card>
 
       <p className="text-[10px] text-center text-muted-foreground italic">
-        Uji pemahaman Anda tentang kedudukan i'rab setiap kata dalam ayat ini.
+        Uji pemahaman Anda tentang kedudukan i&apos;rab setiap kata dalam {currentData.surah} Ayat {currentData.ayat}.
       </p>
     </div>
   );
