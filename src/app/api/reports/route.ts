@@ -78,13 +78,14 @@ export async function POST(req: Request) {
     const moduleName = String(body.module_name || 'Aplikasi Hi AQLI').trim().slice(0, 120);
     const pagePath = String(body.page_path || '/').trim().slice(0, 300);
     const category = String(body.category || 'koreksi_konten').trim().slice(0, 80);
-    const contextTitle = body.context_title ? String(body.context_title).trim().slice(0, 200) : null;
+    const contextTitle = body.context_title ? String(body.context_title).trim().slice(0, 240) : null;
     const contextExcerpt = body.context_excerpt ? String(body.context_excerpt).trim().slice(0, 1500) : null;
-    const description = String(body.description || '').trim().slice(0, 3000);
+    const rawDesc = String(body.description || '').trim().slice(0, 3000);
+    const description = rawDesc || `${contextTitle ? `[${contextTitle}] ` : ''}Laporan cepat (${category})`;
 
-    if (!description || description.length < 4) {
+    if (!contextTitle && !rawDesc) {
       return NextResponse.json(
-        { success: false, error: 'Mohon tuliskan detail kendala atau koreksi minimal 4 karakter.' },
+        { success: false, error: 'Mohon pilih bagian halaman yang ingin dilaporkan.' },
         { status: 400 }
       );
     }
