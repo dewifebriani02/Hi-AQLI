@@ -662,7 +662,7 @@ export default function DashboardPage() {
   // ONBOARDING CHECKLIST LOGIC
 
   return (
-    <div className="flex flex-col gap-6 pb-24 max-w-2xl mx-auto">
+    <div className="flex flex-col gap-5 pb-2 max-w-2xl mx-auto">
       {/* Header: Greeting & Points */}
       <div className="flex items-start justify-between mt-4 px-1">
         <div className="space-y-1">
@@ -1143,7 +1143,7 @@ export default function DashboardPage() {
       </div>
 
       {user && userData?.referral_code && (
-        <div className="mx-1 mb-6">
+        <div className="mx-1">
           <Card className="border border-[#D4AF37]/40 shadow-xl overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] via-[#680000] to-[#450000] text-white relative">
             <div className="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-[#D4AF37]/15 blur-2xl pointer-events-none" />
             <div className="absolute -left-10 -bottom-10 w-32 h-32 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
@@ -1285,7 +1285,7 @@ export default function DashboardPage() {
       )}
 
       {/* Footer: Community Links */}
-      <div className="mt-8 mb-4 px-4 py-8 bg-[#800000]/5 rounded-[2.5rem] border border-[#800000]/10 flex flex-col items-center gap-6">
+      <div className="mt-1 px-4 py-6 bg-[#800000]/5 rounded-[2rem] border border-[#800000]/10 flex flex-col items-center gap-4">
         <div className="text-center space-y-1">
           <p className="text-[10px] font-black text-[#800000] uppercase tracking-[0.2em]">Gabung Komunitas Kami</p>
           <h3 className="text-lg font-black text-slate-800 font-headline">Lebih Dekat Dengan Al-Qur'an</h3>

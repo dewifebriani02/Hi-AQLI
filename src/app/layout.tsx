@@ -274,7 +274,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             <main className="p-3 sm:p-6 lg:p-8 flex-1 min-w-0">
               {children}
               {!isAdminRoute && !isAuthPage && (
-                <div className="max-w-5xl mx-auto mt-10 pt-4 border-t border-slate-200/70 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left px-2">
+                <div className="max-w-5xl mx-auto mt-4 pt-3 border-t border-slate-200/70 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left px-2">
                   <p className="text-[11px] text-slate-500 font-medium">
                     Menemukan kekeliruan harakat, terjemah, soal kuis, rujukan jawaban, atau kendala teknis di halaman ini?
                   </p>
