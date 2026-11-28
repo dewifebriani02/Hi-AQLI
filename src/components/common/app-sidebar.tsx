@@ -55,7 +55,6 @@ const adminItems: AdminMenuItem[] = [
   { href: "/admin/users", label: "Manajemen Users", icon: UserCog },
   { href: "/admin/thalibah", label: "Direktori Thalibah", icon: Users },
   { href: "/admin/finance", label: "Monitor Keuangan", icon: BarChart3 },
-  { href: "/admin/vouchers", label: "Manajemen Voucher", icon: ShieldCheck },
   {
     label: "Kelola Hi Mufradat",
     icon: GraduationCap,

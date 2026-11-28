@@ -104,7 +104,9 @@ function RegistrationForm() {
     return names[programParam] || programParam;
   }, [programParam]);
 
-  const { data: userData, isLoading: isUserDocLoading } = useDoc(user ? "users" : null, user?.id);
+  const { data: userData, isLoading: isUserDocLoading, refresh: refreshUserData } = useDoc(user ? "users" : null, user?.id);
+  const { data: assignedGroupData } = useDoc(userData?.mufradat_group_id ? "mufradat_groups" : null, userData?.mufradat_group_id);
+  const [joinedMufradatGroup, setJoinedMufradatGroup] = useState<{ id: string; name: string; whatsapp_link: string | null } | null>(null);
   const fullSalutation = userData?.salutation || "Ukhti";
   const callSign = getCallSign(fullSalutation);
 
@@ -118,25 +120,18 @@ function RegistrationForm() {
 
   const [selectedHalaqahId, setSelectedHalaqahId] = useState<string | null>(halaqahId);
 
-  // Auto-find the circle if ID is in params
-  const circle = useMemo(() => {
-    const searchPool = programParam ? filteredHalaqahs : allHalaqahs;
-    if (!selectedHalaqahId || !searchPool) return null;
-    return searchPool.find(h => h.id === selectedHalaqahId);
-  }, [selectedHalaqahId, allHalaqahs, filteredHalaqahs, programParam]);
-
   // 2. Resolve Virtual IDs to real UUIDs for database operations
   const { data: mufradatGroups } = useCollection("mufradat_groups", {
     limit: 1,
     orderBy: { column: 'created_at', ascending: true }
   });
   const defaultGroup = mufradatGroups?.[0];
+  const activeMufradatGroup = joinedMufradatGroup || assignedGroupData || defaultGroup;
 
   const resolvedHalaqahId = useMemo(() => {
     const searchPool = programParam ? filteredHalaqahs : allHalaqahs;
     if (!selectedHalaqahId || !searchPool) return selectedHalaqahId;
 
-    // Virtual ID mapping to programType (only applies when not filtered by program)
     if (!programParam) {
       if (selectedHalaqahId === 'mufradat-premium') {
         return allHalaqahs?.find(h => h.program_type === 'hi_mufradat')?.id || selectedHalaqahId;
@@ -148,6 +143,13 @@ function RegistrationForm() {
 
     return selectedHalaqahId;
   }, [selectedHalaqahId, allHalaqahs, filteredHalaqahs, programParam]);
+
+  // Auto-find the circle if ID is in params (checking both raw and resolved IDs)
+  const circle = useMemo(() => {
+    const searchPool = programParam ? filteredHalaqahs : allHalaqahs;
+    if (!selectedHalaqahId || !searchPool) return null;
+    return searchPool.find(h => h.id === selectedHalaqahId || h.id === resolvedHalaqahId) || null;
+  }, [selectedHalaqahId, resolvedHalaqahId, allHalaqahs, filteredHalaqahs, programParam]);
 
   // Robust Auto-selection based on URL program parameter
   useEffect(() => {
@@ -185,7 +187,7 @@ function RegistrationForm() {
       filters: [
         { column: 'user_id', operator: '==', value: user?.id },
         { column: 'halaqah_id', operator: '==', value: resolvedHalaqahId },
-        { column: 'status', operator: 'in', value: ["active", "pending_verification"] }
+        { column: 'status', operator: 'in', value: ["active", "verified", "pending_verification"] }
       ].filter(f => f.column !== 'halaqah_id' || (f.value && f.value.length > 20)) 
     };
   }, [user?.id, resolvedHalaqahId]);
@@ -206,12 +208,19 @@ function RegistrationForm() {
     }
   }, [isUserLoading, isUserDocLoading, isRegLoading, isHalaqahsLoading, isAllRegLoading]);
 
-  const isProfileActive = (
-    (selectedHalaqahId && userData?.followed_halaqahs?.includes(selectedHalaqahId))
+  const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium' || programParam === 'hi_mufradat');
+  const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1' || programParam === 'tikrar_daily';
+  const isNgaji = (circle?.program_type || circle?.programType) === 'hi_ngaji' || programParam === 'hi_ngaji';
+
+  const isProfileActive = Boolean(
+    (selectedHalaqahId && userData?.followed_halaqahs?.includes(selectedHalaqahId)) ||
+    (resolvedHalaqahId && userData?.followed_halaqahs?.includes(resolvedHalaqahId)) ||
+    (isMufradat && userData?.mufradat_status === 'active') ||
+    (isTikrar && userData?.is_tikrar_paid)
   );
 
   const existingReg = existingRegs?.[0];
-  const isActuallyActive = isProfileActive || existingReg?.status === 'active';
+  const isActuallyActive = isProfileActive || ['active', 'verified'].includes(existingReg?.status);
   const isActuallyPending = !isActuallyActive && existingReg?.status === 'pending_verification';
 
   const [step, setStep] = useState(1);
@@ -286,9 +295,6 @@ function RegistrationForm() {
   }, [userData?.referred_by_id, searchParams, appliedReferral]);
 
   // Program Detection
-  const isMufradat = ((circle?.program_type || circle?.programType) === 'hi_mufradat' || selectedHalaqahId === 'mufradat-premium');
-  const isTikrar = (circle?.program_type || circle?.programType) === 'tikrar_daily' || selectedHalaqahId === 'tikrar-premium' || selectedHalaqahId === 'tikrar-j30-b1';
-  const isNgaji = (circle?.program_type || circle?.programType) === 'hi_ngaji' || programParam === 'hi_ngaji';
 
   const programKey = isMufradat ? 'mufradat' : isTikrar ? 'tikrar' : isNgaji ? 'ngaji' : programKeyFromType(circle?.program_type || circle?.programType);
   const isFree = isProgramFree(programKey, circle);
@@ -548,6 +554,10 @@ function RegistrationForm() {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error?.message || 'Gagal mendaftar program.');
+        if (json?.data?.mufradat_group) {
+          setJoinedMufradatGroup(json.data.mufradat_group);
+        }
+        refreshUserData();
         setSubmitted(true);
         toast({ title: "Pendaftaran Berhasil", description: "Akses program sudah aktif." });
         return;
@@ -748,10 +758,28 @@ function RegistrationForm() {
                 </div>
               )}
             </div>
+            {isActuallyActive && isMufradat && activeMufradatGroup && (
+              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-2 text-center">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                  Grup Monitoring: {activeMufradatGroup.name}
+                </p>
+                {activeMufradatGroup.whatsapp_link ? (
+                  <Button asChild size="sm" className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black h-10 rounded-xl gap-2">
+                    <a href={activeMufradatGroup.whatsapp_link} target="_blank" rel="noopener noreferrer">
+                      <Phone className="w-4 h-4" /> GABUNG GRUP WHATSAPP
+                    </a>
+                  </Button>
+                ) : (
+                  <p className="text-[11px] text-emerald-800/80 font-medium">
+                    Tautan grup WhatsApp {activeMufradatGroup.name} sedang disiapkan Admin.
+                  </p>
+                )}
+              </div>
+            )}
             <Button asChild className={cn("w-full font-black h-14 rounded-xl text-lg shadow-lg", isActuallyActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#800000]")}>
               <Link href={isActuallyActive ? 
-                (halaqahId === 'tikrar-j30-b1' || selectedHalaqahId === 'tikrar-premium' ? '/tikrar' : 
-                 (selectedHalaqahId === 'mufradat-premium' || isMufradat ? '/mufradat' : '/')) 
+                (isTikrar ? '/tikrar' : 
+                 (isMufradat ? '/mufradat' : (resolvedHalaqahId ? `/study-circles/${resolvedHalaqahId}` : '/'))) 
                 : (isActuallyPending ? '/mufradat' : "/")}>
                 {isActuallyActive ? <><PlayCircle className="mr-2 w-6 h-6" /> MASUK KELAS</> : (isActuallyPending ? "MULAI BELAJAR SEKARANG" : "KEMBALI KE DASBOR")}
               </Link>
@@ -786,15 +814,21 @@ function RegistrationForm() {
                 <div className="p-6 bg-emerald-50 rounded-[2rem] border-2 border-emerald-100 space-y-4 animate-in zoom-in duration-500">
                   <div className="flex flex-col items-center gap-2">
                     <Badge className="bg-emerald-600 text-white font-black text-[9px] px-3 py-1 uppercase tracking-widest">Gabung Grup Monitoring</Badge>
-                    <h3 className="text-lg font-black text-emerald-900 leading-tight">{defaultGroup?.name || "Grup Hi Mufradat"}</h3>
+                    <h3 className="text-lg font-black text-emerald-900 leading-tight">{activeMufradatGroup?.name || "Grup Hi Mufradat"}</h3>
                   </div>
 
                   <div className="grid grid-cols-1 gap-2">
-                    <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black h-12 rounded-xl shadow-lg shadow-emerald-500/20 gap-2">
-                      <a href={defaultGroup?.whatsapp_link || "https://chat.whatsapp.com/Bv8e0k51CdVH12ahImxLaq"} target="_blank" rel="noopener noreferrer">
-                        <Phone className="w-4 h-4" /> GABUNG GRUP WHATSAPP
-                      </a>
-                    </Button>
+                    {activeMufradatGroup?.whatsapp_link ? (
+                      <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black h-12 rounded-xl shadow-lg shadow-emerald-500/20 gap-2">
+                        <a href={activeMufradatGroup.whatsapp_link} target="_blank" rel="noopener noreferrer">
+                          <Phone className="w-4 h-4" /> GABUNG GRUP WHATSAPP
+                        </a>
+                      </Button>
+                    ) : (
+                      <div className="p-3 bg-white/80 rounded-xl border border-emerald-200 text-xs font-semibold text-emerald-800">
+                        Tautan grup WhatsApp {activeMufradatGroup?.name || 'terbaru'} sedang disiapkan Admin. Silakan langsung mulai belajar sekarang!
+                      </div>
+                    )}
                     <Button asChild variant="outline" className="w-full border-emerald-600 text-emerald-700 font-black h-12 rounded-xl gap-2">
                       <a href="https://hiaqli.pro/panduan/mufradat" target="_blank" rel="noopener noreferrer">
                         <BookOpen className="w-4 h-4" /> PANDUAN PENGGUNAAN
@@ -894,7 +928,7 @@ function RegistrationForm() {
                       <>
                         {(programParam ? filteredHalaqahs : (allHalaqahs || [])).map(h => (
                           <SelectItem key={h.id} value={h.id} className="font-bold py-3 text-xs">
-                            {h.title} {!isProgramFree(programKeyFromType(h.program_type), h) ? '(Berbayar)' : '(Gratis)'}
+                            {h.title} (Gratis)
                           </SelectItem>
                         ))}
                         {(!programParam && !allHalaqahs?.length) && (
@@ -1354,7 +1388,7 @@ function RegistrationForm() {
                     <div className="space-y-4 text-[11px] text-emerald-900 leading-relaxed font-medium">
                       <div className="p-3 bg-white/50 rounded-xl border border-emerald-100">
                         <p className="font-black text-[#800000] uppercase text-[9px] mb-1">Masa Belajar & Aktivasi:</p>
-                        <p>Halaqah dimulai kapan saja. Masa aktif akses & monitoring berlaku selama **30 hari** terhitung sejak tanggal pendaftaran {fullSalutation} diverifikasi (aktif).</p>
+                        <p>Program Hi Mufradat 100% gratis dan akses {fullSalutation} langsung aktif tanpa batas waktu maupun biaya bulanan.</p>
                       </div>
                       
                       <p>Dengan mendaftar Hi Mufradat, saya berjanji untuk:</p>
@@ -1548,7 +1582,7 @@ function RegistrationForm() {
               ) : (
                 <div className="p-8 bg-emerald-50 rounded-3xl border-2 border-emerald-100 text-center space-y-4">
                   <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto" />
-                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini terbuka secara gratis untuk {fullSalutation}. Tekan tombol di bawah untuk aktivasi antrean verifikasi.</p>
+                  <p className="text-sm font-bold text-emerald-800 leading-relaxed">Masyallah! Kelas ini 100% gratis untuk {fullSalutation}. Tekan tombol di bawah untuk langsung mengaktifkan akses.</p>
                 </div>
               )}
               <Button onClick={handleConfirm} disabled={loading} className="w-full h-16 bg-[#800000] hover:bg-[#800000]/90 font-black rounded-xl text-lg uppercase tracking-widest shadow-2xl">

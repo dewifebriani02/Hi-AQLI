@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from "react";
-import { useUser, db } from "@/db";
+import { useUser, db, authFetch } from "@/db";
 import { useCollection } from "@/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -70,8 +70,7 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { getMufradatStatus } from "@/lib/mufradat-access";
-import { format, addMonths } from "date-fns";
+import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
 const ROLES = [
@@ -142,14 +141,30 @@ export default function AdminUsersPage() {
   // Activate confirmation dialog
   const [activateTarget, setActivateTarget] = useState<{ id: string; username: string } | null>(null);
   const [isActivating, setIsActivating] = useState(false);
+  const [isBulkActivateOpen, setIsBulkActivateOpen] = useState(false);
+  const [isBulkActivating, setIsBulkActivating] = useState(false);
 
   const { data: users, isLoading: isUsersLoading, refresh: refreshUsers } = useCollection("users");
   const { data: adminRoles, refresh: refreshAdminRoles } = useCollection("roles_admin");
   const { data: superAdminRoles } = useCollection("roles_superadmin");
-  const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations");
-  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection("voucher_redemptions", { 
-    select: "*, vouchers(*)" 
-  });
+  const { data: mufradatGroups, refresh: refreshGroups } = useCollection("mufradat_groups");
+
+  const groupNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    mufradatGroups?.forEach((g: any) => {
+      if (g?.id) map.set(g.id, g.name || 'Grup');
+    });
+    return map;
+  }, [mufradatGroups]);
+
+  const unactivatedCount = useMemo(() => {
+    if (!users) return 0;
+    return users.filter(
+      (u: any) =>
+        !u.is_blacklisted &&
+        (u.mufradat_status !== 'active' || !u.is_tikrar_paid || !u.mufradat_group_id)
+    ).length;
+  }, [users]);
 
   const adminRoleIdSet = useMemo(() => {
     const ids = new Set<string>();
@@ -163,7 +178,7 @@ export default function AdminUsersPage() {
     return u.role_id || u.roleId || 'learner';
   };
 
-  const isLoading = isUsersLoading || isRegLoading || isRedemptionsLoading;
+  const isLoading = isUsersLoading;
 
   // KPI Counts
   const kpiStats = useMemo(() => {
@@ -372,6 +387,12 @@ export default function AdminUsersPage() {
         if (musyrifahError) throw new Error(musyrifahError.message || "User dibuat, tetapi gagal menyimpan hak akses musyrifah.");
       }
 
+      // Aktifkan otomatis semua program gratis + grup Mufradat untuk user baru
+      await authFetch('/api/admin/users/activate', {
+        method: 'POST',
+        body: JSON.stringify({ userId: newUserId }),
+      }).catch(() => {});
+
       toast({
         title: "User Berhasil Dibuat! 🎉",
         description: `Akun ${addForm.username} sebagai ${ROLES.find(r => r.id === addForm.role_id)?.name} telah tersimpan.`,
@@ -392,25 +413,50 @@ export default function AdminUsersPage() {
 
     setIsActivating(true);
     try {
-      const nextMonth = addMonths(new Date(), 1).toISOString();
-      const { error } = await db.from("users").update({
-        mufradat_due_date: nextMonth,
-        mufradat_status: 'active',
-        updated_at: new Date().toISOString()
-      }).eq('id', activateTarget.id);
+      const res = await authFetch('/api/admin/users/activate', {
+        method: 'POST',
+        body: JSON.stringify({ userId: activateTarget.id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error?.message || 'Gagal mengaktifkan program user.');
 
-      if (error) throw error;
-      
       toast({
-        title: "Akses Diaktifkan! 🌟",
-        description: `Masa aktif ${activateTarget.username} diperpanjang hingga ${format(new Date(nextMonth), 'd MMMM yyyy', { locale: id })}.`
+        title: "Program Diaktifkan! 🌟",
+        description: `Akses penuh gratis (Hi Mufradat${json?.data?.group?.name ? ` • ${json.data.group.name}` : ''} & Hi Tikrar) untuk ${activateTarget.username} sudah aktif.`
       });
       setActivateTarget(null);
       refreshUsers();
+      refreshGroups();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Gagal aktivasi", description: err.message });
     } finally {
       setIsActivating(false);
+    }
+  };
+
+  const handleBulkActivateAll = async () => {
+    setIsBulkActivating(true);
+    try {
+      const res = await authFetch('/api/admin/users/activate', {
+        method: 'POST',
+        body: JSON.stringify({ all: true }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error?.message || 'Gagal mengaktifkan seluruh user.');
+
+      const count = json?.data?.activatedCount || 0;
+      const newGroups: string[] = json?.data?.createdGroups || [];
+      toast({
+        title: "Semua User Diaktifkan! 🎉",
+        description: `${count} pengguna aktif di semua program gratis.${newGroups.length ? ` Grup baru dibuat: ${newGroups.join(', ')}.` : ''}`
+      });
+      setIsBulkActivateOpen(false);
+      refreshUsers();
+      refreshGroups();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal aktivasi massal", description: err.message });
+    } finally {
+      setIsBulkActivating(false);
     }
   };
 
@@ -442,9 +488,24 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-center">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
           <Button
-            onClick={() => refreshUsers()}
+            onClick={() => setIsBulkActivateOpen(true)}
+            variant="outline"
+            size="sm"
+            className={cn(
+              "rounded-xl gap-1.5 font-bold text-xs h-9",
+              unactivatedCount > 0
+                ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                : "text-slate-600"
+            )}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            Aktifkan Semua{unactivatedCount > 0 ? ` (${unactivatedCount})` : ''}
+          </Button>
+
+          <Button
+            onClick={() => { refreshUsers(); refreshGroups(); }}
             variant="outline"
             size="sm"
             className="rounded-xl gap-1.5 font-bold text-xs h-9"
@@ -757,7 +818,7 @@ export default function AdminUsersPage() {
               <TableRow className="bg-slate-50/50">
                 <TableHead className="text-[10px] font-black uppercase text-slate-500 py-3 pl-6">Profil Pengguna</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-slate-500">Peran & Akses</TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-500">Masa Aktif & Program</TableHead>
+                <TableHead className="text-[10px] font-black uppercase text-slate-500">Status Program</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-slate-500 text-right pr-6">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -857,65 +918,60 @@ export default function AdminUsersPage() {
                         </div>
                       </TableCell>
 
-                      {/* Column 3: Masa Aktif & Program */}
+                      {/* Column 3: Status Program */}
                       <TableCell className="py-3">
                         <div className="flex flex-col gap-1">
                           {(() => {
-                            const userRegs = registrations?.filter(r => r.user_id === u.id) || [];
-                            const userReds = redemptions?.filter(r => r.user_id === u.id) || [];
-                            const access = getMufradatStatus({
-                              user: u, 
-                              registrations: userRegs, 
-                              redemptions: userReds
-                            });
-                            const status = access.status;
-                            
+                            const isMufradatActive = u.mufradat_status === 'active';
+                            const isTikrarActive = Boolean(u.is_tikrar_paid);
+                            const groupName = u.mufradat_group_id ? groupNameMap.get(u.mufradat_group_id) : null;
+                            const needsActivation = !u.is_blacklisted && (!isMufradatActive || !isTikrarActive || !u.mufradat_group_id);
+
                             return (
                               <>
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  {access.dueDate ? (
-                                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-[10px] font-bold text-slate-700">
-                                      <Calendar className={cn(
-                                        "w-3 h-3",
-                                        status === 'active' ? "text-emerald-600" : 
-                                        status === 'grace_period' ? "text-amber-500" : "text-rose-600"
-                                      )} />
-                                      <span>{format(access.dueDate, 'd MMM yyyy', { locale: id })}</span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-[10px] text-muted-foreground italic font-medium">Belum Berlangganan</span>
-                                  )}
-
                                   <Badge className={cn(
-                                    "text-[8px] font-black uppercase px-1.5 py-0 border-none",
-                                    status === 'active' ? "bg-emerald-100 text-emerald-700" : 
-                                    status === 'grace_period' ? "bg-amber-100 text-amber-700" : 
-                                    "bg-rose-100 text-rose-700"
+                                    "text-[8px] font-black uppercase px-1.5 py-0.5 border-none",
+                                    u.is_blacklisted
+                                      ? "bg-rose-100 text-rose-700"
+                                      : isMufradatActive
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-amber-100 text-amber-700"
                                   )}>
-                                    {status}
+                                    {u.is_blacklisted
+                                      ? 'Blacklisted'
+                                      : isMufradatActive
+                                      ? 'Mufradat Aktif (Gratis)'
+                                      : 'Mufradat Belum Aktif'}
                                   </Badge>
 
-                                  {u.is_tikrar_paid && (
-                                    <Badge className="bg-blue-100 text-blue-700 text-[8px] font-black uppercase px-1.5 py-0 border-none">
+                                  {groupName && (
+                                    <Badge variant="outline" className="text-[8px] font-bold px-1.5 py-0 border-emerald-200 bg-emerald-50/50 text-emerald-800">
+                                      {groupName}
+                                    </Badge>
+                                  )}
+
+                                  {isTikrarActive && (
+                                    <Badge className="bg-blue-100 text-blue-700 text-[8px] font-black uppercase px-1.5 py-0.5 border-none">
                                       Tikrar J{u.paidJuz || 30}
                                     </Badge>
                                   )}
                                 </div>
 
-                                <div className="flex items-center gap-2 mt-0.5">
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                   {u.created_at && (
                                     <span className="text-[9px] text-slate-400 font-medium">
-                                      Daftar: {format(new Date(u.created_at), 'dd/MM/yyyy')}
+                                      Daftar: {format(new Date(u.created_at), 'dd/MM/yyyy', { locale: id })}
                                     </span>
                                   )}
-                                  {!access.dueDate && (
+                                  {needsActivation && (
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      onClick={() => setActivateTarget({ id: u.id, username: u.username || u.full_name })}
+                                      onClick={() => setActivateTarget({ id: u.id, username: u.username || u.full_name || u.email })}
                                       className="h-5 px-1.5 text-[8px] font-black uppercase text-emerald-600 hover:bg-emerald-50"
                                     >
-                                      + 1 Bln Mufradat
+                                      Aktifkan Program
                                     </Button>
                                   )}
                                 </div>
@@ -1170,16 +1226,16 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ACTIVATE 1 MONTH CONFIRMATION */}
+      {/* SINGLE USER ACTIVATE CONFIRMATION */}
       <AlertDialog open={!!activateTarget} onOpenChange={(open) => !open && setActivateTarget(null)}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-slate-900">
               <Sparkles className="w-5 h-5 text-emerald-600" />
-              Aktifkan Akses Hi Mufradat
+              Aktifkan Program User
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Perpanjang masa aktif Hi Mufradat untuk <strong>{activateTarget?.username}</strong> selama 1 bulan dari sekarang?
+              Aktifkan seluruh akses program gratis (Hi Mufradat, Grup Mufradat, &amp; Hi Tikrar) untuk <strong>{activateTarget?.username}</strong> sekarang?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1190,7 +1246,33 @@ export default function AdminUsersPage() {
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
             >
               {isActivating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-              Ya, Aktifkan 1 Bulan
+              Ya, Aktifkan Program
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* BULK ACTIVATE ALL CONFIRMATION */}
+      <AlertDialog open={isBulkActivateOpen} onOpenChange={setIsBulkActivateOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-slate-900">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+              Aktifkan Seluruh User di Hi AQLI
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Semua user yang tidak di-blacklist akan langsung diaktifkan ke Hi Mufradat (beserta pembagian Grup kapasitas 50), semua 30 Juz, dan Hi Tikrar secara gratis. Lanjutkan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkActivating}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkActivateAll}
+              disabled={isBulkActivating}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+            >
+              {isBulkActivating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Ya, Aktifkan Semua
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

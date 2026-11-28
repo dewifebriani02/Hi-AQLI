@@ -81,7 +81,8 @@ export default function StudyCirclesPage() {
   const getHalaqahStatus = (id: string) => {
     const reg = allRegs?.find(r => r.halaqah_id === id);
     if (!reg) {
-      if (id === 'tikrar-j30-b1' && userData?.is_tikrar_paid) return 'active';
+      if ((id === 'tikrar-j30-b1' || id === 'tikrar-premium') && userData?.is_tikrar_paid) return 'active';
+      if (id === 'mufradat-premium' && userData?.mufradat_status === 'active') return 'active';
       if (userData?.followed_halaqahs?.includes(id)) return 'active';
       return 'none';
     }

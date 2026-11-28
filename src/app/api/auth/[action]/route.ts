@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { pool, query } from '@/lib/db';
 import { hashPassword, verifyPassword, signToken, getTokenFromRequest, verifyToken } from '@/lib/auth-server';
+import { activateUserPrograms } from '@/lib/user-activation';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(
@@ -116,13 +117,57 @@ export async function POST(
       const username = metadata.username || metadata.full_name || email.split('@')[0];
       const fullName = metadata.full_name || username;
       const phone = metadata.whatsapp || metadata.phone || null;
+      const salutation = metadata.salutation || 'Ukhti';
+      const firstNameRaw = (fullName || username || 'AQLI').split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '') || 'AQLI';
 
-      await query(
-        `INSERT INTO public.users (
-          id, email, encrypted_password, username, full_name, phone, whatsapp, role_id, "roleId", metadata, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'learner', 'learner', $8, now(), now())`,
-        [id, email, hashed, username, fullName, phone, phone, JSON.stringify(metadata)]
-      );
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        let referredById: string | null = null;
+        if (typeof metadata.referred_by_code === 'string' && metadata.referred_by_code.trim()) {
+          const refRes = await client.query(
+            `SELECT id FROM public.users WHERE UPPER(referral_code) = UPPER($1) LIMIT 1`,
+            [metadata.referred_by_code.trim()]
+          );
+          referredById = refRes.rows[0]?.id || null;
+        }
+
+        let referralCode = `AQLI-${firstNameRaw}01`;
+        for (let seq = 1; seq <= 99; seq++) {
+          const candidate = `AQLI-${firstNameRaw}${String(seq).padStart(2, '0')}`;
+          const taken = await client.query(
+            `SELECT id FROM public.users WHERE referral_code = $1 LIMIT 1`,
+            [candidate]
+          );
+          if (taken.rows.length === 0) {
+            referralCode = candidate;
+            break;
+          }
+          if (seq === 99) {
+            referralCode = `AQLI-${firstNameRaw}${Math.floor(100 + Math.random() * 899)}`;
+          }
+        }
+
+        const mergedMeta = { has_chosen_salutation: true, ...metadata };
+        await client.query(
+          `INSERT INTO public.users (
+            id, email, encrypted_password, username, full_name, phone, whatsapp,
+            salutation, referred_by_id, referral_code, role_id, "roleId", metadata, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'learner', 'learner', $11, now(), now())`,
+          [id, email, hashed, username, fullName, phone, phone, salutation, referredById, referralCode, JSON.stringify(mergedMeta)]
+        );
+
+        await activateUserPrograms(client, id);
+        await client.query('COMMIT');
+      } catch (txErr) {
+        try {
+          await client.query('ROLLBACK');
+        } catch {}
+        throw txErr;
+      } finally {
+        client.release();
+      }
 
       const user = {
         id,

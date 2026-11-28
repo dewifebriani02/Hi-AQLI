@@ -1,15 +1,11 @@
 'use client';
 
-import { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useCollection } from "@/db";
-import {useUser, db } from "@/db";
+import { useMemo, useState } from "react";
+import { useCollection, useDoc, useUser } from "@/db";
 import { 
   Card, 
   CardContent, 
   CardHeader, 
-  CardTitle, 
-  CardDescription,
   CardFooter 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,48 +15,32 @@ import {
   Calendar, 
   Users, 
   ArrowRight, 
-  Play, 
   Award,
   Zap,
-  Globe,
   Loader2,
   Lock,
   RotateCcw
 } from "lucide-react";
 import Link from "next/link";
-import { format, isAfter, isBefore, addMinutes } from "date-fns";
+import { format, isBefore, addMinutes } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-
-import { checkIsStudent } from "@/lib/access-control";
 
 export default function MufradatMabarOverviewPage() {
   const { user, isUserLoading } = useUser();
-  const router = useRouter();
-  const registrationsOptions = useMemo(() => ({
-    filters: [{ column: 'user_id', operator: '==', value: user?.id }]
-  }), [user?.id]);
-
-  const { data: registrations, isLoading: isRegLoading, refresh: refreshRegs } = useCollection(
-    user ? "halaqah_registrations" : null, 
-    registrationsOptions
+  const { data: userData, isLoading: isUserDataLoading, refresh: refreshUserData } = useDoc(
+    user?.id ? "users" : null,
+    user?.id
   );
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
+  const isBlocked = Boolean(user && userData?.is_blacklisted);
 
   const handleRefreshStatus = async () => {
     setIsRefreshing(true);
-    await refreshRegs();
+    await refreshUserData();
     setIsRefreshing(false);
   };
-
-  useEffect(() => {
-    if (!isUserLoading && !isRegLoading && user && !isStudent) {
-      // Redirect or show message? User requested content gating, Mabar is a premium feature.
-    }
-  }, [user, isStudent, isUserLoading, isRegLoading]);
 
   const sessionOptions = useMemo(() => ({
     orderBy: { column: 'scheduled_at', ascending: true },
@@ -69,26 +49,26 @@ export default function MufradatMabarOverviewPage() {
 
   const { data: sessions, isLoading: isSessionsLoading } = useCollection("mufradat_mabar_sessions", sessionOptions);
 
-  if (isSessionsLoading || isUserLoading || isRegLoading) return (
+  if (isSessionsLoading || isUserLoading || isUserDataLoading) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
       <Loader2 className="animate-spin w-10 h-10 text-[#800000]" />
       <p className="text-sm font-bold uppercase tracking-widest text-[#800000]">Mencari Kompetisi...</p>
     </div>
   );
 
-  if (user && !isStudent) {
+  if (isBlocked) {
     return (
       <div className="max-w-4xl mx-auto py-20 px-4 text-center space-y-6">
         <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-3xl flex items-center justify-center mx-auto shadow-lg">
           <Lock className="w-10 h-10" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-3xl font-black font-headline uppercase">Fitur Khusus Thalibah</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">Mabar Al-Qur'an adalah fitur eksklusif untuk thalibah yang terdaftar dalam program Hi AQLI. Mari bergabung sekarang!</p>
+          <h2 className="text-3xl font-black font-headline uppercase">Akses Dinonaktifkan</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">Akun Ukhti sedang dinonaktifkan sementara. Silakan hubungi Admin Hi AQLI untuk informasi lebih lanjut.</p>
         </div>
         <div className="flex flex-col gap-3">
           <Button asChild className="bg-[#800000] hover:bg-[#800000]/90 h-14 px-10 rounded-2xl font-black uppercase shadow-xl">
-            <Link href="/study-circles/registration">DAFTAR PROGRAM SEKARANG</Link>
+            <Link href="/programs">KEMBALI KE PROGRAM</Link>
           </Button>
           <Button 
             variant="ghost" 
@@ -97,12 +77,9 @@ export default function MufradatMabarOverviewPage() {
             className="text-xs font-bold text-muted-foreground hover:text-[#800000] gap-2"
           >
             {isRefreshing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
-            SUDAH DAFTAR? CEK STATUS PENDAFTARAN
+            PERIKSA ULANG STATUS AKUN
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground/60 italic font-medium">
-          Mendaftar dengan status "Menunggu Verifikasi" sudah cukup untuk mengakses halaman ini.
-        </p>
       </div>
     );
   }

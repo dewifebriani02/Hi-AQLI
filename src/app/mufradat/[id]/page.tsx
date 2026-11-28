@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Info, Mic2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, X, Gift, Zap } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Check, GraduationCap, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
@@ -14,14 +14,6 @@ import {
   TooltipTrigger,
   TooltipPortal,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/db";
 import { useCollection, useDoc } from "@/db";
@@ -56,15 +48,6 @@ interface SurahInfo {
   verses_count: number;
 }
 
-const RECITERS = [
-  { id: 7, name: "Mishary Rashid Alafasy" },
-  { id: 2, name: "AbdulBaset AbdulSamad (Murattal)" },
-  { id: 3, name: "Abdur-Rahman as-Sudais" },
-  { id: 6, name: "Mahmoud Khalil Al-Husary" },
-  { id: 12, name: "Saud al-Shuraim" },
-  { id: 1, name: "AbdulBaset AbdulSamad (Mujawwad)" },
-];
-
 export default function MufradatSurahDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -83,10 +66,8 @@ export default function MufradatSurahDetailPage() {
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [showReminder, setShowReminder] = useState(true);
 
   // Fetch progress for the current surah to handle locking
-  // Unified global progress fetch (no surah filter to avoid type/sync issues)
   const progressOptions = useMemo(() => ({
     filters: [
       { column: 'user_id', operator: '==', value: user?.id },
@@ -122,9 +103,9 @@ export default function MufradatSurahDetailPage() {
 
   const isStudent = useMemo(() => {
     const fromRegs = checkIsStudent(registrations || []);
-    const fromProfile = userData?.mufradat_status === 'active' || userData?.mufradat_status === 'trial';
+    const fromProfile = Boolean(user && !userData?.is_blacklisted);
     return fromRegs || fromProfile;
-  }, [registrations, userData]);
+  }, [registrations, user, userData]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -212,7 +193,6 @@ export default function MufradatSurahDetailPage() {
     // WAIT for ALL essential data to be ready before making a decision
     if (isUserLoading || isUserProgressLoading || isRegLoading || isUserDataLoading || isRedemptionsLoading || !user || !userProgress) return;
     
-    const hasAnyProgress = currentSurahPassedVerses.size > 0;
     const sId = Number(id);
     const startPage = SURAH_START_PAGES[sId] || 1;
     const isFreeSurah = [1, 112, 113, 114].includes(sId);
@@ -221,7 +201,6 @@ export default function MufradatSurahDetailPage() {
     const isUnlocked = isFreeSurah || isStudent || !access.isBlocked || sId === 2 || currentSurahPassedVerses.size > 0 || (startPage > 1 && completedPageQuizzes.has(startPage - 1));
     
     if (!isUnlocked) {
-      // Safety timeout to prevent race conditions during initial rendering
       const timer = setTimeout(() => {
         router.push('/mufradat');
       }, 1500);
@@ -245,8 +224,6 @@ export default function MufradatSurahDetailPage() {
 
       try {
         setLoading(true);
-
-        // Fetch next surah info if available (can stay background)
 
         // Fetch next surah info if available
         const nextId = Number(id) + 1;
@@ -276,11 +253,9 @@ export default function MufradatSurahDetailPage() {
   // Auto-scroll to last completed verse
   useEffect(() => {
     if (!loading && !isProgressLoading && verses.length > 0 && completedVerseNumbers.size > 0) {
-      // Find the highest completed verse number
       const lastCompleted = Math.max(...Array.from(completedVerseNumbers));
       
       if (lastCompleted > 0) {
-        // Delay slightly to ensure DOM is ready
         const timer = setTimeout(() => {
           const element = document.getElementById(`verse-${lastCompleted}`);
           if (element) {
@@ -305,11 +280,6 @@ export default function MufradatSurahDetailPage() {
     const newSize = Math.max(20, Math.min(fontSize + delta, 64));
     setFontSize(newSize);
     localStorage.setItem('aqli_mushaf_font_size', newSize.toString());
-  };
-
-  const selectReciter = (reciterId: number) => {
-    setSelectedReciterId(reciterId);
-    localStorage.setItem('aqli_reciter_id', reciterId.toString());
   };
 
   const toggleAudio = async (verseKey: string) => {
@@ -408,51 +378,6 @@ export default function MufradatSurahDetailPage() {
           </div>
         </div>
       </div>
- 
-      {/* Soft Reminder Banner (Horizontal Sleek) */}
-      {user && (access.showSoftReminder || access.status === 'trial') && showReminder && (
-        <div className={cn(
-          "mx-4 px-4 py-3 rounded-2xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 border-2 shadow-sm relative overflow-hidden",
-          access.status === 'trial' ? "bg-emerald-50 border-emerald-100" : "bg-amber-50 border-amber-100"
-        )}>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-              access.status === 'trial' ? "bg-white text-emerald-600" : "bg-white text-amber-600"
-            )}>
-              {access.status === 'trial' ? <Zap className="w-4 h-4 fill-current" /> : <Heart className="w-4 h-4 fill-amber-500" />}
-            </div>
-            <div className="min-w-0">
-              <p className={cn(
-                "text-[11px] font-black leading-tight truncate",
-                access.status === 'trial' ? "text-emerald-900" : "text-amber-900"
-              )}>
-                {access.status === 'trial' ? "Mode Trial Aktif" : access.message}
-              </p>
-              {access.status === 'trial' && <p className="text-[9px] text-emerald-700/70 font-bold">Akses terbuka sementara 24 jam.</p>}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 shrink-0">
-            <Button asChild size="sm" className={cn(
-              "font-black text-[10px] h-8 px-3 rounded-lg shadow-sm transition-all active:scale-[0.98]",
-              access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
-            )}>
-              <Link href="/mufradat/billing">
-                {access.status === 'trial' ? 'STATUS' : 'INFAQ'}
-              </Link>
-            </Button>
-            <button 
-              onClick={() => setShowReminder(false)}
-              className="p-1 hover:bg-black/5 rounded-full transition-colors text-muted-foreground"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-
 
       {/* Murajaah Quiz Banner - Access after completing enough verses */}
       {completedVerseNumbers.size >= Math.min(verses.length, 3) && (
@@ -492,18 +417,12 @@ export default function MufradatSurahDetailPage() {
             // Sequential rule: Verse V is unlocked if previous verse is done
             const isPrevVerseDone = isFirstVerse || completedVerseNumbers.has(prevVerse?.verse_number || 0);
 
-            // A verse is UNLOCKED if:
-            // 1. It is a Free Surah (Fatihah & 3 Qul)
-            // 2. OR It is the very first verse of the Quran (1:1)
-            // 3. OR It's already completed (Passed)
-            // 4. OR Previous verse is done (Linear flow)
             const isFreeSurah = [1, 112, 113, 114].includes(Number(id));
             const isUnlockedByContext = isFreeSurah || isPrevVerseDone;
             const isLocked = !isFreeSurah && !isQuranStart && !isCompleted && !isUnlockedByContext;
 
             return (
               <div key={verse.id}>
-                {/* Page Break Indicator (Optional, but keeping UI clean as requested) */}
                 {isNewPage && (
                   <div className="mx-8 my-4 h-px bg-slate-100 relative">
                      <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 bg-white text-[10px] font-bold text-slate-300 uppercase tracking-widest">
@@ -643,7 +562,7 @@ export default function MufradatSurahDetailPage() {
         </div>
       )}
 
-      {/* Access Blocked Overlay - Only show if not a Free Surah or if user is logged in but blocked */}
+      {/* Access Blocked Overlay - Only show if user is blacklisted or signed out on locked surah */}
       {(![1, 112, 113, 114].includes(parseInt(id)) || (user && access.isBlocked)) && access.isBlocked && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
           <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
@@ -656,14 +575,12 @@ export default function MufradatSurahDetailPage() {
                    <p className="text-sm font-bold text-slate-800 leading-relaxed px-4">
                       {access.message}
                    </p>
-                   <p className="text-[11px] text-muted-foreground italic px-6">
-                   </p>
                 </div>
                 <div className="flex flex-col gap-3 px-4">
                    <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black h-14 rounded-2xl text-lg shadow-lg">
-                      <Link href={access.redirectTo || "/mufradat/billing"}>
-                         {access.status === 'inactive' ? <BookOpen className="mr-2 w-6 h-6" /> : <CreditCard className="mr-2 w-6 h-6" />} 
-                         {access.status === 'on_leave' ? 'CEK STATUS CUTI' : access.status === 'inactive' ? 'DAFTAR PROGRAM SEKARANG' : 'KONFIRMASI PEMBAYARAN'}
+                      <Link href={access.redirectTo || "/register?program=hi_mufradat"}>
+                         <BookOpen className="mr-2 w-6 h-6" />
+                         {access.buttonText || 'DAFTAR GRATIS SEKARANG'}
                       </Link>
                    </Button>
                    <Button asChild variant="ghost" className="text-muted-foreground font-bold">

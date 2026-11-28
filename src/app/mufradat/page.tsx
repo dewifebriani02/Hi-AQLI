@@ -7,32 +7,22 @@ import {
   BookOpen,
   Layers,
   Loader2,
-  Headphones,
-  Check,
-  Music,
   ShieldAlert,
-  CreditCard,
   Coffee,
   ArrowRight,
   Heart,
   Trophy,
   Zap as ZapIcon,
   Star,
-  Users,
   Search,
   CheckCircle2,
-  ArrowLeft,
   PartyPopper,
   ThumbsUp,
   Flame,
   Award,
   GraduationCap,
   RotateCcw,
-  Gift,
-  Sparkles as SparklesIcon,
-  ShieldCheck,
   Target,
-  X
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JuzList } from "@/components/tilawah/juz-list";
@@ -55,14 +45,12 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
-  DialogTrigger 
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { getMufradatStatus } from "@/lib/mufradat-access";
-import { checkIsStudent, checkIsVerifiedStudent } from "@/lib/access-control";
+import { checkIsStudent } from "@/lib/access-control";
 import { MufradatOnboarding } from "@/components/mufradat/onboarding-modal";
 
 
@@ -76,7 +64,6 @@ function MufradatPageContent() {
   const [showSeasonRecap, setShowSeasonRecap] = useState(false);
   const [previousLeague, setPreviousLeague] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showReminder, setShowReminder] = useState(true);
 
   // Fetch all passed attempts for the current user
   const progressOptions = useMemo(() => ({
@@ -105,7 +92,7 @@ function MufradatPageContent() {
     select: "*, vouchers(*)"
   }), [user?.id]);
 
-  const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection(
+  const { data: redemptions } = useCollection(
     user ? "voucher_redemptions" : null, 
     redemptionsOptions
   );
@@ -118,7 +105,7 @@ function MufradatPageContent() {
     filters: [{ column: 'user_id', operator: '==', value: user?.id }]
   }), [user?.id]);
 
-  const { data: userBadges, isLoading: isBadgesLoading } = useCollection(
+  const { data: userBadges } = useCollection(
     user ? "user_badges" : null, 
     badgesOptions
   );
@@ -132,7 +119,7 @@ function MufradatPageContent() {
     limit: 50 // Limit to top 50 users in group to avoid over-fetching
   }), [group_id]);
 
-  const { data: allGroupUsers, isLoading: isGroupUsersLoading } = useCollection(
+  const { data: allGroupUsers } = useCollection(
     isRankTab && group_id ? "users" : null, 
     groupUsersOptions
   );
@@ -236,7 +223,7 @@ function MufradatPageContent() {
     limit: 4000 
   }), [group_id]);
 
-  const { data: allGroupAttempts, isLoading: isGroupAttemptsLoading } = useCollection(
+  const { data: allGroupAttempts } = useCollection(
     isRankTab && group_id ? "quiz_attempts" : null, 
     groupAttemptsOptions
   );
@@ -254,7 +241,7 @@ function MufradatPageContent() {
     if (!allGroupUsers || !isRankTab || !allGroupAttempts) return [];
     
     // O(M) Pre-processing attempts into Map for O(1) lookups
-    const attemptsByUserId = new Map<string, { verses: Set<string>, pages: Set<number>, count: number }>();
+    const attemptsByUserId = new Map<string, { verses: Set<string>, pages: Set<number>, count: number, weeklyVerses: Set<string>, weeklyPages: Set<number> }>();
     
     allGroupAttempts.forEach(a => {
       if (!attemptsByUserId.has(a.user_id)) {
@@ -311,7 +298,7 @@ function MufradatPageContent() {
       }
       return b.verseCount - a.verseCount || b.points - a.points;
     }).slice(0, 20); // Top 20
-  }, [allGroupUsers, allGroupAttempts, allReactions, isRankTab, rankMode]);
+  }, [allGroupUsers, allGroupAttempts, allReactions, isRankTab, rankMode, startOfWeek]);
 
   const sendReaction = async (toUserId: string, type: string) => {
     if (!user) return;
@@ -328,8 +315,11 @@ function MufradatPageContent() {
     }
   };
 
-  const isStudent = useMemo(() => checkIsStudent(registrations || []), [registrations]);
-  const isVerifiedStudent = useMemo(() => checkIsVerifiedStudent(registrations || []), [registrations]);
+  const isStudent = useMemo(() => {
+    const fromRegs = checkIsStudent(registrations || []);
+    const fromProfile = Boolean(user && !userData?.is_blacklisted);
+    return fromRegs || fromProfile;
+  }, [registrations, user, userData]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -340,12 +330,8 @@ function MufradatPageContent() {
     });
   }, [userData, registrations, redemptions, isStudent]);
 
-  const showPromoBanner = !isStudent || access.status === 'inactive' || access.status === 'blocked';
-
   const fullSalutation = userData?.salutation || "Ukhti";
-  const callSign = getCallSign(fullSalutation);
-
-
+  void getCallSign(fullSalutation);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -360,8 +346,6 @@ function MufradatPageContent() {
     params.set('tab', val);
     router.replace(`/mufradat?${params.toString()}`);
   };
-
-
 
   // WEEKLY LEAGUE RESET LOGIC (Every Monday 00:00)
   useEffect(() => {
@@ -421,7 +405,6 @@ function MufradatPageContent() {
       
       if (error) {
         console.error("Error updating onboarding status:", error);
-        // We don't re-open it to avoid annoying the user if it's just a network glitch
       }
     } catch (err) {
       console.error("Error updating onboarding status:", err);
@@ -506,8 +489,6 @@ function MufradatPageContent() {
           )}
         </div>
       </div>
-
-
 
       {/* ACHIEVEMENT BADGES SECTION */}
       {user && (userBadges || []).length > 0 && (
@@ -632,7 +613,6 @@ function MufradatPageContent() {
             externalSearch={searchQuery}
           />
         </TabsContent>
-
 
         <TabsContent value="ranking" className="focus-visible:outline-none space-y-4">
           <Card className="border-none shadow-xl overflow-hidden rounded-3xl bg-white">
@@ -796,8 +776,8 @@ function MufradatPageContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Access Blocked Overlay - Only show if user is registered but blocked, not for guests on the main index */}
-      {user && isStudent && access.isBlocked && (
+      {/* Access Blocked Overlay - Only show if user is blacklisted */}
+      {user && access.isBlocked && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
           <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden animate-in zoom-in duration-300">
              <div className="bg-rose-600 py-10 flex flex-col items-center gap-3 text-white">
@@ -809,17 +789,15 @@ function MufradatPageContent() {
                    <p className="text-sm font-bold text-slate-800 leading-relaxed px-4">
                       {access.message}
                    </p>
-                   <p className="text-[11px] text-muted-foreground italic px-6">
-                   </p>
                 </div>
                 <div className="flex flex-col gap-3 px-4">
                    <Button asChild className={cn(
                      "w-full font-black h-14 rounded-2xl text-lg shadow-lg",
                      access.status === 'inactive' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#800000] hover:bg-[#800000]/90"
                    )}>
-                      <Link href={access.redirectTo || "/mufradat/billing"}>
-                         {access.status === 'inactive' ? <BookOpen className="mr-2 w-6 h-6" /> : <CreditCard className="mr-2 w-6 h-6" />} 
-                         {access.buttonText || (access.status === 'on_leave' ? 'CEK STATUS CUTI' : access.status === 'inactive' ? 'DAFTAR PROGRAM SEKARANG' : 'KONFIRMASI PEMBAYARAN')}
+                      <Link href={access.redirectTo || "/study-circles/registration?program=hi_mufradat"}>
+                         <BookOpen className="mr-2 w-6 h-6" />
+                         {access.buttonText || 'DAFTAR GRATIS SEKARANG'}
                       </Link>
                    </Button>
                    <Button asChild variant="ghost" className="text-muted-foreground font-bold">
@@ -865,48 +843,6 @@ function MufradatPageContent() {
            </div>
         </DialogContent>
       </Dialog>
-      {/* Multi-state Access Banner (Horizontal) */}
-      {user && (access.showSoftReminder || access.status === 'trial') && showReminder && (
-        <div className={cn(
-          "px-4 py-3 rounded-2xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 border-2 shadow-sm relative overflow-hidden",
-          access.status === 'trial' ? "bg-emerald-50 border-emerald-100" : "bg-amber-50 border-amber-100"
-        )}>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-              access.status === 'trial' ? "bg-white text-emerald-600" : "bg-white text-amber-600"
-            )}>
-              {access.status === 'trial' ? <Gift className="w-4 h-4" /> : <Heart className="w-4 h-4 fill-amber-500" />}
-            </div>
-            <div className="min-w-0">
-              <p className={cn(
-                "text-[11px] font-black leading-tight truncate",
-                access.status === 'trial' ? "text-emerald-900" : "text-amber-900"
-              )}>
-                {access.status === 'trial' ? "Mode Trial Aktif" : access.message}
-              </p>
-              {access.status === 'trial' && <p className="text-[9px] text-emerald-700/70 font-bold">Akses terbuka sementara 24 jam.</p>}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 shrink-0">
-            <Button asChild size="sm" className={cn(
-              "font-black text-[10px] h-8 px-3 rounded-lg shadow-sm transition-all active:scale-[0.98]",
-              access.status === 'trial' ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
-            )}>
-              <Link href="/mufradat/billing">
-                {access.status === 'trial' ? 'CEK STATUS' : 'INFAQ'}
-              </Link>
-            </Button>
-            <button 
-              onClick={() => setShowReminder(false)}
-              className="p-1 hover:bg-black/5 rounded-full transition-colors text-muted-foreground"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

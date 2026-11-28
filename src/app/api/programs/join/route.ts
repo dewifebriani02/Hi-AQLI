@@ -4,8 +4,7 @@ import { pool } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-server';
 import { isProgramFree, programKeyFromType } from '@/lib/program-settings';
 import { isValidWhatsapp, normalizeWhatsapp } from '@/lib/whatsapp';
-
-const MUFRADAT_GROUP_CAPACITY = 50;
+import { ALL_JUZ_NUMBERS, assignMufradatGroup, AssignedGroupInfo } from '@/lib/user-activation';
 
 function fail(message: string, status: number) {
   return NextResponse.json({ error: { message } }, { status });
@@ -14,7 +13,6 @@ function fail(message: string, status: number) {
 /**
  * Join a FREE program: records the registration as verified and activates access
  * immediately (the same profile changes an admin approval makes, minus billing).
- * Paid programs are rejected here and must go through the payment flow.
  */
 export async function POST(req: NextRequest) {
   const ctx = await getAuthContext(req);
@@ -63,7 +61,7 @@ export async function POST(req: NextRequest) {
     await client.query('BEGIN');
 
     const { rows: userRows } = await client.query(
-      `SELECT id, email, followed_halaqahs, mufradat_group_id, is_tikrar_paid, is_blacklisted
+      `SELECT id, email, followed_halaqahs, mufradat_group_id, mufradat_accessible_juz, is_tikrar_paid, is_blacklisted
          FROM public.users WHERE id = $1 FOR UPDATE`,
       [ctx.userId]
     );
@@ -89,8 +87,6 @@ export async function POST(req: NextRequest) {
     if (!registrationId) {
       // A pending registration from the old paid flow is promoted instead of duplicated.
       const { rows: pendingRows } = await client.query(
-        // Payment fields are kept untouched so a transfer made in the old paid flow stays
-        // traceable (reconciliation, refunds, income reports). Monthly/leave rows are never promoted.
         `UPDATE public.halaqah_registrations
             SET status = 'verified', verified_at = now(), start_date = now(), updated_at = now(),
                 metadata = COALESCE(metadata, '{}'::jsonb) || '{"promoted_free": true}'::jsonb
@@ -107,7 +103,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (!registrationId && (programKey === 'ngaji' || programKey === 'halaqah') && Number(halaqah.quota) > 0) {
-      // Lock the class row so concurrent joins cannot overfill it.
       await client.query(`SELECT id FROM public.halaqahs WHERE id = $1 FOR UPDATE`, [halaqahId]);
       const { rows: countRows } = await client.query(
         `SELECT count(*)::int AS n FROM public.halaqah_registrations
@@ -141,7 +136,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Profile access, mirroring admin approval (admin/registrations).
+    // Profile access activation
     const followed: string[] = Array.isArray(user.followed_halaqahs) ? user.followed_halaqahs : [];
     const sets: string[] = ['followed_halaqahs = $2', 'whatsapp = $3', 'updated_at = now()'];
     const values: any[] = [
@@ -154,31 +149,24 @@ export async function POST(req: NextRequest) {
       sets.push(sql.replace('?', `$${values.length}`));
     };
 
+    let assignedGroup: AssignedGroupInfo | null = null;
     if (programKey === 'mufradat') {
       if (!user.mufradat_group_id) {
-        const { rows: groupRows } = await client.query(
-          `SELECT id FROM public.mufradat_groups
-            WHERE COALESCE(member_count, 0) < $1
-            ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
-          [MUFRADAT_GROUP_CAPACITY]
+        assignedGroup = await assignMufradatGroup(client);
+        push('mufradat_group_id = ?', assignedGroup.id);
+      } else {
+        const { rows: grpRows } = await client.query<AssignedGroupInfo>(
+          `SELECT id, name, whatsapp_link FROM public.mufradat_groups WHERE id = $1 LIMIT 1`,
+          [user.mufradat_group_id]
         );
-        let groupId = groupRows[0]?.id;
-        if (groupId) {
-          await client.query(
-            `UPDATE public.mufradat_groups SET member_count = COALESCE(member_count, 0) + 1 WHERE id = $1`,
-            [groupId]
-          );
-        } else {
-          const { rows: countRows } = await client.query(`SELECT count(*)::int AS n FROM public.mufradat_groups`);
-          groupId = crypto.randomUUID();
-          await client.query(
-            `INSERT INTO public.mufradat_groups (id, name, member_count, created_at) VALUES ($1, $2, 1, now())`,
-            [groupId, `Grup ${(countRows[0]?.n || 0) + 1}`]
-          );
-        }
-        push('mufradat_group_id = ?', groupId);
+        assignedGroup = grpRows[0] || null;
       }
+
+      const currentJuz: number[] = Array.isArray(user.mufradat_accessible_juz) ? user.mufradat_accessible_juz : [];
+      const mergedJuz = Array.from(new Set([...currentJuz, ...ALL_JUZ_NUMBERS])).sort((a, b) => a - b);
+      push('mufradat_accessible_juz = ?::jsonb', JSON.stringify(mergedJuz));
       push('mufradat_status = ?', 'active');
+
       if (typeof metadata.schedule === 'string') {
         const { rows: schedCols } = await client.query(
           `SELECT column_name FROM information_schema.columns
@@ -192,7 +180,6 @@ export async function POST(req: NextRequest) {
 
     if (programKey === 'tikrar') {
       push('is_tikrar_paid = ?', true);
-      // Legacy schema uses "paidJuz"; a consistency migration added paid_juz. Write whichever exist.
       const { rows: juzCols } = await client.query(
         `SELECT column_name FROM information_schema.columns
           WHERE table_schema = 'public' AND table_name = 'users' AND column_name IN ('paid_juz', 'paidJuz')`
@@ -207,7 +194,14 @@ export async function POST(req: NextRequest) {
     await client.query(`UPDATE public.users SET ${sets.join(', ')} WHERE id = $1`, values);
     await client.query('COMMIT');
 
-    return NextResponse.json({ data: { registration_id: registrationId, program: programKey }, error: null });
+    return NextResponse.json({
+      data: {
+        registration_id: registrationId,
+        program: programKey,
+        mufradat_group: assignedGroup,
+      },
+      error: null,
+    });
   } catch (err: any) {
     try {
       await client.query('ROLLBACK');

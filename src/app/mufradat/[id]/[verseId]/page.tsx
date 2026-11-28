@@ -3,7 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, ShieldAlert, CreditCard, Heart, Zap, X } from "lucide-react";
+import { ChevronLeft, Loader2, BookOpen, ListTree, GraduationCap, ArrowLeft, ArrowRight, RotateCcw, Lightbulb, Lock, ShieldAlert, Zap } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
@@ -59,7 +59,6 @@ function VerseDetailContent() {
   const [activeWordIdx, setActiveWordIdx] = useState<number | null>(null);
 
   const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
-  const [showReminder, setShowReminder] = useState(true);
 
   const progressOptions = useMemo(() => ({
     filters: [
@@ -83,15 +82,15 @@ function VerseDetailContent() {
 
   const isStudent = useMemo(() => {
     const fromRegs = checkIsStudent(registrations || []);
-    const fromProfile = userData?.mufradat_status === 'active' || userData?.mufradat_status === 'trial';
+    const fromProfile = Boolean(user && !userData?.is_blacklisted);
     return fromRegs || fromProfile;
-  }, [registrations, userData]);
+  }, [registrations, user, userData]);
 
   const isVerifiedStudent = useMemo(() => {
     const fromRegs = checkIsVerifiedStudent(registrations || []);
-    const fromProfile = userData?.mufradat_status === 'active';
+    const fromProfile = Boolean(user && !userData?.is_blacklisted);
     return fromRegs || fromProfile;
-  }, [registrations, userData]);
+  }, [registrations, user, userData]);
 
   const access = useMemo(() => {
     return getMufradatStatus({
@@ -129,23 +128,6 @@ function VerseDetailContent() {
 
   const isCurrentVerseCompleted = completedVerseNumbers.has(Number(verseId));
 
-  const completedPageQuizzes = useMemo(() => {
-    const pageSet = new Set<number>();
-    if (!progress) return pageSet;
-    progress.forEach(p => {
-      if (!p.quiz_id?.startsWith('mufradat_page_')) return;
-
-      // Robust Passed Check
-      const isPassed = p.is_passed || (Number(p.total_questions) > 0 && Number(p.score) >= Number(p.total_questions));
-      
-      if (isPassed) {
-        const pNum = parseInt(p.quiz_id.replace('mufradat_page_', ''));
-        if (!isNaN(pNum)) pageSet.add(pNum);
-      }
-    });
-    return pageSet;
-  }, [progress]);
-
   // Sequential Learning Guard
   useEffect(() => {
     // WAIT for ALL essential data to be ready before making a decision
@@ -166,14 +148,12 @@ function VerseDetailContent() {
     const isUnlocked = hasProgramAccess && isSequentialPathDone;
     
     if (!isUnlocked) {
-      // Grace period: Wait 1500ms before redirecting to allow DB sync
-      // This prevents 'flicker' redirects if the user just finished the kuis
       const timer = setTimeout(() => {
         router.push(`/mufradat/${id}`);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [verse, progress, isProgressLoading, isUserLoading, isRegLoading, isUserDataLoading, isRedemptionsLoading, user, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers, access.isFree, isStudent, access.isBlocked, success]);
+  }, [verse, progress, isProgressLoading, isUserLoading, isRegLoading, isUserDataLoading, isRedemptionsLoading, user, router, id, verseId, isCurrentVerseCompleted, completedVerseNumbers, access.isFree, isVerifiedStudent, access.isBlocked, success]);
   
   // Fetch latest attempt for THIS specific verse to get wrong_words
   const lastAttemptOptions = useMemo(() => ({
@@ -226,7 +206,7 @@ function VerseDetailContent() {
       try {
         setLoading(true);
         const [sRes, vRes] = await Promise.all([
-          Promise.resolve({ ok: true, json: () => ({ chapter: localSurah }) }), // Use localSurah if available
+          Promise.resolve({ ok: true, json: () => ({ chapter: localSurah }) }),
           fetch(`https://api.quran.com/api/v4/verses/by_key/${id}:${verseId}?language=id&words=true&word_fields=text_uthmani&word_translation_language=id&translations=33&fields=text_uthmani`)
         ]);
 
@@ -323,37 +303,6 @@ function VerseDetailContent() {
           </TooltipProvider>
         </div>
         </div>
- 
-      {/* Soft Reminder Banner (Horizontal Sleek) */}
-      {access.showSoftReminder && showReminder && (
-        <div className="bg-amber-50 border-2 border-amber-100 px-4 py-3 rounded-2xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 relative shadow-sm">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-amber-600 shrink-0 shadow-sm">
-              <Heart className="w-4 h-4 fill-amber-500" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-black leading-tight text-amber-900 truncate">Support Hi AQLI</p>
-              <p className="text-[10px] font-medium text-amber-900/80 leading-tight truncate">
-                {access.message}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 shrink-0">
-            <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] h-8 px-3 rounded-lg shadow-sm">
-              <Link href="/mufradat/billing">INFAQ</Link>
-            </Button>
-            <button 
-              onClick={() => setShowReminder(false)}
-              className="p-1 hover:bg-amber-100 rounded-full transition-colors text-amber-600"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-
 
       <Card ref={studyCardRef} className="border-none bg-muted/20 scroll-mt-24">
         <CardContent className="pt-8 pb-10 px-6 text-right" dir="rtl">
@@ -502,7 +451,6 @@ function VerseDetailContent() {
         </Card>
       </div>
 
-
       {/* Access Blocked Overlay */}
       {access.isBlocked && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 sm:p-4">
@@ -516,14 +464,12 @@ function VerseDetailContent() {
                    <p className="text-sm font-bold text-slate-800 leading-relaxed px-4">
                       {access.message}
                    </p>
-                   <p className="text-[11px] text-muted-foreground italic px-6">
-                   </p>
                 </div>
                 <div className="flex flex-col gap-3 px-4">
                    <Button asChild className="w-full bg-[#800000] hover:bg-[#800000]/90 font-black h-14 rounded-2xl text-lg shadow-lg">
-                      <Link href={access.redirectTo || "/mufradat/billing"}>
-                         {access.redirectTo?.includes('billing') || !access.redirectTo ? <CreditCard className="mr-2 w-6 h-6" /> : <GraduationCap className="mr-2 w-6 h-6" />}
-                         {access.buttonText || (access.status === 'on_leave' ? 'CEK STATUS CUTI' : 'KONFIRMASI PEMBAYARAN')}
+                      <Link href={access.redirectTo || "/register?program=hi_mufradat"}>
+                         <GraduationCap className="mr-2 w-6 h-6" />
+                         {access.buttonText || 'DAFTAR GRATIS SEKARANG'}
                       </Link>
                    </Button>
                    <Button asChild variant="ghost" className="text-muted-foreground font-bold">

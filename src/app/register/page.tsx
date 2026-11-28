@@ -115,7 +115,6 @@ function RegisterContent() {
         if (!profile) {
           let referrerId = null;
 
-          // 1. Resolve Referrer ID if ref code exists
           if (referralCode) {
             const { data: referrer } = await db
               .from('users')
@@ -125,13 +124,11 @@ function RegisterContent() {
 
             if (referrer) {
               referrerId = referrer.id;
-              console.log('Detected persistent referral from:', referrerId);
             }
           }
 
-          // 2. Generate unique referral code
           const firstNameRaw = (fullName || user.user_metadata?.full_name || username || user.email?.split('@')[0] || 'AQLI');
-          const firstName = firstNameRaw.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const firstName = firstNameRaw.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '') || 'AQLI';
           let sequence = 1;
           let generatedCode = "";
           let isUnique = false;
@@ -151,14 +148,12 @@ function RegisterContent() {
             } else {
               sequence++;
               if (sequence > 99) {
-                // Fallback if many users have same name
                 generatedCode = `AQLI-${firstName}${Math.floor(Math.random() * 1000)}`;
                 isUnique = true;
               }
             }
           }
 
-          // 3. Create missing profile with referred_by_id and referral_code
           await db.from('users').upsert({
             id: user.id,
             full_name: fullName || user.user_metadata?.full_name || '',
@@ -166,7 +161,9 @@ function RegisterContent() {
             email: user.email,
             role_id: 'learner',
             points: 0,
-            followed_halaqahs: [],
+            mufradat_status: 'active',
+            is_tikrar_paid: true,
+            paidJuz: 30,
             salutation: salutation || 'Ukhti',
             referred_by_id: referrerId,
             referral_code: generatedCode,
@@ -177,6 +174,11 @@ function RegisterContent() {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }, { onConflict: 'id' });
+        } else if (salutation && profile.salutation !== salutation) {
+          await db.from('users').update({
+            salutation,
+            updated_at: new Date().toISOString(),
+          }).eq('id', user.id);
         }
         
         // IMPROVED: Logic for destination after registration/login
@@ -242,7 +244,9 @@ function RegisterContent() {
       data: { 
         full_name: fullName,
         username: cleanUsername,
-        whatsapp: normalizeWhatsapp(whatsapp)
+        whatsapp: normalizeWhatsapp(whatsapp),
+        salutation: salutation || 'Ukhti',
+        referred_by_code: referralCode || undefined,
       }
     });
 

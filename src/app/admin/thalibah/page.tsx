@@ -115,7 +115,7 @@ export default function AdminThalibahPage() {
     const learners = allUsers.filter(u => u.role_id === 'learner' || !u.role_id);
 
     return learners.map(learner => {
-      const userRegs = allRegistrations.filter(r => r.user_id === learner.id && r.status === 'active');
+      const userRegs = allRegistrations.filter(r => r.user_id === learner.id && ['active', 'verified'].includes(r.status));
       const programs = userRegs.map(r => ({
         id: r.id,
         halaqah_id: r.halaqah_id,
@@ -798,7 +798,7 @@ export default function AdminThalibahPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-[9px] font-bold">
-                            {prog.is_paid ? (prog.payment_method === 'voucher' ? 'Voucher' : 'Berbayar') : 'Gratis'}
+                            'Gratis'
                           </Badge>
                           <Button
                             variant="ghost"

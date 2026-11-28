@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play, Pause, Loader2, Lock, Type, Minus, Plus, Target, ArrowRight, Star, ShieldAlert, CreditCard, Heart, BookOpen, GraduationCap, Check, Grid3X3, ChevronDown, ChevronUp, X, Zap } from "lucide-react";
+import { ChevronLeft, Play, Pause, Loader2, Lock, Type, Minus, Plus, ArrowRight, Star, GraduationCap, Check, Grid3X3, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
 import { getMufradatStatus } from "@/lib/mufradat-access";
@@ -17,7 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/db";
 import { useCollection, useDoc } from "@/db";
-import { JUZ_PAGE_MAPPING, getJuzForPage } from "@/lib/quran-mapping";
+import { JUZ_PAGE_MAPPING } from "@/lib/quran-mapping";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { checkIsStudent, checkIsVerifiedStudent } from "@/lib/access-control";
@@ -57,7 +57,6 @@ export default function MufradatJuzDetailPage() {
   const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
   const [selectedReciterId, setSelectedReciterId] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [showReminder, setShowReminder] = useState(true);
 
   // Fetch progress for this Juz
   const { data: userProgress, isLoading: isUserProgressLoading } = useCollection(user ? "quiz_attempts" : null, {
@@ -79,15 +78,15 @@ export default function MufradatJuzDetailPage() {
 
   const isStudent = useMemo(() => {
     const fromRegs = checkIsStudent(registrations || []);
-    const fromProfile = userData?.mufradat_status === 'active' || userData?.mufradat_status === 'trial';
+    const fromProfile = Boolean(user && !userData?.is_blacklisted);
     return fromRegs || fromProfile;
-  }, [registrations, userData]);
+  }, [registrations, user, userData]);
 
   const isVerifiedStudent = useMemo(() => {
     const fromRegs = checkIsVerifiedStudent(registrations || []);
-    const fromProfile = userData?.mufradat_status === 'active';
+    const fromProfile = Boolean(user && !userData?.is_blacklisted);
     return fromRegs || fromProfile;
-  }, [registrations, userData]);
+  }, [registrations, user, userData]);
 
   const access = useMemo(() => {
     // For Juz access, we check if the user has access to the first page of this Juz
@@ -223,7 +222,7 @@ export default function MufradatJuzDetailPage() {
       if (lastCompletedKey) {
         const timer = setTimeout(() => {
           scrollToVerse(lastCompletedKey);
-        }, 1200); // Slightly longer delay to ensure full rendering
+        }, 1200);
         return () => clearTimeout(timer);
       }
     }
@@ -377,32 +376,6 @@ export default function MufradatJuzDetailPage() {
         )}
 
       </div>
- 
-      {/* Soft Reminder Banner */}
-      {access.showSoftReminder && showReminder && (
-          <div className="mx-4 bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex flex-col gap-4 animate-in slide-in-from-top-4 shadow-sm relative mb-4">
-              <button 
-                onClick={() => setShowReminder(false)}
-                className="absolute top-3 right-3 p-1 hover:bg-amber-100 rounded-full transition-colors text-amber-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="flex items-start gap-4 pr-6">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                      <Heart className="w-5 h-5 fill-amber-500" />
-                  </div>
-                  <div>
-                      <p className="text-[10px] font-black uppercase tracking-tight text-amber-800">Support Hi AQLI</p>
-                      <p className="text-[11px] font-medium text-amber-900 leading-tight">{access.message}</p>
-                  </div>
-              </div>
-              <Button asChild size="sm" className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] h-11 rounded-xl shadow-lg shadow-amber-200/50 transition-all active:scale-[0.98]">
-                  <Link href="/mufradat/billing">INFAQ SEKARANG</Link>
-              </Button>
-          </div>
-      )}
-
-
 
       <div className="flex flex-col divide-y">
         <TooltipProvider delayDuration={0}>

@@ -319,11 +319,11 @@ export default function AdminClassesPage() {
       duration_weeks: Number(form.durationWeeks) || 4,
       juz: form.programType === 'hi_ngaji' ? null : form.juz,
       level: form.level,
-      is_premium: form.programType === 'hi_ngaji' ? form.isPremium : false,
+      is_premium: false,
       has_exam: form.hasExam,
       has_certificate: form.hasCertificate,
       tag: form.tag.trim(),
-      base_price: form.programType === 'hi_ngaji' && form.isPremium ? (Number(form.basePrice) || 0) : 0,
+      base_price: 0,
       quota: Number(form.quota) || 20,
       updated_at: new Date().toISOString()
     };
@@ -693,15 +693,9 @@ export default function AdminClassesPage() {
                       {progInfo.label}
                     </Badge>
                     <div className="flex items-center gap-1.5">
-                      {(halaqah.program_type === 'hi_ngaji' || halaqah.programType === 'hi_ngaji') && halaqah.is_premium ? (
-                        <Badge className="bg-amber-100 text-amber-800 text-[9px] font-black border-none">
-                          BERBAYAR
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-emerald-100 text-emerald-800 text-[9px] font-black border-none">
-                          GRATIS
-                        </Badge>
-                      )}
+                      <Badge className="bg-emerald-100 text-emerald-800 text-[9px] font-black border-none">
+                        GRATIS
+                      </Badge>
                       <Badge variant="outline" className={cn(
                         "text-[9px] font-bold",
                         isFull ? "border-rose-300 text-rose-600 bg-rose-50" : "border-slate-200 text-slate-600"
@@ -998,36 +992,10 @@ export default function AdminClassesPage() {
               </div>
             </div>
 
-            {/* Row 7: Pricing & Flags (Khusus Hi Ngaji yang bisa diset berbayar oleh Admin) */}
-            {form.programType === 'hi_ngaji' ? (
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="space-y-0.5">
-                  <Label className="text-xs font-bold text-slate-800">Kelas Hi Ngaji Berbayar</Label>
-                  <p className="text-[10px] text-slate-500">Secara default gratis. Aktifkan jika kelas Hi Ngaji ini berbayar.</p>
-                </div>
-                <Switch
-                  checked={form.isPremium}
-                  onCheckedChange={(checked) => setForm({ ...form, isPremium: checked })}
-                />
-              </div>
-            ) : (
-              <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200 text-[11px] font-bold text-emerald-800">
-                Program ini 100% Gratis secara default di Hi AQLI (tanpa biaya pendaftaran maupun tagihan bulanan).
-              </div>
-            )}
-
-            {form.programType === 'hi_ngaji' && form.isPremium && (
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-slate-600">Nominal Infaq Dasar (Rp)</Label>
-                <Input
-                  type="number"
-                  placeholder="Contoh: 50000"
-                  value={form.basePrice}
-                  onChange={(e) => setForm({ ...form, basePrice: parseInt(e.target.value) || 0 })}
-                  className="rounded-xl font-bold text-primary"
-                />
-              </div>
-            )}
+            {/* Row 7: Program Status */}
+            <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200 text-[11px] font-bold text-emerald-800">
+              Seluruh program &amp; kelas di Hi AQLI 100% Gratis (tanpa biaya pendaftaran maupun tagihan bulanan).
+            </div>
           </div>
 
           <DialogFooter>

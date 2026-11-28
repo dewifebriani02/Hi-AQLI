@@ -61,7 +61,7 @@ export default function TermsAndConditionsPage() {
                 <h3 className="text-lg font-black uppercase tracking-tight m-0">3. Program & Pembayaran</h3>
               </div>
               <p className="text-sm leading-relaxed text-slate-600">
-                Seluruh program utama di Hi AQLI (seperti Hi Tilawah, Hi Mufradat, Hi Tikrar, Hi Mutaba'ah, dan Hi Muhasabah) dapat diakses secara gratis. Kelas tertentu pada Hi Ngaji dapat bersifat gratis maupun berbayar sesuai ketentuan yang ditetapkan Admin. Segala bentuk infaq sukarela melalui Hi Berbagi dikelola dengan transparan untuk kebermanfaatan umat.
+                Seluruh program dan kelas di Hi AQLI (seperti Hi Tilawah, Hi Mufradat, Hi Tikrar, Hi Ngaji, Hi Mutaba'ah, dan Hi Muhasabah) dapat diakses secara 100% gratis tanpa biaya pendaftaran maupun tagihan bulanan. Segala bentuk infaq sukarela melalui Hi Berbagi dikelola dengan transparan untuk kebermanfaatan umat.
               </p>
             </section>
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { pool } from '@/lib/db';
 import { signToken } from '@/lib/auth-server';
+import { activateUserPrograms } from '@/lib/user-activation';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(req: NextRequest) {
@@ -85,38 +86,61 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // 3. Query or create user in PostgreSQL
-    const { rows } = await query(
-      `SELECT * FROM public.users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
-      [email]
-    );
-
-    let userRow;
-    if (rows.length > 0) {
-      userRow = rows[0];
-      // Always sync Google picture to metadata.avatar_url if present
-      if (picture) {
-        const metadata = { ...(userRow.metadata || {}), avatar_url: picture };
-        await query(
-          `UPDATE public.users SET metadata = $1, updated_at = now() WHERE id = $2`,
-          [JSON.stringify(metadata), userRow.id]
-        );
-        userRow.metadata = metadata;
-      }
-    } else {
-      const id = uuidv4();
-      const username = profile.given_name || email.split('@')[0];
-      const metadata = { avatar_url: picture, full_name: fullName };
-
-      await query(
-        `INSERT INTO public.users (
-          id, email, username, full_name, role_id, "roleId", metadata, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, 'learner', 'learner', $5, now(), now())`,
-        [id, email, username, fullName, JSON.stringify(metadata)]
+    // 3. Query or create user in PostgreSQL (auto-activating all free Hi AQLI programs)
+    const client = await pool.connect();
+    let userRow: any;
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `SELECT * FROM public.users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+        [email]
       );
 
-      const created = await query(`SELECT * FROM public.users WHERE id = $1 LIMIT 1`, [id]);
-      userRow = created.rows[0];
+      if (rows.length > 0) {
+        userRow = rows[0];
+        // Always sync Google picture to metadata.avatar_url if present
+        if (picture) {
+          const metadata = { ...(userRow.metadata || {}), avatar_url: picture };
+          await client.query(
+            `UPDATE public.users SET metadata = $1, updated_at = now() WHERE id = $2`,
+            [JSON.stringify(metadata), userRow.id]
+          );
+          userRow.metadata = metadata;
+        }
+        // Ensure existing non-blacklisted Google users are activated cleanly
+        if (
+          !userRow.is_blacklisted &&
+          (userRow.mufradat_status !== 'active' || !userRow.mufradat_group_id || !userRow.is_tikrar_paid)
+        ) {
+          await activateUserPrograms(client, userRow.id, { promotePending: true });
+        }
+      } else {
+        const id = uuidv4();
+        const username = profile.given_name || email.split('@')[0];
+        const firstNameRaw = (fullName || username || 'AQLI').split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '') || 'AQLI';
+        const referralCode = `AQLI-${firstNameRaw}${Math.floor(10 + Math.random() * 89)}`;
+        const metadata = { avatar_url: picture, full_name: fullName, has_chosen_salutation: false };
+
+        await client.query(
+          `INSERT INTO public.users (
+            id, email, username, full_name, salutation, referral_code, role_id, "roleId", metadata, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, 'Ukhti', $5, 'learner', 'learner', $6, now(), now())`,
+          [id, email, username, fullName, referralCode, JSON.stringify(metadata)]
+        );
+
+        await activateUserPrograms(client, id);
+        const created = await client.query(`SELECT * FROM public.users WHERE id = $1 LIMIT 1`, [id]);
+        userRow = created.rows[0];
+      }
+
+      await client.query('COMMIT');
+    } catch (txErr) {
+      try {
+        await client.query('ROLLBACK');
+      } catch {}
+      throw txErr;
+    } finally {
+      client.release();
     }
 
     const user = {

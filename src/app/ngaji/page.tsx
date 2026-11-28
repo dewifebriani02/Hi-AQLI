@@ -73,7 +73,7 @@ export default function NgajiPage() {
             "p-4 hover:bg-accent/5 transition-all cursor-pointer group border-none shadow-sm",
             isActive ? "bg-white border-l-4 border-[#D4AF37]" :
               isPending ? "bg-white border-l-4 border-amber-500" :
-                (circle.is_premium || circle.isPremium) ? "bg-white border-l-4 border-[#800000]" : "bg-card/50",
+                "bg-card/50",
             isFull && "opacity-60"
           )}
         >
@@ -84,11 +84,11 @@ export default function NgajiPage() {
                   "flex items-center justify-center w-12 h-12 rounded-xl font-bold shrink-0",
                   isActive ? "bg-[#D4AF37] text-black" :
                     isPending ? "bg-amber-500 text-white" :
-                      (circle.is_premium || circle.isPremium) ? "bg-[#800000] text-white" : "bg-[#800000]/10 text-[#800000]"
+                      "bg-[#800000]/10 text-[#800000]"
                 )}>
                   {isActive ? <PlayCircle className="w-6 h-6" /> :
                     isPending ? <Timer className="w-6 h-6 animate-pulse" /> :
-                      (circle.is_premium || circle.isPremium) ? <Zap className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                      <Users className="w-6 h-6" />}
                 </div>
                 <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -100,7 +100,7 @@ export default function NgajiPage() {
                     ) : isFull ? (
                       <Badge variant="outline" className="text-destructive border-destructive text-[7px] h-4 px-1.5 font-black uppercase">PENUH</Badge>
                     ) : (
-                      (circle.is_premium || circle.isPremium) && <Badge className="bg-[#800000] text-white border-none text-[7px] h-4 px-1.5 font-black uppercase">PREMIUM</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-700 border-none text-[7px] h-4 px-1.5 font-black uppercase">GRATIS</Badge>
                     )}
                   </div>
                   <div className="flex flex-col gap-0.5 mt-1">
@@ -147,9 +147,7 @@ export default function NgajiPage() {
                 {circle.has_exam || circle.hasExam ? <Badge variant="outline" className="text-[8px] border-emerald-200 text-emerald-700 bg-emerald-50 h-4 flex items-center gap-1"><GraduationCap className="w-2 h-2" /> UJIAN</Badge> : null}
                 {circle.has_certificate || circle.hasCertificate ? <Badge variant="outline" className="text-[8px] border-blue-200 text-blue-700 bg-blue-50 h-4 flex items-center gap-1"><Award className="w-2 h-2" /> SERTIFIKAT</Badge> : null}
               </div>
-              {user && !isProgramFree('ngaji', circle) && !isActive && !isPending && (
-                <span className="text-xs font-black text-[#800000]">Rp {(circle.base_price || circle.basePrice)?.toLocaleString('id-ID')}</span>
-              )}
+
             </div>
           </div>
         </Card>
@@ -166,7 +164,7 @@ export default function NgajiPage() {
         </div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Materi &amp; Pendaftaran</h1>
         <p className="text-muted-foreground text-sm">
-          Pilih program sesuai level {salutation}. Semua pendaftaran diverifikasi oleh Admin HI AQLI.
+          Pilih program sesuai level {salutation}. Seluruh kelas Hi Ngaji gratis 100% dan langsung aktif setelah mendaftar.
         </p>
       </div>
 

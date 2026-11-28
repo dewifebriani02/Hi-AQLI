@@ -275,7 +275,6 @@ export default function AdminRegistrationsPage() {
               .insert({ 
                 name: `Grup ${nextNum}`, 
                 member_count: 1,
-                level: 1,
                 created_at: new Date().toISOString()
               })
               .select()
@@ -414,10 +413,10 @@ export default function AdminRegistrationsPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-slate-900 flex items-center gap-2.5">
             <CheckCircle2 className="w-7 h-7 text-primary" />
-            Verifikasi Pendaftaran & Pembayaran
+            Riwayat & Verifikasi Pendaftaran
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
-            Periksa antrean transfer infaq pendaftaran, verifikasi bukti bayar, voucher, serta riwayat aktivasi kelas.
+            Pantau riwayat pendaftaran gratis serta aktivasi kelas peserta di Hi AQLI.
           </p>
         </div>
 
@@ -754,9 +753,13 @@ export default function AdminRegistrationsPage() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <Badge variant="outline" className={cn(
                                 "text-[9px] font-bold border-none px-2 py-0.5",
-                                reg.payment_method === 'voucher' ? "bg-indigo-50 text-indigo-700" : "bg-amber-50 text-amber-700"
+                                reg.payment_method === 'voucher'
+                                  ? "bg-indigo-50 text-indigo-700"
+                                  : reg.is_paid
+                                  ? "bg-amber-50 text-amber-700"
+                                  : "bg-emerald-50 text-emerald-700"
                               )}>
-                                {reg.payment_method === 'voucher' ? 'VOUCHER' : 'TRANSFER BANK'}
+                                {reg.payment_method === 'voucher' ? 'VOUCHER' : reg.is_paid ? 'TRANSFER BANK' : 'GRATIS'}
                               </Badge>
                               {reg.voucher_code_used && (
                                 <span className="text-[9px] font-mono text-slate-500">({reg.voucher_code_used})</span>

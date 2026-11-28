@@ -267,7 +267,7 @@ export function JuzList({
           const startPage = juzPages[0];
           const isJuzUnlocked = variant === "tilawah" 
             ? (isStudent || isJuzFree(j)) 
-            : (isStudent || unlockedJuz.includes(j));
+            : (isStudent || isJuzFree(j) || unlockedJuz.includes(j));
           const isExpanded = expandedJuz === j;
 
           // GRID VIEW (AYAT MODE) OR TILAWAH

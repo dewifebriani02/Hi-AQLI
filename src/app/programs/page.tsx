@@ -38,7 +38,7 @@ const PROGRAMS = [
     id: "hi-ngaji",
     name: "Hi Ngaji",
     description: "Kelas belajar membaca Al-Qur'an (Tahsin/Tajwid) dari dasar hingga mahir.",
-    longDescription: "Belajar tartil bersama muallimah berpengalaman. Gratis secara default (atau sesuai ketentuan kelas di Admin).",
+    longDescription: "Belajar tartil bersama muallimah berpengalaman secara 100% gratis.",
     icon: Library,
     color: "from-purple-500 to-violet-600",
     price: "Gratis",

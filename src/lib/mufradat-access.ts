@@ -1,14 +1,13 @@
-import { subMonths, format, getDate, isAfter, parseISO, startOfMonth, addDays, differenceInHours, addMonths } from "date-fns";
-import { SURAH_START_PAGES, getJuzForPage } from "./quran-mapping";
+import { format, parseISO, addDays, differenceInHours, addMonths } from "date-fns";
 import { isProgramFree } from "./program-settings";
 
-export type MufradatAccessStatus = 
-  | 'active'           // Fully paid and in good standing
-  | 'trial'            // New user, 24h grace access while pending
-  | 'grace_period'     // 28th to 10th, bill issued but not yet blocked
-  | 'blocked'          // After 10th, unpaid
-  | 'on_leave'         // Currently on approved leave (Cuti)
-  | 'inactive';        // Not enrolled or stopped paying
+export type MufradatAccessStatus =
+  | 'active'           // Full active access
+  | 'trial'            // Legacy state
+  | 'grace_period'     // Legacy state
+  | 'blocked'          // Blacklisted / blocked
+  | 'on_leave'         // Approved leave
+  | 'inactive';        // Not signed in
 
 export interface MufradatAccessSummary {
   status: MufradatAccessStatus;
@@ -18,7 +17,7 @@ export interface MufradatAccessSummary {
   nextBillingMonth?: string;
   redirectTo?: string;
   buttonText?: string;
-  isFree?: boolean; 
+  isFree?: boolean;
   isVerified?: boolean;
   daysRemaining?: number;
   dueDate?: Date;
@@ -35,31 +34,22 @@ export interface GetMufradatStatusOptions {
 }
 
 /**
- * Evaluates the Hi Mufradat subscription status for a user.
- * 
- * Rules:
- * 1. Billing issued on the 28th for the NEXT month.
- * 2. Grace period until the 10th of THAT month.
- * 3. Blocking starts after the 11th if unpaid.
- * 4. Leave (Cuti) exempts from billing but blocks verse access.
- * 5. Surah 1 (Al-Fatihah) and last 3 surahs are always FREE for everyone.
+ * Evaluates Hi Mufradat access status for a user.
+ * Because all Hi AQLI programs are 100% free, any signed-in non-blacklisted user
+ * gets full active access across all surahs, pages, and juz.
  */
 export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAccessSummary {
-  const { 
-    user, 
-    registrations = [], 
-    isStudent = false, 
-    surahId, 
-    verseId, 
-    pageId, 
-    redemptions = [] 
+  const {
+    user,
+    registrations = [],
+    surahId,
+    pageId,
+    redemptions = [],
   } = options;
 
   const fullSalutation = user?.salutation || "Ukhti";
   const sNum = surahId ? parseInt(surahId.toString()) : null;
-  const vNum = verseId ? parseInt(verseId.toString()) : null;
   const pNum = pageId ? parseInt(pageId.toString()) : null;
-  
   const today = new Date();
 
   const freeSurahs = [1, 112, 113, 114];
@@ -68,13 +58,13 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
       status: 'active',
       isBlocked: false,
       isFree: true,
-      isVerified: true, // Free contents are effectively verified
+      isVerified: true,
       showSoftReminder: false,
-      message: `Selamat Datang! ${fullSalutation} sedang menikmati akses gratis halaman pertama/terakhir Al-Quran.`
+      message: `Selamat Datang! ${fullSalutation} sedang menikmati akses gratis halaman Al-Qur'an.`,
     };
   }
 
-  // FREE PROGRAM: no billing, no trial window, no blocking. Anyone registered has full access.
+  // FREE PROGRAM: all signed-in non-blacklisted users get immediate full active access.
   if (isProgramFree('mufradat')) {
     if (!user) {
       return {
@@ -82,252 +72,113 @@ export function getMufradatStatus(options: GetMufradatStatusOptions): MufradatAc
         isBlocked: true,
         isVerified: false,
         showSoftReminder: false,
-        message: "Silakan masuk dan daftar (gratis) untuk mengakses seluruh ayat Hi Mufradat.",
-        redirectTo: '/programs',
-        buttonText: 'DAFTAR GRATIS SEKARANG'
+        message: "Silakan masuk atau daftar akun gratis untuk mengakses seluruh ayat Hi Mufradat.",
+        redirectTo: '/register?program=hi_mufradat',
+        buttonText: 'DAFTAR GRATIS SEKARANG',
       };
     }
 
-    const isRegistered =
-      user.mufradat_status === 'active' ||
-      user.mufradat_status === 'on_leave' ||
-      !!user.mufradat_group_id ||
-      registrations?.some(r =>
-        r.status !== 'rejected' &&
-        (r.halaqah_id === 'mufradat-premium' || r.halaqah_title?.toLowerCase().includes('mufradat'))
-      );
-
-    if (isRegistered) {
+    if (user.is_blacklisted) {
       return {
-        status: 'active',
-        isBlocked: false,
-        isFree: true,
-        isVerified: true,
+        status: 'blocked',
+        isBlocked: true,
+        isVerified: false,
         showSoftReminder: false,
-        message: `Akses Aktif. Hi Mufradat gratis untuk ${fullSalutation}. Selamat belajar!`
+        message: `Akun ${fullSalutation} sedang dinonaktifkan. Silakan hubungi Admin Hi AQLI.`,
+        redirectTo: '/programs',
+        buttonText: 'HUBUNGI ADMIN',
       };
     }
 
     return {
-      status: 'inactive',
-      isBlocked: true,
-      isVerified: false,
+      status: 'active',
+      isBlocked: false,
+      isFree: true,
+      isVerified: true,
       showSoftReminder: false,
-      message: `${fullSalutation} belum terdaftar di Hi Mufradat. Daftar gratis, akses langsung aktif.`,
-      redirectTo: '/programs',
-      buttonText: 'DAFTAR GRATIS SEKARANG'
+      message: `Akses Aktif. Hi Mufradat 100% gratis untuk ${fullSalutation}. Selamat belajar!`,
     };
   }
 
-  // Handle Vouchers - CRITICAL: PRIORITIZE VOUCHERS FIRST FOR INSTANT ACTIVATION
-  const hasVoucher = redemptions?.some(r => 
-    r.vouchers?.program_id === 'mufradat' || r.vouchers?.program_id === 'all'
+  // Legacy fallback (unreachable when isProgramFree('mufradat') === true)
+  const hasVoucher = redemptions?.some(
+    (r) => r.vouchers?.program_id === 'mufradat' || r.vouchers?.program_id === 'all'
   );
-
   if (hasVoucher) {
     return {
       status: 'active',
       isBlocked: false,
       isVerified: true,
       showSoftReminder: false,
-      message: "Akses Aktif (Promo/Voucher). Selamat mempelajari mufradat Qur'an!"
+      message: "Akses Aktif. Selamat mempelajari mufradat Qur'an!",
     };
   }
 
-  // 0. PENDING REGISTRATION CHECK (Bonus 24h Access for New/Re-registering Users)
-  // This applies to anyone who doesn't have a verified subscription but just registered
-  const pendingReg = registrations?.find(r => 
-    r.status === 'pending_verification' && 
-    (r.halaqah_id === 'mufradat-premium' || r.halaqah_title?.toLowerCase().includes('mufradat'))
-  );
-
-  // 1. GUEST ACCESS & PENDING REGISTRATION TRIAL
-  if (!user || user.mufradat_status === 'inactive' || !user.mufradat_group_id || !user.mufradat_due_date) {
-    if (!user) {
-      return {
-        status: 'inactive',
-        isBlocked: true,
-        isVerified: false,
-        showSoftReminder: false,
-        message: "Program ini membutuhkan pendaftaran untuk mengakses seluruh ayat. Mari bergabung menjadi peserta Hi Mufradat!",
-        redirectTo: '/programs',
-        buttonText: 'DAFTAR PROGRAM SEKARANG'
-      };
-    }
-
-    if (pendingReg) {
-      const hoursSinceReg = differenceInHours(today, parseISO(pendingReg.created_at));
-      
-      // TRIAL ACCESS: 24 hours from registration
-      if (hoursSinceReg < 24) {
-        return {
-          status: 'trial',
-          isBlocked: false,
-          isVerified: false,
-          showSoftReminder: true,
-          message: `Mode Trial Aktif! Pendaftaran ${fullSalutation} sedang diproses. ${fullSalutation} bisa mencoba akses seluruh ayat selama 24 jam pertama.`,
-          buttonText: 'CEK STATUS PENDAFTARAN',
-          redirectTo: '/mufradat/billing'
-        };
-      }
-
-      // After 24h, still pending but trial ended
-      return {
-        status: 'inactive',
-        isBlocked: true,
-        isVerified: false,
-        showSoftReminder: false,
-        message: `Sabar Menunggu Verifikasi. Pendaftaran ${fullSalutation} sedang ditinjau secara manual oleh Musyrifah. Mohon tunggu maksimal 1x24 jam kerja.`,
-        redirectTo: '/mufradat/billing',
-        buttonText: 'CEK STATUS PENDAFTARAN'
-      };
-    }
-
+  if (!user || user.mufradat_status === 'inactive') {
     return {
       status: 'inactive',
       isBlocked: true,
       isVerified: false,
       showSoftReminder: false,
-      message: `${fullSalutation} belum terdaftar di program Hi Mufradat. Silakan lakukan pendaftaran terlebih dahulu.`,
-      redirectTo: '/programs',
-      buttonText: 'DAFTAR PROGRAM SEKARANG'
+      message: `${fullSalutation} belum terdaftar di Hi Mufradat. Silakan daftar gratis.`,
+      redirectTo: '/study-circles/registration?program=hi_mufradat',
+      buttonText: 'DAFTAR GRATIS SEKARANG',
     };
   }
 
-  // Handle Leave status
-  if (user.mufradat_status === 'on_leave') {
-    const leaveFrom = user.mufradat_leave_from ? parseISO(user.mufradat_leave_from) : null;
-    const leaveUntil = user.mufradat_leave_until ? parseISO(user.mufradat_leave_until) : null;
-    
-    const isAfterFrom = !leaveFrom || today >= leaveFrom;
-    const isBeforeUntil = !leaveUntil || today <= leaveUntil;
-    
-    if (isAfterFrom && isBeforeUntil) {
-      return {
-        status: 'on_leave',
-        isBlocked: true,
-        showSoftReminder: false,
-        message: `Status ${fullSalutation} sedang Cuti. Akses ayat akan kembali terbuka setelah masa cuti berakhir.`
-      };
-    }
-  }
-
-  const verifiedRegs = registrations
-    ?.filter(r => 
-      r.status?.toLowerCase() === 'verified' && 
-      (
-        r.halaqah_id?.toLowerCase().includes('mufradat') || 
-        r.halaqah_title?.toLowerCase().includes('mufradat') || 
-        r.halaqah_id === 'all' || 
-        r.halaqah_id === user.mufradat_group_id
-      )
-    )
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) || [];
+  const verifiedRegs =
+    registrations
+      ?.filter((r) => r.status?.toLowerCase() === 'verified')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) || [];
 
   const isVerified = verifiedRegs.length > 0;
-  let dueDate = null;
-
+  let dueDate: Date | null = null;
   if (isVerified) {
     const firstVer = verifiedRegs[0];
-    const baseDate = parseISO(firstVer.verified_at || firstVer.created_at);
-    // Count how many verified months/regs (usually 1 per monthly, but handles legacy)
-    dueDate = addMonths(baseDate, verifiedRegs.length);
-  }
-
-  // Fallback to mufradat_due_date ONLY if no registrations found
-  // This allows legacy/manually added users to remain active while transition is in progress
-  if (!dueDate && user.mufradat_due_date) {
+    dueDate = addMonths(parseISO(firstVer.verified_at || firstVer.created_at), verifiedRegs.length);
+  } else if (user.mufradat_due_date) {
     dueDate = parseISO(user.mufradat_due_date);
   }
 
-  // If still no due date, they are effectively inactive/unpaid in billing sense
-  // BUT: If they have a verified registration, we might want to let them see content?
-  // The user says "Buka akses semua surat, juz untuk yang valid registration"
-  // If we want billing to still work, we keep the block for expired.
-  
   if (!dueDate) {
     return {
-      status: 'inactive',
-      isBlocked: true,
-      isVerified,
-      showSoftReminder: false,
-      nextBillingMonth: format(today, 'yyyy-MM'),
-      message: `Masa aktif akses ${fullSalutation} belum tersedia. Silakan lakukan aktivasi pembayaran.`,
-      redirectTo: '/mufradat/billing'
-    };
-  }
-
-  // Grace Period: 3 Days
-  const graceDate = addDays(dueDate, 3);
-  const isExpired = today > dueDate;
-  const isGraceEnded = today > graceDate;
-
-  if (isGraceEnded) {
-    const hasPendingCurrent = registrations.some(r => 
-      r.status === 'pending_verification' && 
-      (
-        r.halaqah_id === 'mufradat-premium' || 
-        r.halaqah_id === user.mufradat_group_id ||
-        r.halaqah_title?.toLowerCase().includes('mufradat')
-      ) &&
-      (differenceInHours(today, parseISO(r.created_at)) < 48) // Allow 48h buffer for pending
-    );
-
-    if (hasPendingCurrent) {
-       return {
-         status: 'trial', // Show as trial/pending mode
-         isBlocked: false,
-         isVerified,
-         showSoftReminder: true,
-         message: `Bukti Infaq ${fullSalutation} sedang menunggu verifikasi Musyrifah. Akses tetap terbuka sementara (Mode Trial).`
-       };
-    }
-
-    return {
-      status: 'blocked',
-      isBlocked: true,
-      isVerified,
-      showSoftReminder: false,
-      dueDate: dueDate,
-      nextBillingMonth: format(dueDate, 'yyyy-MM'),
-      message: `Akses Terhenti. Masa aktif Hi Mufradat ${fullSalutation} sudah habis. Mohon lakukan konfirmasi infaq.`,
-      redirectTo: '/mufradat/billing',
-      buttonText: 'KONFIRMASI PEMBAYARAN'
-    };
-  }
-
-  if (isExpired) {
-    return {
-      status: 'grace_period',
+      status: 'active',
       isBlocked: false,
-      isVerified,
-      showSoftReminder: true,
-      dueDate: dueDate,
-      nextBillingMonth: format(dueDate, 'yyyy-MM'),
-      message: `Masa aktif akses ${fullSalutation} telah berakhir pada ${format(dueDate, 'd MMM')}. Mohon segera konfirmasi pendaftaran.`
+      isFree: true,
+      isVerified: true,
+      showSoftReminder: false,
+      message: `Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!`,
     };
   }
 
-  // Calculate days remaining
+  const graceDate = addDays(dueDate, 3);
   const diffTime = dueDate.getTime() - today.getTime();
   const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const pendingHours = differenceInHours(today, dueDate);
 
-  // Determine the next month that needs to be paid
-  // If they are expired or blocked, they are paying for the current/past due month
-  // If they are active, they are paying for the month AFTER their current due date
-  const nextMonthDate = isExpired ? today : addMonths(dueDate, 1);
-  const nextBillingMonth = format(nextMonthDate, 'yyyy-MM');
+  if (today > graceDate && pendingHours > 72) {
+    return {
+      status: 'active',
+      isBlocked: false,
+      isFree: true,
+      isVerified: true,
+      showSoftReminder: false,
+      daysRemaining,
+      dueDate,
+      nextBillingMonth: format(today, 'yyyy-MM'),
+      message: `Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!`,
+    };
+  }
 
   return {
     status: 'active',
     isBlocked: false,
-    isVerified,
-    showSoftReminder: daysRemaining <= 3,
+    isFree: true,
+    isVerified: true,
+    showSoftReminder: false,
     daysRemaining,
     dueDate,
-    nextBillingMonth,
-    message: daysRemaining <= 3 
-      ? `Akses aktif. Sisa masa aktif ${fullSalutation} tinggal ${daysRemaining} hari lagi.` 
-      : `Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!`
+    nextBillingMonth: format(addMonths(dueDate, 1), 'yyyy-MM'),
+    message: `Akses Aktif. Ahlan wa Sahlan di Hi Mufradat!`,
   };
 }
