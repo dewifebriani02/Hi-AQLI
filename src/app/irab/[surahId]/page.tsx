@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,13 @@ import {
   ArrowRight,
   BookOpen,
   Sparkles,
+  Play,
+  Pause,
+  Loader2,
+  Minus,
+  Plus,
+  Type,
+  Volume2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -20,12 +27,69 @@ import {
   getIrabVersesBySurah,
 } from "@/lib/irab-data";
 import { QURAN_CHAPTERS } from "@/lib/quran-data";
+import { RECITERS, getAyahAudioUrl } from "@/lib/quran-reciters";
 import { useUser, useCollection } from "@/db";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function IrabSurahDetailPage() {
   const params = useParams();
   const surahId = String(params.surahId || "");
   const { user } = useUser();
+  const { toast } = useToast();
+
+  const [fontSize, setFontSize] = useState(28);
+  const [selectedReciterId, setSelectedReciterId] = useState<number>(7);
+  const [playingKey, setPlayingKey] = useState<string | null>(null);
+  const [loadingAudioKey, setLoadingAudioKey] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const savedReciter = localStorage.getItem("aqli_reciter_id");
+    if (savedReciter) {
+      const parsed = parseInt(savedReciter, 10);
+      if (!isNaN(parsed)) setSelectedReciterId(parsed);
+    }
+    const savedSize = localStorage.getItem("aqli_mushaf_font_size");
+    if (savedSize) {
+      const parsed = parseInt(savedSize, 10);
+      if (!isNaN(parsed)) setFontSize(Math.max(20, Math.min(parsed, 48)));
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setPlayingKey(null);
+    };
+  }, [surahId]);
+
+  const adjustFontSize = (delta: number) => {
+    const newSize = Math.max(20, Math.min(fontSize + delta, 48));
+    setFontSize(newSize);
+    localStorage.setItem("aqli_mushaf_font_size", newSize.toString());
+  };
+
+  const selectReciter = (val: string) => {
+    const reciterId = parseInt(val, 10);
+    if (!isNaN(reciterId)) {
+      setSelectedReciterId(reciterId);
+      localStorage.setItem("aqli_reciter_id", reciterId.toString());
+      if (audioRef.current) {
+        audioRef.current.pause();
+        setPlayingKey(null);
+      }
+    }
+  };
 
   const chapter = useMemo(
     () => QURAN_CHAPTERS.find((c) => String(c.id) === surahId) || null,
@@ -38,6 +102,61 @@ export default function IrabSurahDetailPage() {
   );
 
   const verses = useMemo(() => getIrabVersesBySurah(surahId), [surahId]);
+
+  const toggleAudio = async (verseKey: string) => {
+    if (playingKey === verseKey) {
+      audioRef.current?.pause();
+      setPlayingKey(null);
+      return;
+    }
+
+    setLoadingAudioKey(verseKey);
+
+    try {
+      const fullUrl = await getAyahAudioUrl(selectedReciterId, verseKey);
+      if (!fullUrl) throw new Error("Audio tidak ditemukan");
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(fullUrl);
+      audioRef.current = audio;
+
+      audio.onplay = () => {
+        setPlayingKey(verseKey);
+        setLoadingAudioKey(null);
+      };
+
+      audio.onended = () => {
+        setPlayingKey(null);
+        const currentIndex = verses.findIndex((v) => v.key === verseKey);
+        if (currentIndex !== -1 && currentIndex < verses.length - 1) {
+          setTimeout(() => toggleAudio(verses[currentIndex + 1].key), 300);
+        }
+      };
+
+      audio.onerror = () => {
+        setLoadingAudioKey(null);
+        setPlayingKey(null);
+        toast({
+          variant: "destructive",
+          title: "Audio Error",
+          description: "Gagal memutar suara murottal ayat ini.",
+        });
+      };
+
+      await audio.play();
+    } catch {
+      setLoadingAudioKey(null);
+      setPlayingKey(null);
+      toast({
+        variant: "destructive",
+        title: "Audio Error",
+        description: "Gagal memuat murottal ayat.",
+      });
+    }
+  };
 
   const nextIrabSurah = useMemo(() => {
     const idx = IRAB_SURAH_LIST.findIndex((s) => s.id === surahId);
@@ -62,20 +181,33 @@ export default function IrabSurahDetailPage() {
     progressOptions
   );
 
-  const passedKeys = useMemo(() => {
+  const { passedKeys, verseStatsMap } = useMemo(() => {
     const set = new Set<string>();
-    if (!progress) return set;
+    const stats = new Map<string, { maxScore: number; attempts: number }>();
+    if (!progress) return { passedKeys: set, verseStatsMap: stats };
+
     progress.forEach((p: any) => {
       if (!p.quiz_id?.startsWith("irab_")) return;
+      const key = p.quiz_id.replace("irab_", "");
       const isPassed =
         p.is_passed ||
         (Number(p.total_questions) > 0 &&
           Number(p.score) >= Number(p.total_questions));
       if (isPassed) {
-        set.add(p.quiz_id.replace("irab_", ""));
+        set.add(key);
       }
+
+      const pct =
+        Math.round((Number(p.score) / (Number(p.total_questions) || 1)) * 100) ||
+        0;
+      const current = stats.get(key) || { maxScore: 0, attempts: 0 };
+      stats.set(key, {
+        maxScore: Math.max(current.maxScore, pct),
+        attempts: current.attempts + 1,
+      });
     });
-    return set;
+
+    return { passedKeys: set, verseStatsMap: stats };
   }, [progress]);
 
   const doneCount = verses.filter((v) => passedKeys.has(v.key)).length;
@@ -86,41 +218,86 @@ export default function IrabSurahDetailPage() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-24">
       {/* Sticky Header — Mirrors Hi Mufradat /mufradat/[id] */}
-      <div className="flex items-center justify-between gap-3 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b px-2 sm:px-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <Button asChild variant="ghost" size="icon" className="shrink-0">
-            <Link href="/irab">
-              <ChevronLeft className="h-6 w-6 text-[#800000]" />
-            </Link>
-          </Button>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black font-headline truncate">
-                {surahId}. {surahTitle}
-              </h1>
-              {surahArab && (
-                <span className="font-arabic text-lg text-[#800000] shrink-0">
-                  {surahArab}
-                </span>
-              )}
+      <div className="flex flex-col gap-2.5 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b px-2 sm:px-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button asChild variant="ghost" size="icon" className="shrink-0">
+              <Link href="/irab">
+                <ChevronLeft className="h-6 w-6 text-[#800000]" />
+              </Link>
+            </Button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black font-headline truncate">
+                  {surahId}. {surahTitle}
+                </h1>
+                {surahArab && (
+                  <span className="font-arabic text-lg text-[#800000] shrink-0">
+                    {surahArab}
+                  </span>
+                )}
+              </div>
+              <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest text-[#800000] truncate">
+                Hi I&apos;rab • Bedah Nahwu Surah
+              </p>
             </div>
-            <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest text-[#800000] truncate">
-              Hi I&apos;rab • Bedah Nahwu Surah
-            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:flex items-center gap-1 bg-muted/30 p-1 rounded-lg border">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(-2)}>
+                <Minus className="h-3 w-3" />
+              </Button>
+              <Type className="h-3 w-3 text-muted-foreground mx-1" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => adjustFontSize(2)}>
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+
+            {verses.length > 0 && (
+              <Badge
+                className={cn(
+                  "shrink-0 text-[10px] font-black px-2.5 py-1 rounded-full border",
+                  doneCount >= verses.length
+                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                    : "bg-[#800000]/10 text-[#800000] border-[#800000]/20"
+                )}
+              >
+                {doneCount}/{verses.length} Lulus
+              </Badge>
+            )}
           </div>
         </div>
 
+        {/* Mobile Font Size + Qari Controls */}
         {verses.length > 0 && (
-          <Badge
-            className={cn(
-              "shrink-0 text-[10px] font-black px-2.5 py-1 rounded-full border",
-              doneCount >= verses.length
-                ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                : "bg-[#800000]/10 text-[#800000] border-[#800000]/20"
-            )}
-          >
-            {doneCount}/{verses.length} Lulus
-          </Badge>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <Volume2 className="w-3.5 h-3.5 text-[#800000] shrink-0" />
+              <Select value={String(selectedReciterId)} onValueChange={selectReciter}>
+                <SelectTrigger className="h-8 text-xs font-semibold bg-white border-slate-200 rounded-lg max-w-[240px]">
+                  <SelectValue placeholder="Pilih Qari" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RECITERS.slice(0, 10).map((r) => (
+                    <SelectItem key={r.id} value={String(r.id)} className="text-xs">
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="sm:hidden flex items-center gap-1 bg-muted/30 p-0.5 rounded-lg border">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-[#800000]" onClick={() => adjustFontSize(-2)}>
+                <Minus className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-[11px] font-bold w-6 text-center">{fontSize}</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-[#800000]" onClick={() => adjustFontSize(2)}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -166,6 +343,7 @@ export default function IrabSurahDetailPage() {
           <div className="grid gap-3">
             {verses.map((item) => {
               const isCompleted = passedKeys.has(item.key);
+              const vStats = verseStatsMap.get(item.key);
               const arabicFull = item.words.map((w) => w.word).join(" ");
 
               return (
@@ -206,7 +384,23 @@ export default function IrabSurahDetailPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {vStats && vStats.attempts > 0 && (
+                          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
+                            <span
+                              className={cn(
+                                "text-[10px] font-black",
+                                vStats.maxScore === 100 ? "text-emerald-600" : "text-amber-600"
+                              )}
+                            >
+                              🎯 {vStats.maxScore}%
+                            </span>
+                            <span className="text-[9px] font-bold text-slate-400 tracking-tighter uppercase">
+                              🔄 {vStats.attempts}x
+                            </span>
+                          </div>
+                        )}
+
                         <Button
                           asChild
                           variant="outline"
@@ -232,6 +426,21 @@ export default function IrabSurahDetailPage() {
                             {isCompleted ? "Ulangi Kuis" : "Kuis"}
                           </Link>
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleAudio(item.key)}
+                          className="h-9 w-9 text-[#800000] hover:bg-[#800000]/10 rounded-xl"
+                          title={playingKey === item.key ? "Jeda Murottal" : "Putar Suara Ayat"}
+                        >
+                          {loadingAudioKey === item.key ? (
+                            <Loader2 className="animate-spin h-4 w-4" />
+                          ) : playingKey === item.key ? (
+                            <Pause className="h-4 w-4 fill-current" />
+                          ) : (
+                            <Play className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
                     </div>
 
@@ -241,7 +450,8 @@ export default function IrabSurahDetailPage() {
                       className="block p-3.5 rounded-xl bg-orange-50/40 hover:bg-orange-50/80 border border-orange-100/80 transition-colors"
                     >
                       <p
-                        className="text-2xl sm:text-3xl font-arabic text-right text-slate-800 leading-loose"
+                        className="font-arabic text-right text-slate-800 leading-loose"
+                        style={{ fontSize: `${fontSize}px` }}
                         dir="rtl"
                       >
                         {arabicFull}

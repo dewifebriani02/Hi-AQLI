@@ -22,6 +22,11 @@ import {
   CheckCircle2,
   ListTree,
   X,
+  Play,
+  Pause,
+  Loader2,
+  RotateCcw,
+  Volume2,
 } from 'lucide-react';
 import Link from "next/link";
 import React, { useState, useMemo, useEffect, useRef } from "react";
@@ -30,16 +35,25 @@ import { useParams, useRouter } from "next/navigation";
 import {
   getIrabNavigation,
 } from "@/lib/irab-data";
+import { getAyahAudioUrl } from "@/lib/quran-reciters";
 import { useUser, useCollection } from "@/db";
+import { useToast } from "@/hooks/use-toast";
 
 export default function IrabDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const surahId = params.surahId as string;
   const ayat = params.ayat as string;
   const currentVerseNum = parseInt(ayat, 10) || 1;
   const [selectedWord, setSelectedWord] = useState<number | null>(null);
+  const [wordCounts, setWordCounts] = useState<Record<number, number>>({});
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [selectedReciterId, setSelectedReciterId] = useState<number>(7);
+
   const detailRef = useRef<HTMLDivElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { user } = useUser();
 
@@ -54,13 +68,90 @@ export default function IrabDetailPage() {
     nextSurah,
   } = useMemo(() => getIrabNavigation(surahId, ayat), [surahId, ayat]);
 
-  // Reset selected word when verse changes so ringkasan appears cleanly first
+  useEffect(() => {
+    const savedReciter = localStorage.getItem('aqli_reciter_id');
+    if (savedReciter) {
+      const parsed = parseInt(savedReciter, 10);
+      if (!isNaN(parsed)) setSelectedReciterId(parsed);
+    }
+  }, []);
+
+  // Reset selected word, repetisi counts, and stop audio when verse changes
   useEffect(() => {
     setSelectedWord(null);
+    setWordCounts({});
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsPlayingAudio(false);
+    setIsLoadingAudio(false);
   }, [surahId, ayat]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const toggleAudio = async () => {
+    const verseKey = `${surahId}:${ayat}`;
+    if (isPlayingAudio) {
+      audioRef.current?.pause();
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    setIsLoadingAudio(true);
+    try {
+      const fullUrl = await getAyahAudioUrl(selectedReciterId, verseKey);
+      if (!fullUrl) throw new Error("Audio tidak ditemukan");
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(fullUrl);
+      audioRef.current = audio;
+
+      audio.onplay = () => {
+        setIsPlayingAudio(true);
+        setIsLoadingAudio(false);
+      };
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+      };
+      audio.onerror = () => {
+        setIsLoadingAudio(false);
+        setIsPlayingAudio(false);
+        toast({
+          variant: "destructive",
+          title: "Audio Error",
+          description: "Gagal memutar suara murottal ayat ini.",
+        });
+      };
+
+      await audio.play();
+    } catch {
+      setIsLoadingAudio(false);
+      setIsPlayingAudio(false);
+      toast({
+        variant: "destructive",
+        title: "Audio Error",
+        description: "Gagal memuat audio murottal ayat.",
+      });
+    }
+  };
 
   const handleSelectWord = (idx: number) => {
     setSelectedWord(idx);
+    setWordCounts((prev) => ({
+      ...prev,
+      [idx]: (prev[idx] || 0) + 1,
+    }));
     setTimeout(() => {
       detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 60);
@@ -135,8 +226,24 @@ export default function IrabDetailPage() {
           </p>
         </div>
 
-        {/* Quick Action Icons (Quiz + Prev Ayat + Next Ayat) just like Hi Mufradat */}
+        {/* Quick Action Icons (Audio + Quiz + Prev Ayat + Next Ayat) */}
         <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleAudio}
+            className="text-[#800000] hover:bg-[#800000]/10"
+            title={isPlayingAudio ? "Jeda Suara Ayat" : "Putar Suara Ayat"}
+          >
+            {isLoadingAudio ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isPlayingAudio ? (
+              <Pause className="h-4 w-4 fill-current" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </Button>
+
           <Button
             asChild
             variant="ghost"
@@ -202,6 +309,28 @@ export default function IrabDetailPage() {
       {/* Ayat Display Card (Interactive Word-by-Word Mushaf View) */}
       <Card className="border-none shadow-xl bg-white overflow-hidden relative border-b-4 border-[#800000] rounded-3xl mx-2 sm:mx-0">
         <CardContent className="p-6 sm:p-8 text-center space-y-6">
+          <div className="flex items-center justify-between">
+            <Badge variant="outline" className="text-[#800000] border-[#800000]/20 text-[10px] font-black uppercase">
+              QS. {currentData.surah} : {currentData.ayat}
+            </Badge>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={toggleAudio}
+              className="h-8 rounded-full border-[#800000]/20 text-[#800000] hover:bg-[#800000]/5 font-bold text-[11px] gap-1.5"
+            >
+              {isLoadingAudio ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : isPlayingAudio ? (
+                <Pause className="w-3.5 h-3.5 fill-current" />
+              ) : (
+                <Volume2 className="w-3.5 h-3.5" />
+              )}
+              {isPlayingAudio ? "Jeda Murottal" : "Dengar Ayat"}
+            </Button>
+          </div>
+
           <div className="flex flex-wrap justify-center gap-x-3 sm:gap-x-5 gap-y-4 sm:gap-y-6" dir="rtl">
             {currentData.words.map((item, idx) => (
               <button
@@ -251,7 +380,7 @@ export default function IrabDetailPage() {
 
       {/* 1. Ringkasan I'rab Seluruh Kata (Ditaruh Terlebih Dahulu) */}
       <Card className="border-[#800000]/10 shadow-sm overflow-hidden mx-2 sm:mx-0">
-        <CardHeader className="border-b bg-[#800000]/5 py-4 flex flex-row items-center justify-between">
+        <CardHeader className="border-b bg-[#800000]/5 py-4 flex flex-row items-start justify-between gap-2">
           <div className="flex flex-col gap-1">
             <CardTitle className="text-base flex items-center gap-2 font-headline">
               <ListTree className="w-4 h-4 text-[#800000]" />
@@ -261,6 +390,16 @@ export default function IrabDetailPage() {
               Ketuk baris kata di bawah untuk melihat detail penjelasan I&apos;rab &amp; Shorof.
             </p>
           </div>
+          {Object.keys(wordCounts).length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setWordCounts({})}
+              className="text-[10px] font-bold text-muted-foreground uppercase gap-1 shrink-0"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y" dir="ltr">
@@ -290,6 +429,11 @@ export default function IrabDetailPage() {
                       <Badge className={cn("text-[9px] font-black uppercase px-2 py-0.5 border", item.color)}>
                         {item.function}
                       </Badge>
+                      {wordCounts[idx] > 0 && (
+                        <Badge className="bg-[#D4AF37] hover:bg-[#D4AF37] text-black text-[9px] font-bold h-4 px-1.5 animate-in zoom-in-50 duration-200">
+                          x{wordCounts[idx]}
+                        </Badge>
+                      )}
                     </div>
                     <span className="text-xs text-muted-foreground font-medium truncate max-w-full">
                       {item.trans} — &ldquo;{item.meaning}&rdquo;
