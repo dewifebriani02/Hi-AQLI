@@ -176,7 +176,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <SidebarInset className="w-full min-w-0 flex flex-col overflow-x-clip">
           <div className={cn("flex flex-col flex-1 w-full min-w-0", showBottomNav ? "pb-24" : "pb-6")}>
             <header className="sticky top-0 z-40 flex h-16 sm:h-20 items-center justify-between gap-2 px-3 sm:px-6 md:px-10 transition-all bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
-              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
                 {showAdminUI && (
                   <SidebarTrigger
                     className={cn(
@@ -187,17 +187,17 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                     )}
                   />
                 )}
-                <Link href="/" className="transition-transform hover:scale-105 active:scale-95 min-w-0">
-                  <Logo variant="default" showText={true} className="scale-90 sm:scale-110 md:scale-125 origin-left" textClassName="text-lg sm:text-2xl md:text-3xl font-black tracking-tight" imageSize={40} />
+                <Link href="/" className="transition-transform hover:scale-105 active:scale-95 shrink-0">
+                  <Logo variant="default" showText={true} className="sm:scale-110 md:scale-125 origin-left" textClassName="text-base sm:text-2xl md:text-3xl font-black tracking-tight whitespace-nowrap" imageSize={32} />
                 </Link>
               </div>
               
-              <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
                 {/* Global Report Error Button — Available on every thalibah page */}
                 {!isAuthPage && (
                   <ReportTriggerButton
-                    label="Laporkan"
-                    className="h-7 sm:h-8 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-black border-rose-200 bg-rose-50/60 hover:bg-rose-100/80 text-[#800000]"
+                    label="Lapor"
+                    className="h-7 sm:h-8 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-black border-rose-200 bg-rose-50/60 hover:bg-rose-100/80 text-[#800000] whitespace-nowrap"
                   />
                 )}
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -22,8 +21,8 @@ export const Logo = ({
   variant = 'default',
   whiteText = false
 }: LogoProps) => (
-  <div className={cn("flex items-center gap-3", className)}>
-    <div className="relative flex items-center justify-center" style={{ width: imageSize, height: imageSize }}>
+  <div className={cn("flex items-center gap-2 sm:gap-3 shrink-0", className)}>
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: imageSize, height: imageSize }}>
       <Image
         src={variant === 'gold' ? "/app-logo-gold.png" : "/app-logo.png"}
         alt="AQLI Logo"
@@ -35,7 +34,7 @@ export const Logo = ({
     </div>
     {showText && (
       <span className={cn(
-        "font-headline font-black tracking-tight leading-none select-none mt-0.5",
+        "font-headline font-black tracking-tight leading-none select-none whitespace-nowrap mt-0.5",
         whiteText ? "text-white" : (variant === 'gold' ? "text-[#D4AF37]" : "text-[#800000]"),
         textClassName
       )}>
