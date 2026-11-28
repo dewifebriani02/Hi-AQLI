@@ -2519,6 +2519,195 @@ export function TikrarSystem({
                 <Settings2 className="w-3.5 h-3.5 mr-1.5" /> Atur Target
               </Button>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isResetting}
+                  className="h-9 px-2 sm:px-2.5 text-[11px] sm:text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 rounded-xl shrink-0 whitespace-nowrap"
+                  title="Pilihan Reset Counter"
+                >
+                  {isResetting ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin shrink-0" />
+                  ) : (
+                    <RotateCcw className="w-3.5 h-3.5 mr-1 shrink-0" />
+                  )}
+                  <span>Reset</span>
+                  <ChevronDown className="w-3 h-3 ml-1 shrink-0 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72 max-h-[75dvh] overflow-y-auto rounded-2xl p-1.5 shadow-xl">
+                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-wider text-stone-500 px-2 py-1">
+                  Pilih Counter yang Direset (Hal. {page})
+                </DropdownMenuLabel>
+                {!pageLockReason && ([1, 2, 3, 4] as const).map((bId) => {
+                  const bLetter = BLOCK_LETTERS[bId];
+                  const bState = blocks[bId];
+                  const bListen = getBlockListenCount({ blocks }, bId);
+                  const hasAct = bListen > 0 || bState?.a?.count > 0 || bState?.b?.count > 0 || bState?.combined?.count > 0 || bState?.understood !== undefined;
+                  if (!hasAct) return null;
+                  return (
+                    <React.Fragment key={`top-reset-block-${bId}`}>
+                      <div className="px-2 pt-1.5 pb-0.5 text-[9.5px] font-black uppercase tracking-wider text-primary/80">
+                        Blok {bLetter} (TM {bId})
+                      </div>
+                      {(bListen > 0 || bState?.understood !== undefined) && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setResetConfirm({
+                              scope: "counter",
+                              key: `${bId}.listen`,
+                              title: `Reset Counter Simak TM ${bId} (Blok ${bLetter})?`,
+                              description: `Hitungan Simak TM ${bId} (Blok ${bLetter}) pada Halaman ${page} akan dikembalikan ke 0.`,
+                            })
+                          }
+                          className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
+                        >
+                          <span>Reset Simak TM {bId}</span>
+                          <span className="text-[10px] font-black text-stone-500">{bListen}/5</span>
+                        </DropdownMenuItem>
+                      )}
+                      {bState?.a?.count > 0 && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setResetConfirm({
+                              scope: "counter",
+                              key: `${bId}.a`,
+                              title: `Reset Counter TM ${bId}-1 (Blok ${bLetter}-1)?`,
+                              description: `Hitungan TM ${bId}-1 (Blok ${bLetter}-1) pada Halaman ${page} akan dikembalikan ke 0.`,
+                            })
+                          }
+                          className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
+                        >
+                          <span>Reset TM {bId}-1 ({bLetter}-1)</span>
+                          <span className="text-[10px] font-black text-stone-500">{bState.a.count}/{PASS_THRESHOLD}</span>
+                        </DropdownMenuItem>
+                      )}
+                      {bState?.b?.count > 0 && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setResetConfirm({
+                              scope: "counter",
+                              key: `${bId}.b`,
+                              title: `Reset Counter TM ${bId}-2 (Blok ${bLetter}-2)?`,
+                              description: `Hitungan TM ${bId}-2 (Blok ${bLetter}-2) pada Halaman ${page} akan dikembalikan ke 0.`,
+                            })
+                          }
+                          className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
+                        >
+                          <span>Reset TM {bId}-2 ({bLetter}-2)</span>
+                          <span className="text-[10px] font-black text-stone-500">{bState.b.count}/{PASS_THRESHOLD}</span>
+                        </DropdownMenuItem>
+                      )}
+                      {bState?.combined?.count > 0 && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setResetConfirm({
+                              scope: "counter",
+                              key: `${bId}.combined`,
+                              title: `Reset Counter Gabung TM ${bId} (Blok ${bLetter})?`,
+                              description: `Hitungan Gabung TM ${bId} (Blok ${bLetter}) pada Halaman ${page} akan dikembalikan ke 0.`,
+                            })
+                          }
+                          className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
+                        >
+                          <span>Reset Gabung TM {bId}</span>
+                          <span className="text-[10px] font-black text-stone-500">{bState.combined.count}/{PASS_THRESHOLD}</span>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setResetConfirm({
+                            scope: "block",
+                            block: bId,
+                            title: `Reset Counter Blok ${bLetter} (TM ${bId}) Hal. ${page}?`,
+                            description: `Seluruh hitungan Simak TM ${bId}, TM ${bId}-1, TM ${bId}-2, dan Gabung TM ${bId} pada halaman ini akan dikembalikan ke 0.`,
+                          })
+                        }
+                        className="text-xs font-black text-rose-700 focus:text-rose-800 focus:bg-rose-50 rounded-lg cursor-pointer gap-1.5"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Reset Seluruh Blok {bLetter} (TM {bId})</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </React.Fragment>
+                  );
+                })}
+                {!pageLockReason && ([
+                  { key: "1_2", label: "Gabung TM 1 & 2 (Blok A & B)" },
+                  { key: "2_3", label: "Gabung TM 2 & 3 (Blok B & C)" },
+                  { key: "1_2_3", label: "Gabung TM 1–3 (Blok A–C)" },
+                  { key: "3_4", label: "Gabung TM 3 & 4 (Blok C & D)" },
+                  { key: "2_3_4", label: "Gabung TM 2–4 (Blok B–D)" },
+                  { key: "1_2_3_4", label: "Gabung Seluruh Halaman (TM 1–4)" },
+                ] as const).some((m) => (metaCounts[m.key] || 0) > 0) && (
+                  <>
+                    <div className="px-2 pt-1 pb-0.5 text-[9.5px] font-black uppercase tracking-wider text-amber-800">
+                      Gabungan Antar Blok
+                    </div>
+                    {([
+                      { key: "1_2", label: "Gabung TM 1 & 2 (Blok A & B)" },
+                      { key: "2_3", label: "Gabung TM 2 & 3 (Blok B & C)" },
+                      { key: "1_2_3", label: "Gabung TM 1–3 (Blok A–C)" },
+                      { key: "3_4", label: "Gabung TM 3 & 4 (Blok C & D)" },
+                      { key: "2_3_4", label: "Gabung TM 2–4 (Blok B–D)" },
+                      { key: "1_2_3_4", label: "Gabung Seluruh Halaman (TM 1–4)" },
+                    ] as const).map((m) => {
+                      const c = metaCounts[m.key] || 0;
+                      if (c <= 0) return null;
+                      return (
+                        <DropdownMenuItem
+                          key={`top-reset-meta-${m.key}`}
+                          onClick={() =>
+                            setResetConfirm({
+                              scope: "counter",
+                              key: `meta.${m.key}`,
+                              title: `Reset Counter ${m.label}?`,
+                              description: `Hitungan ${m.label} pada Halaman ${page} akan dikembalikan ke 0.`,
+                            })
+                          }
+                          className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between gap-2"
+                        >
+                          <span className="truncate">Reset {m.label}</span>
+                          <span className="text-[10px] font-black text-stone-500 shrink-0">{c}/{PASS_THRESHOLD}</span>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem
+                  disabled={Boolean(pageLockReason)}
+                  onClick={() =>
+                    setResetConfirm({
+                      scope: "page",
+                      title: `Reset Counter Halaman ${page}?`,
+                      description: `Semua counter (Simak, TM 1–4, dan gabungan antar blok) pada Halaman ${page} akan dikembalikan ke 0. Nilai ujian & riwayat tasmi' tetap aman.`,
+                    })
+                  }
+                  className="rounded-lg text-xs font-bold text-stone-800 cursor-pointer gap-2 py-2"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Reset Seluruh Halaman Ini (Hal. {page})</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() =>
+                    setResetConfirm({
+                      scope: "juz",
+                      title: `Reset Counter Juz ${juz}?`,
+                      description: `Seluruh counter pengulangan dan catatan progres harian pada Juz ${juz} (Hal. ${juzPageRange.startPage}–${juzPageRange.endPage}) akan dikembalikan ke 0. Juz lain, status lulus ujian & tasmi' tetap terjaga.`,
+                    })
+                  }
+                  className="rounded-lg text-xs font-bold text-rose-700 focus:text-rose-800 focus:bg-rose-50 cursor-pointer gap-2 py-2"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>Reset Seluruh Juz Ini (Juz {juz})</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
           </div>
         </div>
@@ -4355,74 +4544,6 @@ function MaqtaCard({
               TUNTAS
             </Badge>
           ) : null}
-          {hasBlockActivity && !isLocked && canReset && (onResetBlock || onResetCounter) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  title={`Pilihan reset counter Blok ${letter} (TM ${id})`}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-stone-300/90 bg-white/95 text-[10px] font-bold text-stone-700 hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 active:scale-95 transition-all shrink-0"
-                >
-                  <RotateCcw className="w-2.5 h-2.5" />
-                  <span>Reset</span>
-                  <ChevronDown className="w-2.5 h-2.5 opacity-70" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5">
-                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-wider text-stone-500 px-2 py-1">
-                  Reset Counter Blok {letter} (TM {id})
-                </DropdownMenuLabel>
-                {(listenCount > 0 || state?.understood !== undefined) && onResetCounter && (
-                  <DropdownMenuItem
-                    onClick={() => onResetCounter(`${id}.listen`, `Simak TM ${id} (Blok ${letter})`)}
-                    className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
-                  >
-                    <span>Reset Simak TM {id}</span>
-                    <span className="text-[10px] font-black text-stone-500">{listenCount}/5</span>
-                  </DropdownMenuItem>
-                )}
-                {state.a.count > 0 && onResetCounter && (
-                  <DropdownMenuItem
-                    onClick={() => onResetCounter(`${id}.a`, `TM ${id}-1 (Blok ${letter}-1)`)}
-                    className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
-                  >
-                    <span>Reset TM {id}-1 ({letter}-1)</span>
-                    <span className="text-[10px] font-black text-stone-500">{state.a.count}/{PASS_THRESHOLD}</span>
-                  </DropdownMenuItem>
-                )}
-                {state.b.count > 0 && onResetCounter && (
-                  <DropdownMenuItem
-                    onClick={() => onResetCounter(`${id}.b`, `TM ${id}-2 (Blok ${letter}-2)`)}
-                    className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
-                  >
-                    <span>Reset TM {id}-2 ({letter}-2)</span>
-                    <span className="text-[10px] font-black text-stone-500">{state.b.count}/{PASS_THRESHOLD}</span>
-                  </DropdownMenuItem>
-                )}
-                {state.combined.count > 0 && onResetCounter && (
-                  <DropdownMenuItem
-                    onClick={() => onResetCounter(`${id}.combined`, `Gabung TM ${id} (Blok ${letter})`)}
-                    className="text-xs font-bold text-stone-700 focus:text-rose-700 focus:bg-rose-50 rounded-lg cursor-pointer justify-between"
-                  >
-                    <span>Reset Gabung TM {id}</span>
-                    <span className="text-[10px] font-black text-stone-500">{state.combined.count}/{PASS_THRESHOLD}</span>
-                  </DropdownMenuItem>
-                )}
-                {onResetBlock && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={onResetBlock}
-                      className="text-xs font-black text-rose-700 focus:text-rose-800 focus:bg-rose-50 rounded-lg cursor-pointer gap-1.5"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Reset Seluruh Blok {letter}</span>
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
       </div>
 
@@ -4984,30 +5105,17 @@ function MetaStep({ id: customId, stepKey, label, count, isLocked, onIncrement, 
           </div>
           <div className="flex items-center justify-between gap-1.5 min-h-[24px]">
             <StepTag info={stepInfo} className="justify-start min-w-0" />
-            {(canUndo || (count > 0 && !isLocked && canReset && onReset)) && (
+            {canUndo && (
               <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                {canUndo && (
-                  <button
-                    type="button"
-                    onClick={() => onIncrement(-1)}
-                    title="Kurangi 1 (kelebihan pencet)"
-                    aria-label="Kurangi 1"
-                    className="h-6 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation shrink-0"
-                  >
-                    −1
-                  </button>
-                )}
-                {count > 0 && !isLocked && canReset && onReset && (
-                  <button
-                    type="button"
-                    onClick={onReset}
-                    title={`Reset counter ${label} ke 0`}
-                    className="h-6 px-2 rounded-lg border border-rose-200 bg-rose-50/70 text-rose-700 font-bold text-[10px] inline-flex items-center gap-1 hover:bg-rose-100 active:scale-95 transition-all touch-manipulation shrink-0"
-                  >
-                    <RotateCcw className="w-2.5 h-2.5" />
-                    <span>Reset</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => onIncrement(-1)}
+                  title="Kurangi 1 (kelebihan pencet)"
+                  aria-label="Kurangi 1"
+                  className="h-6 px-2.5 rounded-lg border border-stone-300 bg-white text-stone-700 font-black text-[11px] hover:bg-stone-100 active:scale-95 transition-all touch-manipulation shrink-0"
+                >
+                  −1
+                </button>
               </div>
             )}
           </div>
