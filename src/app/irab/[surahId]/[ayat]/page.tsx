@@ -106,7 +106,7 @@ export default function IrabDetailPage() {
       {/* Sticky Top Header — Identical Flow to Hi Mufradat */}
       <div className="flex items-center gap-2 sm:gap-4 sticky top-16 sm:top-20 bg-background/95 backdrop-blur z-30 py-3 sm:py-4 border-b px-2 sm:px-0">
         <Button asChild variant="ghost" size="icon" className="text-[#800000] shrink-0 w-8 h-8 sm:w-10 sm:h-10">
-          <Link href={`/irab?surah=${surahId}`}>
+          <Link href={`/irab/${surahId}`}>
             <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
           </Link>
         </Button>
@@ -478,7 +478,7 @@ export default function IrabDetailPage() {
             ) : <span />}
 
             <Button asChild variant="ghost" size="sm" className="text-xs font-bold text-muted-foreground hover:text-[#800000]">
-              <Link href={`/irab?surah=${surahId}`}>
+              <Link href={`/irab/${surahId}`}>
                 Daftar Ayat {currentData.surah}
               </Link>
             </Button>

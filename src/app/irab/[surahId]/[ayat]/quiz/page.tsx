@@ -383,7 +383,7 @@ export default function IrabQuizPage() {
                   </Link>
                 </Button>
                 <Button asChild variant="ghost" className="w-full text-slate-500 font-bold text-xs uppercase tracking-widest">
-                  <Link href={`/irab?surah=${surahId}`}>KEMBALI KE DAFTAR AYAT</Link>
+                  <Link href={`/irab/${surahId}`}>KEMBALI KE DAFTAR AYAT</Link>
                 </Button>
               </div>
             ) : (

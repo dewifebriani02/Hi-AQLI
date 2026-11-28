@@ -314,6 +314,25 @@ export function getSmartPageContext(pathname: string | null): PageContextInfo {
     };
   }
 
+  const irabSurahMatch = path.match(/^\/irab\/(\d+)$/);
+  if (irabSurahMatch) {
+    const surahNo = irabSurahMatch[1];
+    const surahName = SURAH_MAP_STR.get(surahNo) || `Surah ${surahNo}`;
+    return {
+      moduleName: "Hi I'rab • Daftar Ayat Surah",
+      contextLabel: `Daftar Ayat QS. ${surahName} (${surahNo})`,
+      sectionOptions: [
+        "Daftar Ayat dalam Surah",
+        "Status Kelulusan Kuis",
+        "Tombol Bedah Ayat / Kuis",
+      ],
+      issueOptions: [
+        { id: "koreksi_konten", label: "Data ayat / terjemah kurang tepat" },
+        { id: "kendala_teknis", label: "Halaman ayat tidak terbuka" },
+      ],
+    };
+  }
+
   if (path.startsWith("/irab")) {
     return {
       moduleName: "Hi I'rab (Bedah Nahwu Al-Qur'an)",
