@@ -21,14 +21,14 @@ import {
   ArrowRight,
   CheckCircle2,
   ListTree,
+  X,
 } from 'lucide-react';
 import Link from "next/link";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import {
   getIrabNavigation,
-  getIrabVersesBySurah,
 } from "@/lib/irab-data";
 import { useUser, useCollection } from "@/db";
 
@@ -38,7 +38,8 @@ export default function IrabDetailPage() {
   const surahId = params.surahId as string;
   const ayat = params.ayat as string;
   const currentVerseNum = parseInt(ayat, 10) || 1;
-  const [selectedWord, setSelectedWord] = useState<number>(0);
+  const [selectedWord, setSelectedWord] = useState<number | null>(null);
+  const detailRef = useRef<HTMLDivElement | null>(null);
 
   const { user } = useUser();
 
@@ -53,10 +54,17 @@ export default function IrabDetailPage() {
     nextSurah,
   } = useMemo(() => getIrabNavigation(surahId, ayat), [surahId, ayat]);
 
-  // Reset selected word to 0 when verse changes
+  // Reset selected word when verse changes so ringkasan appears cleanly first
   useEffect(() => {
-    setSelectedWord(0);
+    setSelectedWord(null);
   }, [surahId, ayat]);
+
+  const handleSelectWord = (idx: number) => {
+    setSelectedWord(idx);
+    setTimeout(() => {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
 
   // Fetch user's passed I'rab quizzes for this surah (same flow as Hi Mufradat)
   const progressOptions = useMemo(() => ({
@@ -99,7 +107,7 @@ export default function IrabDetailPage() {
     );
   }
 
-  const activeWord = currentData.words[selectedWord] || currentData.words[0];
+  const activeWord = selectedWord !== null ? (currentData.words[selectedWord] || null) : null;
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8 max-w-4xl mx-auto pb-32">
@@ -199,12 +207,12 @@ export default function IrabDetailPage() {
               <button
                 key={idx}
                 type="button"
-                onClick={() => setSelectedWord(idx)}
+                onClick={() => handleSelectWord(idx)}
                 className={cn(
                   "cursor-pointer transition-all duration-200 group relative px-2.5 py-1.5 rounded-2xl border",
                   selectedWord === idx
                     ? "scale-105 bg-[#800000]/5 border-[#800000]/30 shadow-sm"
-                    : "border-transparent opacity-75 hover:opacity-100 hover:bg-slate-50"
+                    : "border-transparent opacity-85 hover:opacity-100 hover:bg-slate-50"
                 )}
               >
                 <p className={cn(
@@ -235,130 +243,13 @@ export default function IrabDetailPage() {
               &ldquo;{currentData.translation}&rdquo;
             </p>
             <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
-              Ketuk salah satu kata di atas untuk melihat bedah I&apos;rab &amp; Shorof
+              Ketuk salah satu kata untuk membuka detail I&apos;rab &amp; Shorof
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Active Word Deep Analysis Card */}
-      {activeWord && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 px-2 sm:px-0">
-          <div className="flex items-center justify-between gap-2 px-1">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-[#D4AF37] fill-current" />
-              <h3 className="text-[11px] font-black text-[#800000] uppercase tracking-[0.2em]">
-                Analisis Kata Ke-{selectedWord + 1} dari {currentData.words.length}
-              </h3>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2.5 text-[10px] font-black rounded-lg"
-                disabled={selectedWord <= 0}
-                onClick={() => setSelectedWord((w) => Math.max(0, w - 1))}
-              >
-                <ArrowLeft className="w-3 h-3 mr-1" /> Kata Sebelumnya
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2.5 text-[10px] font-black rounded-lg"
-                disabled={selectedWord >= currentData.words.length - 1}
-                onClick={() => setSelectedWord((w) => Math.min(currentData.words.length - 1, w + 1))}
-              >
-                Kata Berikutnya <ArrowRight className="w-3 h-3 ml-1" />
-              </Button>
-            </div>
-          </div>
-
-          <Card className="border-none shadow-md bg-white rounded-2xl overflow-hidden">
-            <div className={cn("h-2 w-full", activeWord.color.split(' ')[0])} />
-            <CardContent className="p-4 sm:p-6">
-              {/* Header - RATA KANAN */}
-              <div className="flex justify-between items-start mb-6 text-right" dir="rtl">
-                <div className="text-right">
-                  <h4 className="text-3xl sm:text-4xl font-arabic text-black mb-1">{activeWord.wordArab}</h4>
-                  <p className="text-xs font-black text-muted-foreground uppercase tracking-widest" dir="ltr">
-                    {activeWord.trans} • &ldquo;{activeWord.meaning}&rdquo;
-                  </p>
-                </div>
-                <Badge className={cn("px-3 py-1 text-[10px] font-black uppercase rounded-lg border", activeWord.color)} dir="ltr">
-                  {activeWord.function}
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {/* Kedudukan I'rab */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="p-2 rounded-xl bg-white text-[#800000] shadow-sm">
-                      <Layers className="w-5 h-5" />
-                    </div>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                      <Info className="w-3 h-3" /> Kedudukan (I&apos;rab)
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    {/* Arab */}
-                    <div className="text-right border-b border-slate-200 pb-3" dir="rtl">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">بِاللُّغَةِ الْعَرَبِيَّةِ</p>
-                      <p className="text-lg sm:text-xl font-arabic font-bold text-[#800000] leading-relaxed">
-                        {activeWord.irabArab}
-                      </p>
-                    </div>
-                    {/* Latin */}
-                    <div className="text-left border-b border-slate-200 pb-3">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Transliterasi I&apos;rab</p>
-                      <p className="text-sm font-bold text-slate-800 leading-relaxed">
-                        {activeWord.irab}
-                      </p>
-                    </div>
-                    {/* Indonesia */}
-                    <div className="text-left border-b border-slate-200 pb-3">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Terjemah Kedudukan</p>
-                      <p className="text-sm font-bold text-slate-800 leading-relaxed">
-                        {activeWord.irabIndo}
-                      </p>
-                    </div>
-                    {/* Penjelasan */}
-                    <div className="bg-white p-3.5 rounded-xl border border-orange-100 text-left">
-                      <p className="text-[9px] font-black text-orange-600 uppercase tracking-wider mb-1">Penjelasan Nahwu</p>
-                      <p className="text-sm text-slate-700 leading-relaxed">
-                        {activeWord.irabExplanation}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl bg-orange-50/50 border border-orange-100">
-                    <div className="p-2 rounded-lg bg-white text-orange-600 shadow-sm shrink-0">
-                      <Type className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[9px] font-black text-orange-500 uppercase tracking-wider mb-1">Akar &amp; Wazan (Shorof)</p>
-                      <p className="text-xs sm:text-sm font-bold text-orange-950">{activeWord.shorof}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl bg-amber-50/50 border border-amber-100">
-                    <div className="p-2 rounded-lg bg-white text-amber-600 shadow-sm shrink-0">
-                      <BookOpen className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[9px] font-black text-amber-600 uppercase tracking-wider mb-1">Makna Kata</p>
-                      <p className="text-xs sm:text-sm font-bold text-amber-950">{activeWord.meaning}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Full Word List & Bottom Action Flow — Mirrors Hi Mufradat CardFooter */}
+      {/* 1. Ringkasan I'rab Seluruh Kata (Ditaruh Terlebih Dahulu) */}
       <Card className="border-[#800000]/10 shadow-sm overflow-hidden mx-2 sm:mx-0">
         <CardHeader className="border-b bg-[#800000]/5 py-4 flex flex-row items-center justify-between">
           <div className="flex flex-col gap-1">
@@ -367,7 +258,7 @@ export default function IrabDetailPage() {
               Ringkasan I&apos;rab Seluruh Kata ({currentData.words.length} Kata)
             </CardTitle>
             <p className="text-[11px] text-amber-900 font-medium leading-snug">
-              Ketuk baris kata di bawah untuk melihat detail penjelasan I&apos;rab di atas.
+              Ketuk baris kata di bawah untuk melihat detail penjelasan I&apos;rab &amp; Shorof.
             </p>
           </div>
         </CardHeader>
@@ -376,13 +267,10 @@ export default function IrabDetailPage() {
             {currentData.words.map((item, idx) => (
               <div
                 key={idx}
-                onClick={() => {
-                  setSelectedWord(idx);
-                  window.scrollTo({ top: 120, behavior: 'smooth' });
-                }}
+                onClick={() => handleSelectWord(idx)}
                 className={cn(
                   "p-4 flex items-center justify-between gap-4 hover:bg-muted/50 transition-all cursor-pointer select-none",
-                  selectedWord === idx && "bg-[#800000]/[0.04]"
+                  selectedWord === idx && "bg-[#800000]/[0.05]"
                 )}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
@@ -416,9 +304,139 @@ export default function IrabDetailPage() {
             ))}
           </div>
         </CardContent>
+      </Card>
 
-        {/* Bottom Navigation & Quiz Buttons — Exact Hi Mufradat Pattern */}
-        <CardFooter className="pt-6 border-t bg-muted/10 p-4 flex flex-col gap-3">
+      {/* 2. Detail Analisis Kata (Muncul Setelah Kata / Ringkasan Diklik) */}
+      <div ref={detailRef} className="scroll-mt-36 px-2 sm:px-0">
+        {activeWord && selectedWord !== null && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#D4AF37] fill-current" />
+                <h3 className="text-[11px] font-black text-[#800000] uppercase tracking-[0.2em]">
+                  Detail Kata Ke-{selectedWord + 1} dari {currentData.words.length}
+                </h3>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5 text-[10px] font-black rounded-lg"
+                  disabled={selectedWord <= 0}
+                  onClick={() => setSelectedWord((w) => (w !== null ? Math.max(0, w - 1) : 0))}
+                >
+                  <ArrowLeft className="w-3 h-3 mr-1" /> Sebelumnya
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5 text-[10px] font-black rounded-lg"
+                  disabled={selectedWord >= currentData.words.length - 1}
+                  onClick={() => setSelectedWord((w) => (w !== null ? Math.min(currentData.words.length - 1, w + 1) : 0))}
+                >
+                  Berikutnya <ArrowRight className="w-3 h-3 ml-1" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg text-muted-foreground hover:text-[#800000]"
+                  onClick={() => setSelectedWord(null)}
+                  title="Tutup Detail"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            <Card className="border-none shadow-md bg-white rounded-2xl overflow-hidden">
+              <div className={cn("h-2 w-full", activeWord.color.split(' ')[0])} />
+              <CardContent className="p-4 sm:p-6">
+                {/* Header - RATA KANAN */}
+                <div className="flex justify-between items-start mb-6 text-right" dir="rtl">
+                  <div className="text-right">
+                    <h4 className="text-3xl sm:text-4xl font-arabic text-black mb-1">{activeWord.wordArab}</h4>
+                    <p className="text-xs font-black text-muted-foreground uppercase tracking-widest" dir="ltr">
+                      {activeWord.trans} • &ldquo;{activeWord.meaning}&rdquo;
+                    </p>
+                  </div>
+                  <Badge className={cn("px-3 py-1 text-[10px] font-black uppercase rounded-lg border", activeWord.color)} dir="ltr">
+                    {activeWord.function}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Kedudukan I'rab */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-2 rounded-xl bg-white text-[#800000] shadow-sm">
+                        <Layers className="w-5 h-5" />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                        <Info className="w-3 h-3" /> Kedudukan (I&apos;rab)
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {/* Arab */}
+                      <div className="text-right border-b border-slate-200 pb-3" dir="rtl">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">بِاللُّغَةِ الْعَرَبِيَّةِ</p>
+                        <p className="text-lg sm:text-xl font-arabic font-bold text-[#800000] leading-relaxed">
+                          {activeWord.irabArab}
+                        </p>
+                      </div>
+                      {/* Latin */}
+                      <div className="text-left border-b border-slate-200 pb-3">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Transliterasi I&apos;rab</p>
+                        <p className="text-sm font-bold text-slate-800 leading-relaxed">
+                          {activeWord.irab}
+                        </p>
+                      </div>
+                      {/* Indonesia */}
+                      <div className="text-left border-b border-slate-200 pb-3">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Terjemah Kedudukan</p>
+                        <p className="text-sm font-bold text-slate-800 leading-relaxed">
+                          {activeWord.irabIndo}
+                        </p>
+                      </div>
+                      {/* Penjelasan */}
+                      <div className="bg-white p-3.5 rounded-xl border border-orange-100 text-left">
+                        <p className="text-[9px] font-black text-orange-600 uppercase tracking-wider mb-1">Penjelasan Nahwu</p>
+                        <p className="text-sm text-slate-700 leading-relaxed">
+                          {activeWord.irabExplanation}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl bg-orange-50/50 border border-orange-100">
+                      <div className="p-2 rounded-lg bg-white text-orange-600 shadow-sm shrink-0">
+                        <Type className="w-4 h-4" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[9px] font-black text-orange-500 uppercase tracking-wider mb-1">Akar &amp; Wazan (Shorof)</p>
+                        <p className="text-xs sm:text-sm font-bold text-orange-950">{activeWord.shorof}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl bg-amber-50/50 border border-amber-100">
+                      <div className="p-2 rounded-lg bg-white text-amber-600 shadow-sm shrink-0">
+                        <BookOpen className="w-4 h-4" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[9px] font-black text-amber-600 uppercase tracking-wider mb-1">Makna Kata</p>
+                        <p className="text-xs sm:text-sm font-bold text-amber-950">{activeWord.meaning}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Navigation & Quiz Buttons — Exact Hi Mufradat Pattern */}
+      <Card className="border-[#800000]/10 shadow-sm overflow-hidden mx-2 sm:mx-0">
+        <CardFooter className="pt-6 bg-muted/10 p-4 flex flex-col gap-3">
           {/* Primary Quiz CTA */}
           <Button
             asChild
