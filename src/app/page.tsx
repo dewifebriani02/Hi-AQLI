@@ -1143,41 +1143,32 @@ export default function DashboardPage() {
       </div>
 
       {user && userData?.referral_code && (
-        <div className="mx-1 mb-8">
-          <Card className="border-none shadow-2xl overflow-hidden rounded-[2.5rem] bg-white border border-amber-100 flex flex-col sm:flex-row min-h-[180px] group transition-all">
-            {/* Promo Image (Premium Preview) */}
-            <div className="relative w-full sm:w-1/3 bg-[#800000] overflow-hidden">
-              <img
-                src="/images/promo-hiaqli.png"
-                alt="Promo Hi AQLI"
-                className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#800000] via-transparent to-transparent sm:bg-gradient-to-r" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="p-3 bg-white/10 backdrop-blur rounded-2xl border border-white/20">
-                  <SparklesIcon className="w-6 h-6 text-amber-400 animate-pulse" />
-                </div>
-              </div>
-            </div>
+        <div className="mx-1 mb-6">
+          <Card className="border border-[#D4AF37]/40 shadow-xl overflow-hidden rounded-3xl bg-gradient-to-br from-[#800000] via-[#680000] to-[#450000] text-white relative">
+            <div className="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-[#D4AF37]/15 blur-2xl pointer-events-none" />
+            <div className="absolute -left-10 -bottom-10 w-32 h-32 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
 
-            <CardContent className="p-6 flex-1 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex flex-col">
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Ajak Teman Belajar Al-Qur&apos;an</h3>
-                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Syiar Kebaikan &amp; Pahala Jariyah</p>
-                  </div>
+            <CardContent className="p-4 sm:p-5 relative z-10 flex flex-col gap-3.5">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center shrink-0 shadow-inner">
+                  <HeartHandshake className="w-5 h-5 text-[#D4AF37]" />
                 </div>
-
-                <div className="flex flex-col gap-1 mb-6">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kode Undangan {fullSalutation}</p>
-                  <div className="text-2xl font-black text-[#800000] tracking-[0.3em] font-mono">
-                    {userData.referral_code}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D4AF37] text-[#4a0000] text-[9px] font-black uppercase tracking-wider">
+                      <SparklesIcon className="w-2.5 h-2.5" /> Syiar &amp; Pahala Jariyah
+                    </span>
                   </div>
+                  <h3 className="text-sm sm:text-base font-black text-white tracking-tight leading-snug">
+                    Ajak Sahabat Belajar Al-Qur&apos;an Bersama
+                  </h3>
+                  <p className="text-[11px] text-amber-100/85 italic leading-relaxed mt-0.5">
+                    &ldquo;Barangsiapa menunjuki kepada kebaikan, baginya pahala seperti pelakunya.&rdquo; (HR. Muslim)
+                  </p>
                 </div>
               </div>
 
-              {/* Common Invite Text Generator */}
+              {/* Compact 1-Row Code + Share Action */}
               {(() => {
                 const origin = "https://hiaqli.pro";
                 const mufradatLink = `${origin}/register?ref=${userData.referral_code}&program=mufradat`;
@@ -1186,25 +1177,50 @@ export default function DashboardPage() {
                   mufradat: `*NAIK LEVEL PAHAM AL-QUR'AN DENGAN KUIS SERU!* 📈✨\n*HI MUFRADAT* - By AQLI\n\nIngin bacaan Al-Qur'anmu tak sekadar lewat di lisan, tapi juga meresap dalam ke hati? Yuk, naikkan level pemahamanmu dengan cara yang seru dan bikin nagih! 🌿\n\nDi Hi Mufradat, setiap ayat adalah tantangan baru untuk dimenangkan! ✨\n\n🚀 *MISI SPESIAL UNTUKMU:*\n✅ *Kuasai Mufradat Al-Qur'an*: Pecahkan kuis harian yang dirancang khusus untuk mengasah hafalan maknamu! 🕹️\n✅ *Panjat Leaderboard*: Kumpulkan poin dari setiap jawaban benar dan jadilah yang terbaik di grup thalibah! 🏆\n✅ *Progress Bertahap*: Minimal 1 halaman per pekan, rasakan kedekatan yang berbeda saat berinteraksi dengan Kalam-Nya. 📈\n✅ *Komunitas Aktif*: Berjuang bareng teman-teman dengan visi yang sama untuk jadi Ahlul Qur'an. 🤝\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nSiap Menjadi Master Mufradat? Mulai Petualanganmu Sekarang:\n🔗 ${mufradatLink}\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
                   tikrar: `*HAFAL AL-QUR'AN JADI PETUALANGAN SERU!* 📖🚀\n*HI TIKRAR* - By AQLI\n\nIngin hafalan Al-Qur'an ${fullSalutation} sekuat karang dan anti-lupa? Yuk, taklukkan tantangan hafalan dengan sistem monitoring harian yang bikin semangat! 🕋\n\n🚀 *MISI HAFALANMU:*\n✅ *7 Tahapan Itqan*: Metode sistematis yang bikin hafalan nempel terus! 🧠\n✅ *Daily Monitoring*: Progressmu dipantau setiap hari, gak bakal melenceng! 🎯\n✅ *Teman Murojaah*: Semangat bareng thalibah lain agar istiqomah terjaga! 🤝\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nSiap Jadi Penjaga Al-Qur'an? Join Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=tikrar\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
                   ngaji: `*BACA AL-QUR'AN JADI LEBIH TARTIL & PERCAYA DIRI!* 📚✨\n*HI NGAJI* - By AQLI\n\nIngin memperbaiki bacaan dari nol sampai mahir? Yuk, rasakan asyiknya belajar tahsin & tajwid bareng muallimah yang sabar & kompeten! 🕋\n\n🌟 *PENGALAMAN BELAJARMU:*\n✅ *Bimbingan Intensif*: Belajar dari dasar sampai tartil sesuai kaidah tajwid! 🎓\n✅ *Koreksi Detail*: Tajwid & makhroj diperbaiki sampai benar-benar fasih! 🗣️\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=ngaji\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
-                  irab: `*SELAMI RAHASIA BAHASA LANGIT DENGAN MUDAH!* 🔍📖\n*HI IRAB* - By AQLI\n\nIngin memahami alasan di balik setiap harokat dan keindahan tata bahasa Al-Qur'an? Yuk, pecahkan misteri I'rab dengan cara yang simpel dan menyenangkan! 🕋\n\n✨ *LEVEL UP PEMAHAMANMU:*\n✅ *Analisis Mendalam*: Pahami struktur kalimat Al-Qur'an secara detail. 🧐\n✅ *Simpel & Praktis*: Metode yang dirancang khusus agar mudah dipahami siapa saja! 🎓\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`
+                  irab: `*SELAMI RAHASIA BAHASA LANGIT DENGAN MUDAH!* 🔍📖\n*HI I'RAB* - By AQLI\n\nIngin memahami alasan di balik setiap harokat dan keindahan tata bahasa Al-Qur'an? Yuk, pecahkan misteri I'rab dengan cara yang simpel dan menyenangkan! 🕋\n\n✨ *LEVEL UP PEMAHAMANMU:*\n✅ *Analisis Mendalam*: Pahami struktur kalimat Al-Qur'an secara detail. 🧐\n✅ *Simpel & Praktis*: Metode yang dirancang khusus agar mudah dipahami siapa saja! 🎓\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar agar kita bisa saling menyemangati! 🌿\n\nDaftar Sekarang:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=irab\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`,
+                  matan: `*KUASAI FONDASI ILMU NAHWU & TAJWID DARI KITAB MATAN ULAMA!* 📜✨\n*HI MATAN* - By AQLI\n\nYuk pelajari dan hafalkan Matan Al-Ajurumiyah & Tuhfatul Athfal secara bertahap lengkap dengan syarah dan evaluasi per bab! 🕋\n\n🤝 *YUK BELAJAR BARENG DI HI AQLI!*\nGunakan kode undangan saya: *${userData.referral_code}* saat mendaftar:\n🔗 ${origin}/register?ref=${userData.referral_code}&program=matan\n\n---\n*Berhijrah dengan Ilmu, Beramal dengan Itqan.*`
                 };
 
                 const promoItems = [
-                  { id: 'mufradat', name: 'Hi Mufradat', icon: Activity, color: 'bg-amber-400', locked: false },
-                  { id: 'tikrar', name: 'Hi Tikrar', icon: Award, color: 'bg-indigo-400', locked: false },
-                  { id: 'ngaji', name: 'Hi Ngaji', icon: BookOpen, color: 'bg-cyan-400', locked: true },
-                  { id: 'irab', name: 'Hi Irab', icon: Search, color: 'bg-emerald-400', locked: true },
+                  { id: "mufradat", name: "Hi Mufradat", icon: Activity, color: "bg-amber-500", locked: false },
+                  { id: "tikrar", name: "Hi Tikrar", icon: Award, color: "bg-rose-700", locked: false },
+                  { id: "ngaji", name: "Hi Ngaji", icon: BookOpen, color: "bg-emerald-600", locked: false },
+                  { id: "irab", name: "Hi I'rab", icon: Search, color: "bg-amber-600", locked: false },
+                  { id: "matan", name: "Hi Matan", icon: Book, color: "bg-[#800000]", locked: false },
                 ];
                 
                 return (
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-white/15">
+                    <div className="flex items-center justify-between sm:justify-start gap-2.5 bg-black/25 border border-white/15 rounded-2xl px-3.5 py-2">
+                      <div className="flex flex-col">
+                        <span className="text-[8.5px] font-black uppercase tracking-widest text-amber-200/80">
+                          Kode Undangan {fullSalutation}
+                        </span>
+                        <span className="text-sm sm:text-base font-black tracking-[0.2em] font-mono text-[#D4AF37]">
+                          {userData.referral_code}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== "undefined" && navigator.clipboard) {
+                            navigator.clipboard.writeText(userData.referral_code);
+                          }
+                        }}
+                        className="ml-2 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-[10px] font-black uppercase tracking-wider text-white border border-white/15 active:scale-95 transition-all"
+                        title="Salin Kode Undangan"
+                      >
+                        Salin
+                      </button>
+                    </div>
+
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button
-                          className="w-full rounded-2xl h-16 font-black uppercase text-[12px] tracking-[0.2em] gap-3 bg-[#800000] text-white border-2 border-[#800000] hover:bg-white hover:text-[#800000] transition-all shadow-xl shadow-[#800000]/20 group/btn"
+                          className="rounded-2xl h-11 px-5 font-black uppercase text-[11px] tracking-wider gap-2 bg-[#D4AF37] text-[#4a0000] hover:bg-[#e5c247] transition-all shadow-lg shrink-0"
                         >
-                          <Share2 className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-                          BAGIKAN AJAKAN KE TEMAN
+                          <Share2 className="w-4 h-4" />
+                          Bagikan Ajakan
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-lg bg-white rounded-[2rem]">
@@ -1215,7 +1231,7 @@ export default function DashboardPage() {
                           </DialogDescription>
                         </DialogHeader>
 
-                        <div className="grid gap-3 py-4">
+                        <div className="grid gap-2.5 py-3">
                            {promoItems.map((item) => {
                              const isLocked = item.locked;
                              return (
@@ -1225,19 +1241,19 @@ export default function DashboardPage() {
                                  target={isLocked ? undefined : "_blank"}
                                  rel={isLocked ? undefined : "noopener noreferrer"}
                                  className={cn(
-                                   "group flex items-center justify-between p-4 rounded-2xl transition-all shadow-sm border-2",
+                                   "group flex items-center justify-between p-3.5 rounded-2xl transition-all shadow-sm border-2",
                                    isLocked 
                                      ? "bg-slate-50/50 border-slate-100 opacity-60 cursor-not-allowed" 
-                                     : "bg-slate-50 hover:bg-white border-transparent hover:border-[#800000]/10"
+                                     : "bg-slate-50 hover:bg-white border-transparent hover:border-[#800000]/15"
                                  )}
                                  onClick={(e) => isLocked && e.preventDefault()}
                                >
-                                 <div className="flex items-center gap-4">
+                                 <div className="flex items-center gap-3.5">
                                    <div className={cn(
-                                     "w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md", 
+                                     "w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-md", 
                                      isLocked ? "bg-slate-300" : item.color
                                    )}>
-                                     <item.icon className="w-6 h-6" />
+                                     <item.icon className="w-5 h-5" />
                                    </div>
                                    <div className="flex flex-col">
                                      <div className="flex items-center gap-2">
@@ -1248,10 +1264,10 @@ export default function DashboardPage() {
                                    </div>
                                  </div>
                                  <div className={cn(
-                                   "w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-transform",
+                                   "w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md transition-transform",
                                    isLocked ? "bg-slate-200" : "bg-[#25D366] group-hover:scale-110"
                                  )}>
-                                   {isLocked ? <Lock className="w-4 h-4 text-slate-400" /> : <Share2 className="w-5 h-5" />}
+                                   {isLocked ? <Lock className="w-4 h-4 text-slate-400" /> : <Share2 className="w-4 h-4" />}
                                  </div>
                                </a>
                              );
