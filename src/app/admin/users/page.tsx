@@ -144,10 +144,24 @@ export default function AdminUsersPage() {
   const [isActivating, setIsActivating] = useState(false);
 
   const { data: users, isLoading: isUsersLoading, refresh: refreshUsers } = useCollection("users");
+  const { data: adminRoles, refresh: refreshAdminRoles } = useCollection("roles_admin");
+  const { data: superAdminRoles } = useCollection("roles_superadmin");
   const { data: registrations, isLoading: isRegLoading } = useCollection("halaqah_registrations");
   const { data: redemptions, isLoading: isRedemptionsLoading } = useCollection("voucher_redemptions", { 
     select: "*, vouchers(*)" 
   });
+
+  const adminRoleIdSet = useMemo(() => {
+    const ids = new Set<string>();
+    adminRoles?.forEach((r: any) => { if (r?.id) ids.add(r.id); });
+    superAdminRoles?.forEach((r: any) => { if (r?.id) ids.add(r.id); });
+    return ids;
+  }, [adminRoles, superAdminRoles]);
+
+  const getEffectiveRole = (u: any): string => {
+    if (adminRoleIdSet.has(u.id)) return 'admin';
+    return u.role_id || u.roleId || 'learner';
+  };
 
   const isLoading = isUsersLoading || isRegLoading || isRedemptionsLoading;
 
@@ -156,12 +170,15 @@ export default function AdminUsersPage() {
     if (!users) return { total: 0, learners: 0, educators: 0, admins: 0, blacklisted: 0 };
     return {
       total: users.length,
-      learners: users.filter(u => u.role_id === 'learner' || !u.role_id).length,
-      educators: users.filter(u => u.role_id === 'muallimah' || u.role_id === 'musyrifah').length,
-      admins: users.filter(u => u.role_id === 'admin').length,
+      learners: users.filter(u => getEffectiveRole(u) === 'learner').length,
+      educators: users.filter(u => {
+        const r = getEffectiveRole(u);
+        return r === 'muallimah' || r === 'musyrifah';
+      }).length,
+      admins: users.filter(u => getEffectiveRole(u) === 'admin').length,
       blacklisted: users.filter(u => u.is_blacklisted).length,
     };
-  }, [users]);
+  }, [users, adminRoleIdSet]);
 
   // Load musyrifah programs when editingUser changes
   useEffect(() => {
@@ -192,7 +209,7 @@ export default function AdminUsersPage() {
         u.whatsapp?.includes(q) ||
         u.phone?.includes(q);
 
-      const userRole = u.role_id || 'learner';
+      const userRole = getEffectiveRole(u);
       const matchRole = roleFilter === 'all' || userRole === roleFilter;
 
       const matchStatus =
@@ -202,7 +219,7 @@ export default function AdminUsersPage() {
 
       return matchSearch && matchRole && matchStatus;
     });
-  }, [users, search, roleFilter, statusFilter]);
+  }, [users, search, roleFilter, statusFilter, adminRoleIdSet]);
 
   // Pagination
   const totalPages = Math.ceil((filteredUsers.length || 1) / ITEMS_PER_PAGE);
@@ -224,6 +241,7 @@ export default function AdminUsersPage() {
       full_name: editingUser.full_name || "",
       username: editingUser.username,
       role_id: editingUser.role_id,
+      roleId: editingUser.role_id,
       whatsapp: editingUser.whatsapp || editingUser.phone || "",
       bank_name: editingUser.bank_name || "",
       bank_account_number: editingUser.bank_account_number || "",
@@ -233,27 +251,32 @@ export default function AdminUsersPage() {
     };
 
     try {
-      const { error } = await db.from('users').update(updateData).eq('id', editingUser.id);
-      if (error) throw error;
-
       if (editingUser.role_id === 'admin') {
-        await db.from('roles_admin').upsert({ id: editingUser.id });
+        const { error: adminRoleError } = await db.from('roles_admin').upsert({ id: editingUser.id });
+        if (adminRoleError) throw new Error(adminRoleError.message || 'Gagal menambahkan hak akses admin ke roles_admin.');
       } else {
-        await db.from('roles_admin').delete().eq('id', editingUser.id);
+        const { error: removeAdminError } = await db.from('roles_admin').delete().eq('id', editingUser.id);
+        if (removeAdminError) throw new Error(removeAdminError.message || 'Gagal menghapus hak akses admin dari roles_admin.');
       }
 
       if (editingUser.role_id === 'musyrifah') {
         if (editingAssignedPrograms.length > 0) {
-          await db.from('roles_musyrifah').upsert({
+          const { error: musyrifahError } = await db.from('roles_musyrifah').upsert({
             id: editingUser.id,
             assigned_programs: editingAssignedPrograms
           });
+          if (musyrifahError) throw new Error(musyrifahError.message || 'Gagal menyimpan hak akses musyrifah.');
         } else {
-          await db.from('roles_musyrifah').delete().eq('id', editingUser.id);
+          const { error: removeMusyrifahError } = await db.from('roles_musyrifah').delete().eq('id', editingUser.id);
+          if (removeMusyrifahError) throw new Error(removeMusyrifahError.message || 'Gagal menghapus hak akses musyrifah.');
         }
       } else {
-        await db.from('roles_musyrifah').delete().eq('id', editingUser.id);
+        const { error: removeMusyrifahError } = await db.from('roles_musyrifah').delete().eq('id', editingUser.id);
+        if (removeMusyrifahError) throw new Error(removeMusyrifahError.message || 'Gagal membersihkan hak akses musyrifah.');
       }
+
+      const { error } = await db.from('users').update(updateData).eq('id', editingUser.id);
+      if (error) throw error;
 
       toast({
         title: "Data Diperbarui! ✅",
@@ -261,6 +284,7 @@ export default function AdminUsersPage() {
       });
       setIsEditDialogOpen(false);
       refreshUsers();
+      refreshAdminRoles();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Gagal update", description: err.message });
     } finally {
@@ -325,6 +349,7 @@ export default function AdminUsersPage() {
         email: addForm.email.trim().toLowerCase(),
         whatsapp: addForm.whatsapp.trim(),
         role_id: addForm.role_id,
+        roleId: addForm.role_id,
         bank_name: addForm.bank_name.trim(),
         bank_account_number: addForm.bank_account_number.trim(),
         bank_account_holder: addForm.bank_account_holder.trim(),
@@ -335,14 +360,16 @@ export default function AdminUsersPage() {
       if (userError) throw userError;
 
       if (addForm.role_id === 'admin') {
-        await db.from("roles_admin").upsert({ id: newUserId });
+        const { error: adminRoleError } = await db.from("roles_admin").upsert({ id: newUserId });
+        if (adminRoleError) throw new Error(adminRoleError.message || "User dibuat, tetapi gagal menyimpan hak akses admin.");
       }
 
       if (addForm.role_id === 'musyrifah' && addForm.assigned_programs.length > 0) {
-        await db.from("roles_musyrifah").upsert({
+        const { error: musyrifahError } = await db.from("roles_musyrifah").upsert({
           id: newUserId,
           assigned_programs: addForm.assigned_programs
         });
+        if (musyrifahError) throw new Error(musyrifahError.message || "User dibuat, tetapi gagal menyimpan hak akses musyrifah.");
       }
 
       toast({
@@ -352,6 +379,7 @@ export default function AdminUsersPage() {
       setIsAddDialogOpen(false);
       setAddForm(INITIAL_ADD_FORM);
       refreshUsers();
+      refreshAdminRoles();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal menambah user", description: e.message });
     } finally {
@@ -743,6 +771,8 @@ export default function AdminUsersPage() {
               ) : (
                 paginatedUsers.map((u) => {
                   const waLink = formatWaLink(u.whatsapp || u.phone, u.full_name || u.username);
+                  const effectiveRole = getEffectiveRole(u);
+                  const isAdminOutOfSync = u.role_id === 'admin' && !adminRoleIdSet.has(u.id);
                   return (
                     <TableRow key={u.id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Column 1: Profil */}
@@ -752,7 +782,7 @@ export default function AdminUsersPage() {
                             "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0",
                             u.is_blacklisted 
                               ? "bg-rose-100 text-rose-700"
-                              : u.role_id === 'admin' 
+                              : effectiveRole === 'admin' 
                               ? "bg-amber-100 text-amber-800" 
                               : "bg-primary/10 text-primary"
                           )}>
@@ -800,18 +830,25 @@ export default function AdminUsersPage() {
                       {/* Column 2: Peran & Hak Akses */}
                       <TableCell className="py-3">
                         <div className="flex flex-col gap-1 items-start">
-                          <Badge variant="outline" className={cn(
-                            "text-[9px] font-black uppercase px-2 py-0.5 border-none",
-                            u.role_id === 'admin' ? "bg-amber-500 text-white" :
-                            u.role_id === 'muallimah' ? "bg-blue-600 text-white" :
-                            u.role_id === 'musyrifah' ? "bg-emerald-600 text-white" :
-                            "bg-purple-100 text-purple-700"
-                          )}>
-                            {u.role_id === 'learner' || !u.role_id
-                              ? (u.followed_halaqahs?.length > 0 ? "Thalibah" : "User Umum")
-                              : (ROLES.find(r => r.id === u.role_id)?.name || u.role_id)
-                            }
-                          </Badge>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <Badge variant="outline" className={cn(
+                              "text-[9px] font-black uppercase px-2 py-0.5 border-none",
+                              effectiveRole === 'admin' ? "bg-amber-500 text-white" :
+                              effectiveRole === 'muallimah' ? "bg-blue-600 text-white" :
+                              effectiveRole === 'musyrifah' ? "bg-emerald-600 text-white" :
+                              "bg-purple-100 text-purple-700"
+                            )}>
+                              {effectiveRole === 'learner'
+                                ? (u.followed_halaqahs?.length > 0 ? "Thalibah" : "User Umum")
+                                : (ROLES.find(r => r.id === effectiveRole)?.name || effectiveRole)
+                              }
+                            </Badge>
+                            {isAdminOutOfSync && (
+                              <Badge className="bg-rose-100 text-rose-700 text-[8px] font-black uppercase px-1.5 py-0 border-none">
+                                Belum Sinkron
+                              </Badge>
+                            )}
+                          </div>
                           {u.bank_name && (
                             <span className="text-[9px] text-slate-400 flex items-center gap-1">
                               <CreditCard className="w-2.5 h-2.5" /> {u.bank_name} {u.bank_account_number ? `(${u.bank_account_number})` : ''}
@@ -910,7 +947,7 @@ export default function AdminUsersPage() {
                             size="sm"
                             className="h-8 w-8 p-0 text-slate-600 hover:bg-primary/10 hover:text-primary rounded-xl"
                             onClick={() => {
-                              setEditingUser({ ...u });
+                              setEditingUser({ ...u, role_id: effectiveRole });
                               setIsEditDialogOpen(true);
                             }}
                             title="Edit User"
