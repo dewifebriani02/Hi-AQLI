@@ -192,14 +192,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 </Link>
               </div>
               
-              <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
-                {/* Global Report Error Button — Available on every thalibah page */}
-                {!isAuthPage && (
-                  <ReportTriggerButton
-                    label="Lapor"
-                    className="h-7 sm:h-8 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-black border-rose-200 bg-rose-50/60 hover:bg-rose-100/80 text-[#800000] whitespace-nowrap"
-                  />
-                )}
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
 
                 {/* Global Font Size Stepper */}
                 <div 
