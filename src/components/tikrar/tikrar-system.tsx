@@ -4839,13 +4839,6 @@ function MaqtaCard({
                         <EyeOff className="w-3.5 h-3.5 shrink-0" />
                         <span>Hitungan 21–40: Hafalan Tanpa Melihat Ayat</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSubAHidden(false)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white hover:bg-[#B91C1C] hover:text-white border border-[#B91C1C]/30 text-[#991B1B] text-[10px] font-black shadow-sm transition-colors touch-manipulation"
-                      >
-                        <Eye className="w-3 h-3" /> Intip Ayat TM {id}-1
-                      </button>
                     </div>
                   )}
                   <div
@@ -4903,13 +4896,6 @@ function MaqtaCard({
                         <EyeOff className="w-3.5 h-3.5 shrink-0" />
                         <span>Hitungan 21–40: Hafalan Tanpa Melihat Ayat</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSubBHidden(false)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white hover:bg-stone-900 hover:text-white border border-stone-900/30 text-stone-900 text-[10px] font-black shadow-sm transition-colors touch-manipulation"
-                      >
-                        <Eye className="w-3 h-3" /> Intip Ayat TM {id}-2
-                      </button>
                     </div>
                   )}
                   <div
